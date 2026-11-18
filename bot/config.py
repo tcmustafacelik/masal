@@ -1,0 +1,49 @@
+"""Botun bütün ayarları tek yerde. Değiştirmek için sadece bu dosyayı düzenle."""
+
+BASE_URL = "https://tr.okx.com"
+
+# Sanal başlangıç bakiyesi (her strateji kendi kasasıyla yarışır)
+START_CASH = 10_000.0
+
+# İşlem maliyeti: komisyon + kayma payı (tek yön). OKX TR alıcı komisyonu ~%0,22.
+FEE_RATE = 0.0025
+SLIPPAGE = 0.001
+
+# Hangi coinler: TL paritesinde, 24 saatlik hacmi yeterli olanlar
+QUOTE = "TRY"
+MIN_VOLUME_TRY = 1_000_000
+MAX_SYMBOLS = 12
+EXCLUDED = {"USDT", "USDC", "XAUT", "PAXG", "EURT", "DAI", "FDUSD", "TUSD"}
+
+BAR = "1H"
+
+# Risk kuralları (dengeli profil)
+RISK = {
+    "trade_size": 1_000.0,      # işlem başına en fazla TL
+    "max_positions": 5,         # aynı anda en fazla açık pozisyon
+    "stop_loss": 0.05,          # işlem başına zarar sınırı %5
+    "daily_loss_limit": 300.0,  # gün içi toplam kayıp bu tutarı geçerse o gün yeni işlem yok
+    "kill_switch": 8_500.0,     # toplam bakiye bunun altına inerse her şey kapanır, bot durur
+}
+
+STRATEGIES = {
+    "dip": {
+        "name": "Düşüşte al",
+        "desc": "Fiyat ortalamanın belirgin altına inip aşırı satımdayken alır, hedefte ya da süre dolunca satar.",
+        "sma": 20, "rsi": 14, "dip_pct": 0.03, "rsi_max": 35,
+        "take_profit": 0.04, "max_hold_bars": 48,
+    },
+    "trend": {
+        "name": "Trend takibi",
+        "desc": "Kısa ortalama uzun ortalamayı yukarı kesip fiyat ana trendin üstündeyken girer, iz süren stopla çıkar.",
+        "fast": 12, "slow": 26, "base": 50, "trailing": 0.04,
+    },
+    "grid": {
+        "name": "Kademeli",
+        "desc": "Her %2 düşüşte küçük bir kademe daha alır (en fazla 3), her kademeyi %2,5 kârla ayrı satar.",
+        "step": 0.02, "lot": 400.0, "max_lots": 3, "lot_tp": 0.025, "max_coins": 3,
+        "stop": 0.07,  # ortalama maliyetin %7 altında tüm kademeler satılır
+    },
+}
+
+TZ_OFFSET_HOURS = 3  # Türkiye saati

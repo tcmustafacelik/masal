@@ -1,0 +1,43 @@
+name: Masal bot
+
+on:
+  schedule:
+    - cron: "7 * * * *"      # her saat başını 7 geçe
+    - cron: "40 2 * * 1"     # pazartesi 05:40 (TR) geçmiş test yenilenir
+  workflow_dispatch:          # telefondan elle çalıştırma
+
+permissions:
+  contents: write
+
+concurrency:
+  group: masal-bot
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Bot turu
+        env:
+          OKX_API_KEY: ${{ secrets.OKX_API_KEY }}
+          OKX_API_SECRET: ${{ secrets.OKX_API_SECRET }}
+          OKX_API_PASSPHRASE: ${{ secrets.OKX_API_PASSPHRASE }}
+          MASAL_BUDGET: ${{ vars.MASAL_BUDGET }}
+          MASAL_LIVE: ${{ vars.MASAL_LIVE }}
+          MASAL_STRATEGY: ${{ vars.MASAL_STRATEGY }}
+        run: python -m bot.run
+      - name: Geçmiş test (haftalık)
+        if: github.event.schedule == '40 2 * * 1'
+        run: python -m bot.backtest 30
+      - name: Sonuçları kaydet
+        run: |
+          git config user.name "masal-bot"
+          git config user.email "masal-bot@users.noreply.github.com"
+          git add docs/data
+          git diff --cached --quiet || git commit -m "Bot turu $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push

@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F4F5F7">
+<title>Masal · Kripto bot</title>
+<style>
+:root{
+  --bg:#F4F5F7;--surface:#fff;--line:#E3E6EB;--line2:#EEF0F3;
+  --text:#1D2430;--muted:#6A7280;--faint:#9AA1AC;
+  --blue:#2F6FDE;--blue-bg:#EAF1FD;
+  --amber:#D9861A;--amber-bg:#FFF3DF;--amber-line:#F0C27A;
+  --green:#178A5B;--green-bg:#E6F5EE;--red:#C9473F;--red-bg:#FCEBEA;
+  --r:10px;--r-sm:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  padding:0 0 calc(24px + env(safe-area-inset-bottom))}
+.wrap{max-width:560px;margin:0 auto;padding:0 14px}
+svg.i{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+header{position:sticky;top:0;z-index:5;background:rgba(244,245,247,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line2)}
+.bar{display:flex;align-items:center;gap:10px;padding:12px 0 10px}
+.logo{width:34px;height:34px;border-radius:9px;background:var(--text);color:#fff;display:grid;place-items:center;font-weight:600;font-size:16px;letter-spacing:.5px}
+.ttl{flex:1;min-width:0}
+.ttl b{display:block;font-size:16px;font-weight:600;letter-spacing:.2px}
+.ttl span{font-size:12px;color:var(--muted)}
+.chip{font-size:11.5px;font-weight:600;padding:3px 8px;border-radius:6px;background:var(--blue-bg);color:var(--blue);white-space:nowrap}
+.ibtn{width:36px;height:36px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--surface);color:var(--muted);display:grid;place-items:center;cursor:pointer}
+.ibtn:active{transform:scale(.96)}
+.ibtn.spin svg{animation:sp .8s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
+.upd{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);padding-bottom:10px}
+.upd svg.i{width:14px;height:14px}
+section{margin-top:18px}
+h2{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin:0 2px 8px;display:flex;align-items:center;gap:6px}
+h2 svg.i{width:15px;height:15px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 6px 10px;text-align:center;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:5px;min-height:96px;justify-content:center;font:inherit;color:inherit;transition:background .15s,border-color .15s}
+.tile .ic{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;background:var(--line2);color:var(--muted)}
+.tile .nm{font-size:12.5px;font-weight:600;line-height:1.2}
+.tile .pc{font-size:12px;font-weight:600;font-variant-numeric:tabular-nums}
+.tile.on{background:var(--amber-bg);border-color:var(--amber-line);box-shadow:inset 0 0 0 1px var(--amber-line)}
+.tile.on .ic{background:var(--amber);color:#fff}
+.desc{font-size:12.5px;color:var(--muted);margin:10px 2px 0}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.m{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px}
+.m .k{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.m .k svg.i{width:14px;height:14px}
+.m .v{font-size:19px;font-weight:600;margin-top:4px;font-variant-numeric:tabular-nums;letter-spacing:-.2px}
+.m .s{font-size:12px;color:var(--muted);margin-top:1px;font-variant-numeric:tabular-nums}
+.up{color:var(--green)}.dn{color:var(--red)}
+.alert{display:flex;gap:10px;align-items:flex-start;border-radius:var(--r);padding:11px 12px;font-size:13px;margin-top:10px}
+.alert.red{background:var(--red-bg);color:var(--red)}.alert.amb{background:var(--amber-bg);color:#93570B}
+.seg{display:inline-flex;background:var(--line2);border-radius:8px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;font:inherit;font-size:12px;font-weight:600;color:var(--muted);padding:5px 10px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:5px}
+.seg button svg.i{width:14px;height:14px}
+.seg button.on{background:var(--surface);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.chead{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}
+.legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11.5px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:10px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
+#chart{width:100%;height:170px;display:block}
+.empty{padding:22px 10px;text-align:center;color:var(--faint);font-size:13px}
+.empty svg.i{width:22px;height:22px;margin-bottom:6px;color:var(--faint)}
+.list .row{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line2)}
+.list .row:first-child{border-top:0;padding-top:2px}
+.list .row:last-child{padding-bottom:2px}
+.coin{width:34px;height:34px;border-radius:9px;background:var(--line2);display:grid;place-items:center;font-size:11px;font-weight:700;color:var(--muted);flex:none;letter-spacing:.2px}
+.coin.al{background:var(--blue-bg);color:var(--blue)}.coin.sat{background:var(--green-bg);color:var(--green)}.coin.sat.l{background:var(--red-bg);color:var(--red)}
+.mid{flex:1;min-width:0}
+.mid b{font-size:13.5px;font-weight:600;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mid span{font-size:12px;color:var(--muted);display:block;line-height:1.35;margin-top:1px}
+.end{text-align:right;font-variant-numeric:tabular-nums;flex:none}
+.end b{font-size:13.5px;font-weight:600;display:block}
+.end span{font-size:12px;color:var(--muted)}
+.bt .row .rank{width:22px;height:22px;border-radius:6px;background:var(--line2);font-size:11.5px;font-weight:700;display:grid;place-items:center;color:var(--muted);flex:none}
+.bt .row.best .rank{background:var(--amber);color:#fff}
+.note{font-size:12px;color:var(--muted);margin-top:10px;padding-top:10px;border-top:1px solid var(--line2)}
+.rules{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.rule{display:flex;gap:9px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:11px}
+.rule .ic{width:28px;height:28px;border-radius:7px;background:var(--blue-bg);color:var(--blue);display:grid;place-items:center;flex:none}
+.rule .ic svg.i{width:15px;height:15px}
+.rule b{font-size:13.5px;display:block;font-variant-numeric:tabular-nums}
+.rule span{font-size:11.5px;color:var(--muted);line-height:1.3;display:block}
+footer{font-size:11.5px;color:var(--faint);text-align:center;margin-top:22px;line-height:1.5}
+.tag{display:block;margin:3px auto 0;width:max-content;font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:5px;background:var(--line2);color:var(--muted)}
+.tag.real{background:var(--green-bg);color:var(--green)}
+.err{background:var(--red-bg);color:var(--red);border-radius:var(--r);padding:12px;margin-top:14px;font-size:13px;display:none}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-dip" viewBox="0 0 24 24"><path d="M3 7l6 6 4-4 8 8"/><path d="M21 11v6h-6"/></symbol>
+  <symbol id="i-trend" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></symbol>
+  <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M4 7a2 2 0 012-2h11v4"/><rect x="4" y="7" width="16" height="12" rx="2"/><path d="M16 13h2"/></symbol>
+  <symbol id="i-pnl" viewBox="0 0 24 24"><path d="M4 19h16"/><path d="M7 15v-3M12 15V8M17 15v-6"/></symbol>
+  <symbol id="i-day" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M16 3v4M8 3v4M4 11h16"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r=".5"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 10-2.3 5.7"/><path d="M20 5v6h-6"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 4v16h16"/><path d="M7 14l4-4 3 3 5-6"/></symbol>
+  <symbol id="i-box" viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4h11l-2 4 2 4H5"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></symbol>
+  <symbol id="i-coins" viewBox="0 0 24 24"><ellipse cx="9" cy="7" rx="5" ry="2.5"/><path d="M4 7v5c0 1.4 2.2 2.5 5 2.5s5-1.1 5-2.5V7"/><path d="M10 17c.6 1.4 2.6 2.5 5 2.5 2.8 0 5-1.1 5-2.5v-5c0-1.4-2.2-2.5-5-2.5"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><path d="M8 3h8l5 5v8l-5 5H8l-5-5V8l5-5z"/><path d="M12 8v5M12 16h.01"/></symbol>
+  <symbol id="i-calx" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M16 3v4M8 3v4M4 11h16M10 14l4 4M14 14l-4 4"/></symbol>
+  <symbol id="i-power" viewBox="0 0 24 24"><path d="M12 3v8"/><path d="M6.3 7.3a8 8 0 1011.4 0"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><path d="M5 9h14M5 15h14"/><path d="M5 5h14v14H5z"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/></symbol>
+</svg>
+
+<header>
+  <div class="wrap">
+    <div class="bar">
+      <div class="logo">M</div>
+      <div class="ttl"><b>Masal</b><span>Kripto bot · OKX TR</span></div>
+      <span class="chip" id="mode">Sanal mod</span>
+      <button class="ibtn" id="reload" aria-label="Yenile"><svg class="i"><use href="#i-refresh"/></svg></button>
+    </div>
+    <div class="upd"><svg class="i"><use href="#i-clock"/></svg><span id="updated">Yükleniyor…</span></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="err" id="err"></div>
+
+  <section>
+    <h2><svg class="i"><use href="#i-target"/></svg>Strateji</h2>
+    <div class="tiles" id="tiles"></div>
+    <p class="desc" id="desc"></p>
+    <div id="alerts"></div>
+  </section>
+
+  <section>
+    <div class="grid2" id="metrics"></div>
+  </section>
+
+  <section>
+    <h2><svg class="i"><use href="#i-chart"/></svg>Bakiye seyri</h2>
+    <div class="card">
+      <div class="chead">
+        <div class="seg" id="seg">
+          <button data-v="live" class="on"><svg class="i"><use href="#i-clock"/></svg>Canlı</button>
+          <button data-v="bt"><svg class="i"><use href="#i-calx"/></svg>Geçmiş test</button>
+        </div>
+        <span style="font-size:12px;color:var(--muted)" id="chartNote"></span>
+      </div>
+      <div id="chartBox"></div>
+      <div class="legend" id="legend"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2><svg class="i"><use href="#i-box"/></svg>Açık pozisyonlar</h2>
+    <div class="card list" id="positions"></div>
+  </section>
+
+  <section>
+    <h2><svg class="i"><use href="#i-list"/></svg>Son işlemler</h2>
+    <div class="card list" id="trades"></div>
+  </section>
+
+  <section>
+    <h2><svg class="i"><use href="#i-flag"/></svg>Strateji yarışı · geçmiş test</h2>
+    <div class="card list bt" id="backtest"></div>
+  </section>
+
+  <section>
+    <h2><svg class="i"><use href="#i-shield"/></svg>Koruma kuralları</h2>
+    <div class="rules" id="rules"></div>
+  </section>
+
+  <section id="logSec" style="display:none">
+    <h2><svg class="i"><use href="#i-info"/></svg>Bot kayıtları</h2>
+    <div class="card list" id="log"></div>
+  </section>
+
+  <footer id="foot"></footer>
+</main>
+
+<script>
+const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
+const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#1D2430'};
+const AMBER='#D9861A';
+let S=null,B=null,sel=localStore('masal_sel')||'dip',view='live';
+
+function localStore(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
+const nf=(v,d=2)=>new Intl.NumberFormat('tr-TR',{minimumFractionDigits:d,maximumFractionDigits:d}).format(v);
+const tl=(v,d=2)=>nf(v,d)+' TL';
+const sgn=v=>(v>0?'+':v<0?'−':'')+nf(Math.abs(v));
+const cls=v=>v>0?'up':v<0?'dn':'';
+function px(v){const a=Math.abs(v);return nf(v,a>=1000?0:a>=10?2:a>=1?3:5)}
+function dt(ts,withYear){const d=new Date(ts);const p=n=>String(n).padStart(2,'0');
+  return p(d.getDate())+'.'+p(d.getMonth()+1)+(withYear?'.'+d.getFullYear():'')+' '+p(d.getHours())+':'+p(d.getMinutes())}
+function ago(ts){const m=Math.round((Date.now()-ts)/60000);if(m<1)return 'az önce';if(m<60)return m+' dk önce';const h=Math.floor(m/60);return h<24?h+' sa önce':Math.floor(h/24)+' gün önce'}
+const ic=(id,c='i')=>`<svg class="${c}"><use href="#${id}"/></svg>`;
+const sym=inst=>inst.split('-')[0];
+
+async function load(){
+  const btn=document.getElementById('reload');btn.classList.add('spin');
+  const err=document.getElementById('err');err.style.display='none';
+  try{
+    const q='?t='+Date.now();
+    const [s,b]=await Promise.all([fetch('data/summary.json'+q).then(r=>{if(!r.ok)throw 0;return r.json()}),
+      fetch('data/backtest.json'+q).then(r=>r.ok?r.json():null).catch(()=>null)]);
+    S=s;B=b;if(!S.strategies[sel])sel=Object.keys(S.strategies)[0];render();
+  }catch(e){err.textContent='Veriler yüklenemedi. Bağlantını kontrol edip yenile düğmesine dokun.';err.style.display='block'}
+  finally{btn.classList.remove('spin')}
+}
+
+function render(){
+  document.getElementById('updated').textContent=S.updated?`Son güncelleme ${dt(S.updated,true)} · ${ago(S.updated)}`:'Henüz çalışmadı';
+  const L=S.strategies.live;
+  document.getElementById('mode').textContent=L?(L.armed?'Gerçek mod':'Deneme modu'):'Sanal mod';
+  document.getElementById('foot').innerHTML=L&&L.armed?'Gerçek hesap kartı OKX TR hesabındaki gerçek işlemleri gösterir; diğerleri sanal karşılaştırmadır.<br>Veriler saatte bir güncellenir.':'Bu panel sanal işlemleri gösterir; gerçek para kullanılmıyor.<br>Veriler saatte bir güncellenir.';
+  const keys=Object.keys(S.strategies);
+  const tg=document.getElementById('tiles');tg.style.gridTemplateColumns=`repeat(${keys.length===4?2:3},minmax(0,1fr))`;
+  tg.innerHTML=keys.map(k=>{const x=S.strategies[k];
+    return `<button class="tile ${k===sel?'on':''}" data-k="${k}"><span class="ic">${ic(ICON[k])}</span>
+      <span class="nm">${x.name}${x.live?`<small class="tag ${x.armed?'real':''}">${x.armed?'Gerçek':'Deneme'}</small>`:''}</span><span class="pc ${cls(x.pnl_pct)}">${x.pnl_pct>0?'+':''}${nf(x.pnl_pct)}%</span></button>`}).join('');
+  const x=S.strategies[sel];
+  document.getElementById('desc').textContent=x.desc;
+  let al='';
+  if(x.halted)al+=`<div class="alert red">${ic('i-power')}<div><b>Acil fren devrede.</b> ${x.halt_reason}. Bot bu stratejide yeni işlem açmıyor.</div></div>`;
+  else if(x.blocked_today)al+=`<div class="alert amb">${ic('i-stop')}<div><b>Günlük zarar sınırına ulaşıldı.</b> Bugün yeni işlem açılmayacak.</div></div>`;
+  document.getElementById('alerts').innerHTML=al;
+
+  const wr=x.win_rate==null?'—':'%'+nf(x.win_rate,0);
+  document.getElementById('metrics').innerHTML=[
+    ['i-wallet','Bakiye',tl(x.equity),`Nakit ${tl(x.cash,0)} · başlangıç ${tl(x.start_cash,0)}`,''],
+    ['i-pnl','Toplam kâr/zarar',sgn(x.pnl)+' TL',`${x.pnl_pct>0?'+':''}${nf(x.pnl_pct)}%`,cls(x.pnl)],
+    ['i-day','Bugün',sgn(x.today_pnl)+' TL','Gün başından beri',cls(x.today_pnl)],
+    ['i-target','Kazanma oranı',wr,`${x.trades} kapanan işlem`,'']
+  ].map(([i,k,v,s,c])=>`<div class="m"><div class="k">${ic(i)}${k}</div><div class="v ${c}">${v}</div><div class="s">${s}</div></div>`).join('');
+
+  renderChart();
+
+  const pos=x.positions;
+  document.getElementById('positions').innerHTML=pos.length?pos.map(p=>`<div class="row"><div class="coin">${sym(p.inst).slice(0,4)}</div>
+      <div class="mid"><b>${sym(p.inst)}${p.lots>1?` · ${p.lots} kademe`:''}</b><span>Ort. ${px(p.avg)} → ${px(p.price)} · ${ago(p.since)}</span></div>
+      <div class="end"><b>${tl(p.value,0)}</b><span class="${cls(p.pnl)}">${sgn(p.pnl)} TL · ${p.pnl_pct>0?'+':''}${nf(p.pnl_pct)}%</span></div></div>`).join('')
+    :`<div class="empty">${ic('i-box')}<div>Şu an açık pozisyon yok</div></div>`;
+
+  const tr=x.recent.slice(0,15);
+  document.getElementById('trades').innerHTML=tr.length?tr.map(t=>{const sell=t.side==='SAT';
+    return `<div class="row"><div class="coin ${sell?'sat'+(t.pnl<0?' l':''):'al'}">${t.side}</div>
+      <div class="mid"><b>${sym(t.inst)} · ${px(t.price)}</b><span>${t.reason} · ${dt(t.ts)}</span></div>
+      <div class="end"><b>${tl(t.amount,0)}</b>${sell?`<span class="${cls(t.pnl)}">${sgn(t.pnl)} TL</span>`:'<span>alım</span>'}</div></div>`}).join('')
+    :`<div class="empty">${ic('i-list')}<div>Henüz işlem yok. Bot fırsat bekliyor.</div></div>`;
+
+  renderBacktest();
+  const R=x.risk||S.risk;
+  renderLog(x);
+  document.getElementById('rules').innerHTML=[
+    R.lot?['i-coins',tl(R.lot,0),'Kademe başına alım']:['i-coins',tl(R.trade_size,0),'İşlem başına en fazla'],
+    ['i-layers',R.max_positions+' pozisyon','Aynı anda en fazla'],
+    ['i-stop','%'+nf(R.stop_loss*100,0)+' zarar','Bu noktada otomatik satar'],
+    ['i-calx',tl(R.daily_loss_limit,0),'Günlük kayıp sınırı'],
+    ['i-power',tl(R.kill_switch,0),'Altına inerse acil fren'],
+    ['i-info','%'+nf((S.fee+S.slippage)*100,2),'Komisyon + kayma (tek yön)']
+  ].map(([i,b,s])=>`<div class="rule"><div class="ic">${ic(i)}</div><div><b>${b}</b><span>${s}</span></div></div>`).join('');
+
+  document.querySelectorAll('.tile').forEach(el=>el.onclick=()=>{sel=el.dataset.k;localStore('masal_sel',sel);render()});
+}
+
+function renderLog(x){
+  const sec=document.getElementById('logSec');
+  if(!x.live){sec.style.display='none';return}
+  sec.style.display='';
+  document.getElementById('log').innerHTML=x.log.length?x.log.map(([ts,t])=>`<div class="row"><div class="mid"><b style="white-space:normal;font-weight:500">${t}</b><span>${dt(ts)}</span></div></div>`).join('')
+    :`<div class="empty">${ic('i-info')}<div>Henüz kayıt yok</div></div>`;
+}
+
+function renderBacktest(){
+  const box=document.getElementById('backtest');
+  if(!B){box.innerHTML=`<div class="empty">${ic('i-flag')}<div>Geçmiş test sonucu henüz yok</div></div>`;return}
+  const rows=Object.entries(B.results).sort((a,b)=>b[1].pnl_pct-a[1].pnl_pct);
+  box.innerHTML=rows.map(([k,r],i)=>`<div class="row ${i===0?'best':''}"><div class="rank">${i+1}</div>
+      <div class="mid"><b>${r.name}${k===sel?' · seçili':''}</b><span>${r.trades} işlem · kazanma %${nf(r.win_rate,0)} · en büyük düşüş %${nf(r.max_drawdown,1)}</span></div>
+      <div class="end"><b class="${cls(r.pnl_pct)}">${r.pnl_pct>0?'+':''}${nf(r.pnl_pct)}%</b><span>${tl(r.final,0)}</span></div></div>`).join('')
+    +`<div class="note">Son ${B.days} gün, ${B.symbols.length} coin, gerçek OKX TR fiyatları, komisyon dahil. Aynı coinleri alıp hiç dokunmamak (al-tut): <b class="${cls(B.hold_pct)}">${B.hold_pct>0?'+':''}${nf(B.hold_pct)}%</b>. Geçmiş sonuç geleceği garanti etmez.</div>`;
+}
+
+function renderChart(){
+  const box=document.getElementById('chartBox'),leg=document.getElementById('legend'),note=document.getElementById('chartNote');
+  const src=view==='live'?Object.fromEntries(Object.entries(S.strategies).map(([k,v])=>[k,v.equity_series]))
+    :(B?Object.fromEntries(Object.entries(B.results).map(([k,v])=>[k,v.equity])):{});
+  note.textContent=view==='live'?(S.created?'Başlangıç '+dt(S.created).split(' ')[0]:''):(B?'Son '+B.days+' gün':'');
+  for(const k in src){const st=view==='live'?(S.strategies[k]?.start_cash||S.start_cash):S.start_cash;src[k]=src[k].map(([t,v])=>[t,(v/st-1)*100])}
+  const pts=Object.values(src).flat();
+  if(pts.length<4||Object.values(src).every(s=>s.length<2)){
+    box.innerHTML=`<div class="empty">${ic('i-chart')}<div>${view==='live'?'Grafik için veri birikiyor. Bot saatte bir nokta ekler.':'Geçmiş test verisi yok'}</div></div>`;leg.innerHTML='';return}
+  const W=520,H=170,pl=4,pr=4,pt=10,pb=18;
+  const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]).concat([0]);
+  const x0=Math.min(...xs),x1=Math.max(...xs);let y0=Math.min(...ys),y1=Math.max(...ys);const pad=(y1-y0)*.12||1;y0-=pad;y1+=pad;
+  const X=t=>pl+(t-x0)/(x1-x0||1)*(W-pl-pr),Y=v=>pt+(1-(v-y0)/(y1-y0))*(H-pt-pb);
+  const path=s=>s.map((p,i)=>(i?'L':'M')+X(p[0]).toFixed(1)+' '+Y(p[1]).toFixed(1)).join(' ');
+  let g=`<line x1="0" x2="${W}" y1="${Y(0)}" y2="${Y(0)}" stroke="#C9CED6" stroke-dasharray="4 4" stroke-width="1"/>`;
+  g+=`<text x="${W-2}" y="${Y(0)-4}" text-anchor="end" font-size="10" fill="#9AA1AC">Başlangıç %0</text><text x="2" y="${pt+8}" font-size="10" fill="#9AA1AC">${y1>0?"+":""}${nf(y1,1)}%</text><text x="2" y="${H-pb-3}" font-size="10" fill="#9AA1AC">${nf(y0,1)}%</text>`;
+  const order=Object.keys(src).filter(k=>k!==sel).concat(src[sel]?[sel]:[]);
+  for(const k of order){const s=src[k];if(s.length<2)continue;const on=k===sel;
+    g+=`<path d="${path(s)}" fill="none" stroke="${on?AMBER:COLORS[k]}" stroke-width="${on?2.4:1.3}" stroke-opacity="${on?1:.45}" stroke-linejoin="round"/>`;
+    if(on){const l=s[s.length-1];g+=`<circle cx="${X(l[0])}" cy="${Y(l[1])}" r="3.5" fill="${AMBER}" stroke="#fff" stroke-width="1.5"/>`}}
+  g+=`<text x="2" y="${H-4}" font-size="10" fill="#9AA1AC">${dt(x0).split(' ')[0]}</text><text x="${W-2}" y="${H-4}" text-anchor="end" font-size="10" fill="#9AA1AC">${dt(x1).split(' ')[0]}</text>`;
+  box.innerHTML=`<svg id="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${g}</svg>`;
+  leg.innerHTML=Object.keys(src).map(k=>`<span><i style="background:${k===sel?AMBER:COLORS[k]};opacity:${k===sel?1:.6}"></i>${S.strategies[k]?.name||k}</span>`).join('');
+}
+
+document.getElementById('seg').onclick=e=>{const b=e.target.closest('button');if(!b)return;view=b.dataset.v;
+  document.querySelectorAll('#seg button').forEach(x=>x.classList.toggle('on',x===b));renderChart()};
+document.getElementById('reload').onclick=load;
+load();
+</script>
+</body>
+</html>
