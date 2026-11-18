@@ -1,5 +1,5 @@
 {
-  "live": false,
+  "live": true,
   "paused": true,
   "liquidate": 0,
   "strategy": "grid",
