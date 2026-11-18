@@ -1,0 +1,37 @@
+{
+  "live": false,
+  "paused": false,
+  "liquidate": 0,
+  "strategy": "grid",
+  "budget": 2000,
+  "kasa": 10000,
+  "topup": {
+    "amount": 1000,
+    "profit_pct": 5,
+    "days": 7
+  },
+  "risk": {
+    "trade_pct": 10,
+    "max_positions": 5,
+    "stop_pct": 5,
+    "daily_loss_pct": 3,
+    "kill_pct": 15
+  },
+  "grid": {
+    "step_pct": 2,
+    "lot_pct": 4,
+    "lot_tp_pct": 2.5,
+    "max_lots": 3,
+    "max_coins": 3,
+    "stop_pct": 7
+  },
+  "dip": {
+    "dip_pct": 3,
+    "rsi_max": 35,
+    "take_profit_pct": 4,
+    "max_hold_hours": 48
+  },
+  "trend": {
+    "trailing_pct": 4
+  }
+}

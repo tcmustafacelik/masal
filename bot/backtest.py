@@ -7,13 +7,14 @@ import os
 import sys
 import time
 
-from . import config, okx
+from . import config, okx, settings
 from .engine import Portfolio, new_state, run_bars, WARMUP
 
 OUT = os.path.join(os.path.dirname(__file__), "..", "docs", "data", "backtest.json")
 
 
 def main(days=30):
+    settings.load()
     bars_needed = days * 24 + WARMUP
     insts = okx.universe()
     series = {}

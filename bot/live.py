@@ -73,6 +73,10 @@ class OkxPrivate:
         return o
 
 
+def para(v):
+    return f"{v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
 def floor_to(x, step):
     return math.floor(x / step + 1e-9) * step
 
@@ -87,7 +91,7 @@ class LivePortfolio(Portfolio):
         self.log = state.setdefault("log", [])
 
     def _note(self, ts, text):
-        self.log.append([ts, text])
+        self.log.append([int(time.time() * 1000), text])
         del self.log[:-100]
         print(text)
 
@@ -96,7 +100,7 @@ class LivePortfolio(Portfolio):
         if amount < 10:
             return False
         if not self.armed:
-            self._note(ts, f"[deneme] AL {inst} {amount} TL ({reason})")
+            self._note(ts, f"[deneme] AL {inst.split('-')[0]} {para(amount)} TL · {reason}")
             return super()._buy(ts, inst, price, amount, reason + " · deneme")
         try:
             if self.api.available(config.QUOTE) < amount:
@@ -117,7 +121,7 @@ class LivePortfolio(Portfolio):
             pos["lots"].append({"qty": qty, "entry": avg, "cost": spent, "ts": ts, "ordId": o["ordId"]})
             self.s["trades"].append({"ts": ts, "inst": inst, "side": "AL", "price": avg, "qty": qty,
                                      "amount": round(spent, 2), "reason": reason, "real": True})
-            self._note(ts, f"AL {inst} {spent:.2f} TL @ {avg}")
+            self._note(ts, f"AL {inst.split('-')[0]} {para(spent)} TL · fiyat {avg}")
             return True
         except Exception as e:
             self._note(ts, f"HATA alım {inst}: {e}")
@@ -125,7 +129,7 @@ class LivePortfolio(Portfolio):
 
     def _sell_lots(self, ts, inst, price, lots, reason):
         if not self.armed:
-            self._note(ts, f"[deneme] SAT {inst} ({reason})")
+            self._note(ts, f"[deneme] SAT {inst.split('-')[0]} · {reason}")
             return super()._sell_lots(ts, inst, price, lots, reason + " · deneme")
         pos = self.s["positions"][inst]
         base = inst.split("-")[0]
@@ -158,6 +162,6 @@ class LivePortfolio(Portfolio):
             pos["lots"] = [l for l in pos["lots"] if l not in lots]
             if not pos["lots"]:
                 del self.s["positions"][inst]
-            self._note(ts, f"SAT {inst} {proceeds:.2f} TL @ {avg} ({pnl:+.2f})")
+            self._note(ts, f"SAT {inst.split('-')[0]} {para(proceeds)} TL · fiyat {avg} · sonuç {'+' if pnl >= 0 else '−'}{para(abs(pnl))} TL")
         except Exception as e:
             self._note(ts, f"HATA satış {inst}: {e}")

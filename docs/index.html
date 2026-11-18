@@ -15,6 +15,7 @@
   --r:10px;--r-sm:8px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none!important}
 html{-webkit-text-size-adjust:100%}
 body{background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   padding:0 0 calc(24px + env(safe-area-inset-bottom))}
@@ -100,6 +101,43 @@ footer{font-size:11.5px;color:var(--faint);text-align:center;margin-top:22px;lin
 .prog .lbl b{color:var(--text);font-weight:600}
 .bar2{height:6px;border-radius:3px;background:var(--line2);overflow:hidden}.bar2 i{display:block;height:100%;background:var(--amber);border-radius:3px}
 .hint{font-size:11.5px;color:var(--faint);margin-top:10px;line-height:1.4}
+.sethead{display:flex;align-items:center;gap:10px;padding:14px 0 2px}
+.sethead b{font-size:17px;font-weight:600;flex:1}
+.dirty{font-size:11.5px;font-weight:600;padding:3px 8px;border-radius:6px;background:var(--amber-bg);color:#93570B}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--text);font:inherit;font-size:13.5px;font-weight:600;padding:9px 14px;border-radius:var(--r-sm);cursor:pointer;display:inline-flex;align-items:center;gap:6px;justify-content:center}
+.btn:active{transform:scale(.98)}
+.btn.primary{background:var(--text);border-color:var(--text);color:#fff}
+.btn.danger{color:var(--red);border-color:#F1C4C0}
+.btn.danger.arm{background:var(--red);border-color:var(--red);color:#fff}
+.btn svg.i{width:16px;height:16px}
+.field{display:flex;align-items:center;gap:10px;padding:11px 0;border-top:1px solid var(--line2)}
+.field:first-child{border-top:0;padding-top:0}.field:last-child{padding-bottom:0}
+.field .lb{flex:1;min-width:0}
+.field .lb b{font-size:13.5px;font-weight:600;display:block}
+.field .lb span{font-size:11.5px;color:var(--muted);display:block;line-height:1.35;margin-top:1px}
+.field .lb em{font-style:normal;color:var(--red);font-size:11.5px;display:block;margin-top:2px}
+.step{display:flex;align-items:center;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;flex:none;background:var(--surface)}
+.step button{width:32px;height:36px;border:0;background:var(--line2);color:var(--muted);display:grid;place-items:center;cursor:pointer}
+.step button svg.i{width:15px;height:15px}
+.step input{width:58px;height:36px;border:0;text-align:center;font:inherit;font-size:14px;font-weight:600;color:var(--text);font-variant-numeric:tabular-nums;background:transparent;outline:none}
+.step .u{font-size:12px;color:var(--muted);width:34px;text-align:left;flex:none}
+.step.bad{border-color:var(--red)}
+.step.changed{border-color:var(--amber-line);box-shadow:inset 0 0 0 1px var(--amber-line)}
+.sw{display:flex;align-items:center;gap:12px;cursor:pointer}
+.sw .lb{flex:1}
+.track{width:44px;height:26px;border-radius:7px;background:var(--line);position:relative;flex:none;transition:background .15s}
+.track i{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:5px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.15);transition:left .15s}
+.sw.on .track{background:var(--amber)}.sw.on .track i{left:21px}
+.tiles.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.warn{font-size:12px;color:#93570B;background:var(--amber-bg);border-radius:var(--r-sm);padding:9px 11px;margin-top:8px;display:flex;gap:8px;align-items:flex-start}
+.warn svg.i{width:16px;height:16px;margin-top:1px}
+.inp{width:100%;height:40px;border:1px solid var(--line);border-radius:var(--r-sm);padding:0 12px;font:inherit;font-size:14px;margin:10px 0 8px;background:var(--surface)}
+.steps{font-size:12.5px;color:var(--muted);line-height:1.5;padding-left:18px;margin-top:6px}
+.steps li{margin-top:3px}.steps b{color:var(--text)}
+.savebar{position:sticky;bottom:calc(10px + env(safe-area-inset-bottom));margin-top:18px;background:var(--surface);border:1px solid var(--amber-line);border-radius:var(--r);padding:10px;display:flex;align-items:center;gap:8px;box-shadow:0 6px 20px rgba(0,0,0,.08)}
+.savebar span{flex:1;font-size:12.5px;color:#93570B;display:flex;gap:6px;align-items:center;min-width:0}
+.savebar span svg.i{width:15px;height:15px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom));background:var(--text);color:#fff;font-size:13px;padding:10px 14px;border-radius:var(--r-sm);max-width:calc(100% - 28px);z-index:20;box-shadow:0 6px 20px rgba(0,0,0,.18)}
 .err{background:var(--red-bg);color:var(--red);border-radius:var(--r);padding:12px;margin-top:14px;font-size:13px;display:none}
 </style>
 </head>
@@ -125,6 +163,15 @@ footer{font-size:11.5px;color:var(--faint);text-align:center;margin-top:22px;lin
   <symbol id="i-power" viewBox="0 0 24 24"><path d="M12 3v8"/><path d="M6.3 7.3a8 8 0 1011.4 0"/></symbol>
   <symbol id="i-layers" viewBox="0 0 24 24"><path d="M5 9h14M5 15h14"/><path d="M5 5h14v14H5z"/></symbol>
   <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
+  <symbol id="i-flask" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 9a2 2 0 001.7 3h10.6a2 2 0 001.7-3l-5-9V3"/><path d="M7.5 15h9"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></symbol>
+  <symbol id="i-sell" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5"/><path d="M5 20h14"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 6v12M6 12h12"/></symbol>
+  <symbol id="i-minus" viewBox="0 0 24 24"><path d="M6 12h12"/></symbol>
 </svg>
 
 <header>
@@ -134,6 +181,7 @@ footer{font-size:11.5px;color:var(--faint);text-align:center;margin-top:22px;lin
       <div class="ttl"><b>Masal</b><span>Kripto bot · OKX TR</span></div>
       <span class="chip" id="mode">Sanal mod</span>
       <button class="ibtn" id="reload" aria-label="Yenile"><svg class="i"><use href="#i-refresh"/></svg></button>
+      <button class="ibtn" id="openSet" aria-label="Ayarlar"><svg class="i"><use href="#i-gear"/></svg></button>
     </div>
     <div class="upd"><svg class="i"><use href="#i-clock"/></svg><span id="updated">Yükleniyor…</span></div>
   </div>
@@ -196,6 +244,28 @@ footer{font-size:11.5px;color:var(--faint);text-align:center;margin-top:22px;lin
 
   <footer id="foot"></footer>
 </main>
+
+<main class="wrap" id="setv" hidden>
+  <div class="sethead">
+    <button class="ibtn" id="closeSet" aria-label="Geri"><svg class="i"><use href="#i-back"/></svg></button>
+    <b>Ayarlar</b>
+    <span class="dirty" id="dirtyTag" hidden>Kaydedilmedi</span>
+  </div>
+
+  <section id="connSec">
+    <h2><svg class="i"><use href="#i-link"/></svg>GitHub bağlantısı</h2>
+    <div class="card" id="conn"></div>
+  </section>
+
+  <div id="setForm"></div>
+
+  <div class="savebar" id="savebar" hidden>
+    <span><svg class="i"><use href="#i-info"/></svg>Kaydedilmemiş değişiklik var</span>
+    <button class="btn" id="undo">Vazgeç</button>
+    <button class="btn primary" id="save"><svg class="i"><use href="#i-check"/></svg>Kaydet</button>
+  </div>
+</main>
+<div class="toast" id="toast" hidden></div>
 
 <script>
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
@@ -347,6 +417,143 @@ function renderChart(){
 document.getElementById('seg').onclick=e=>{const b=e.target.closest('button');if(!b)return;view=b.dataset.v;
   document.querySelectorAll('#seg button').forEach(x=>x.classList.toggle('on',x===b));renderChart()};
 document.getElementById('reload').onclick=load;
+/* ---------------- Ayarlar ---------------- */
+const REPO=(()=>{const h=location.hostname,m=h.match(/^([^.]+)\.github\.io$/);const seg=location.pathname.split('/').filter(Boolean)[0];
+  return m&&seg?{o:m[1],r:seg}:{o:'tcmustafacelik',r:'masal'}})();
+const API=`https://api.github.com/repos/${REPO.o}/${REPO.r}/contents/docs/ayarlar.json`;
+let token=localStore('masal_token')||'',orig=null,draft=null,sha=null,sellArm=0;
+const SNAMES={grid:'Kademeli',dip:'Düşüşte al',trend:'Trend takibi'};
+const P=(o,k)=>k.split('.').reduce((a,x)=>a?.[x],o);
+const SETP=(o,k,v)=>{const ks=k.split('.');const last=ks.pop();ks.reduce((a,x)=>a[x],o)[last]=v};
+const pctTL=(p)=>tl((draft.budget||0)*p/100,0);
+const SECTIONS=[
+ {t:'Kasa',i:'i-wallet',f:[
+  ['budget','Bottaki başlangıç parası','Bot kasadan bu kadarla işlem yapar','TL',100,100,1e7,0],
+  ['kasa','Kasa','Hesaptaki toplam para; bot bunu asla aşmaz','TL',500,500,1e8,0]]},
+ {t:'Kasadan ekleme',i:'i-plus',f:[
+  ['topup.amount','Ekleme tutarı','Kâr hedefi her tuttuğunda kasadan eklenir','TL',100,0,1e7,0],
+  ['topup.profit_pct','Kâr hedefi','Son eklemeden beri bu kadar kâr olunca','%',.5,.5,100,1],
+  ['topup.days','Bekleme süresi','İki ekleme arasında en az','gün',1,0,365,0]]},
+ {t:'Koruma',i:'i-shield',f:[
+  ['risk.stop_pct','Zarar sınırı','İşlem bu kadar zarara geçince otomatik satılır','%',.5,.5,50,1],
+  ['risk.daily_loss_pct','Günlük kayıp sınırı',()=>`Bottaki paranın; şu an ${pctTL(draft.risk.daily_loss_pct)}. Aşılırsa o gün yeni alım yok`,'%',.5,.5,50,1],
+  ['risk.kill_pct','Acil fren',()=>`Bottaki para bu kadar eriyince her şey satılır ve bot durur (${tl(draft.budget*(1-draft.risk.kill_pct/100),0)} altı)`,'%',1,1,90,0],
+  ['risk.max_positions','En fazla pozisyon','Aynı anda açık tutulacak coin sayısı','adet',1,1,30,0],
+  ['risk.trade_pct','İşlem büyüklüğü',()=>`Düşüşte al ve Trend için bottaki paranın; şu an ${pctTL(draft.risk.trade_pct)}`,'%',1,1,100,0]]},
+];
+const STRAT_F={
+ grid:[['grid.step_pct','Kademe aralığı','Fiyat bu kadar düşünce bir kademe daha alınır','%',.5,.5,20,1],
+  ['grid.lot_pct','Kademe büyüklüğü',()=>`Bottaki paranın; şu an ${pctTL(draft.grid.lot_pct)}`,'%',.5,.5,50,1],
+  ['grid.lot_tp_pct','Kademe kârı','Her kademe bu kârla ayrı satılır','%',.5,.5,50,1],
+  ['grid.max_lots','En fazla kademe','Bir coinde','adet',1,1,10,0],
+  ['grid.max_coins','En fazla coin','Aynı anda kademeli alınan','adet',1,1,20,0],
+  ['grid.stop_pct','Toplu zarar sınırı','Ortalama maliyetin bu kadar altında tüm kademeler satılır','%',.5,1,50,1]],
+ dip:[['dip.dip_pct','Düşüş eşiği','Fiyat 20 saatlik ortalamanın bu kadar altına inince','%',.5,.5,30,1],
+  ['dip.rsi_max','Aşırı satım eşiği','RSI bu değerin altındayken alınır','',1,5,60,0],
+  ['dip.take_profit_pct','Kâr hedefi','Bu kâra ulaşınca satılır','%',.5,.5,50,1],
+  ['dip.max_hold_hours','En uzun bekleme','Bu süre dolunca satılır','saat',1,1,500,0]],
+ trend:[['trend.trailing_pct','İz süren stop','Fiyat zirveden bu kadar geri çekilince satılır','%',.5,.5,30,1]],
+};
+
+function field([k,label,hint,u,step,min,max,dec]){
+  const v=P(draft,k),h=typeof hint==='function'?hint():hint;
+  return `<div class="field" data-k="${k}"><div class="lb"><b>${label}</b><span class="h">${h}</span><em></em></div>
+   <div class="step"><button data-d="-1" aria-label="Azalt">${ic('i-minus')}</button>
+   <input inputmode="decimal" value="${String(v).replace('.',',')}" data-step="${step}" data-min="${min}" data-max="${max}" data-dec="${dec}">
+   <span class="u">${u}</span><button data-d="1" aria-label="Artır">${ic('i-plus')}</button></div></div>`}
+
+function tile(on,key,icon,name,sub){return `<button class="tile ${on?'on':''}" data-t="${key}"><span class="ic">${ic(icon)}</span><span class="nm">${name}</span>${sub?`<span class="pc" style="color:var(--muted);font-weight:500">${sub}</span>`:''}</button>`}
+
+function renderConn(){
+  const c=document.getElementById('conn');
+  c.innerHTML=token?`<div class="field" style="padding:0"><div class="lb"><b style="display:flex;gap:6px;align-items:center;color:var(--green)">${ic('i-check')}Bağlı</b><span>${REPO.o}/${REPO.r} · ayarlar Kaydet ile buraya yazılır</span></div><button class="btn" id="unlink">Kaldır</button></div>`
+  :`<div style="font-size:13px">Ayarları kaydedebilmek için bir kereye mahsus GitHub erişim anahtarı gir. Anahtar sadece bu telefonda saklanır.</div>
+    <input class="inp" id="tok" type="password" placeholder="github_pat_…" autocomplete="off">
+    <button class="btn primary" id="link" style="width:100%">${ic('i-link')}Bağlan</button>
+    <ol class="steps"><li>GitHub'da <b>Settings → Developer settings → Fine-grained tokens → Generate new token</b></li>
+    <li><b>Repository access:</b> Only select repositories → <b>${REPO.r}</b></li><li><b>Permissions → Contents:</b> Read and write</li><li>Oluşan anahtarı kopyalayıp yukarıya yapıştır</li></ol>`;
+  const u=document.getElementById('unlink');if(u)u.onclick=()=>{token='';localStorage.removeItem('masal_token');renderConn()};
+  const l=document.getElementById('link');if(l)l.onclick=async()=>{const t=document.getElementById('tok').value.trim();if(!t)return toast('Anahtarı yapıştır');
+    l.textContent='Kontrol ediliyor…';try{const r=await fetch(API,{headers:{Authorization:'Bearer '+t,Accept:'application/vnd.github+json'}});
+      if(!r.ok)throw r.status;token=t;localStore('masal_token',t);await loadSettings();toast('Bağlandı')}catch(e){toast(e===404?'Depo ya da dosya bulunamadı: izinleri kontrol et':'Anahtar geçersiz ya da yetkisi yok');renderConn()}};
+}
+
+function renderForm(){
+  const live=draft.live,ch=JSON.stringify(orig)!==JSON.stringify(draft);
+  let h=`<section><h2>${ic('i-power')}Çalışma</h2>
+   <div class="tiles two" data-g="mode">${tile(!live,'demo','i-flask','Deneme','Emir gönderilmez')}${tile(live,'real','i-coins','Gerçek','OKX TR hesabında')}</div>
+   ${live&&!orig.live?`<div class="warn">${ic('i-info')}<div>Kaydedince bot OKX TR hesabında <b>gerçek emir</b> vermeye başlar. API anahtarı GitHub Secrets'ta olmalı.</div></div>`:''}
+   ${!live&&orig.live?`<div class="warn">${ic('i-info')}<div>Denemeye geçince hesaptaki coinler bot tarafından satılmaz. Gerekirse önce aşağıdan <b>Hepsini sat</b>.</div></div>`:''}
+   <div class="card" style="margin-top:8px"><div class="sw ${draft.paused?'on':''}" id="pauseSw"><div class="lb"><b style="font-size:13.5px">Botu durdur</b><span style="font-size:11.5px;color:var(--muted);display:block">Yeni alım yapılmaz; açık pozisyonların zarar sınırı çalışmaya devam eder</span></div><div class="track"><i></i></div></div>
+   <div class="field" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line2)"><div class="lb"><b>Hepsini sat ve dur</b><span>Gerçek hesaptaki tüm coinleri hemen satar, botu durdurur</span></div>
+   <button class="btn danger ${sellArm?'arm':''}" id="sellAll">${ic('i-sell')}${sellArm?'Emin misin? Dokun':'Hepsini sat'}</button></div></div></section>
+   <section><h2>${ic('i-target')}Strateji</h2><div class="tiles" data-g="strat">${['grid','dip','trend'].map(k=>tile(draft.strategy===k,k,ICON[k],SNAMES[k])).join('')}</div>
+   ${draft.strategy!==orig.strategy&&orig.live?`<div class="warn">${ic('i-info')}<div>Gerçek modda strateji değişince eski stratejinin açık coinleri satılır, yeni strateji temiz başlar.</div></div>`:''}</section>`;
+  for(const sec of SECTIONS)h+=`<section><h2>${ic(sec.i)}${sec.t}</h2><div class="card">${sec.f.map(field).join('')}</div></section>`;
+  h+=`<section><h2>${ic(ICON[draft.strategy])}${SNAMES[draft.strategy]} ayarları</h2><div class="card">${STRAT_F[draft.strategy].map(field).join('')}</div></section>`;
+  const f=document.getElementById('setForm');f.innerHTML=h;
+  f.querySelectorAll('[data-g=mode] .tile').forEach(b=>b.onclick=()=>{draft.live=b.dataset.t==='real';renderForm()});
+  f.querySelectorAll('[data-g=strat] .tile').forEach(b=>b.onclick=()=>{draft.strategy=b.dataset.t;renderForm()});
+  document.getElementById('pauseSw').onclick=()=>{draft.paused=!draft.paused;renderForm()};
+  document.getElementById('sellAll').onclick=()=>{if(!sellArm){sellArm=setTimeout(()=>{sellArm=0;renderForm()},4000);return renderForm()}
+    clearTimeout(sellArm);sellArm=0;const keep=JSON.parse(JSON.stringify(orig));keep.liquidate=Date.now();keep.paused=true;save(keep,'Hepsini sat isteği gönderildi; bot 1-2 dakika içinde satar ve durur.')};
+  f.querySelectorAll('.field[data-k]').forEach(el=>{const k=el.dataset.k,inp=el.querySelector('input');
+    const set=(raw,fromBtn)=>{const st=+inp.dataset.step,mn=+inp.dataset.min,mx=+inp.dataset.max,dc=+inp.dataset.dec;
+      const r0=String(raw).trim();let v=dc>0?parseFloat(r0.replace(',','.')):parseFloat(r0.replace(/[.,\s]/g,''));
+      const em=el.querySelector('em');
+      if(isNaN(v)||v<mn||v>mx){el.querySelector('.step').classList.add('bad');em.textContent=`${nf(mn,dc)} ile ${nf(mx,dc)} arasında olmalı`;draft._bad=(draft._bad||new Set()).add(k)}
+      else{el.querySelector('.step').classList.remove('bad');em.textContent='';draft._bad?.delete(k);v=+v.toFixed(dc);SETP(draft,k,v);if(fromBtn)inp.value=String(v).replace('.',',')}
+      refresh()};
+    inp.oninput=()=>set(inp.value);inp.onblur=()=>{if(!draft._bad?.has(k))inp.value=String(P(draft,k)).replace('.',',')};
+    el.querySelectorAll('button[data-d]').forEach(b=>b.onclick=()=>{const st=+inp.dataset.step;let v=P(draft,k)+(+b.dataset.d)*st;
+      v=Math.min(+inp.dataset.max,Math.max(+inp.dataset.min,v));set(String(+v.toFixed(+inp.dataset.dec)).replace('.',','),true)});
+  });
+  refresh();
+}
+
+function clean(o){const c=JSON.parse(JSON.stringify(o,(k,v)=>k==='_bad'?undefined:v));return c}
+function refresh(){
+  const d=clean(draft),ch=JSON.stringify(orig)!==JSON.stringify(d);
+  document.getElementById('savebar').hidden=!ch;document.getElementById('dirtyTag').hidden=!ch;
+  document.querySelectorAll('.field[data-k]').forEach(el=>{const k=el.dataset.k;
+    el.querySelector('.step').classList.toggle('changed',P(orig,k)!==P(d,k));
+    const all=[...SECTIONS.flatMap(s=>s.f),...Object.values(STRAT_F).flat()].find(f=>f[0]===k);
+    if(all&&typeof all[2]==='function')el.querySelector('.h').textContent=all[2]()});
+}
+
+async function loadSettings(){
+  try{
+    if(token){const r=await fetch(API+'?t='+Date.now(),{headers:{Authorization:'Bearer '+token,Accept:'application/vnd.github+json'},cache:'no-store'});
+      if(!r.ok)throw r.status;const j=await r.json();sha=j.sha;orig=JSON.parse(decodeURIComponent(escape(atob(j.content.replace(/\n/g,'')))))}
+    else{orig=await fetch('ayarlar.json?t='+Date.now()).then(r=>r.json())}
+  }catch(e){orig=S?.settings||null;if(e===401){token='';localStorage.removeItem('masal_token');toast('GitHub anahtarının süresi dolmuş, yeniden bağlan')}}
+  if(!orig){document.getElementById('setForm').innerHTML=`<div class="empty">${ic('i-info')}<div>Ayarlar yüklenemedi</div></div>`;return}
+  draft=JSON.parse(JSON.stringify(orig));renderConn();renderForm();
+}
+
+async function save(obj,msg){
+  if(!token){toast('Kaydetmek için önce GitHub bağlantısını kur');document.getElementById('connSec').scrollIntoView({behavior:'smooth'});return}
+  if(draft._bad&&draft._bad.size&&obj===undefined){toast('Kırmızı alanları düzelt');return}
+  const data=obj||clean(draft),btn=document.getElementById('save');btn.textContent='Kaydediliyor…';
+  try{
+    const cur=await fetch(API+'?t='+Date.now(),{headers:{Authorization:'Bearer '+token,Accept:'application/vnd.github+json'},cache:'no-store'}).then(r=>{if(!r.ok)throw r.status;return r.json()});
+    const body={message:'Ayarlar uygulamadan güncellendi',content:btoa(unescape(encodeURIComponent(JSON.stringify(data,null,2)+'\n'))),sha:cur.sha,branch:'main'};
+    const r=await fetch(API,{method:'PUT',headers:{Authorization:'Bearer '+token,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(!r.ok)throw r.status;sha=(await r.json()).content.sha;orig=JSON.parse(JSON.stringify(data));draft=JSON.parse(JSON.stringify(data));
+    renderForm();toast(msg||'Kaydedildi. Bot 1-2 dakika içinde yeni ayarlarla çalışır.');
+  }catch(e){toast(e===401||e===403?'Yetki hatası: anahtarın Contents yazma izni olmalı':'Kaydedilemedi, tekrar dene ('+e+')')}
+  finally{btn.innerHTML=ic('i-check')+'Kaydet'}
+}
+
+let toastT;function toast(t){const el=document.getElementById('toast');el.textContent=t;el.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>el.hidden=true,3800)}
+function showSettings(on){document.querySelector('main.wrap:not(#setv)').hidden=on;document.getElementById('setv').hidden=!on;
+  document.querySelector('header').hidden=on;scrollTo(0,0);if(on)loadSettings()}
+document.getElementById('openSet').onclick=()=>showSettings(true);
+document.getElementById('closeSet').onclick=()=>{if(draft&&JSON.stringify(orig)!==JSON.stringify(clean(draft))&&!confirmLeave())return;showSettings(false)};
+let leaveArm=0;function confirmLeave(){if(leaveArm)return true;leaveArm=1;toast('Kaydedilmemiş değişiklik var. Çıkmak için geri tuşuna tekrar dokun.');setTimeout(()=>leaveArm=0,3500);return false}
+document.getElementById('save').onclick=()=>save();
+document.getElementById('undo').onclick=()=>{draft=JSON.parse(JSON.stringify(orig));renderForm()};
+
 load();
 </script>
 </body>

@@ -8,7 +8,23 @@ from .engine import Portfolio
 OUT = os.path.join(os.path.dirname(__file__), "..", "docs", "data", "summary.json")
 
 
-def build(state):
+def tr(v):
+    return f"{v:,.0f}".replace(",", ".")
+
+
+def describe(key, c):
+    pct = lambda v: f"%{v * 100:g}".replace(".", ",")
+    if key == "grid":
+        return (f"Her {pct(c['step'])} düşüşte küçük bir kademe daha alır (en fazla {c['max_lots']}), "
+                f"her kademeyi {pct(c['lot_tp'])} kârla ayrı satar.")
+    if key == "dip":
+        return (f"Fiyat 20 saatlik ortalamanın {pct(c['dip_pct'])} altına inip aşırı satımdayken alır; "
+                f"{pct(c['take_profit'])} kârda ya da {c['max_hold_bars']} saat dolunca satar.")
+    return (f"Kısa ortalama uzun ortalamayı yukarı kesip fiyat ana trendin üstündeyken girer; "
+            f"zirveden {pct(c['trailing'])} geri çekilince çıkar.")
+
+
+def build(state, S=None):
     strategies = {}
     items = list(state["portfolios"].items())
     if state.get("live"):
@@ -35,10 +51,10 @@ def build(state):
         live = key == "live"
         strategies[key] = {
             "name": "Gerçek hesap" if live else cfg["name"],
-            "desc": (f"{cfg['name']} stratejisi gerçek OKX TR hesabında, {start:,.0f} TL bütçeyle. "
-                     + ("Emirler gerçek." if s.get("armed") else "Şu an deneme modunda: emir gönderilmiyor.")) if live else cfg["desc"],
+            "desc": (f"{cfg['name']} stratejisi gerçek OKX TR hesabında, {tr(start)} TL bütçeyle. "
+                     + ("Emirler gerçek." if s.get("armed") else "Şu an deneme modunda: emir gönderilmiyor.")) if live else describe(s["key"], p.cfg),
             "live": live, "armed": bool(s.get("armed")), "start_cash": start, "log": s.get("log", [])[-20:][::-1],
-            "kasa": s.get("kasa"), "base": s.get("base"), "topups": s.get("topups", 0),
+            "paused": bool(s.get("paused")), "kasa": s.get("kasa"), "base": s.get("base"), "topups": s.get("topups", 0),
             "last_topup": s.get("last_topup"), "checkpoint": s.get("checkpoint"),
             "risk": dict(p.risk, lot=p.cfg.get("lot")),
             "equity": round(eq, 2), "cash": round(s["cash"], 2),
@@ -56,7 +72,7 @@ def build(state):
         "updated": state.get("updated"), "created": state.get("created"),
         "mode": "Sanal", "start_cash": config.START_CASH,
         "risk": config.RISK, "fee": config.FEE_RATE, "slippage": config.SLIPPAGE,
-        "universe": state.get("universe", []), "strategies": strategies,
+        "universe": state.get("universe", []), "strategies": strategies, "settings": S,
     }
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, separators=(",", ":"))

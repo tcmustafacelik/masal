@@ -29,18 +29,15 @@ RISK = {
 STRATEGIES = {
     "dip": {
         "name": "Düşüşte al",
-        "desc": "Fiyat ortalamanın belirgin altına inip aşırı satımdayken alır, hedefte ya da süre dolunca satar.",
         "sma": 20, "rsi": 14, "dip_pct": 0.03, "rsi_max": 35,
         "take_profit": 0.04, "max_hold_bars": 48,
     },
     "trend": {
         "name": "Trend takibi",
-        "desc": "Kısa ortalama uzun ortalamayı yukarı kesip fiyat ana trendin üstündeyken girer, iz süren stopla çıkar.",
         "fast": 12, "slow": 26, "base": 50, "trailing": 0.04,
     },
     "grid": {
         "name": "Kademeli",
-        "desc": "Her %2 düşüşte küçük bir kademe daha alır (en fazla 3), her kademeyi %2,5 kârla ayrı satar.",
         "step": 0.02, "lot": 400.0, "max_lots": 3, "lot_tp": 0.025, "max_coins": 3,
         "stop": 0.07,  # ortalama maliyetin %7 altında tüm kademeler satılır
     },

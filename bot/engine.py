@@ -106,7 +106,7 @@ class Portfolio:
             del self.s["positions"][inst]
 
     def _can_open(self):
-        return (not self.s["halted"] and not self.s["blocked_today"]
+        return (not self.s["halted"] and not self.s["blocked_today"] and not self.s.get("paused")
                 and len(self.s["positions"]) < self.risk["max_positions"]
                 and self.s["cash"] >= 50)
 
@@ -194,6 +194,7 @@ class Portfolio:
             if price <= avg * (1 - c["stop"]):
                 self._sell_lots(ts, inst, price, list(pos["lots"]), "Zarar sınırı")
             elif (len(pos["lots"]) < c["max_lots"] and not self.s["halted"] and not self.s["blocked_today"]
+                  and not self.s.get("paused")
                   and price <= pos["lots"][-1]["entry"] * (1 - c["step"])):
                 self._buy(ts, inst, price, c["lot"], f"{len(pos['lots']) + 1}. kademe")
             return
