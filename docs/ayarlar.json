@@ -1,6 +1,6 @@
 {
   "live": false,
-  "paused": false,
+  "paused": true,
   "liquidate": 0,
   "strategy": "grid",
   "interval_min": 10,
