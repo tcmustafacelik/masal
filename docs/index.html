@@ -73,6 +73,16 @@ header{position:sticky;top:0;z-index:5;background:var(--header-bg);backdrop-filt
 .ttl{flex:1;min-width:0}
 .ttl b{display:block;font-size:16px;font-weight:600;letter-spacing:.2px}
 .ttl span{font-size:12px;color:var(--muted)}
+.mode{display:flex;align-items:center;gap:7px;padding:4px 10px 4px 4px;border-radius:9px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font:inherit;color:var(--text);text-align:left;flex:none}
+.mode .mi{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;flex:none;background:var(--amber-bg);color:var(--amber)}
+.mode .mi svg{width:15px;height:15px}
+.mode b{display:block;font-size:12px;font-weight:700;line-height:1.15}.mode small{display:block;font-size:10px;color:var(--muted);line-height:1.2}
+.mode.real{border-color:color-mix(in srgb,var(--green) 35%,var(--line))}.mode.real .mi{background:var(--green-bg);color:var(--green);position:relative}
+.mode.real .mi::after{content:"";position:absolute;inset:-1px;border-radius:8px;border:1.5px solid var(--green);opacity:0;animation:mpulse 2.4s ease-out infinite}
+@keyframes mpulse{0%{opacity:.7;transform:scale(.85)}100%{opacity:0;transform:scale(1.25)}}
+.mode.halt .mi{background:var(--red-bg);color:var(--red)}
+@media (max-width:370px){.mode small{display:none}.ttl span{display:none}}
+.ttl span{white-space:nowrap}
 .chip{font-size:11.5px;font-weight:600;padding:3px 8px;border-radius:6px;background:var(--blue-bg);color:var(--blue);white-space:nowrap}
 .ibtn{width:36px;height:36px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--surface);color:var(--muted);display:grid;place-items:center;cursor:pointer}
 .ibtn:active{transform:scale(.96)}
@@ -139,8 +149,9 @@ h2 svg.i{width:15px;height:15px}
 .rule b{font-size:13.5px;display:block;font-variant-numeric:tabular-nums}
 .rule span{font-size:11.5px;color:var(--muted);line-height:1.3;display:block}
 footer{font-size:11.5px;color:var(--faint);text-align:center;margin-top:22px;line-height:1.5}
-.tag{display:block;margin:3px auto 0;width:max-content;font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:5px;background:var(--line2);color:var(--muted)}
-.tag.real{background:var(--green-bg);color:var(--green)}
+.tag{display:flex;align-items:center;justify-content:center;gap:4px;margin:3px auto 0;font-size:10.5px;font-weight:600;color:var(--muted)}
+.tag svg{width:12px;height:12px}.tag.real{color:var(--green)}
+.tag.real i{width:6px;height:6px;border-radius:2px;background:var(--green);animation:blink 1.6s ease-in-out infinite}
 .kasa{margin-top:8px}
 .kasa .top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px}
 .kasa .top b{font-size:14px;display:flex;align-items:center;gap:7px}
@@ -278,7 +289,7 @@ footer{font-size:11.5px;color:var(--faint);text-align:center;margin-top:22px;lin
     <div class="bar">
       <div class="logo" id="logo"><svg class="lg" viewBox="0 0 48 48" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="hbg" x1="0" y1="0" x2="0" y2="48" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1E2C4A"/><stop offset="1" stop-color="#111A2E"/></linearGradient><linearGradient id="hsh" x1="0" y1="0" x2="12" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".22"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient><clipPath id="hcl"><rect width="48" height="48" rx="12"/></clipPath></defs><rect width="48" height="48" rx="12" fill="url(#hbg)"/><rect x=".5" y=".5" width="47" height="47" rx="11.5" fill="none" stroke="#fff" stroke-opacity=".08"/><polygon class="s1" points="11,35 11,13 17,13 17,35" fill="#FFFFFF" stroke="#FFFFFF" stroke-width=".6" stroke-linejoin="round"/><polygon class="s2" points="11,13 17,13 24,21.5 24,29.5" fill="#C7D3E8" stroke="#C7D3E8" stroke-width=".6" stroke-linejoin="round"/><polygon class="s3" points="37,13 31,13 24,21.5 24,29.5" fill="#F4BE6A" stroke="#F4BE6A" stroke-width=".6" stroke-linejoin="round"/><polygon class="s4" points="31,13 37,13 37,35 31,35" fill="#E39A2E" stroke="#E39A2E" stroke-width=".6" stroke-linejoin="round"/><g clip-path="url(#hcl)"><rect class="shine" x="0" y="-6" width="12" height="60" fill="url(#hsh)"/></g><rect x="1" y="1" width="46" height="46" rx="11" fill="none" stroke="#E39A2E" stroke-opacity=".18" stroke-width="1.4"/><rect class="orb" x="1" y="1" width="46" height="46" rx="11" pathLength="100" fill="none" stroke="#F6C46E" stroke-width="1.8" stroke-linecap="round" stroke-dasharray="20 80"/><rect class="orb o2" x="1" y="1" width="46" height="46" rx="11" pathLength="100" fill="none" stroke="#F6C46E" stroke-opacity=".35" stroke-width="1.8" stroke-linecap="round" stroke-dasharray="20 80"/></svg></div>
       <div class="ttl"><b>Masal</b><span>Senin için çalışır</span></div>
-      <span class="chip" id="mode">Sanal mod</span>
+      <button class="mode" id="mode" aria-label="Çalışma modu"></button>
       <button class="ibtn" id="reload" aria-label="Yenile"><svg class="i"><use href="#i-refresh"/></svg></button>
       <button class="ibtn" id="openSet" aria-label="Ayarlar"><svg class="i"><use href="#i-gear"/></svg></button>
     </div>
@@ -395,7 +406,7 @@ footer{font-size:11.5px;color:var(--faint);text-align:center;margin-top:22px;lin
 <div class="toast" id="toast" hidden></div>
 
 <script>
-const APP_VERSION='1.11.0';
+const APP_VERSION='1.11.1';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -454,14 +465,20 @@ async function load(quiet){lastLoad=Date.now();
 function render(){
   updLine();
   const L=S.strategies.live;
-  document.getElementById('mode').textContent=L?(L.armed?'Gerçek mod':'Deneme modu'):'Sanal mod';
+  {const m=document.getElementById('mode'),halt=L&&L.halted,real=L&&L.armed;
+   m.className='mode'+(halt?' halt':real?' real':'');
+   m.innerHTML=halt?`<span class="mi">${ic('i-stop')}</span><span><b>Durdu</b><small>Acil fren</small></span>`
+     :L&&L.paused?`<span class="mi">${ic('i-pause')}</span><span><b>Beklemede</b><small>Yeni alım yok</small></span>`
+     :real?`<span class="mi">${ic('i-coins')}</span><span><b>Gerçek</b><small>OKX TR'de</small></span>`
+     :`<span class="mi">${ic('i-flask')}</span><span><b>Deneme</b><small>Emir gitmez</small></span>`;
+   m.onclick=()=>document.getElementById('openSet').click()}
   document.getElementById('foot').innerHTML='Fiyatlar uygulama açıkken OKX TR\'den anlık güncellenir; bot '+((S.settings?.interval_min||5)>=60?'saatte bir':(S.settings?.interval_min||5)+' dakikada bir')+' kontrol eder.<br>'+(L&&L.armed?'Gerçek hesap kartı OKX TR hesabındaki gerçek işlemleri gösterir; diğerleri sanal karşılaştırmadır.':'Gerçek para kullanılmıyor; tüm işlemler sanal.');
   const keys=Object.keys(S.strategies);
   const tg=document.getElementById('tiles');tg.style.gridTemplateColumns=`repeat(${keys.length===4?2:3},minmax(0,1fr))`;
   tg.innerHTML=keys.map(k=>{const x=S.strategies[k];
     const sub=x.locked?`<span class="pc" style="color:var(--muted)">${ic('i-lock')} Kilitli</span>`:`<span class="pc ${cls(x.pnl_pct)}">${x.pnl_pct>0?'+':''}${nf(x.pnl_pct)}%</span>`;
     return `<button class="tile ${k===sel?'on':''}" data-k="${k}"><span class="ic">${ic(ICON[k])}</span>
-      <span class="nm">${x.name}${x.live?`<small class="tag ${x.armed?'real':''}">${x.armed?'Gerçek':'Deneme'}</small>`:''}</span>${sub}</button>`}).join('');
+      <span class="nm">${x.name}${x.live?`<small class="tag ${x.armed?'real':''}">${x.armed?'<i></i>Canlı emir':ic('i-flask')+'Deneme'}</small>`:''}</span>${sub}</button>`}).join('');
   tg.querySelectorAll('.tile').forEach(el=>el.onclick=()=>{sel=el.dataset.k;localStore('masal_sel',sel);render();pollMarket(true)});
   const x=S.strategies[sel];
   const locked=!!x.locked;

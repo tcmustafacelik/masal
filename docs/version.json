@@ -1,9 +1,7 @@
 {
-  "version": "1.11.0",
+  "version": "1.11.1",
   "date": "2026-11-18",
   "notes": [
-    "Coin logoları",
-    "Tur sıklığında 5 dakika seçeneği (varsayılan)",
-    "Uygulama yeni tur bitince kendiliğinden yenilenir"
+    "Yeni mod göstergesi (Deneme / Gerçek / Beklemede)"
   ]
 }
