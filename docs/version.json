@@ -1,9 +1,8 @@
 {
-  "version": "1.12.0",
+  "version": "1.13.0",
   "date": "2026-11-18",
   "notes": [
-    "Bot kesintisiz çalışır: ~20 saniyede bir kontrol",
-    "Ayarlar ~20 saniyede uygulanır, uygulama yeni veriyi saniyeler içinde gösterir",
-    "Bot durursa üst satırda kırmızı uyarı"
+    "PIN korumalı bağlantı linki",
+    "Animasyonlu PIN girişi"
   ]
 }

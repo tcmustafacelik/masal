@@ -32,6 +32,34 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 [hidden]{display:none!important}
+.pinv{position:fixed;inset:0;z-index:70;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 20px calc(24px + env(safe-area-inset-bottom));animation:pinIn .3s cubic-bezier(.2,.8,.2,1)}
+.pinv.out{animation:pinOut .25s ease forwards}
+@keyframes pinIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes pinOut{to{opacity:0;transform:translateY(10px)}}
+.pinv .plg{width:52px;height:52px;margin-bottom:16px}
+.pinv h3{font-size:18px;font-weight:700;text-align:center}
+.pinv p{font-size:13px;color:var(--muted);text-align:center;margin-top:6px;max-width:300px;line-height:1.45}
+.pbox{display:flex;gap:9px;margin:24px 0 6px}
+.pbox i{width:40px;height:50px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);display:grid;place-items:center;transition:border-color .15s,box-shadow .15s,background .2s}
+.pbox i.cur{border-color:var(--amber);box-shadow:0 0 0 3px var(--amber-bg)}
+.pbox i.f::after{content:"";width:12px;height:12px;border-radius:50%;background:var(--text);animation:dotIn .22s cubic-bezier(.3,1.6,.5,1)}
+@keyframes dotIn{from{transform:scale(0)}to{transform:scale(1)}}
+.pbox.shake{animation:shake .42s}
+@keyframes shake{20%,60%{transform:translateX(-9px)}40%,80%{transform:translateX(9px)}}
+.pbox.bad i{border-color:var(--red)}.pbox.bad i.f::after{background:var(--red)}
+.pbox.ok i{border-color:var(--green);background:var(--green-bg)}.pbox.ok i.f::after{background:var(--green)}
+.pbox.ok i:nth-child(n){animation:okUp .35s ease both}
+.pbox.ok i:nth-child(2){animation-delay:.04s}.pbox.ok i:nth-child(3){animation-delay:.08s}.pbox.ok i:nth-child(4){animation-delay:.12s}.pbox.ok i:nth-child(5){animation-delay:.16s}.pbox.ok i:nth-child(6){animation-delay:.2s}
+@keyframes okUp{50%{transform:translateY(-6px)}}
+.perr{color:var(--red);font-size:12.5px;font-weight:600;min-height:18px;text-align:center}
+.pkeys{display:grid;grid-template-columns:repeat(3,74px);gap:12px;margin-top:14px}
+.pkeys button{height:58px;border-radius:14px;border:1px solid var(--line);background:var(--surface);font:600 22px/1 system-ui,-apple-system,sans-serif;color:var(--text);cursor:pointer;transition:transform .08s,background .15s;-webkit-tap-highlight-color:transparent}
+.pkeys button:active{transform:scale(.9);background:var(--amber-bg)}
+.pkeys button.ghost{border-color:transparent;background:transparent;font-size:13px;color:var(--muted)}
+.pkeys button svg{width:22px;height:22px}
+.pinv .lnk{width:100%;max-width:340px;margin-top:20px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px;font:12px/1.4 ui-monospace,monospace;color:var(--muted);word-break:break-all;max-height:84px;overflow:hidden}
+.pinv .pact{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;max-width:340px;margin-top:10px}
+.pinv .pdone{width:100%;max-width:340px;margin-top:8px}
 html{-webkit-text-size-adjust:100%}
 body{background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   padding:0 0 calc(24px + env(safe-area-inset-bottom))}
@@ -279,6 +307,7 @@ footer{font-size:11.5px;color:var(--faint);text-align:center;margin-top:22px;lin
   <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4L6 18M18 6l1.4-1.4"/></symbol>
   <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z"/></symbol>
   <symbol id="i-auto" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17a8.5 8.5 0 000-17z" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-del" viewBox="0 0 24 24"><path d="M9 5h10a2 2 0 012 2v10a2 2 0 01-2 2H9l-6-7 6-7z"/><path d="M12.5 9.5l5 5M17.5 9.5l-5 5"/></symbol>
   <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2h2"/></symbol>
 </svg>
 
@@ -406,7 +435,7 @@ footer{font-size:11.5px;color:var(--faint);text-align:center;margin-top:22px;lin
 <div class="toast" id="toast" hidden></div>
 
 <script>
-const APP_VERSION='1.12.0';
+const APP_VERSION='1.13.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -431,7 +460,7 @@ async function deriveKey(pw,salt,iter){const km=await crypto.subtle.importKey('r
   return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:iter,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['encrypt','decrypt'])}
 async function unseal(box,pw){const k=await deriveKey(pw,b64d(box.salt),box.iter||150000);
   return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:b64d(box.iv)},k,b64d(box.ct))))}
-async function seal(obj,pw){const salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12)),iter=150000;
+async function seal(obj,pw,iter=150000){const salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12));
   const k=await deriveKey(pw,salt,iter);const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},k,new TextEncoder().encode(JSON.stringify(obj)));
   return {enc:1,iter,salt:b64e(salt),iv:b64e(iv),ct:b64e(ct)}}
 let pw=localStore('masal_pw')||'';
@@ -735,14 +764,70 @@ function field([k,label,hint,u,step,min,max,dec]){
 
 function tile(on,key,icon,name,sub){return `<button class="tile ${on?'on':''}" data-t="${key}"><span class="ic">${ic(icon)}</span><span class="nm">${name}</span>${sub?`<span class="pc" style="color:var(--muted);font-weight:500">${sub}</span>`:''}</button>`}
 
+// ---- PIN girişi (animasyonlu) ----
+function pinPad(o){return new Promise(res=>{
+  const v=document.createElement('div');v.className='pinv';
+  const logo=document.querySelector('#logo .lg')?.outerHTML.replace(/id="h/g,'id="p').replace(/url\(#h/g,'url(#p')||'';
+  v.innerHTML=`<div class="plg">${logo}</div><h3>${o.title}</h3><p>${o.sub||''}</p>
+    <div class="pbox">${'<i></i>'.repeat(6)}</div><div class="perr">${o.err||''}</div>
+    <div class="pkeys">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-k="${n}">${n}</button>`).join('')}
+    <button class="ghost" data-k="x">${o.cancel===false?'':'Vazgeç'}</button><button data-k="0">0</button><button class="ghost" data-k="b" aria-label="Sil">${ic('i-del')}</button></div>`;
+  document.body.appendChild(v);
+  let val='',busy=false;const box=v.querySelector('.pbox'),err=v.querySelector('.perr');
+  const draw=()=>box.querySelectorAll('i').forEach((e,i)=>{e.className=(i<val.length?'f':'')+(i===val.length?' cur':'')});draw();
+  const close=r=>{document.removeEventListener('keydown',kd);v.classList.add('out');setTimeout(()=>v.remove(),250);res(r)};
+  const press=async k=>{if(busy)return;
+    if(k==='x'){if(o.cancel!==false)close(null);return}
+    if(k==='b'){val=val.slice(0,-1);box.classList.remove('bad');err.textContent='';draw();return}
+    if(val.length>=6)return;val+=k;box.classList.remove('bad');err.textContent='';draw();navigator.vibrate?.(8);
+    if(val.length<6)return;busy=true;
+    const r=o.check?await o.check(val):true;
+    if(r===true){box.classList.add('ok');setTimeout(()=>close(val),380)}
+    else{box.classList.add('bad','shake');err.textContent=typeof r==='string'?r:'Tekrar dene';navigator.vibrate?.([30,40,30]);
+      setTimeout(()=>{box.classList.remove('shake');val='';draw();busy=false;if(r===null)close(null)},450)}};
+  v.querySelectorAll('.pkeys button').forEach(b=>b.onclick=()=>press(b.dataset.k));
+  const kd=e=>{if(/^[0-9]$/.test(e.key))press(e.key);else if(e.key==='Backspace')press('b');else if(e.key==='Escape')press('x')};
+  document.addEventListener('keydown',kd);
+})}
+const b64u=s=>btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+const b64uD=s=>atob(s.replace(/-/g,'+').replace(/_/g,'/'));
+async function makeLink(){
+  const p1=await pinPad({title:'PIN belirle',sub:'Bağlantı linkini korumak için 6 haneli bir PIN seç. Linki açınca bu PIN sorulacak.'});if(!p1)return;
+  const p2=await pinPad({title:'PIN\'i tekrar gir',sub:'Aynı 6 haneyi bir kez daha gir.',check:v=>v===p1||'PIN\'ler aynı değil'});if(!p2)return;
+  const box=await seal({t:token,p:pw||''},p1,300000);
+  const link=location.origin+location.pathname+'#bag='+b64u(JSON.stringify(box));
+  const v=document.createElement('div');v.className='pinv';
+  v.innerHTML=`<div class="plg">${document.querySelector('#logo .lg')?.outerHTML.replace(/id="h/g,'id="q').replace(/url\(#h/g,'url(#q')||''}</div><h3>Bağlantı linkin hazır</h3>
+    <p>Notlar'a kaydet ya da kendine gönder. Dokununca Masal açılır, PIN'i girince GitHub'a bağlanır${pw?' ve gerçek hesabın kilidi açılır':''}. Linki kimseyle paylaşma.</p>
+    <div class="lnk">${link.slice(0,64)}…</div>
+    <div class="pact"><button class="btn" id="lkCopy">${ic('i-copy')}Kopyala</button><button class="btn" id="lkShare">${ic('i-link')}Paylaş</button></div>
+    <button class="btn primary pdone" id="lkOk">Tamam</button>`;
+  document.body.appendChild(v);
+  v.querySelector('#lkCopy').onclick=()=>navigator.clipboard?.writeText(link).then(()=>toast('Link kopyalandı'),()=>toast('Kopyalanamadı'));
+  v.querySelector('#lkShare').onclick=()=>navigator.share?navigator.share({title:'Masal bağlantı linki',url:link}).catch(()=>{}):navigator.clipboard?.writeText(link).then(()=>toast('Paylaşım yok; link kopyalandı'));
+  v.querySelector('#lkOk').onclick=()=>{v.classList.add('out');setTimeout(()=>v.remove(),250)};
+}
+async function openLink(){
+  const m=location.hash.match(/^#bag=([\w-]+)/);if(!m)return;
+  history.replaceState(null,'',location.pathname+location.search);
+  let box;try{box=JSON.parse(b64uD(m[1]))}catch(e){return toast('Bağlantı linki bozuk')}
+  let tries=0,got=null;
+  const ok=await pinPad({title:'PIN\'ini gir',sub:'Bağlantı linkini oluştururken seçtiğin 6 haneli PIN.',check:async v=>{
+    try{got=await unseal(box,v);return true}catch(e){tries++;return tries>=5?null:`PIN yanlış · ${5-tries} hakkın kaldı`}}});
+  if(!ok||!got){if(tries>=5)toast('Çok fazla yanlış deneme; link kullanılamadı');return}
+  token=got.t;localStore('masal_token',token);if(got.p){pw=got.p;localStore('masal_pw',pw)}
+  toast('Bağlandı');
+}
 function renderConn(){
   const c=document.getElementById('conn');
-  c.innerHTML=token?`<div class="field" style="padding:0"><div class="lb"><b style="display:flex;gap:6px;align-items:center;color:var(--green)">${ic('i-check')}Bağlı</b><span>${REPO.o}/${REPO.r} · ayarlar Kaydet ile buraya yazılır</span></div><button class="btn" id="unlink">Kaldır</button></div>`
+  c.innerHTML=token?`<div class="field" style="padding:0"><div class="lb"><b style="display:flex;gap:6px;align-items:center;color:var(--green)">${ic('i-check')}Bağlı</b><span>${REPO.o}/${REPO.r} · ayarlar Kaydet ile buraya yazılır</span></div><button class="btn" id="unlink">Kaldır</button></div>
+    <button class="btn" id="mkLink" style="width:100%;margin-top:12px">${ic('i-lock')}Bağlantı linki oluştur</button><div hidden></div>`
   :`<div style="font-size:13px">Ayarları kaydedebilmek için bir kereye mahsus GitHub erişim anahtarı gir. Anahtar sadece bu telefonda saklanır.</div>
     <input class="inp" id="tok" type="password" placeholder="github_pat_…" autocomplete="off">
     <button class="btn primary" id="link" style="width:100%">${ic('i-link')}Bağlan</button>
     <ol class="steps"><li>GitHub'da <b>Settings → Developer settings → Fine-grained tokens → Generate new token</b></li>
     <li><b>Repository access:</b> Only select repositories → <b>${REPO.r}</b></li><li><b>Permissions → Contents:</b> Read and write</li><li>Oluşan anahtarı kopyalayıp yukarıya yapıştır</li></ol>`;
+  const mk=document.getElementById('mkLink');if(mk)mk.onclick=makeLink;
   const u=document.getElementById('unlink');if(u)u.onclick=()=>{token='';localStorage.removeItem('masal_token');renderConn()};
   const l=document.getElementById('link');if(l)l.onclick=async()=>{const t=document.getElementById('tok').value.trim();if(!t)return toast('Anahtarı yapıştır');
     l.textContent='Kontrol ediliyor…';try{const r=await fetch(API,{headers:{Authorization:'Bearer '+t,Accept:'application/vnd.github+json'}});
@@ -924,7 +1009,7 @@ if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceW
 document.getElementById('save').onclick=()=>save();
 document.getElementById('undo').onclick=()=>{draft=JSON.parse(JSON.stringify(orig));renderForm()};
 
-load();
+(async()=>{await openLink();load()})();
 </script>
 </body>
 </html>
