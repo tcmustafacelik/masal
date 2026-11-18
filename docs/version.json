@@ -1,7 +1,7 @@
 {
-  "version": "1.23.1",
+  "version": "1.24.0",
   "date": "2026-11-19",
   "notes": [
-    "Güncellemeden sonra boş ekran kalması düzeltildi (sayfa ve kod artık hep aynı sürüm)"
+    "Anlık alım: fiyat alım seviyesine değdiği an alır, 15 dakikalık mumu beklemez"
   ]
 }

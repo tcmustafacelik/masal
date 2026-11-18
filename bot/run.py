@@ -188,6 +188,34 @@ def _candles(inst):
     return bars
 
 
+def instant_buys(live, series):
+    """Kademeli stratejide anlık alım: son kapanmış mumlara göre hesaplanan alım fiyatına
+    şimdiki fiyat değerse hemen alır. Kurallar mum kapanışındaki alımla aynıdır."""
+    c = live.cfg
+    if live.s["key"] != "grid" or not c.get("instant"):
+        return
+    w = watch(live, series)
+    if not w or not w["items"]:
+        return
+    prices = {t["instId"]: float(t["last"]) for t in okx.tickers() if t.get("last")}
+    ts = int(time.time() * 1000)
+    s = live.s
+    for it in sorted(w["items"], key=lambda x: (prices.get(x["i"], x["p"]) / x["t"])):
+        inst, price = it["i"], prices.get(it["i"])
+        if not price or it["f"] or price > it["t"]:
+            continue
+        if s["halted"] or s["blocked_today"] or s.get("paused") or not live._room(c["lot"]):
+            break
+        pos = s["positions"].get(inst)
+        if pos:
+            n = len(pos["lots"])
+            if n < c["max_lots"] and price <= pos["lots"][-1]["entry"] * (1 - c["step"]):
+                live._buy(ts, inst, price, c["lot"], f"{n + 1}. kademe · anlık")
+        elif live._can_open() and len(s["positions"]) < c["max_coins"]:
+            live._buy(ts, inst, price, c["lot"], "1. kademe · anlık")
+        s["last_prices"][inst] = price
+
+
 def signature(state, S):
     """Kaydedilmesi gereken bir değişiklik olup olmadığını anlamak için özet."""
     parts = []
@@ -264,6 +292,10 @@ def main():
     run_bars([live], live_events, series)
     liquidate(live, S)
     topup(live, S, N if L["armed"] else None)
+    try:
+        instant_buys(live, series)  # fiyat alım seviyesine değdiği an al (mum kapanışını bekleme)
+    except Exception as e:
+        print("Anlık alım kontrolü yapılamadı:", e)
     try:
         L["watch"] = watch(live, series)  # uygulamada "Bot ne yapıyor" kartı
     except Exception as e:

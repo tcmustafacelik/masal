@@ -25,7 +25,8 @@
     "max_coins": 20,
     "stop_pct": 12,
     "use_pct": 40,
-    "trend_filter_pct": 1
+    "trend_filter_pct": 1,
+    "instant": true
   },
   "dip": {
     "dip_pct": 3,

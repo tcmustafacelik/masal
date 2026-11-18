@@ -95,7 +95,7 @@ interface Strategy {
 
 interface WatchItem { i: string; p: number; t: number; g: number; f: boolean; h: number }
 interface Watch { items: WatchItem[]; used: number; cap: number; lot: number; room: boolean; coins: number; max_coins: number }
-interface GridCfg { step: number; lot: number; lot_tp: number; max_lots: number; max_coins: number; stop: number; max_use: number; coin_filter?: number | null }
+interface GridCfg { step: number; lot: number; lot_tp: number; max_lots: number; max_coins: number; stop: number; max_use: number; coin_filter?: number | null; instant?: boolean }
 
 interface OkxStatus {
   ok: boolean;

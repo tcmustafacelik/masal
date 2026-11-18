@@ -1,4 +1,4 @@
-const APP_VERSION='1.23.1';
+const APP_VERSION='1.24.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -142,7 +142,7 @@ function gloss(k: string): [string, string] {
   const L=S?.strategies?.live,c=(L&&!L.locked&&L.cfg)||null;
   const step=c?pp(c.step):'%1,5',tp=c?pp(c.lot_tp):'%4',stop=c?pp(c.stop):'%12',ml=c?c.max_lots:4,mc=c?c.max_coins:20,lot=c?tl(c.lot,0):'bir kademe',use=c?pp(c.max_use,0):'%40',cf=c?.coin_filter?pp(c.coin_filter):'%1';
   const G={
-    nasil:['Bot nasıl alıp satar?',`<p>Bot <b>10 saniyede bir</b> piyasaya bakar, kararını <b>15 dakikalık mum</b> kapanınca verir.</p>
+    nasil:['Bot nasıl alıp satar?',`${c?.instant?'<p>Bot <b>10 saniyede bir</b> fiyatlara bakar; fiyat alım seviyesine değdiği an alır. Alım seviyesi son kapanan 15 dakikalık mumlara göre hesaplanır.</p>':'<p>Bot <b>10 saniyede bir</b> piyasaya bakar, kararını <b>15 dakikalık mum</b> kapanınca verir.</p>'}
       <ul><li><b>Alım:</b> Bir coin son 20 saatin ortalamasından <b>${step}</b> aşağı inince ${lot}'lik bir parça (kademe) alır.</li>
       <li><b>Düşerse:</b> Her ${step} düşüşte bir kademe daha alır, bir coinde en fazla <b>${ml}</b> kademe.</li>
       <li><b>Satış:</b> Her kademe kendi alış fiyatının <b>${tp}</b> üstüne çıkınca ayrı satılır.</li>
@@ -151,10 +151,10 @@ function gloss(k: string): [string, string] {
       <p>Aynı anda en fazla <b>${mc}</b> coin tutulur ve bütçenin en fazla <b>${use}</b>'ı coine yatırılır; kalanı güvenlik payıdır.</p>`],
     yakin:['Alıma yakın coinler',`<p>Her satır bir coinin <b>alım fiyatına ne kadar uzak</b> olduğunu gösterir.</p>
       <ul><li><span class="chip m">%0,8 düşerse</span> fiyat bu kadar daha inerse bot alır.</li>
-      <li><span class="chip g">Alım şartında</span> fiyat alım seviyesinde; 15 dakikalık mum bu seviyede kapanırsa bot alır.</li>
+      <li><span class="chip g">Alım şartında</span> fiyat alım seviyesinde; ${c?.instant?'bot birkaç saniye içinde alır':'15 dakikalık mum bu seviyede kapanırsa bot alır'}.</li>
       <li><span class="chip a">Düşüş filtresi</span> coin hızlı düşüyor; düşüş yavaşlayana kadar alım bekletiliyor.</li>
       <li><span class="chip b">2. kademe</span> zaten elde olan coin; bu kadar daha düşerse bir kademe daha eklenir.</li></ul>
-      <p>Şartta görünüp alınmıyorsa: mum henüz kapanmamıştır, ya da bütçe sınırı / coin sayısı dolmuştur.</p>`],
+      <p>Şartta görünüp alınmıyorsa: ${c?.instant?'':'mum henüz kapanmamıştır, ya da '}bütçe sınırı / coin sayısı dolmuştur.</p>`],
     pozisyon:['Elimdeki coinler',`<ul><li><b>Ort.</b> ortalama alış fiyatın, yanındaki şimdiki fiyat.</li>
       <li><b>Kademe:</b> o coinden kaç parça alındığı.</li>
       <li><b>Kâr al / zarar durdur:</b> botun satacağı fiyatlar.</li>
@@ -207,7 +207,8 @@ function renderNow(x: Strategy){
     h+='</div>';
     if(items.length>5)h+=`<button class="more" id="nowMore">${nowAll?'Daha az göster':`Tümünü göster (${items.length} coin)`}</button>`;
   }
-  h+=`<div class="nf">${ic('i-clock')}Sonraki karar ${nextBar()}'te (15 dakikalık mum kapanışı) · fiyatlar 10 sn'de bir kontrol edilir</div>`;
+  h+=c?.instant?`<div class="nf">${ic('i-clock')}Anlık alım açık: fiyat alım seviyesine değdiği an alır (10 sn'de bir kontrol)</div>`
+    :`<div class="nf">${ic('i-clock')}Sonraki karar ${nextBar()}'te (15 dakikalık mum kapanışı) · fiyatlar 10 sn'de bir kontrol edilir</div>`;
   box.innerHTML=h;
   const mb=document.getElementById('nowMore');if(mb)mb.onclick=()=>{nowAll=!nowAll;renderNow(x)};
 }
