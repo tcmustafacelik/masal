@@ -36,8 +36,14 @@
     "trailing_pct": 4
   },
   "notify": {
-    "enabled": false,
-    "topic": "",
+    "enabled": true,
+    "topic": {
+      "enc": 1,
+      "iter": 150000,
+      "salt": "uAfahXrWZcQrc/7IvX9XBQ==",
+      "iv": "1PYkTRjbeZipq9UN",
+      "ct": "I6SVs2qGD/ZDeptmmiASEA34VBqcTIqEK/iyu1YBTzVoxHrZ"
+    },
     "trades": true,
     "alerts": true,
     "daily": true
