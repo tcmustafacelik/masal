@@ -6,18 +6,18 @@ Sadece standart kütüphane kullanır (paket kurulumundan önce çalışır).
 """
 import json, os, sys, time
 
-ALLOWED = (10, 15, 30, 60)
+ALLOWED = (5, 10, 15, 30, 60)
 
 
 def decide(event, schedule, now_ms):
     if event != "schedule" or schedule == "40 2 * * 1":
         return True, "elle/ayar/haftalık tetikleme"
     try:
-        iv = int(json.load(open("docs/ayarlar.json", encoding="utf-8")).get("interval_min", 10))
+        iv = int(json.load(open("docs/ayarlar.json", encoding="utf-8")).get("interval_min", 5))
     except Exception:
-        iv = 10
+        iv = 5
     if iv not in ALLOWED:
-        iv = 10
+        iv = 5
     try:
         last = int(json.load(open("docs/data/summary.json", encoding="utf-8")).get("updated") or 0)
     except Exception:

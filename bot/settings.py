@@ -15,7 +15,7 @@ DEFAULTS = {
     "paused": False,        # True: gerçek hesapta yeni alım yapılmaz (açık pozisyonlar korunur)
     "liquidate": 0,         # zaman damgası; yeniyse gerçek hesaptaki her şey satılır
     "strategy": "grid",
-    "interval_min": 10,     # bot turu sıklığı (dakika): 10 / 15 / 30 / 60
+    "interval_min": 5,      # bot turu sıklığı (dakika): 5 / 10 / 15 / 30 / 60
     "budget": 2000,         # bottaki başlangıç parası (TL)
     "kasa": 10000,          # hesaptaki toplam kasa (TL)
     "topup": {"amount": 1000, "profit_pct": 5, "days": 7},

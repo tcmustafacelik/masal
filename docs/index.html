@@ -118,7 +118,11 @@ h2 svg.i{width:15px;height:15px}
 .list .row:first-child{border-top:0;padding-top:2px}
 .list .row:last-child{padding-bottom:2px}
 .coin{width:34px;height:34px;border-radius:9px;background:var(--line2);display:grid;place-items:center;font-size:11px;font-weight:700;color:var(--muted);flex:none;letter-spacing:.2px}
-.coin.al{background:var(--blue-bg);color:var(--blue)}.coin.sat{background:var(--green-bg);color:var(--green)}.coin.sat.l{background:var(--red-bg);color:var(--red)}
+.coin{position:relative}.coin.sm{font-size:9.5px;letter-spacing:0}
+.coin img{position:absolute;inset:3px;width:28px;height:28px;border-radius:50%;object-fit:cover;background:var(--surface);opacity:0;transition:opacity .2s}
+.coin img.ok{opacity:1}
+.coin .sd{position:absolute;right:-5px;bottom:-4px;font-size:8.5px;font-weight:800;line-height:1;padding:2px 3px;border-radius:4px;border:1.5px solid var(--surface);letter-spacing:.2px}
+.sd.al{background:var(--blue);color:#fff}.sd.sat{background:var(--green);color:#fff}.sd.sat.l{background:var(--red);color:#fff}
 .mid{flex:1;min-width:0}
 .mid b{font-size:13.5px;font-weight:600;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mid span{font-size:12px;color:var(--muted);display:block;line-height:1.35;margin-top:1px}
@@ -177,7 +181,7 @@ footer{font-size:11.5px;color:var(--faint);text-align:center;margin-top:22px;lin
 .track{width:44px;height:26px;border-radius:7px;background:var(--line);position:relative;flex:none;transition:background .15s}
 .track i{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:5px;background:var(--knob);box-shadow:0 1px 2px rgba(0,0,0,.15);transition:left .15s}
 .sw.on .track{background:var(--amber)}.sw.on .track i{left:21px}
-.tiles.two{grid-template-columns:repeat(2,minmax(0,1fr))}.tiles.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+.tiles.two{grid-template-columns:repeat(2,minmax(0,1fr))}.tiles.four{grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}.tiles.four .tile{padding:10px 2px 9px}
 .tile .ic.num{font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums}
 .warn{font-size:12px;color:var(--amber-ink);background:var(--amber-bg);border-radius:var(--r-sm);padding:9px 11px;margin-top:8px;display:flex;gap:8px;align-items:flex-start}
 .warn svg.i{width:16px;height:16px;margin-top:1px}
@@ -391,7 +395,7 @@ footer{font-size:11.5px;color:var(--faint);text-align:center;margin-top:22px;lin
 <div class="toast" id="toast" hidden></div>
 
 <script>
-const APP_VERSION='1.10.0';
+const APP_VERSION='1.11.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -429,13 +433,19 @@ async function openLive(){
   catch(e){pw='';localStorage.removeItem('masal_pw');toast('Şifre uyuşmadı, gerçek hesap kilitli kaldı')}
 }
 
-async function load(){
-  const btn=document.getElementById('reload');btn.classList.add('spin');
+// Bot kayıtları ayrı "data" dalında tutulur (site her turda yeniden yayınlanmasın diye)
+async function getData(f){const t=Date.now();
+  if(token){try{const r=await fetch(`https://api.github.com/repos/${REPO.o}/${REPO.r}/contents/docs/data/${f}?ref=data&t=${t}`,{headers:{Authorization:'Bearer '+token,Accept:'application/vnd.github.raw+json'},cache:'no-store'});if(r.ok)return await r.json()}catch(e){}}
+  try{const r=await fetch(`https://raw.githubusercontent.com/${REPO.o}/${REPO.r}/data/docs/data/${f}?t=${t}`,{cache:'no-store'});if(r.ok)return await r.json()}catch(e){}
+  const r=await fetch('data/'+f+'?t='+t);if(!r.ok)throw 0;return r.json()}
+let lastLoad=0;
+setInterval(()=>{if(document.hidden||!S)return;const due=(S.updated||0)+(S.settings?.interval_min||5)*6e4+9e4;
+  if(Date.now()>due&&Date.now()-lastLoad>6e4)load(true)},15000);
+async function load(quiet){lastLoad=Date.now();
+  const btn=document.getElementById('reload');if(!quiet)btn.classList.add('spin');
   const err=document.getElementById('err');err.style.display='none';
   try{
-    const q='?t='+Date.now();
-    const [s,b]=await Promise.all([fetch('data/summary.json'+q).then(r=>{if(!r.ok)throw 0;return r.json()}),
-      fetch('data/backtest.json'+q).then(r=>r.ok?r.json():null).catch(()=>null)]);
+    const [s,b]=await Promise.all([getData('summary.json'),getData('backtest.json').catch(()=>null)]);
     S=s;B=b;await openLive();if(!S.strategies[sel])sel=Object.keys(S.strategies)[0];render();pollMarket(true);
   }catch(e){console.error(e);err.textContent='Veriler yüklenemedi. Bağlantını kontrol edip yenile düğmesine dokun.';err.style.display='block'}
   finally{btn.classList.remove('spin');hideSplash()}
@@ -445,7 +455,7 @@ function render(){
   updLine();
   const L=S.strategies.live;
   document.getElementById('mode').textContent=L?(L.armed?'Gerçek mod':'Deneme modu'):'Sanal mod';
-  document.getElementById('foot').innerHTML='Fiyatlar uygulama açıkken OKX TR\'den anlık güncellenir; bot '+((S.settings?.interval_min||10)>=60?'saatte bir':(S.settings?.interval_min||10)+' dakikada bir')+' kontrol eder.<br>'+(L&&L.armed?'Gerçek hesap kartı OKX TR hesabındaki gerçek işlemleri gösterir; diğerleri sanal karşılaştırmadır.':'Gerçek para kullanılmıyor; tüm işlemler sanal.');
+  document.getElementById('foot').innerHTML='Fiyatlar uygulama açıkken OKX TR\'den anlık güncellenir; bot '+((S.settings?.interval_min||5)>=60?'saatte bir':(S.settings?.interval_min||5)+' dakikada bir')+' kontrol eder.<br>'+(L&&L.armed?'Gerçek hesap kartı OKX TR hesabındaki gerçek işlemleri gösterir; diğerleri sanal karşılaştırmadır.':'Gerçek para kullanılmıyor; tüm işlemler sanal.');
   const keys=Object.keys(S.strategies);
   const tg=document.getElementById('tiles');tg.style.gridTemplateColumns=`repeat(${keys.length===4?2:3},minmax(0,1fr))`;
   tg.innerHTML=keys.map(k=>{const x=S.strategies[k];
@@ -480,7 +490,7 @@ function render(){
   renderPositions(x);renderCoins(x);
   const tr=x.recent.slice(0,15);
   document.getElementById('trades').innerHTML=tr.length?tr.map(t=>{const sell=t.side==='SAT';
-    return `<div class="row"><div class="coin ${sell?'sat'+(t.pnl<0?' l':''):'al'}">${t.side}</div>
+    return `<div class="row">${cico(t.inst,t.side,t.pnl<0)}
       <div class="mid"><b>${sym(t.inst)} · ${px(t.price)}</b><span>${t.reason}</span></div>
       <div class="end"><b>${tl(t.amount,0)}</b>${sell?`<span class="${cls(t.pnl)}">${sgn(t.pnl)} TL · ${dt(t.ts)}</span>`:`<span>${dt(t.ts)}</span>`}</div></div>`}).join('')
     :`<div class="empty">${ic('i-list')}<div>Henüz işlem yok. Bot fırsat bekliyor.</div></div>`;
@@ -490,7 +500,7 @@ function render(){
   renderMarket();
 }
 
-function nextRun(){const iv=(S?.settings?.interval_min||10)*6e4;let t=(S?.updated||Date.now())+iv;if(t<Date.now())t=Date.now();t=Math.ceil(t/3e5)*3e5;return new Date(t)}
+function nextRun(){const iv=(S?.settings?.interval_min||5)*6e4;let t=(S?.updated||Date.now())+iv;if(t<Date.now())t=Date.now();t=Math.ceil(t/3e5)*3e5;return new Date(t)}
 function updLine(){
   const p=(n,l=2)=>String(n).padStart(l,'0');
   const live=lastTick?(()=>{const d=new Date(lastTick);return `<b class="up">● Canlı ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}.${p(d.getMilliseconds(),3)}</b> · `})():'';
@@ -511,6 +521,11 @@ function renderMetrics(x){
   ].map(([i,k,v,s,c])=>`<div class="m"><div class="k">${ic(i)}${k}</div><div class="v ${c}">${v}</div><div class="s">${s}</div></div>`).join('');
 }
 
+const ICON_BAD=new Set(),ICON_OK=new Set();
+function cico(inst,side,loss){const b=sym(inst),t=b.slice(0,4),lc=b.toLowerCase();
+  const img=ICON_BAD.has(lc)?'':`<img class="${ICON_OK.has(lc)?'ok':''}" src="https://static.okx.com/cdn/oksupport/asset/currency/icon/${lc}.png" alt="" onload="ICON_OK.add('${lc}');this.classList.add('ok')" onerror="ICON_BAD.add('${lc}');this.remove()">`;
+  const sd=side?`<i class="sd ${side==='SAT'?'sat'+(loss?' l':''):'al'}">${side}</i>`:'';
+  return `<div class="coin${t.length>3?' sm':''}">${t}${img}${sd}</div>`}
 function renderCoins(x){
   const box=document.getElementById('coins'),sumEl=document.getElementById('coinSum');
   const list=(x.coins||[]).map(c=>{const cur=c.open_qty?livePrice(c.inst,c.price):0,op=c.open_qty?c.open_qty*cur-c.open_cost:0;return {...c,op,tot:c.realized+op}}).sort((a,b)=>b.tot-a.tot);
@@ -520,7 +535,7 @@ function renderCoins(x){
     if(c.sells)parts.push(`${c.sells} satış · ${c.wins} kârlı`);else parts.push(`${c.buys} alım`);
     if(c.bought)parts.push(tl(c.bought,0)+' alındı');parts.push(c.open_qty?'elde':'kapandı');
     const det=[c.sells?`kapanan ${sgn(c.realized)}`:'',c.open_qty?`açık ${sgn(c.op)}`:''].filter(Boolean).join(' · ')+' TL';
-    return `<div class="row"><div class="coin">${sym(c.inst).slice(0,4)}</div>
+    return `<div class="row">${cico(c.inst)}
       <div class="mid"><b>${sym(c.inst)}</b><span>${parts.join(' · ')}</span></div>
       <div class="end"><b class="${cls(c.tot)}">${sgn(c.tot)} TL</b><span>${det}</span></div></div>`}).join('');
 }
@@ -529,7 +544,7 @@ function renderPositions(x){
   document.getElementById('positions').innerHTML=pos.length?pos.map(p=>{const cur=livePrice(p.inst,p.price),val=p.qty*cur,pl=val-p.cost,plp=(val/p.cost-1)*100;
     const prot=p.protected===true?'<span class="prot">Borsa korumalı</span>':p.protected===false?'<span class="prot no">Koruma bekliyor</span>':'';
     const tgt=(p.tp||p.sl)?` · ${p.tp?'kâr al '+px(p.tp):''}${p.tp&&p.sl?' / ':''}${p.sl?'zarar durdur '+px(p.sl):''}`:'';
-    return `<div class="row"><div class="coin">${sym(p.inst).slice(0,4)}</div>
+    return `<div class="row">${cico(p.inst)}
       <div class="mid"><b>${sym(p.inst)}${p.lots>1?` · ${p.lots} kademe`:''}${prot}</b><span>Ort. ${px(p.avg)} → ${px(cur)} · ${ago(p.since).replace(' önce','')}${tgt}</span></div>
       <div class="end"><b>${tl(val,0)}</b><span class="${cls(pl)}">${sgn(pl)} TL · ${plp>0?'+':''}${nf(plp)}%</span></div></div>`}).join('')
     :`<div class="empty">${ic('i-box')}<div>Şu an açık pozisyon yok</div></div>`;
@@ -576,7 +591,7 @@ function renderMarket(){
   const rows=list.filter(i=>LP[i]);
   box.className='card list mk';
   box.innerHTML=rows.length?rows.map(i=>{const q=LP[i];
-    return `<div class="row"><div class="coin">${sym(i).slice(0,4)}</div><div class="mid"><b>${sym(i)}</b><span>Hacim ${q.vol>=1e6?nf(q.vol/1e6,1)+' Mn':nf(q.vol/1e3,0)+' B'} TL</span></div>
+    return `<div class="row">${cico(i)}<div class="mid"><b>${sym(i)}</b><span>Hacim ${q.vol>=1e6?nf(q.vol/1e6,1)+' Mn':nf(q.vol/1e3,0)+' B'} TL</span></div>
       <div class="end"><b class="pxv ${q.dir>0?'flash-up':q.dir<0?'flash-dn':''}">${px(q.last)}</b><span class="${cls(q.ch)}">${q.ch>0?'+':''}${nf(q.ch)}% · 24 sa</span></div></div>`}).join('')
     :`<div class="empty">${ic('i-pnl')}<div>Fiyatlar yükleniyor…</div></div>`;
 }
@@ -719,7 +734,7 @@ function renderForm(){
    <div class="card" style="margin-top:8px"><div class="sw ${draft.paused?'on':''}" id="pauseSw"><div class="lb"><b style="font-size:13.5px">Botu durdur</b><span style="font-size:11.5px;color:var(--muted);display:block">Yeni alım yapılmaz; açık pozisyonların zarar sınırı çalışmaya devam eder</span></div><div class="track"><i></i></div></div>
    <div class="field" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line2)"><div class="lb"><b>Hepsini sat ve dur</b><span>Gerçek hesaptaki tüm coinleri hemen satar, botu durdurur</span></div>
    <button class="btn danger ${sellArm?'arm':''}" id="sellAll">${ic('i-sell')}${sellArm?'Emin misin? Dokun':'Hepsini sat'}</button></div></div></section>
-   <section><h2>${ic('i-clock')}Tur sıklığı</h2><div class="tiles four" data-g="iv">${[[10,'10 dk'],[15,'15 dk'],[30,'30 dk'],[60,'1 saat']].map(([m,n])=>`<button class="tile ${(draft.interval_min||10)===m?'on':''}" data-t="${m}"><span class="ic num">${m}</span><span class="nm">${n}</span></button>`).join('')}</div>
+   <section><h2>${ic('i-clock')}Tur sıklığı</h2><div class="tiles four" data-g="iv">${[[5,'5 dk'],[10,'10 dk'],[15,'15 dk'],[30,'30 dk'],[60,'1 saat']].map(([m,n])=>`<button class="tile ${(draft.interval_min||5)===m?'on':''}" data-t="${m}"><span class="ic num">${m}</span><span class="nm">${n}</span></button>`).join('')}</div>
    <div class="hint">Bot bu aralıkla kendiliğinden çalışır; uygulama kapalı olsa da. Ayar kaydedince hemen bir tur atar.</div></section>
    <section><h2>${ic('i-target')}Strateji</h2><div class="tiles" data-g="strat">${['grid','dip','trend'].map(k=>tile(draft.strategy===k,k,ICON[k],SNAMES[k])).join('')}</div>
    ${draft.strategy!==orig.strategy&&orig.live?`<div class="warn">${ic('i-info')}<div>Gerçek modda strateji değişince eski stratejinin açık coinleri satılır, yeni strateji temiz başlar.</div></div>`:''}</section>`;
@@ -766,7 +781,7 @@ async function loadSettings(){
     else{orig=await fetch('ayarlar.json?t='+Date.now()).then(r=>r.json())}
   }catch(e){orig=S?.settings||null;if(e===401){token='';localStorage.removeItem('masal_token');toast('GitHub anahtarının süresi dolmuş, yeniden bağlan')}}
   if(!orig){document.getElementById('setForm').innerHTML=`<div class="empty">${ic('i-info')}<div>Ayarlar yüklenemedi</div></div>`;return}
-  if(orig&&!orig.interval_min)orig.interval_min=10;
+  if(orig&&!orig.interval_min)orig.interval_min=5;
   if(orig&&!orig.notify)orig.notify={enabled:false,topic:'',trades:true,alerts:true,daily:true,money:true};
   topicPlain='';
   if(pw&&orig.notify?.topic?.enc){try{topicPlain=await unseal(orig.notify.topic,pw)}catch(e){}}
