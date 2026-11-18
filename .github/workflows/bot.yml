@@ -5,7 +5,7 @@ name: Masal bot
 # (zincir bir sebeple koparsa yeniden başlatır).
 on:
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "*/5 * * * *"  # yedek: zincir koparsa en geç ~5 dk içinde yeniden başlar
   push:
     paths: ["docs/ayarlar.json"]
   workflow_dispatch:

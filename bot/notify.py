@@ -37,7 +37,7 @@ class Notifier:
 HB_ID = "masal-nabiz"
 
 
-def heartbeat(n, minutes=35):
+def heartbeat(n, minutes=10):
     """Ölü adam düğmesi: ntfy'da ileri tarihli bir "Bot durdu" mesajı bekletilir.
     Bot çalıştıkça bu mesaj silinip yeniden kurulur; bot durursa süre dolunca telefona düşer."""
     if not n.topic:

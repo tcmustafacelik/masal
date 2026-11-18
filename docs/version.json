@@ -1,7 +1,9 @@
 {
-  "version": "1.24.1",
+  "version": "1.25.0",
   "date": "2026-11-19",
   "notes": [
-    "Düğmelere dokununca çıkan mavi kare ve yazı seçilmesi tüm uygulamada kaldırıldı"
+    "Günlük zarar sınırı artık sadece satışla kesinleşen zararı sayar (anlık düşüş alımı durdurmaz)",
+    "Kademelide geçerli olmayan koruma alanları gizlendi",
+    "Bot susarsa uyarı 10 dakikada gelir; zincir koparsa en geç 5 dakikada yeniden başlar"
   ]
 }

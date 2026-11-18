@@ -136,7 +136,11 @@ class Portfolio:
             self.s["halted"] = True
             self.s["halt_reason"] = f"Bakiye {self.risk['kill_switch']:,.0f} TL altına indi"
             eq = self.equity()
-        if eq <= self.s["day"]["start_equity"] - self.risk["daily_loss_limit"]:
+        # Günlük sınır: sadece gün içinde satışlarla kesinleşen zarar sayılır; fiyat dalgalanması alımı durdurmaz
+        day = self.s["day"]["date"]
+        realized = sum(t.get("pnl", 0) for t in self.s["trades"][-200:]
+                       if t["side"] == "SAT" and datetime.fromtimestamp(t["ts"] / 1000, TZ).strftime("%Y-%m-%d") == day)
+        if realized <= -self.risk["daily_loss_limit"]:
             self.s["blocked_today"] = True
         if not self.s["equity"] or self.s["equity"][-1][0] != ts:
             self.s["equity"].append([ts, round(eq, 2), round(self.s.get("start_cash", eq), 2)])

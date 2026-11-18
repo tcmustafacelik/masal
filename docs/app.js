@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.24.1';
+const APP_VERSION = '1.25.0';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -793,12 +793,15 @@ const SECTIONS = [
         ] },
     { t: 'Koruma', i: 'i-shield', f: [
             ['risk.stop_pct', 'Zarar sınırı', 'İşlem bu kadar zarara geçince otomatik satılır', '%', .5, .5, 50, 1],
-            ['risk.daily_loss_pct', 'Günlük kayıp sınırı', () => `Bottaki paranın; şu an ${pctTL(draft.risk.daily_loss_pct)}. Aşılırsa o gün yeni alım yok`, '%', .5, .5, 50, 1],
+            ['risk.daily_loss_pct', 'Günlük kayıp sınırı', () => `Bottaki paranın; şu an ${pctTL(draft.risk.daily_loss_pct)}. Gün içinde satışlarla kesinleşen zarar bunu aşarsa o gün yeni alım yok (anlık dalgalanma saymaz)`, '%', .5, .5, 50, 1],
             ['risk.kill_pct', 'Acil fren', () => `Bottaki para bu kadar eriyince her şey satılır ve bot durur (${tl(draft.budget * (1 - draft.risk.kill_pct / 100), 0)} altı)`, '%', 1, 1, 90, 0],
             ['risk.max_positions', 'En fazla pozisyon', 'Aynı anda açık tutulacak coin sayısı', 'adet', 1, 1, 30, 0],
             ['risk.trade_pct', 'İşlem büyüklüğü', () => `Düşüşte al ve Trend için bottaki paranın; şu an ${sizeTL(draft.risk.trade_pct)}`, '%', 1, 1, 100, 0]
         ] },
 ];
+// Kademeli stratejide zarar sınırı, coin sayısı ve alım tutarı kendi ayarlarından gelir; genel alanlar gizlenir
+const GRID_HIDE = new Set(['risk.stop_pct', 'risk.max_positions', 'risk.trade_pct']);
+function secFields(sec) { return draft?.strategy === 'grid' ? sec.f.filter(f => !GRID_HIDE.has(f[0])) : sec.f; }
 const STRAT_F = {
     grid: [['grid.step_pct', 'Kademe aralığı', 'Fiyat bu kadar düşünce bir kademe daha alınır', '%', .5, .5, 20, 1],
         ['grid.lot_pct', 'Kademe büyüklüğü', () => `Bottaki paranın; şu an ${sizeTL(draft.grid.lot_pct)}`, '%', .5, .5, 50, 1],
@@ -822,7 +825,7 @@ const pc = v => '%' + String(v).replace('.', ',');
 const SUMS = {
     'Kasa': () => `${tl(draft.budget, 0)} botta · kasa ${tl(draft.kasa, 0)}`,
     'Kasadan ekleme': () => `+${tl(draft.topup.amount, 0)} · ${pc(draft.topup.profit_pct)} kârda · ${draft.topup.days} gün arayla`,
-    'Koruma': () => `Zarar ${pc(draft.risk.stop_pct)} · günlük ${pc(draft.risk.daily_loss_pct)} · acil fren ${pc(draft.risk.kill_pct)}`,
+    'Koruma': () => draft.strategy === 'grid' ? `Günlük ${pc(draft.risk.daily_loss_pct)} · acil fren ${pc(draft.risk.kill_pct)}` : `Zarar ${pc(draft.risk.stop_pct)} · günlük ${pc(draft.risk.daily_loss_pct)} · acil fren ${pc(draft.risk.kill_pct)}`,
     grid: () => `${tl(draft.budget * draft.grid.lot_pct / 100, 0)} kademe · ${draft.grid.max_coins} coine kadar · en çok ${tl(draft.budget * (draft.grid.use_pct ?? 40) / 100, 0)}`,
     dip: () => `Düşüş ${pc(draft.dip.dip_pct)} · kâr ${pc(draft.dip.take_profit_pct)} · en çok ${draft.dip.max_hold_hours} saat`,
     trend: () => `İz süren stop ${pc(draft.trend.trailing_pct)}`
@@ -1057,8 +1060,10 @@ function renderForm() {
    <section><h2><span class="hb c-violet">${ic('i-shield')}</span>Kontrol<span class="hsum" style="font-weight:500;color:var(--faint);font-size:11px">değiştirdikçe güncellenir</span></h2><div class="card chk" id="checks"></div></section>`;
     h += '<section style="margin-bottom:-2px"><h2><span class="hb c-gray">' + ic('i-layers') + '</span>Ayrıntılı ayarlar<span class="hsum" style="font-weight:500;color:var(--faint);font-size:11px">dokununca açılır</span></h2></section>';
     h += notifySection();
-    for (const sec of SECTIONS)
-        h += accOpen(sec.t, sec.t, sec.i, SEC_C[sec.t], SUMS[sec.t](), secDirty(sec.f.map(x => x[0]))) + `<div class="card">${sec.f.map(field).join('')}</div>` + ACC_END;
+    for (const sec of SECTIONS) {
+        const ff = secFields(sec);
+        h += accOpen(sec.t, sec.t, sec.i, SEC_C[sec.t], SUMS[sec.t](), secDirty(ff.map(x => x[0]))) + `<div class="card">${ff.map(field).join('')}</div>` + ACC_END;
+    }
     const sf = STRAT_F[draft.strategy];
     h += accOpen('strat', SNAMES[draft.strategy] + ' ayarları', ICON[draft.strategy], 'blue', SUMS[draft.strategy](), secDirty(sf.map(x => x[0]))) + `<div class="card">${sf.map(field).join('')}</div>` + ACC_END;
     h += installSection();

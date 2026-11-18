@@ -145,7 +145,7 @@ def main():
             if rev and start_rev and rev != start_rev:
                 print("Bot kodu güncellendi; oturum yenisiyle değiştiriliyor.")
                 break
-            if time.time() - last_hb > 20 * 60:
+            if time.time() - last_hb > 3 * 60:  # nabız 3 dk'da bir; bot 10 dk susarsa telefona uyarı düşer
                 try:
                     heartbeat(notifier())
                 except Exception as e:
