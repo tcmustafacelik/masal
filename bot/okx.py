@@ -41,7 +41,12 @@ def universe():
         if quote != config.QUOTE or base in config.EXCLUDED:
             continue
         vol = float(t.get("volCcy24h") or 0)
-        if vol >= config.MIN_VOLUME_TRY:
+        try:
+            bid, ask = float(t.get("bidPx") or 0), float(t.get("askPx") or 0)
+            spread = (ask - bid) / ask if ask > 0 and bid > 0 else 1
+        except ValueError:
+            spread = 1
+        if vol >= config.MIN_VOLUME_TRY and spread <= config.MAX_SPREAD:
             rows.append((vol, inst))
     rows.sort(reverse=True)
     return [inst for _, inst in rows[: config.MAX_SYMBOLS]]

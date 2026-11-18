@@ -502,7 +502,7 @@ details.setup summary::-webkit-details-marker{display:none}
 <div class="toast" id="toast" hidden></div>
 
 <script>
-const APP_VERSION='1.17.0';
+const APP_VERSION='1.18.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -807,7 +807,7 @@ function checks(d=draft,o=orig||{},diff=true){
   const out=[],T=(v,dd=0)=>tl(v,dd);
   const b=+d.budget||0,k=+d.kasa||0,st=d.strategy,fee=((S?.fee||.0025)+(S?.slippage||.001))*100;
   const per=st==='grid'?b*d.grid.lot_pct/100:b*d.risk.trade_pct/100;
-  const maxUse=st==='grid'?per*d.grid.max_lots*d.grid.max_coins:per*d.risk.max_positions;
+  const maxUse=st==='grid'?Math.min(per*d.grid.max_lots*d.grid.max_coins,b*(d.grid.use_pct??40)/100):per*d.risk.max_positions;
   const add=(lv,t,dsc)=>out.push({lv,t,dsc});
   if(per<MIN_ORDER)add('bad','Hiç alım yapılmaz',`Her alım ${T(per,2)} çıkıyor; bot ${MIN_ORDER} TL'nin altındaki emirleri göndermez. ${st==='grid'?'Kademe büyüklüğünü':'İşlem büyüklüğünü'} en az %${Math.ceil(MIN_ORDER*100/Math.max(b,1))} yap ya da bottaki parayı artır.`);
   const L=S?.strategies?.live,inv=L&&!L.locked?(L.positions||[]).reduce((a,p)=>a+(p.cost||0),0):0;
@@ -874,7 +874,8 @@ const STRAT_F={
   ['grid.lot_pct','Kademe büyüklüğü',()=>`Bottaki paranın; şu an ${sizeTL(draft.grid.lot_pct)}`,'%',.5,.5,50,1],
   ['grid.lot_tp_pct','Kademe kârı','Her kademe bu kârla ayrı satılır','%',.5,.5,50,1],
   ['grid.max_lots','En fazla kademe','Bir coinde','adet',1,1,10,0],
-  ['grid.max_coins','En fazla coin','Aynı anda kademeli alınan','adet',1,1,20,0],
+  ['grid.max_coins','En fazla coin','Aynı anda kademeli alınan; fırsatlar en derin düşüşten başlayarak sıralanır','adet',1,1,20,0],
+  ['grid.use_pct','Toplam kullanım sınırı',()=>`Coinlere en fazla bottaki paranın bu kadarı yatırılır; şu an ${pctTL(draft.grid.use_pct??40)}`,'%',2,5,100,0],
   ['grid.stop_pct','Toplu zarar sınırı','Ortalama maliyetin bu kadar altında tüm kademeler satılır','%',.5,1,50,1]],
  dip:[['dip.dip_pct','Düşüş eşiği','Fiyat 20 saatlik ortalamanın bu kadar altına inince','%',.5,.5,30,1],
   ['dip.rsi_max','Aşırı satım eşiği','RSI bu değerin altındayken alınır','',1,5,60,0],
@@ -892,7 +893,7 @@ const SUMS={
  'Kasa':()=>`${tl(draft.budget,0)} botta · kasa ${tl(draft.kasa,0)}`,
  'Kasadan ekleme':()=>`+${tl(draft.topup.amount,0)} · ${pc(draft.topup.profit_pct)} kârda · ${draft.topup.days} gün arayla`,
  'Koruma':()=>`Zarar ${pc(draft.risk.stop_pct)} · günlük ${pc(draft.risk.daily_loss_pct)} · acil fren ${pc(draft.risk.kill_pct)}`,
- grid:()=>`Aralık ${pc(draft.grid.step_pct)} · kâr ${pc(draft.grid.lot_tp_pct)} · ${draft.grid.max_coins} coin · ${draft.grid.max_lots} kademe`,
+ grid:()=>`${tl(draft.budget*draft.grid.lot_pct/100,0)} kademe · ${draft.grid.max_coins} coine kadar · en çok ${tl(draft.budget*(draft.grid.use_pct??40)/100,0)}`,
  dip:()=>`Düşüş ${pc(draft.dip.dip_pct)} · kâr ${pc(draft.dip.take_profit_pct)} · en çok ${draft.dip.max_hold_hours} saat`,
  trend:()=>`İz süren stop ${pc(draft.trend.trailing_pct)}`};
 const SEC_C={'Kasa':'teal','Kasadan ekleme':'teal','Koruma':'red'};
@@ -1051,6 +1052,7 @@ async function loadSettings(){
   }catch(e){orig=S?.settings||null;if(e===401){token='';localStorage.removeItem('masal_token');toast('GitHub anahtarının süresi dolmuş, yeniden bağlan')}}
   if(!orig){document.getElementById('setForm').innerHTML=`<div class="empty">${ic('i-info')}<div>Ayarlar yüklenemedi</div></div>`;return}
   if(orig&&!orig.interval_min)orig.interval_min=5;
+  if(orig&&orig.grid&&orig.grid.use_pct==null)orig.grid.use_pct=40;
   if(orig&&!orig.notify)orig.notify={enabled:false,topic:'',trades:true,alerts:true,daily:true,money:true};
   topicPlain='';
   if(pw&&orig.notify?.topic?.enc){try{topicPlain=await unseal(orig.notify.topic,pw)}catch(e){}}

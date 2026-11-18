@@ -20,7 +20,7 @@ DEFAULTS = {
     "kasa": 10000,          # hesaptaki toplam kasa (TL)
     "topup": {"amount": 250, "profit_pct": 5, "days": 7},
     "risk": {"trade_pct": 10, "max_positions": 5, "stop_pct": 5, "daily_loss_pct": 3, "kill_pct": 15},
-    "grid": {"step_pct": 2, "lot_pct": 4, "lot_tp_pct": 2.5, "max_lots": 3, "max_coins": 3, "stop_pct": 7},
+    "grid": {"step_pct": 2, "lot_pct": 4, "lot_tp_pct": 2.5, "max_lots": 3, "max_coins": 3, "stop_pct": 7, "use_pct": 40},
     "dip": {"dip_pct": 3, "rsi_max": 35, "take_profit_pct": 4, "max_hold_hours": 48},
     "trend": {"trailing_pct": 4},
     "notify": {"enabled": False, "topic": "", "trades": True, "alerts": True, "daily": True, "money": True},
@@ -66,7 +66,8 @@ def apply(s):
     g, d, t = s["grid"], s["dip"], s["trend"]
     config.STRATEGIES["grid"].update(step=g["step_pct"] / 100, lot=base * g["lot_pct"] / 100,
                                      lot_tp=g["lot_tp_pct"] / 100, max_lots=int(g["max_lots"]),
-                                     max_coins=int(g["max_coins"]), stop=g["stop_pct"] / 100)
+                                     max_coins=int(g["max_coins"]), stop=g["stop_pct"] / 100,
+                                     max_use=g.get("use_pct", 40) / 100)
     config.STRATEGIES["dip"].update(dip_pct=d["dip_pct"] / 100, rsi_max=d["rsi_max"],
                                     take_profit=d["take_profit_pct"] / 100, max_hold_bars=int(d["max_hold_hours"]))
     config.STRATEGIES["trend"].update(trailing=t["trailing_pct"] / 100)

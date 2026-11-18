@@ -23,8 +23,9 @@
     "lot_pct": 3,
     "lot_tp_pct": 4,
     "max_lots": 3,
-    "max_coins": 4,
-    "stop_pct": 12
+    "max_coins": 20,
+    "stop_pct": 12,
+    "use_pct": 24
   },
   "dip": {
     "dip_pct": 3,

@@ -11,8 +11,9 @@ SLIPPAGE = 0.001
 
 # Hangi coinler: TL paritesinde, 24 saatlik hacmi yeterli olanlar
 QUOTE = "TRY"
-MIN_VOLUME_TRY = 1_000_000
-MAX_SYMBOLS = 12
+MIN_VOLUME_TRY = 250_000   # günlük en az bu kadar TL hacim
+MAX_SYMBOLS = 24
+MAX_SPREAD = 0.008  # alış-satış farkı %0,8'den büyük (sığ) coinler alınmaz
 EXCLUDED = {"USDT", "USDC", "XAUT", "PAXG", "EURT", "DAI", "FDUSD", "TUSD"}
 
 BAR = "1H"
@@ -38,7 +39,7 @@ STRATEGIES = {
     },
     "grid": {
         "name": "Kademeli",
-        "step": 0.02, "lot": 400.0, "max_lots": 3, "lot_tp": 0.025, "max_coins": 3,
+        "step": 0.02, "lot": 400.0, "max_lots": 3, "lot_tp": 0.025, "max_coins": 3, "max_use": 0.4,
         "stop": 0.07,  # ortalama maliyetin %7 altında tüm kademeler satılır
     },
 }

@@ -69,6 +69,14 @@ class Portfolio:
             self.risk[f] = self.risk[f] * k
 
     # ---------- yardımcılar ----------
+    def _room(self, amount):
+        """Kademeli stratejide coinlere yatırılan toplam para, bütçenin belirlenen oranını aşmasın."""
+        cap = self.cfg.get("max_use")
+        if not cap:
+            return True
+        used = sum(l["cost"] for p in self.s["positions"].values() for l in p["lots"])
+        return used + amount <= cap * self.s.get("start_cash", config.START_CASH) + 0.01
+
     def equity(self):
         total = self.s["cash"]
         for inst, pos in self.s["positions"].items():
@@ -203,14 +211,20 @@ class Portfolio:
             if price <= avg * (1 - c["stop"]):
                 self._sell_lots(ts, inst, price, list(pos["lots"]), "Zarar sınırı")
             elif (len(pos["lots"]) < c["max_lots"] and not self.s["halted"] and not self.s["blocked_today"]
-                  and not self.s.get("paused")
+                  and not self.s.get("paused") and self._room(c["lot"])
                   and price <= pos["lots"][-1]["entry"] * (1 - c["step"])):
                 self._buy(ts, inst, price, c["lot"], f"{len(pos['lots']) + 1}. kademe")
             return
         m = sma(closes, 20)
-        if (self._can_open() and len(self.s["positions"]) < c["max_coins"]
+        if (self._can_open() and len(self.s["positions"]) < c["max_coins"] and self._room(c["lot"])
                 and m and price <= m * (1 - c["step"])):
             self._buy(ts, inst, price, c["lot"], "1. kademe")
+
+
+def _dip_rank(series, inst, idx):
+    """Aynı saatte birden çok fırsat varsa en derin düşüş önce değerlendirilir."""
+    closes = [c for _, c in series[inst][max(0, idx - 19): idx + 1]]
+    return closes[-1] / (sum(closes) / len(closes)) if closes else 1.0
 
 
 def run_bars(portfolios, events, series):
@@ -225,7 +239,7 @@ def run_bars(portfolios, events, series):
             i += 1
         for p in portfolios:
             p.start_bar(ts)
-            for _, inst, idx in group:
+            for _, inst, idx in sorted(group, key=lambda g: _dip_rank(series, g[1], g[2])):
                 closes = [c for _, c in series[inst][max(0, idx - 299): idx + 1]]
                 p.on_bar(ts, inst, closes)
             p.end_bar(ts)
