@@ -483,11 +483,11 @@ details.setup summary::-webkit-details-marker{display:none}
 <div class="toast" id="toast" hidden></div>
 
 <script>
-const APP_VERSION='1.14.0';
+const APP_VERSION='1.14.1';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
-let S=null,B=null,sel=localStore('masal_sel')||'dip',view='live';
+let S=null,B=null,sel=localStore('masal_sel')||'dip',view='live',selPicked=false;
 
 function localStore(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
 const nf=(v,d=2)=>new Intl.NumberFormat('tr-TR',{minimumFractionDigits:d,maximumFractionDigits:d}).format(v);
@@ -539,7 +539,7 @@ async function load(quiet){lastLoad=Date.now();
   const err=document.getElementById('err');err.style.display='none';
   try{
     const [s,b]=await Promise.all([getData('summary.json'),getData('backtest.json').catch(()=>null)]);
-    S=s;B=b;await openLive();if(!S.strategies[sel])sel=Object.keys(S.strategies)[0];render();pollMarket(true);
+    S=s;B=b;await openLive();if(!selPicked&&S.strategies.live?.armed&&!S.strategies.live.locked)sel='live';if(!S.strategies[sel])sel=Object.keys(S.strategies)[0];render();pollMarket(true);
   }catch(e){console.error(e);err.textContent='Veriler yüklenemedi. Bağlantını kontrol edip yenile düğmesine dokun.';err.style.display='block'}
   finally{btn.classList.remove('spin');hideSplash()}
 }
@@ -557,13 +557,13 @@ function render(){
      :`<span class="mi">${ic('i-flask')}</span><span><b>Deneme</b><small>Emir gitmez</small></span>`;
    m.onclick=()=>document.getElementById('openSet').click()}
   document.getElementById('foot').innerHTML='Fiyatlar uygulama açıkken OKX TR\'den anlık güncellenir; bot kesintisiz çalışır, yaklaşık 20 saniyede bir kontrol eder.<br>'+(L&&L.armed?'Gerçek hesap kartı OKX TR hesabındaki gerçek işlemleri gösterir; diğerleri sanal karşılaştırmadır.':'Gerçek para kullanılmıyor; tüm işlemler sanal.');
-  const keys=Object.keys(S.strategies);
+  const keys=Object.keys(S.strategies).sort((a,b)=>(b==='live')-(a==='live'));
   const tg=document.getElementById('tiles');tg.style.gridTemplateColumns=`repeat(${keys.length===4?2:3},minmax(0,1fr))`;
   tg.innerHTML=keys.map(k=>{const x=S.strategies[k];
     const sub=x.locked?`<span class="pc" style="color:var(--muted)">${ic('i-lock')} Kilitli</span>`:`<span class="pc ${cls(x.pnl_pct)}">${x.pnl_pct>0?'+':''}${nf(x.pnl_pct)}%</span>`;
     return `<button class="tile ${k===sel?'on':''}" data-k="${k}"><span class="ic">${ic(ICON[k])}</span>
-      <span class="nm">${x.name}${x.live?`<small class="tag ${x.armed?'real':''}">${x.armed?'<i></i>Canlı emir':ic('i-flask')+'Deneme'}</small>`:''}</span>${sub}</button>`}).join('');
-  tg.querySelectorAll('.tile').forEach(el=>el.onclick=()=>{sel=el.dataset.k;localStore('masal_sel',sel);render();pollMarket(true)});
+      <span class="nm">${x.name}${x.live?`<small class="tag ${x.armed?'real':''}">${x.armed?'<i></i>Canlı emir':ic('i-flask')+'Deneme'}</small>`:`<small class="tag">Sanal · ${tl(x.start_cash||10000,0)}</small>`}</span>${sub}</button>`}).join('');
+  tg.querySelectorAll('.tile').forEach(el=>el.onclick=()=>{sel=el.dataset.k;selPicked=true;localStore('masal_sel',sel);render();pollMarket(true)});
   const x=S.strategies[sel];
   const locked=!!x.locked;
   ['sumSec','chartSec'].forEach(id=>document.getElementById(id).hidden=locked);
