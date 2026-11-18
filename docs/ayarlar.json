@@ -4,7 +4,7 @@
   "liquidate": 0,
   "strategy": "grid",
   "interval_min": 5,
-  "budget": 1000,
+  "budget": 4800,
   "kasa": 5000,
   "topup": {
     "amount": 250,
