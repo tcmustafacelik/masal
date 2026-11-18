@@ -169,10 +169,16 @@ class LivePortfolio(Portfolio):
         if amount < 10:
             return False
         need = min_order_try(inst, price)
-        if amount < need:  # borsanın bu coin için en küçük emir tutarının altında: sessizce atla
-            if self._once_per_day("min_" + inst):
-                self._note(ts, f"{inst.split('-')[0]} atlandı: OKX bu coinde en az {para(need)} TL emir istiyor, kademe {para(amount)} TL")
-            return False
+        if amount < need:
+            # Kademe, borsanın bu coin için en küçük emrine yetmiyor: kullanıcı tercihi gereği
+            # parası yetiyorsa ve kademenin 4 katını geçmiyorsa alt sınır kadar alınır, yoksa atlanır.
+            if need <= self.s["cash"] and need <= amount * 4:
+                self._note(ts, f"{inst.split('-')[0]}: kademe {para(amount)} TL borsanın alt sınırına yetmiyor, {para(need)} TL alınıyor")
+                amount = round(need + 0.5, 2)
+            else:
+                if self._once_per_day("min_" + inst):
+                    self._note(ts, f"{inst.split('-')[0]} atlandı: OKX bu coinde en az {para(need)} TL emir istiyor, botta yeterli para yok")
+                return False
         if not self.armed:
             self._note(ts, f"[deneme] AL {inst.split('-')[0]} {para(amount)} TL · {reason}")
             ok = super()._buy(ts, inst, price, amount, reason + " · deneme")

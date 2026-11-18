@@ -1,7 +1,7 @@
 {
-  "version": "1.16.1",
+  "version": "1.16.2",
   "date": "2026-11-18",
   "notes": [
-    "Borsanın en küçük emir tutarına yetmeyen coin sessizce atlanır"
+    "Kademesi borsa alt sınırına yetmeyen coinde (BTC gibi) alt sınır kadar alınır"
   ]
 }
