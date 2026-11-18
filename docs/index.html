@@ -50,6 +50,7 @@ header{position:sticky;top:0;z-index:5;background:rgba(244,245,247,.94);backdrop
 .ibtn.spin svg{animation:sp .8s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
 .upd{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);padding-bottom:10px}
 .upd svg.i{width:14px;height:14px}
+.upd b{font-weight:600;font-variant-numeric:tabular-nums}
 section{margin-top:18px}
 h2{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin:0 2px 8px;display:flex;align-items:center;gap:6px}
 h2 svg.i{width:15px;height:15px}
@@ -393,7 +394,7 @@ async function load(){
 }
 
 function render(){
-  document.getElementById('updated').textContent=S.updated?`Bot son çalıştı: ${dt(S.updated,true)} · ${ago(S.updated)}`:'Henüz çalışmadı';
+  updLine();
   const L=S.strategies.live;
   document.getElementById('mode').textContent=L?(L.armed?'Gerçek mod':'Deneme modu'):'Sanal mod';
   document.getElementById('foot').innerHTML='Fiyatlar uygulama açıkken OKX TR\'den anlık güncellenir; bot saatte bir karar verir.<br>'+(L&&L.armed?'Gerçek hesap kartı OKX TR hesabındaki gerçek işlemleri gösterir; diğerleri sanal karşılaştırmadır.':'Gerçek para kullanılmıyor; tüm işlemler sanal.');
@@ -441,6 +442,13 @@ function render(){
   renderMarket();
 }
 
+function nextRun(){const d=new Date();d.setSeconds(0,0);if(d.getMinutes()>=7)d.setHours(d.getHours()+1);d.setMinutes(7);return d}
+function updLine(){
+  const p=(n,l=2)=>String(n).padStart(l,'0');
+  const live=lastTick?(()=>{const d=new Date(lastTick);return `<b class="up">● Canlı ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}.${p(d.getMilliseconds(),3)}</b> · `})():'';
+  const nr=nextRun();
+  document.getElementById('updated').innerHTML=live+(S?.updated?`Bot ${ago(S.updated)} · sonraki ${p(nr.getHours())}:${p(nr.getMinutes())}`:'Bot henüz çalışmadı');
+}
 function livePrice(inst,fallback){return LP[inst]?.last??fallback}
 function liveEquity(x){return x.cash+x.positions.reduce((a,p)=>a+p.qty*livePrice(p.inst,p.price),0)}
 
@@ -497,7 +505,7 @@ async function pollMarket(now){
         tag.innerHTML=`<i></i>Canlı · ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}.${p(d.getMilliseconds(),3)}`;tag.classList.add('on')}
       const x=S.strategies[sel];
       if(x&&!x.locked){renderMetrics(x);renderPositions(x)}
-      renderMarket();
+      renderMarket();updLine();
     }catch(e){document.getElementById('liveTag').classList.remove('on')}
     mkBusy=false}
   mkTimer=setTimeout(pollMarket,2000);
