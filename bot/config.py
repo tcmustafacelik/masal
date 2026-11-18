@@ -11,8 +11,8 @@ SLIPPAGE = 0.001
 
 # Hangi coinler: TL paritesinde, 24 saatlik hacmi yeterli olanlar
 QUOTE = "TRY"
-MIN_VOLUME_TRY = 250_000   # günlük en az bu kadar TL hacim
-MAX_SYMBOLS = 24
+MIN_VOLUME_TRY = 100_000   # günlük en az bu kadar TL hacim (kullanıcı isteği: daha çok coin)
+MAX_SYMBOLS = 40
 MAX_SPREAD = 0.008  # alış-satış farkı %0,8'den büyük (sığ) coinler alınmaz
 EXCLUDED = {"USDT", "USDC", "XAUT", "PAXG", "EURT", "DAI", "FDUSD", "TUSD"}
 
