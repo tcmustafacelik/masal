@@ -401,6 +401,21 @@ button:focus{outline:none}button:focus-visible{outline:2px solid var(--amber-lin
 .btn:active,.ibtn:active,.tile:active,.mode:active,.seg button:active,.more:active,.back:active{transform:scale(.97)}
 .acch:active{background:var(--line2)}
 input,textarea,.inp{-webkit-user-select:text;user-select:text}
+/* ---- kâr/zarar renkleri: her listede yeşil = kâr, kırmızı = zarar ---- */
+.end span.up,.mid span.up,.end b.up{color:var(--green)}.end span.dn,.mid span.dn,.end b.dn{color:var(--red)}
+.plc{display:inline-block!important;margin-top:4px;padding:3px 7px;border-radius:6px;font-size:12px!important;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.plc.up{background:var(--green-bg);color:var(--green)!important}.plc.dn{background:var(--red-bg);color:var(--red)!important}.plc.z{background:var(--line2);color:var(--muted)}
+.plp{display:block;font-size:11.5px!important;font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums}
+.row.pos{align-items:flex-start}.row.pos .coin{margin-top:2px}
+.row.pos .mid b{display:flex;align-items:center;gap:5px}.row.pos .mid b small{font-size:12px;font-weight:500;color:var(--muted)}
+.shd{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:5px;background:var(--green-bg);color:var(--green);flex:none}
+.shd svg{width:12px;height:12px}.shd.no{background:var(--amber-bg);color:var(--amber)}
+.rng{position:relative;height:6px;border-radius:3px;margin:9px 4px 0;background:linear-gradient(90deg,color-mix(in srgb,var(--red) 55%,transparent),var(--line) 45%,var(--line) 55%,color-mix(in srgb,var(--green) 55%,transparent))}
+.rng .av{position:absolute;top:-3px;width:2px;height:12px;margin-left:-1px;background:var(--faint);border-radius:1px}
+.rng .mk{position:absolute;top:-4px;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:var(--surface);border:3px solid var(--muted);box-shadow:0 1px 4px var(--shadow);transition:left .5s}
+.rng .mk.up{border-color:var(--green)}.rng .mk.dn{border-color:var(--red)}
+.rngl{display:flex;justify-content:space-between;gap:6px;margin-top:6px}
+.rngl em{font-style:normal;font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -570,6 +585,6 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 <div class="toast" id="toast" hidden></div>
 <div class="qsh" id="qsh" hidden><div class="qb"><div class="gr"></div><h3><span><svg class="i"><use href="#i-info"/></svg></span><b id="qTitle"></b></h3><div class="qt" id="qText"></div><button class="btn primary" id="qOk">Anladım</button></div></div>
 
-<script src="app.js?v=1.25.0"></script>
+<script src="app.js?v=1.25.1"></script>
 </body>
 </html>

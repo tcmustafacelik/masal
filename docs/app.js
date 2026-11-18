@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.25.0';
+const APP_VERSION = '1.25.1';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -249,7 +249,7 @@ function render() {
         const sell = t.side === 'SAT';
         return `<div class="row">${cico(t.inst, t.side, t.pnl < 0)}
       <div class="mid"><b>${sym(t.inst)} ${sell ? 'satıldı' : 'alındı'}</b><span>${dt(t.ts)} · ${t.reason} · ${px(t.price)}</span></div>
-      <div class="end"><b>${tl(t.amount, 0)}</b>${sell ? `<span class="${cls(t.pnl)}">${sgn(t.pnl)} TL ${t.pnl >= 0 ? 'kâr' : 'zarar'}</span>` : `<span>harcandı</span>`}</div></div>`;
+      <div class="end"><b>${tl(t.amount, 0)}</b>${sell ? `<span class="plc ${cls(t.pnl) || 'z'}">${sgn(t.pnl)} TL ${t.pnl >= 0 ? 'kâr' : 'zarar'}</span>` : `<span>harcandı</span>`}</div></div>`;
     }).join('')
         : `<div class="empty">${ic('i-list')}<div>Henüz işlem yok. Bot fırsat bekliyor.</div></div>`;
     renderBacktest();
@@ -285,11 +285,10 @@ function gloss(k) {
       <li><span class="chip a">Düşüş filtresi</span> coin hızlı düşüyor; düşüş yavaşlayana kadar alım bekletiliyor.</li>
       <li><span class="chip b">2. kademe</span> zaten elde olan coin; bu kadar daha düşerse bir kademe daha eklenir.</li></ul>
       <p>Şartta görünüp alınmıyorsa: ${c?.instant ? '' : 'mum henüz kapanmamıştır, ya da '}bütçe sınırı / coin sayısı dolmuştur.</p>`],
-        pozisyon: ['Elimdeki coinler', `<ul><li><b>Ort.</b> ortalama alış fiyatın, yanındaki şimdiki fiyat.</li>
-      <li><b>Kademe:</b> o coinden kaç parça alındığı.</li>
-      <li><b>Kâr al / zarar durdur:</b> botun satacağı fiyatlar.</li>
-      <li><b>Borsa korumalı:</b> bu satış emirleri OKX'te bekliyor; bot ya da telefon kapalı olsa bile çalışır.</li></ul>
-      <p>Sağdaki tutar coinin şu anki değeri, altındaki rakam satılsa ne kadar kâr/zarar edeceğin (komisyon hariç).</p>`],
+        pozisyon: ['Elimdeki coinler', `<ul><li><b>Alış → şimdi:</b> ortalama alış fiyatın ve şu anki fiyat.</li>
+      <li><b>Çubuk:</b> solda kırmızı <b>zarar durdur</b>, sağda yeşil <b>kâr al</b> fiyatı. Yuvarlak, fiyatın şu an nerede olduğunu gösterir; ince çizgi alış fiyatın. Yuvarlak sağa gittikçe kâra yaklaşırsın.</li>
+      <li><span class="shd">${ic('i-shield')}</span> <b>Borsa korumalı:</b> bu satış emirleri OKX'te bekliyor; bot ya da telefon kapalı olsa bile çalışır.</li>
+      <li><b>Sağdaki renkli kutu:</b> şimdi satılsa ne kadar kâr (yeşil) ya da zarar (kırmızı) edeceğin.</li></ul>`],
         coinkz: ['Coin bazında kâr/zarar', `<p>Her coin için şimdiye kadar elde edilen sonuç:</p>
       <ul><li><b>Kapanan:</b> satılmış kademelerden kesinleşmiş kâr/zarar.</li><li><b>Açık:</b> elde duran kısmın şu anki, henüz kesinleşmemiş kâr/zararı.</li></ul>
       <p>Başlıktaki toplam ikisinin toplamıdır.</p>`],
@@ -451,11 +450,16 @@ function renderPositions(x) {
     }
     document.getElementById('positions').innerHTML = pos.length ? pos.map(p => {
         const cur = livePrice(p.inst, p.price), val = p.qty * cur, pl = val - p.cost, plp = (val / p.cost - 1) * 100;
-        const prot = p.protected === true ? '<span class="prot">Borsa korumalı</span>' : p.protected === false ? '<span class="prot no">Koruma bekliyor</span>' : '';
-        const tgt = (p.tp || p.sl) ? ` · ${p.tp ? 'kâr al ' + px(p.tp) : ''}${p.tp && p.sl ? ' / ' : ''}${p.sl ? 'zarar durdur ' + px(p.sl) : ''}` : '';
-        return `<div class="row">${cico(p.inst)}
-      <div class="mid"><b>${sym(p.inst)}${p.lots > 1 ? ` · ${p.lots} kademe` : ''}${prot}</b><span>Ort. ${px(p.avg)} → ${px(cur)} · ${ago(p.since).replace(' önce', '')}${tgt}</span></div>
-      <div class="end"><b>${tl(val, 0)}</b><span class="${cls(pl)}">${sgn(pl)} TL · ${plp > 0 ? '+' : ''}${nf(plp)}%</span></div></div>`;
+        const prot = p.protected === true ? `<span class="shd" title="Borsa korumalı">${ic('i-shield')}</span>` : p.protected === false ? `<span class="shd no" title="Koruma bekliyor">${ic('i-shield')}</span>` : '';
+        let rng = '';
+        if (p.tp && p.sl && p.tp > p.sl) {
+            const lg = (px(p.sl) + px(p.tp)).length > 14, k = v => Math.max(0, Math.min(100, (v - p.sl) / (p.tp - p.sl) * 100));
+            rng = `<div class="rng"><i class="av" style="left:${k(p.avg).toFixed(1)}%"></i><i class="mk ${cls(pl)}" style="left:${k(cur).toFixed(1)}%"></i></div>
+        <div class="rngl"><em class="dn">${lg ? 'Zarar' : 'Zarar durdur'} ${px(p.sl)}</em><em class="up">${lg ? 'Kâr' : 'Kâr al'} ${px(p.tp)}</em></div>`;
+        }
+        return `<div class="row pos">${cico(p.inst)}
+      <div class="mid"><b>${sym(p.inst)}${prot}${p.lots > 1 ? `<small> · ${p.lots} kademe</small>` : ''}</b><span>Alış ${px(p.avg)} → şimdi ${px(cur)} · ${ago(p.since).replace(' önce', '')}</span>${rng}</div>
+      <div class="end"><b>${tl(val, 0)}</b><span class="plc ${cls(pl) || 'z'}">${sgn(pl)} TL</span><span class="plp ${cls(pl)}">${plp > 0 ? '+' : ''}${nf(plp)}%</span></div></div>`;
     }).join('')
         : `<div class="empty">${ic('i-box')}<div>Şu an açık pozisyon yok</div></div>`;
 }
