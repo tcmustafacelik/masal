@@ -27,7 +27,7 @@ def main(days=30, custom=False):
     else:
         req = None
         settings.load()
-    bars_needed = days * 24 + WARMUP
+    bars_needed = days * 24 * config.BPH + WARMUP
     insts = okx.universe()
     series = {}
     for inst in insts:
@@ -58,7 +58,7 @@ def main(days=30, custom=False):
             "win_rate": round(len(wins) / len(sells) * 100, 1) if sells else 0,
             "max_drawdown": round(mdd * 100, 2),
             "halted": p.s["halted"],
-            "equity": p.s["equity"][::6],  # 6 saatlik seyreltme
+            "equity": p.s["equity"][::6 * config.BPH],  # 6 saatlik seyreltme
         }
 
     # Al ve tut karşılaştırması: aynı coinlere eşit para yatırıp hiç dokunmamak

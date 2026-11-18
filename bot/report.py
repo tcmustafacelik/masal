@@ -19,7 +19,7 @@ def describe(key, c):
                 f"her kademeyi {pct(c['lot_tp'])} kârla ayrı satar.")
     if key == "dip":
         return (f"Fiyat 20 saatlik ortalamanın {pct(c['dip_pct'])} altına inip aşırı satımdayken alır; "
-                f"{pct(c['take_profit'])} kârda ya da {c['max_hold_bars']} saat dolunca satar.")
+                f"{pct(c['take_profit'])} kârda ya da {c['max_hold_bars'] // config.BPH} saat dolunca satar.")
     return (f"Kısa ortalama uzun ortalamayı yukarı kesip fiyat ana trendin üstündeyken girer; "
             f"zirveden {pct(c['trailing'])} geri çekilince çıkar.")
 
@@ -83,7 +83,7 @@ def build(state, S=None):
             "positions": sorted(positions, key=lambda x: -x["value"]),
             "coins": coin_list,
             "recent": s["trades"][-40:][::-1],
-            "equity_series": s["equity"][-24 * 30:],
+            "equity_series": s["equity"][-24 * 30 * config.BPH:][::config.BPH],
             "halted": s["halted"], "halt_reason": s["halt_reason"], "blocked_today": s["blocked_today"],
         }
     out = {

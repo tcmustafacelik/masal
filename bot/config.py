@@ -16,7 +16,10 @@ MAX_SYMBOLS = 24
 MAX_SPREAD = 0.008  # alış-satış farkı %0,8'den büyük (sığ) coinler alınmaz
 EXCLUDED = {"USDT", "USDC", "XAUT", "PAXG", "EURT", "DAI", "FDUSD", "TUSD"}
 
-BAR = "1H"
+import os as _os
+BAR_MIN = int(_os.environ.get("MASAL_BAR_MIN", "15"))  # mum süresi (dakika): kararlar bu aralıkla verilir
+BAR = {15: "15m", 30: "30m", 60: "1H"}[BAR_MIN]
+BPH = 60 // BAR_MIN  # saatteki mum sayısı; göstergeler saat cinsinden aynı kalsın diye pencereler bununla çarpılır
 
 # Risk kuralları (dengeli profil)
 RISK = {
@@ -30,12 +33,12 @@ RISK = {
 STRATEGIES = {
     "dip": {
         "name": "Düşüşte al",
-        "sma": 20, "rsi": 14, "dip_pct": 0.03, "rsi_max": 35,
-        "take_profit": 0.04, "max_hold_bars": 48,
+        "sma": 20 * BPH, "rsi": 14, "dip_pct": 0.03, "rsi_max": 35,
+        "take_profit": 0.04, "max_hold_bars": 48 * BPH,
     },
     "trend": {
         "name": "Trend takibi",
-        "fast": 12, "slow": 26, "base": 50, "trailing": 0.04,
+        "fast": 12 * BPH, "slow": 26 * BPH, "base": 50 * BPH, "trailing": 0.04,
     },
     "grid": {
         "name": "Kademeli",

@@ -178,7 +178,7 @@ def _universe():
 
 def _candles(inst):
     """Kapanmış saatlik mumlar sadece saat başında değişir; arada önbellekten verilir."""
-    hour = int(time.time() // 3600)
+    hour = int(time.time() // (config.BAR_MIN * 60))
     hit = _CACHE["bars"].get(inst)
     if hit and hit[0] == hour and time.time() - hit[1] < 600:
         return hit[2]

@@ -35,7 +35,7 @@ def rsi(xs, n=14):
     return 100 - 100 / (1 + rs)
 
 
-WARMUP = 60  # bu kadar mum birikmeden işlem yapılmaz
+WARMUP = 60 * config.BPH  # 60 saatlik veri birikmeden işlem yapılmaz
 
 
 def new_state(key, cash=None, scale=None):
@@ -215,7 +215,7 @@ class Portfolio:
                   and price <= pos["lots"][-1]["entry"] * (1 - c["step"])):
                 self._buy(ts, inst, price, c["lot"], f"{len(pos['lots']) + 1}. kademe")
             return
-        m = sma(closes, 20)
+        m = sma(closes, 20 * config.BPH)  # son 20 saatin ortalaması
         if (self._can_open() and len(self.s["positions"]) < c["max_coins"] and self._room(c["lot"])
                 and m and price <= m * (1 - c["step"])):
             self._buy(ts, inst, price, c["lot"], "1. kademe")

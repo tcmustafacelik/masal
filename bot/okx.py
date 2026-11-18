@@ -6,7 +6,7 @@ import urllib.request
 
 from . import config
 
-BAR_MS = 3_600_000  # 1 saatlik mum
+BAR_MS = config.BAR_MIN * 60_000  # mum süresi
 
 
 def _get(path, params=None, retries=3):

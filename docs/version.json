@@ -1,8 +1,7 @@
 {
-  "version": "1.18.0",
-  "date": "2026-11-18",
+  "version": "1.19.0",
+  "date": "2026-11-19",
   "notes": [
-    "Kademeli: 20 coine kadar, en derin düşüş önce, toplam kullanım sınırı",
-    "Daha geniş coin listesi (sığ coinler elenir)"
+    "Bot kararlarını 15 dakikada bir verir (önce saatte bir)"
   ]
 }

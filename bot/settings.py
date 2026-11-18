@@ -69,5 +69,5 @@ def apply(s):
                                      max_coins=int(g["max_coins"]), stop=g["stop_pct"] / 100,
                                      max_use=g.get("use_pct", 40) / 100)
     config.STRATEGIES["dip"].update(dip_pct=d["dip_pct"] / 100, rsi_max=d["rsi_max"],
-                                    take_profit=d["take_profit_pct"] / 100, max_hold_bars=int(d["max_hold_hours"]))
+                                    take_profit=d["take_profit_pct"] / 100, max_hold_bars=int(d["max_hold_hours"]) * config.BPH)
     config.STRATEGIES["trend"].update(trailing=t["trailing_pct"] / 100)
