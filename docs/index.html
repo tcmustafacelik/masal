@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#F4F5F7">
 <title>Masal</title>
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icon-192.png">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <style>
@@ -27,7 +27,20 @@ body{background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-syst
 svg.i{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 header{position:sticky;top:0;z-index:5;background:rgba(244,245,247,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line2)}
 .bar{display:flex;align-items:center;gap:10px;padding:12px 0 10px}
-.logo{width:34px;height:34px;border-radius:9px;background:var(--text);color:#fff;display:grid;place-items:center;font-weight:600;font-size:16px;letter-spacing:.5px}
+.logo{width:36px;height:36px;flex:none;cursor:pointer}
+.lg{width:100%;height:100%;display:block}
+.lg path{stroke-dasharray:40;stroke-dashoffset:40;animation:draw .55s cubic-bezier(.4,0,.2,1) forwards}
+.lg .p1{animation-delay:.15s}.lg .p2{animation-delay:.6s}.lg .p3{animation-delay:.9s}
+.lg.done .p2{animation:draw .55s cubic-bezier(.4,0,.2,1) .6s forwards,glow 5s ease-in-out 2s infinite}
+@keyframes draw{to{stroke-dashoffset:0}}
+@keyframes glow{0%,100%{stroke-opacity:1}50%{stroke-opacity:.55}}
+#splash{position:fixed;inset:0;background:var(--bg);z-index:50;display:grid;place-items:center;transition:opacity .35s}
+#splash.out{opacity:0;pointer-events:none}
+#splash .sp{display:flex;flex-direction:column;align-items:center;gap:14px}
+#splash .lg.big{width:84px;height:84px}
+#splash b{font-size:20px;font-weight:600;letter-spacing:.4px;opacity:0;animation:fade .5s ease 1.1s forwards}
+@keyframes fade{to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.lg path{animation:none!important;stroke-dashoffset:0}#splash b{animation:none;opacity:1}}
 .ttl{flex:1;min-width:0}
 .ttl b{display:block;font-size:16px;font-weight:600;letter-spacing:.2px}
 .ttl span{font-size:12px;color:var(--muted)}
@@ -145,6 +158,34 @@ footer{font-size:11.5px;color:var(--faint);text-align:center;margin-top:22px;lin
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom));background:var(--text);color:#fff;font-size:13px;padding:10px 14px;border-radius:var(--r-sm);max-width:calc(100% - 28px);z-index:20;box-shadow:0 6px 20px rgba(0,0,0,.18)}
 .okx{display:flex;gap:7px;align-items:flex-start;font-size:12px;border-radius:var(--r-sm);padding:8px 10px;margin:-2px 0 12px}
 .okx svg.i{width:15px;height:15px;margin-top:1px}.okx.ok{background:var(--green-bg);color:var(--green)}.okx.bad{background:var(--red-bg);color:var(--red)}
+.live{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;text-transform:none;letter-spacing:0;color:var(--muted);font-variant-numeric:tabular-nums}
+.live i{width:7px;height:7px;border-radius:2px;background:var(--faint);display:inline-block}
+.live.on i{background:var(--green);animation:blink 1.6s ease-in-out infinite}
+@keyframes blink{50%{opacity:.35}}
+.mk .row{padding:8px 0}
+.mk .pxv{transition:color .4s}
+.flash-up{color:var(--green)!important}.flash-dn{color:var(--red)!important}
+.lock{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-top:10px}
+.lock b{display:flex;gap:7px;align-items:center;font-size:14px}
+.lock p{font-size:12.5px;color:var(--muted);margin-top:4px}
+.prot{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 5px;border-radius:4px;background:var(--green-bg);color:var(--green);margin-left:4px;vertical-align:1px}
+.prot.no{background:var(--amber-bg);color:#93570B}
+.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (min-width:600px){
+  .wrap{max-width:780px;padding:0 20px}
+  .metrics{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .rules{grid-template-columns:repeat(3,minmax(0,1fr))}
+  #setv .tiles.two.links{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+@media (min-width:980px){
+  .wrap{max-width:1200px;padding:0 28px}
+  .cols{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,1fr);gap:0 26px;align-items:start}
+  .metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .rules{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #chart{height:220px}
+  #setForm{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 26px;align-items:start}
+  #setv .sethead,#setv>section{max-width:none}
+}
 .err{background:var(--red-bg);color:var(--red);border-radius:var(--r);padding:12px;margin-top:14px;font-size:13px;display:none}
 </style>
 </head>
@@ -179,12 +220,18 @@ footer{font-size:11.5px;color:var(--faint);text-align:center;margin-top:22px;lin
   <symbol id="i-sell" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5"/><path d="M5 20h14"/></symbol>
   <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 6v12M6 12h12"/></symbol>
   <symbol id="i-minus" viewBox="0 0 24 24"><path d="M6 12h12"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0112 0v5l1.5 2h-15L6 16z"/><path d="M10 20.5a2 2 0 004 0"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 18h2"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2h2"/></symbol>
 </svg>
+
+<div id="splash"><div class="sp"><svg class="lg big" viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="11" fill="#1D2430"/><path class="p1" pathLength="40" d="M11 35V14l13 14" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><path class="p2" pathLength="40" d="M24 28l13-14" fill="none" stroke="#E39A2E" stroke-width="4.5" stroke-linecap="round"/><path class="p3" pathLength="40" d="M37 14v21" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/></svg><b>Masal</b></div></div>
 
 <header>
   <div class="wrap">
     <div class="bar">
-      <div class="logo">M</div>
+      <div class="logo" id="logo"><svg class="lg" viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="11" fill="#1D2430"/><path class="p1" pathLength="40" d="M11 35V14l13 14" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><path class="p2" pathLength="40" d="M24 28l13-14" fill="none" stroke="#E39A2E" stroke-width="4.5" stroke-linecap="round"/><path class="p3" pathLength="40" d="M37 14v21" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/></svg></div>
       <div class="ttl"><b>Masal</b><span>Kripto bot · OKX TR</span></div>
       <span class="chip" id="mode">Sanal mod</span>
       <button class="ibtn" id="reload" aria-label="Yenile"><svg class="i"><use href="#i-refresh"/></svg></button>
@@ -194,9 +241,10 @@ footer{font-size:11.5px;color:var(--faint);text-align:center;margin-top:22px;lin
   </div>
 </header>
 
-<main class="wrap">
+<main class="wrap" id="mainv">
   <div class="err" id="err"></div>
-
+  <div class="cols">
+  <div class="colA">
   <section>
     <h2><svg class="i"><use href="#i-target"/></svg>Strateji</h2>
     <div class="tiles" id="tiles"></div>
@@ -204,12 +252,12 @@ footer{font-size:11.5px;color:var(--faint);text-align:center;margin-top:22px;lin
     <div id="alerts"></div>
   </section>
 
-  <section>
-    <div class="grid2" id="metrics"></div>
+  <section id="sumSec">
+    <div class="grid2 metrics" id="metrics"></div>
     <div id="kasa"></div>
   </section>
 
-  <section>
+  <section id="chartSec">
     <h2><svg class="i"><use href="#i-chart"/></svg>Bakiye seyri</h2>
     <div class="card">
       <div class="chead">
@@ -225,8 +273,22 @@ footer{font-size:11.5px;color:var(--faint);text-align:center;margin-top:22px;lin
   </section>
 
   <section>
+    <h2><svg class="i"><use href="#i-shield"/></svg>Koruma kuralları</h2>
+    <div class="rules" id="rules"></div>
+  </section>
+  </div>
+
+  <div class="colB">
+
+
+  <section>
     <h2><svg class="i"><use href="#i-box"/></svg>Açık pozisyonlar</h2>
     <div class="card list" id="positions"></div>
+  </section>
+
+  <section>
+    <h2><svg class="i"><use href="#i-pnl"/></svg>Piyasa<span class="live" id="liveTag"><i></i>Bağlanıyor…</span></h2>
+    <div class="card list" id="market"></div>
   </section>
 
   <section>
@@ -234,20 +296,17 @@ footer{font-size:11.5px;color:var(--faint);text-align:center;margin-top:22px;lin
     <div class="card list" id="trades"></div>
   </section>
 
-  <section>
-    <h2><svg class="i"><use href="#i-flag"/></svg>Strateji yarışı · geçmiş test</h2>
-    <div class="card list bt" id="backtest"></div>
-  </section>
-
-  <section>
-    <h2><svg class="i"><use href="#i-shield"/></svg>Koruma kuralları</h2>
-    <div class="rules" id="rules"></div>
-  </section>
-
   <section id="logSec" style="display:none">
     <h2><svg class="i"><use href="#i-info"/></svg>Bot kayıtları</h2>
     <div class="card list" id="log"></div>
   </section>
+
+  <section>
+    <h2><svg class="i"><use href="#i-flag"/></svg>Strateji yarışı · geçmiş test</h2>
+    <div class="card list bt" id="backtest"></div>
+  </section>
+  </div>
+  </div>
 
   <footer id="foot"></footer>
 </main>
@@ -261,8 +320,8 @@ footer{font-size:11.5px;color:var(--faint);text-align:center;margin-top:22px;lin
 
   <section>
     <h2><svg class="i"><use href="#i-link"/></svg>Hızlı bağlantılar</h2>
-    <div class="tiles two">
-      <a class="tile" href="https://tr.okx.com/account/my-api" target="_blank" rel="noopener"><span class="ic"><svg class="i"><use href="#i-coins"/></svg></span><span class="nm">OKX API anahtarı</span><span class="pc" style="color:var(--muted);font-weight:500">Yenile / oluştur</span></a>
+    <div class="tiles two links">
+      <a class="tile" href="https://tr.okx.com/account/my-api" target="_blank" rel="noopener"><span class="ic"><svg class="i"><use href="#i-coins"/></svg></span><span class="nm">OKX API anahtarı</span><span class="pc" style="color:var(--muted);font-weight:500">Yenilerken aynı şifre</span></a>
       <a class="tile" href="https://github.com/tcmustafacelik/masal/settings/secrets/actions" target="_blank" rel="noopener"><span class="ic"><svg class="i"><use href="#i-shield"/></svg></span><span class="nm">Anahtar kasası</span><span class="pc" style="color:var(--muted);font-weight:500">GitHub Secrets</span></a>
       <a class="tile" href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noopener"><span class="ic"><svg class="i"><use href="#i-link"/></svg></span><span class="nm">Erişim anahtarı</span><span class="pc" style="color:var(--muted);font-weight:500">GitHub token</span></a>
       <a class="tile" href="https://github.com/tcmustafacelik/masal/actions" target="_blank" rel="noopener"><span class="ic"><svg class="i"><use href="#i-list"/></svg></span><span class="nm">Bot çalışmaları</span><span class="pc" style="color:var(--muted);font-weight:500">GitHub Actions</span></a>
@@ -302,6 +361,25 @@ function ago(ts){const m=Math.round((Date.now()-ts)/60000);if(m<1)return 'az ön
 const ic=(id,c='i')=>`<svg class="${c}"><use href="#${id}"/></svg>`;
 const sym=inst=>inst.split('-')[0];
 
+/* ---------- şifreleme (bot ile aynı: PBKDF2-SHA256 + AES-GCM) ---------- */
+const b64d=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0)),b64e=u=>btoa(String.fromCharCode(...new Uint8Array(u)));
+async function deriveKey(pw,salt,iter){const km=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:iter,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['encrypt','decrypt'])}
+async function unseal(box,pw){const k=await deriveKey(pw,b64d(box.salt),box.iter||150000);
+  return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:b64d(box.iv)},k,b64d(box.ct))))}
+async function seal(obj,pw){const salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12)),iter=150000;
+  const k=await deriveKey(pw,salt,iter);const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},k,new TextEncoder().encode(JSON.stringify(obj)));
+  return {enc:1,iter,salt:b64e(salt),iv:b64e(iv),ct:b64e(ct)}}
+let pw=localStore('masal_pw')||'';
+async function openLive(){
+  if(!S.live_enc)return;
+  const pub=S.live_public||{};
+  S.strategies.live={locked:true,name:'Gerçek hesap',live:true,armed:pub.armed,paused:pub.paused,pnl_pct:0};
+  if(!pw)return;
+  try{const o=await unseal(S.live_enc,pw);S.strategies.live=o.strategy;S.okx=o.okx}
+  catch(e){pw='';localStorage.removeItem('masal_pw');toast('Şifre uyuşmadı, gerçek hesap kilitli kaldı')}
+}
+
 async function load(){
   const btn=document.getElementById('reload');btn.classList.add('spin');
   const err=document.getElementById('err');err.style.display='none';
@@ -309,66 +387,131 @@ async function load(){
     const q='?t='+Date.now();
     const [s,b]=await Promise.all([fetch('data/summary.json'+q).then(r=>{if(!r.ok)throw 0;return r.json()}),
       fetch('data/backtest.json'+q).then(r=>r.ok?r.json():null).catch(()=>null)]);
-    S=s;B=b;if(!S.strategies[sel])sel=Object.keys(S.strategies)[0];render();
-  }catch(e){err.textContent='Veriler yüklenemedi. Bağlantını kontrol edip yenile düğmesine dokun.';err.style.display='block'}
-  finally{btn.classList.remove('spin')}
+    S=s;B=b;await openLive();if(!S.strategies[sel])sel=Object.keys(S.strategies)[0];render();pollMarket(true);
+  }catch(e){console.error(e);err.textContent='Veriler yüklenemedi. Bağlantını kontrol edip yenile düğmesine dokun.';err.style.display='block'}
+  finally{btn.classList.remove('spin');hideSplash()}
 }
 
 function render(){
-  document.getElementById('updated').textContent=S.updated?`Son güncelleme ${dt(S.updated,true)} · ${ago(S.updated)}`:'Henüz çalışmadı';
+  document.getElementById('updated').textContent=S.updated?`Bot son çalıştı: ${dt(S.updated,true)} · ${ago(S.updated)}`:'Henüz çalışmadı';
   const L=S.strategies.live;
   document.getElementById('mode').textContent=L?(L.armed?'Gerçek mod':'Deneme modu'):'Sanal mod';
-  document.getElementById('foot').innerHTML=L&&L.armed?'Gerçek hesap kartı OKX TR hesabındaki gerçek işlemleri gösterir; diğerleri sanal karşılaştırmadır.<br>Veriler saatte bir güncellenir.':'Bu panel sanal işlemleri gösterir; gerçek para kullanılmıyor.<br>Veriler saatte bir güncellenir.';
+  document.getElementById('foot').innerHTML='Fiyatlar uygulama açıkken OKX TR\'den anlık güncellenir; bot saatte bir karar verir.<br>'+(L&&L.armed?'Gerçek hesap kartı OKX TR hesabındaki gerçek işlemleri gösterir; diğerleri sanal karşılaştırmadır.':'Gerçek para kullanılmıyor; tüm işlemler sanal.');
   const keys=Object.keys(S.strategies);
   const tg=document.getElementById('tiles');tg.style.gridTemplateColumns=`repeat(${keys.length===4?2:3},minmax(0,1fr))`;
   tg.innerHTML=keys.map(k=>{const x=S.strategies[k];
+    const sub=x.locked?`<span class="pc" style="color:var(--muted)">${ic('i-lock')} Kilitli</span>`:`<span class="pc ${cls(x.pnl_pct)}">${x.pnl_pct>0?'+':''}${nf(x.pnl_pct)}%</span>`;
     return `<button class="tile ${k===sel?'on':''}" data-k="${k}"><span class="ic">${ic(ICON[k])}</span>
-      <span class="nm">${x.name}${x.live?`<small class="tag ${x.armed?'real':''}">${x.armed?'Gerçek':'Deneme'}</small>`:''}</span><span class="pc ${cls(x.pnl_pct)}">${x.pnl_pct>0?'+':''}${nf(x.pnl_pct)}%</span></button>`}).join('');
+      <span class="nm">${x.name}${x.live?`<small class="tag ${x.armed?'real':''}">${x.armed?'Gerçek':'Deneme'}</small>`:''}</span>${sub}</button>`}).join('');
+  tg.querySelectorAll('.tile').forEach(el=>el.onclick=()=>{sel=el.dataset.k;localStore('masal_sel',sel);render();pollMarket(true)});
   const x=S.strategies[sel];
+  const locked=!!x.locked;
+  ['sumSec','chartSec'].forEach(id=>document.getElementById(id).hidden=locked);
+  if(locked){
+    document.getElementById('desc').textContent='';
+    document.getElementById('alerts').innerHTML=`<div class="lock"><b>${ic('i-lock')}Gerçek hesap verileri şifreli</b>
+      <p>Bakiye ve işlemlerin herkese açık sayfada şifreli duruyor. Görmek için OKX'te API anahtarını oluştururken belirlediğin şifreyi (Passphrase) gir. Şifre sadece bu cihazda saklanır.</p>
+      <input class="inp" id="pwIn" type="password" placeholder="OKX şifresi" autocomplete="off"><button class="btn primary" id="pwBtn" style="width:100%">${ic('i-lock')}Kilidi aç</button></div>`;
+    document.getElementById('pwBtn').onclick=async()=>{const v=document.getElementById('pwIn').value;if(!v)return toast('Şifreyi gir');
+      try{const o=await unseal(S.live_enc,v);pw=v;localStore('masal_pw',v);S.strategies.live=o.strategy;S.okx=o.okx;render();toast('Kilit açıldı')}
+      catch(e){toast('Şifre yanlış')}};
+    ['positions','trades'].forEach(id=>document.getElementById(id).innerHTML=`<div class="empty">${ic('i-lock')}<div>Kilitli</div></div>`);
+    document.getElementById('logSec').style.display='none';
+    renderBacktest();renderRules(S.risk);renderMarket();return;
+  }
   document.getElementById('desc').textContent=x.desc;
   let al='';
   if(x.halted)al+=`<div class="alert red">${ic('i-power')}<div><b>Acil fren devrede.</b> ${x.halt_reason}. Bot bu stratejide yeni işlem açmıyor.</div></div>`;
+  else if(x.paused)al+=`<div class="alert amb">${ic('i-pause')}<div><b>Bot durduruldu.</b> Yeni alım yapılmıyor; açık pozisyonların koruması devam ediyor.</div></div>`;
   else if(x.blocked_today)al+=`<div class="alert amb">${ic('i-stop')}<div><b>Günlük zarar sınırına ulaşıldı.</b> Bugün yeni işlem açılmayacak.</div></div>`;
   document.getElementById('alerts').innerHTML=al;
-
-  const wr=x.win_rate==null?'—':'%'+nf(x.win_rate,0);
-  document.getElementById('metrics').innerHTML=[
-    ['i-wallet','Bakiye',tl(x.equity),`Nakit ${tl(x.cash,0)} · başlangıç ${tl(x.start_cash,0)}`,''],
-    ['i-pnl','Toplam kâr/zarar',sgn(x.pnl)+' TL',`${x.pnl_pct>0?'+':''}${nf(x.pnl_pct)}%`,cls(x.pnl)],
-    ['i-day','Bugün',sgn(x.today_pnl)+' TL','Gün başından beri',cls(x.today_pnl)],
-    ['i-target','Kazanma oranı',wr,`${x.trades} kapanan işlem`,'']
-  ].map(([i,k,v,s,c])=>`<div class="m"><div class="k">${ic(i)}${k}</div><div class="v ${c}">${v}</div><div class="s">${s}</div></div>`).join('');
-
+  renderMetrics(x);
   renderKasa(x);
   renderChart();
-
-  const pos=x.positions;
-  document.getElementById('positions').innerHTML=pos.length?pos.map(p=>`<div class="row"><div class="coin">${sym(p.inst).slice(0,4)}</div>
-      <div class="mid"><b>${sym(p.inst)}${p.lots>1?` · ${p.lots} kademe`:''}</b><span>Ort. ${px(p.avg)} → ${px(p.price)} · ${ago(p.since)}</span></div>
-      <div class="end"><b>${tl(p.value,0)}</b><span class="${cls(p.pnl)}">${sgn(p.pnl)} TL · ${p.pnl_pct>0?'+':''}${nf(p.pnl_pct)}%</span></div></div>`).join('')
-    :`<div class="empty">${ic('i-box')}<div>Şu an açık pozisyon yok</div></div>`;
-
+  renderPositions(x);
   const tr=x.recent.slice(0,15);
   document.getElementById('trades').innerHTML=tr.length?tr.map(t=>{const sell=t.side==='SAT';
     return `<div class="row"><div class="coin ${sell?'sat'+(t.pnl<0?' l':''):'al'}">${t.side}</div>
       <div class="mid"><b>${sym(t.inst)} · ${px(t.price)}</b><span>${t.reason} · ${dt(t.ts)}</span></div>
       <div class="end"><b>${tl(t.amount,0)}</b>${sell?`<span class="${cls(t.pnl)}">${sgn(t.pnl)} TL</span>`:'<span>alım</span>'}</div></div>`}).join('')
     :`<div class="empty">${ic('i-list')}<div>Henüz işlem yok. Bot fırsat bekliyor.</div></div>`;
-
   renderBacktest();
-  const R=x.risk||S.risk;
   renderLog(x);
+  renderRules(x.risk||S.risk);
+  renderMarket();
+}
+
+function livePrice(inst,fallback){return LP[inst]?.last??fallback}
+function liveEquity(x){return x.cash+x.positions.reduce((a,p)=>a+p.qty*livePrice(p.inst,p.price),0)}
+
+function renderMetrics(x){
+  const eq=liveEquity(x),pnl=eq-x.start_cash,pct=(eq/x.start_cash-1)*100,today=x.today_pnl+(eq-x.equity);
+  const wr=x.win_rate==null?'—':'%'+nf(x.win_rate,0);
+  document.getElementById('metrics').innerHTML=[
+    ['i-wallet','Bakiye',tl(eq),`Nakit ${tl(x.cash,0)} · başlangıç ${tl(x.start_cash,0)}`,''],
+    ['i-pnl','Toplam kâr/zarar',sgn(pnl)+' TL',`${pct>0?'+':''}${nf(pct)}%`,cls(pnl)],
+    ['i-day','Bugün',sgn(today)+' TL','Gün başından beri',cls(today)],
+    ['i-target','Kazanma oranı',wr,`${x.trades} kapanan işlem`,'']
+  ].map(([i,k,v,s,c])=>`<div class="m"><div class="k">${ic(i)}${k}</div><div class="v ${c}">${v}</div><div class="s">${s}</div></div>`).join('');
+}
+
+function renderPositions(x){
+  const pos=x.positions;
+  document.getElementById('positions').innerHTML=pos.length?pos.map(p=>{const cur=livePrice(p.inst,p.price),val=p.qty*cur,pl=val-p.cost,plp=(val/p.cost-1)*100;
+    const prot=p.protected===true?'<span class="prot">Borsa korumalı</span>':p.protected===false?'<span class="prot no">Koruma bekliyor</span>':'';
+    const tgt=(p.tp||p.sl)?` · ${p.tp?'kâr al '+px(p.tp):''}${p.tp&&p.sl?' / ':''}${p.sl?'zarar durdur '+px(p.sl):''}`:'';
+    return `<div class="row"><div class="coin">${sym(p.inst).slice(0,4)}</div>
+      <div class="mid"><b>${sym(p.inst)}${p.lots>1?` · ${p.lots} kademe`:''}${prot}</b><span>Ort. ${px(p.avg)} → ${px(cur)} · ${ago(p.since)}${tgt}</span></div>
+      <div class="end"><b>${tl(val,0)}</b><span class="${cls(pl)}">${sgn(pl)} TL · ${plp>0?'+':''}${nf(plp)}%</span></div></div>`}).join('')
+    :`<div class="empty">${ic('i-box')}<div>Şu an açık pozisyon yok</div></div>`;
+}
+
+function renderRules(R){
   document.getElementById('rules').innerHTML=[
     R.lot?['i-coins',tl(R.lot,0),'Kademe başına alım']:['i-coins',tl(R.trade_size,0),'İşlem başına en fazla'],
     ['i-layers',R.max_positions+' pozisyon','Aynı anda en fazla'],
-    ['i-stop','%'+nf(R.stop_loss*100,0)+' zarar','Bu noktada otomatik satar'],
+    ['i-stop','%'+nf(R.stop_loss*100,1)+' zarar','Bu noktada otomatik satar'],
     ['i-calx',tl(R.daily_loss_limit,0),'Günlük kayıp sınırı'],
     ['i-power',tl(R.kill_switch,0),'Altına inerse acil fren'],
     ['i-info','%'+nf((S.fee+S.slippage)*100,2),'Komisyon + kayma (tek yön)']
   ].map(([i,b,s])=>`<div class="rule"><div class="ic">${ic(i)}</div><div><b>${b}</b><span>${s}</span></div></div>`).join('');
-
-  document.querySelectorAll('.tile').forEach(el=>el.onclick=()=>{sel=el.dataset.k;localStore('masal_sel',sel);render()});
 }
+
+/* ---------- anlık piyasa: uygulama açıkken OKX TR'den doğrudan ---------- */
+const LP={};let mkTimer=null,mkBusy=false,lastTick=0;
+function marketList(){const x=S?.strategies?.[sel];const held=x&&!x.locked?x.positions.map(p=>p.inst):[];
+  return [...new Set([...held,...(S?.universe||[])])].slice(0,16)}
+async function pollMarket(now){
+  clearTimeout(mkTimer);
+  if(!S)return;
+  if(document.hidden){mkTimer=setTimeout(pollMarket,3000);return}
+  if(!mkBusy){mkBusy=true;
+    try{
+      const list=marketList();
+      const res=await Promise.all(list.map(i=>fetch('https://tr.okx.com/api/v5/market/ticker?instId='+i,{cache:'no-store'}).then(r=>r.json()).catch(()=>null)));
+      res.forEach((r,k)=>{const t=r?.data?.[0];if(!t)return;const inst=list[k],last=+t.last,prev=LP[inst]?.last;
+        LP[inst]={last,vol:+t.volCcy24h,ch:(last/(+t.open24h)-1)*100,dir:prev==null?0:Math.sign(last-prev),ts:+t.ts};
+        lastTick=Math.max(lastTick,+t.ts)});
+      const tag=document.getElementById('liveTag');
+      if(lastTick){const d=new Date(lastTick),p=(n,l=2)=>String(n).padStart(l,'0');
+        tag.innerHTML=`<i></i>Canlı · ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}.${p(d.getMilliseconds(),3)}`;tag.classList.add('on')}
+      const x=S.strategies[sel];
+      if(x&&!x.locked){renderMetrics(x);renderPositions(x)}
+      renderMarket();
+    }catch(e){document.getElementById('liveTag').classList.remove('on')}
+    mkBusy=false}
+  mkTimer=setTimeout(pollMarket,2000);
+}
+function renderMarket(){
+  const list=marketList(),box=document.getElementById('market');
+  const rows=list.filter(i=>LP[i]);
+  box.className='card list mk';
+  box.innerHTML=rows.length?rows.map(i=>{const q=LP[i];
+    return `<div class="row"><div class="coin">${sym(i).slice(0,4)}</div><div class="mid"><b>${sym(i)}</b><span>Hacim ${q.vol>=1e6?nf(q.vol/1e6,1)+' Mn':nf(q.vol/1e3,0)+' B'} TL</span></div>
+      <div class="end"><b class="pxv ${q.dir>0?'flash-up':q.dir<0?'flash-dn':''}">${px(q.last)}</b><span class="${cls(q.ch)}">${q.ch>0?'+':''}${nf(q.ch)}% · 24 sa</span></div></div>`}).join('')
+    :`<div class="empty">${ic('i-pnl')}<div>Fiyatlar yükleniyor…</div></div>`;
+}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)pollMarket(true)});
 
 function okxLine(){const o=S.okx;if(!o)return '';
   return `<div class="okx ${o.ok?'ok':'bad'}">${ic(o.ok?'i-check':'i-info')}<span>OKX TR: ${o.status}${o.ok?` · hesaptaki TL ${tl(o.try)}`:''}</span></div>`}
@@ -387,7 +530,7 @@ function renderKasa(x){
     <div class="prog">${full?'<div class="lbl"><span>Kasanın tamamı botta; yeni ekleme yapılmayacak.</span></div>'
       :`<div class="lbl"><span>Sonraki +1.000 TL için kâr hedefi</span><b>${tl(x.equity,0)} / ${tl(target,0)}</b></div>
       <div class="bar2"><i style="width:${(prog*100).toFixed(1)}%"></i></div>
-      <div class="hint">Aktif para son eklemeden beri %5 kâra ulaşınca${waitD?` ve ${waitD} gün daha geçince`:''} kasadan +1.000 TL eklenir. Zarardayken ekleme yapılmaz. Başlangıç bütçesi GitHub ayarlarındaki <b>MASAL_BUDGET</b> ile elle değiştirilebilir.</div>`}
+      <div class="hint">Aktif para son eklemeden beri %5 kâra ulaşınca${waitD?` ve ${waitD} gün daha geçince`:''} kasadan +1.000 TL eklenir. Zarardayken ekleme yapılmaz. Başlangıç parası ve kurallar Ayarlar ekranından değiştirilebilir.</div>`}
     </div></div>`;
 }
 
@@ -411,7 +554,7 @@ function renderBacktest(){
 
 function renderChart(){
   const box=document.getElementById('chartBox'),leg=document.getElementById('legend'),note=document.getElementById('chartNote');
-  const src=view==='live'?Object.fromEntries(Object.entries(S.strategies).map(([k,v])=>[k,v.equity_series]))
+  const src=view==='live'?Object.fromEntries(Object.entries(S.strategies).filter(([k,v])=>v.equity_series).map(([k,v])=>[k,v.equity_series]))
     :(B?Object.fromEntries(Object.entries(B.results).map(([k,v])=>[k,v.equity])):{});
   note.textContent=view==='live'?(S.created?'Başlangıç '+dt(S.created).split(' ')[0]:''):(B?'Son '+B.days+' gün':'');
   for(const k in src){const st=view==='live'?(S.strategies[k]?.start_cash||S.start_cash):S.start_cash;src[k]=src[k].map(([t,v])=>[t,(v/st-1)*100])}
@@ -509,12 +652,15 @@ function renderForm(){
    <button class="btn danger ${sellArm?'arm':''}" id="sellAll">${ic('i-sell')}${sellArm?'Emin misin? Dokun':'Hepsini sat'}</button></div></div></section>
    <section><h2>${ic('i-target')}Strateji</h2><div class="tiles" data-g="strat">${['grid','dip','trend'].map(k=>tile(draft.strategy===k,k,ICON[k],SNAMES[k])).join('')}</div>
    ${draft.strategy!==orig.strategy&&orig.live?`<div class="warn">${ic('i-info')}<div>Gerçek modda strateji değişince eski stratejinin açık coinleri satılır, yeni strateji temiz başlar.</div></div>`:''}</section>`;
+  h+=notifySection();
   for(const sec of SECTIONS)h+=`<section><h2>${ic(sec.i)}${sec.t}</h2><div class="card">${sec.f.map(field).join('')}</div></section>`;
   h+=`<section><h2>${ic(ICON[draft.strategy])}${SNAMES[draft.strategy]} ayarları</h2><div class="card">${STRAT_F[draft.strategy].map(field).join('')}</div></section>`;
+  h+=installSection();
   const f=document.getElementById('setForm');f.innerHTML=h;
   f.querySelectorAll('[data-g=mode] .tile').forEach(b=>b.onclick=()=>{draft.live=b.dataset.t==='real';renderForm()});
   f.querySelectorAll('[data-g=strat] .tile').forEach(b=>b.onclick=()=>{draft.strategy=b.dataset.t;renderForm()});
   document.getElementById('pauseSw').onclick=()=>{draft.paused=!draft.paused;renderForm()};
+  bindNotify();bindInstall();
   document.getElementById('sellAll').onclick=()=>{if(!sellArm){sellArm=setTimeout(()=>{sellArm=0;renderForm()},4000);return renderForm()}
     clearTimeout(sellArm);sellArm=0;const keep=JSON.parse(JSON.stringify(orig));keep.liquidate=Date.now();keep.paused=true;save(keep,'Hepsini sat isteği gönderildi; bot 1-2 dakika içinde satar ve durur.')};
   f.querySelectorAll('.field[data-k]').forEach(el=>{const k=el.dataset.k,inp=el.querySelector('input');
@@ -548,6 +694,9 @@ async function loadSettings(){
     else{orig=await fetch('ayarlar.json?t='+Date.now()).then(r=>r.json())}
   }catch(e){orig=S?.settings||null;if(e===401){token='';localStorage.removeItem('masal_token');toast('GitHub anahtarının süresi dolmuş, yeniden bağlan')}}
   if(!orig){document.getElementById('setForm').innerHTML=`<div class="empty">${ic('i-info')}<div>Ayarlar yüklenemedi</div></div>`;return}
+  if(orig&&!orig.notify)orig.notify={enabled:false,topic:'',trades:true,alerts:true,daily:true};
+  topicPlain='';
+  if(pw&&orig.notify?.topic?.enc){try{topicPlain=await unseal(orig.notify.topic,pw)}catch(e){}}
   draft=JSON.parse(JSON.stringify(orig));renderConn();renderForm();
 }
 
@@ -566,11 +715,70 @@ async function save(obj,msg){
 }
 
 let toastT;function toast(t){const el=document.getElementById('toast');el.textContent=t;el.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>el.hidden=true,3800)}
-function showSettings(on){document.querySelector('main.wrap:not(#setv)').hidden=on;document.getElementById('setv').hidden=!on;
+function showSettings(on){document.getElementById('mainv').hidden=on;document.getElementById('setv').hidden=!on;
   document.querySelector('header').hidden=on;scrollTo(0,0);if(on)loadSettings()}
 document.getElementById('openSet').onclick=()=>showSettings(true);
 document.getElementById('closeSet').onclick=()=>{if(draft&&JSON.stringify(orig)!==JSON.stringify(clean(draft))&&!confirmLeave())return;showSettings(false)};
 let leaveArm=0;function confirmLeave(){if(leaveArm)return true;leaveArm=1;toast('Kaydedilmemiş değişiklik var. Çıkmak için geri tuşuna tekrar dokun.');setTimeout(()=>leaveArm=0,3500);return false}
+
+/* ---------- bildirimler ---------- */
+let topicPlain='';
+const swRow=(id,on,title,sub)=>`<div class="sw ${on?'on':''}" id="${id}"><div class="lb"><b style="font-size:13.5px">${title}</b><span style="font-size:11.5px;color:var(--muted);display:block">${sub}</span></div><div class="track"><i></i></div></div>`;
+function notifySection(){
+  const N=draft.notify||(draft.notify={enabled:false,topic:'',trades:true,alerts:true,daily:true});
+  let h=`<section><h2>${ic('i-bell')}Bildirimler</h2><div class="card">`;
+  if(!pw)return h+`<div style="font-size:13px;color:var(--muted)">${ic('i-lock')} Bildirimleri açmak için önce ana ekranda <b>Gerçek hesap</b> kutusuna dokunup kilidi aç.</div></div></section>`;
+  h+=swRow('nOn',N.enabled,'Telefona bildirim gönder','Gerçek hesaptaki olaylar anında telefonuna düşer');
+  if(N.enabled){
+    h+=`<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line2);display:grid;gap:12px">
+      ${swRow('nTr',N.trades,'İşlemler','Alım, satım, borsada kâr al / zarar durdur')}
+      ${swRow('nAl',N.alerts,'Uyarılar','Hata, acil fren, OKX anahtarı sorunu, yetersiz bakiye')}
+      ${swRow('nDy',N.daily,'Günlük özet','Her akşam 21:00 civarı günün sonucu')}</div>
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line2)">
+      <ol class="steps"><li><b>ntfy</b> uygulamasını kur: <a href="https://play.google.com/store/apps/details?id=io.heckel.ntfy" target="_blank" rel="noopener">Android</a> · <a href="https://apps.apple.com/app/ntfy/id1625396347" target="_blank" rel="noopener">iPhone</a></li>
+      <li>ntfy'de <b>+</b> düğmesine dokun, konu adına aşağıdakini yapıştır, <b>Abone ol</b>.</li>
+      <li>Burada <b>Kaydet</b>'e bas, sonra test bildirimi gönder.</li></ol>
+      <div class="field" style="margin-top:8px;border-top:0;padding:0"><div class="lb"><span>Konu adı (gizli tut)</span><b style="font-family:var(--mono,monospace);font-size:13px;word-break:break-all">${topicPlain||'—'}</b></div>
+      <button class="btn" id="nCopy">${ic('i-copy')}Kopyala</button></div>
+      <button class="btn" id="nTest" style="width:100%;margin-top:10px">${ic('i-bell')}Test bildirimi gönder</button></div>`;
+  }
+  return h+'</div></section>';
+}
+function bindNotify(){
+  const N=draft.notify;if(!N||!pw)return;
+  const t=(id,f)=>{const e=document.getElementById(id);if(e)e.onclick=f};
+  t('nOn',async()=>{N.enabled=!N.enabled;
+    if(N.enabled&&!topicPlain){topicPlain='masal-'+Array.from(crypto.getRandomValues(new Uint8Array(12)),b=>(b%36).toString(36)).join('');
+      N.topic=await seal(topicPlain,pw)}
+    renderForm()});
+  t('nTr',()=>{N.trades=!N.trades;renderForm()});t('nAl',()=>{N.alerts=!N.alerts;renderForm()});t('nDy',()=>{N.daily=!N.daily;renderForm()});
+  t('nCopy',()=>{navigator.clipboard?.writeText(topicPlain).then(()=>toast('Konu adı kopyalandı'),()=>toast('Kopyalanamadı, elle seç'))});
+  t('nTest',async()=>{try{const r=await fetch('https://ntfy.sh/',{method:'POST',body:JSON.stringify({topic:topicPlain,title:'Masal',message:'Test bildirimi: bağlantı çalışıyor.',tags:['white_check_mark']})});
+    toast(r.ok?'Test bildirimi gönderildi':'Gönderilemedi ('+r.status+')')}catch(e){toast('Gönderilemedi, bağlantını kontrol et')}});
+}
+
+/* ---------- ana ekrana ekleme ---------- */
+let installEvt=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvt=e;if(!document.getElementById('setv').hidden&&draft)renderForm()});
+window.addEventListener('appinstalled',()=>{installEvt=null;toast('Masal ana ekrana eklendi');if(draft)renderForm()});
+const standalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+function installSection(){
+  let h=`<section><h2>${ic('i-phone')}Uygulama</h2><div class="card">`;
+  if(standalone())h+=`<div style="display:flex;gap:8px;align-items:center;color:var(--green);font-weight:600;font-size:13.5px">${ic('i-check')}Masal ana ekranında uygulama olarak yüklü</div>`;
+  else if(installEvt)h+=`<div style="font-size:13px;margin-bottom:10px">Masal'ı ana ekrana ekle; kendi simgesiyle uygulama gibi açılır, internet yokken de son verileri gösterir.</div><button class="btn primary" id="instBtn" style="width:100%">${ic('i-phone')}Ana ekrana ekle</button>`;
+  else h+=`<ol class="steps" style="margin-top:0"><li><b>Android (Chrome):</b> sağ üstteki ⋮ → <b>Ana ekrana ekle</b></li><li><b>iPhone (Safari):</b> Paylaş → <b>Ana Ekrana Ekle</b></li><li><b>Bilgisayar (Chrome/Edge):</b> adres çubuğundaki <b>Yükle</b> simgesi</li></ol>`;
+  return h+'</div></section>';
+}
+function bindInstall(){const b=document.getElementById('instBtn');if(b)b.onclick=async()=>{installEvt.prompt();await installEvt.userChoice;installEvt=null;renderForm()}}
+
+/* ---------- açılış, logo, çevrimdışı ---------- */
+let splashT0=Date.now();
+function hideSplash(){const sp=document.getElementById('splash');if(!sp||sp.classList.contains('out'))return;
+  setTimeout(()=>{sp.classList.add('out');setTimeout(()=>sp.remove(),400)},Math.max(0,1500-(Date.now()-splashT0)))}
+setTimeout(hideSplash,4000);
+document.querySelectorAll('.lg').forEach(l=>setTimeout(()=>l.classList.add('done'),1600));
+document.getElementById('logo').onclick=()=>{const l=document.querySelector('#logo .lg');const c=l.cloneNode(true);c.classList.remove('done');l.replaceWith(c);setTimeout(()=>c.classList.add('done'),1600)};
+if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 document.getElementById('save').onclick=()=>save();
 document.getElementById('undo').onclick=()=>{draft=JSON.parse(JSON.stringify(orig));renderForm()};
 

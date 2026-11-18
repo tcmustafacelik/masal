@@ -2,7 +2,7 @@
 import json
 import os
 
-from . import config
+from . import config, vault
 from .engine import Portfolio
 
 OUT = os.path.join(os.path.dirname(__file__), "..", "docs", "data", "summary.json")
@@ -45,6 +45,8 @@ def build(state, S=None):
                 "avg": cost / qty if qty else 0, "price": px, "value": round(value, 2),
                 "pnl": round(value - cost, 2), "pnl_pct": round((value / cost - 1) * 100, 2) if cost else 0,
                 "since": pos["lots"][0]["ts"],
+                "tp": pos["lots"][0].get("tp"), "sl": pos["lots"][0].get("sl"),
+                "protected": all(l.get("algo") for l in pos["lots"]) if s.get("armed") else None,
             })
         cfg = config.STRATEGIES[s["key"]]
         start = s.get("start_cash", config.START_CASH)
@@ -74,5 +76,11 @@ def build(state, S=None):
         "risk": config.RISK, "fee": config.FEE_RATE, "slippage": config.SLIPPAGE,
         "universe": state.get("universe", []), "strategies": strategies, "settings": S, "okx": state.get("okx"),
     }
+    if vault.password() and "live" in strategies:
+        # Gerçek hesap bilgileri herkese açık sayfada şifreli durur; uygulama OKX şifresiyle çözer
+        lv = strategies.pop("live")
+        out["live_enc"] = vault.seal({"strategy": lv, "okx": state.get("okx")})
+        out["live_public"] = {"armed": lv["armed"], "paused": lv["paused"]}
+        out["okx"] = None
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, separators=(",", ":"))

@@ -24,6 +24,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Gerekli paket
+        run: pip install --quiet cryptography
       - name: Bot turu
         env:
           OKX_API_KEY: ${{ secrets.OKX_API_KEY }}

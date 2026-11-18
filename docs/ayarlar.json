@@ -33,5 +33,12 @@
   },
   "trend": {
     "trailing_pct": 4
+  },
+  "notify": {
+    "enabled": false,
+    "topic": "",
+    "trades": true,
+    "alerts": true,
+    "daily": true
   }
 }

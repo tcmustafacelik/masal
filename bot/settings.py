@@ -22,6 +22,7 @@ DEFAULTS = {
     "grid": {"step_pct": 2, "lot_pct": 4, "lot_tp_pct": 2.5, "max_lots": 3, "max_coins": 3, "stop_pct": 7},
     "dip": {"dip_pct": 3, "rsi_max": 35, "take_profit_pct": 4, "max_hold_hours": 48},
     "trend": {"trailing_pct": 4},
+    "notify": {"enabled": False, "topic": "", "trades": True, "alerts": True, "daily": True},
 }
 
 

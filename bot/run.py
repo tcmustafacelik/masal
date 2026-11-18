@@ -6,7 +6,8 @@ import json
 import os
 import time
 
-from . import config, okx, report, settings
+from . import config, okx, report, settings, vault
+from .notify import Notifier
 from .engine import Portfolio, new_state, run_bars
 
 STATE_FILE = os.path.join(os.path.dirname(__file__), "..", "docs", "data", "state.json")
@@ -17,17 +18,30 @@ def tr(v):
 
 
 def load_state():
-    if os.path.exists(STATE_FILE):
-        with open(STATE_FILE, encoding="utf-8") as f:
-            return json.load(f)
-    return {"created": int(time.time() * 1000),
-            "portfolios": {k: new_state(k) for k in config.STRATEGIES}}
+    if not os.path.exists(STATE_FILE):
+        return {"created": int(time.time() * 1000),
+                "portfolios": {k: new_state(k) for k in config.STRATEGIES}}
+    with open(STATE_FILE, encoding="utf-8") as f:
+        state = json.load(f)
+    for k in ("live", "okx"):
+        if vault.is_sealed(state.get(k)):
+            try:
+                state[k] = vault.unseal(state[k])
+            except ValueError as e:
+                # Şifre değiştiyse eski kayıt saklanır, gerçek hesap yeniden kurulur
+                print(f"{k} çözülemedi: {e}")
+                state.setdefault("locked", {})[k] = state.pop(k)
+    return state
 
 
 def save_state(state):
     os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
+    out = dict(state)
+    for k in ("live", "okx"):
+        if out.get(k) is not None:
+            out[k] = vault.seal(out[k])
     with open(STATE_FILE, "w", encoding="utf-8") as f:
-        json.dump(state, f, ensure_ascii=False, separators=(",", ":"))
+        json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
 
 
 def note(L, text):
@@ -39,6 +53,10 @@ def note(L, text):
 def setup_live(state, S):
     """Gerçek hesap portföyünü ayarlara göre hazırlar."""
     armed, key, budget = bool(S["live"]), S["strategy"], float(S["budget"])
+    if armed and not (os.environ.get("OKX_API_KEY") and os.environ.get("OKX_API_SECRET")
+                      and os.environ.get("OKX_API_PASSPHRASE")):
+        armed = False  # anahtar yoksa gerçek mod açılmaz, bot deneme olarak devam eder
+        print("Gerçek mod istendi ama OKX anahtarları tanımlı değil; deneme modunda çalışılıyor.")
     L = state.get("live")
     if L and L.get("key") != key and L.get("armed") and L["positions"]:
         # Gerçek modda strateji değişti: eski stratejinin coinleri önce satılır
@@ -71,7 +89,7 @@ def setup_live(state, S):
     return L
 
 
-def topup(p, S):
+def topup(p, S, N=None):
     """Kâr ettikçe kasadan ek para. Zarardayken, durdurulmuşken ya da acil frende asla eklenmez."""
     L, T = p.s, S["topup"]
     amount = float(T["amount"])
@@ -88,6 +106,9 @@ def topup(p, S):
     L["checkpoint"] = eq + amount
     L["scale"] = L["start_cash"] / config.START_CASH
     note(L, f"Kâr hedefi tuttu: kasadan +{tr(amount)} TL eklendi")
+    if N:
+        N.add("trades", "Kasadan ekleme", f"Kâr hedefi tuttu, bota +{tr(amount)} TL eklendi. "
+               f"Bottaki para artık {tr(L['start_cash'])} TL.", 3, ["moneybag"])
 
 
 def liquidate(p, S):
@@ -100,6 +121,25 @@ def liquidate(p, S):
             p._sell_lots(ts, inst, L["last_prices"].get(inst, 0), list(L["positions"][inst]["lots"]),
                          "Elle: hepsini sat")
         note(L, "Uygulamadan istenen 'hepsini sat' tamamlandı")
+
+
+def daily_summary(L, p, N):
+    """Her akşam 21:00 turunda günün özetini gönderir."""
+    from datetime import datetime, timedelta, timezone
+    now = datetime.now(timezone(timedelta(hours=config.TZ_OFFSET_HOURS)))
+    today = now.strftime("%Y-%m-%d")
+    if now.hour < 21 or L.get("daily_sent") == today or not N.on:
+        return
+    L["daily_sent"] = today
+    eq = p.equity()
+    day_pnl = eq - L["day"]["start_equity"]
+    tot = eq - L["start_cash"]
+    start_ms = int(datetime.strptime(today, "%Y-%m-%d").replace(tzinfo=now.tzinfo).timestamp() * 1000)
+    n_tr = sum(1 for t in L["trades"] if t["ts"] >= start_ms)
+    sg = lambda v: ("+" if v >= 0 else "−") + tr(abs(v))
+    N.add("daily", "Masal · günün özeti",
+          f"Bugün {sg(day_pnl)} TL · toplam {sg(tot)} TL\nBottaki para {tr(eq)} TL · bugün {n_tr} işlem · "
+          f"{len(L['positions'])} açık pozisyon", 2, ["bar_chart"])
 
 
 def check_okx():
@@ -116,12 +156,24 @@ def check_okx():
 
 def main():
     S = settings.load()
+    N = Notifier(S)
     state = load_state()
+    if state.get("locked") and not state.get("locked_notified"):
+        state["locked_notified"] = True
+        N.add("alerts", "Eski gerçek hesap kaydı açılamadı",
+              "OKX şifresi değişmiş görünüyor. Bot gerçek hesabı sıfırdan başlattı; hesapta coin kaldıysa OKX'ten kontrol et. "
+              "Anahtarı yenilerken aynı şifreyi kullan.", 5, ["warning"])
     ports = [Portfolio(s) for s in state["portfolios"].values()]
 
     from .live import LivePortfolio
     L = setup_live(state, S)
     live = LivePortfolio(L, L["armed"])
+    live.notifier = N if L["armed"] else None
+    was_halted = L["halted"]
+    try:
+        live.reconcile()  # borsada tetiklenen korumaları önce kayda geçir
+    except Exception as e:
+        note(L, f"Borsa kontrolü yapılamadı: {e}")
 
     insts = set(okx.universe())
     for p in ports + [live]:  # elde tutulan coinler listeden düşse bile takip edilir
@@ -158,13 +210,25 @@ def main():
     run_bars(ports, events, series)
     run_bars([live], live_events, series)
     liquidate(live, S)
-    topup(live, S)
+    topup(live, S, N if L["armed"] else None)
 
+    if L["armed"] and L["halted"] and not was_halted:
+        N.add("alerts", "Acil fren devrede", f"{L['halt_reason']}. Gerçek hesaptaki her şey satıldı, bot durdu.",
+              5, ["rotating_light"])
+
+    prev = state.get("okx") or {}
     state["okx"] = check_okx()
+    if L["armed"] and not state["okx"]["ok"] and (prev.get("ok") or live._once_per_day("okx")):
+        N.add("alerts", "OKX bağlantısı çalışmıyor",
+              state["okx"]["status"] + ". Anahtarın süresi dolmuş olabilir; uygulamadan yenileyebilirsin.", 5,
+              ["key"])
+
+    daily_summary(L, live, N)
     state["updated"] = int(time.time() * 1000)
     state["universe"] = sorted(series)
     save_state(state)
     report.build(state, S)
+    N.flush()
     print(f"{len(events)} yeni mum işlendi, {len(series)} coin takipte.")
 
 

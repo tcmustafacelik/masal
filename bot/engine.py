@@ -133,6 +133,7 @@ class Portfolio:
         else:
             self.s["equity"][-1][1] = round(eq, 2)
         self.s["equity"] = self.s["equity"][-3000:]
+        self.s["trades"] = self.s["trades"][-500:]
 
     # ---------- strateji ----------
     def on_bar(self, ts, inst, closes):
