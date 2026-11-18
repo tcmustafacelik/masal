@@ -25,7 +25,10 @@ def sh(*args, cwd=None):
 
 
 def code_rev(ref):
-    return sh("git", "rev-parse", f"{ref}:bot").stdout.strip()
+    """Bot kodu ve iş akışı dosyasının sürümü; ikisinden biri değişince oturum yenilenir."""
+    a = sh("git", "rev-parse", f"{ref}:bot").stdout.strip()
+    b = sh("git", "rev-parse", f"{ref}:.github/workflows/bot.yml").stdout.strip()
+    return a + b
 
 
 def refresh_settings():

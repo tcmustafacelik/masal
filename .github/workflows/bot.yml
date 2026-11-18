@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 58
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
       - name: Son kayıtları al
@@ -33,9 +33,9 @@ jobs:
             git checkout FETCH_HEAD -- docs/data
             git reset -q docs/data
           fi
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
-          python-version: "3.12"
+          python-version: "3.15"
       - name: Gerekli paket
         run: pip install --quiet cryptography
       - name: Bot (kesintisiz)
