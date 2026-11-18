@@ -270,6 +270,13 @@ details.setup summary::-webkit-details-marker{display:none}
 .chk .ok .ci{background:var(--green-bg);color:var(--green)}.chk .ok b.t{color:var(--green)}
 .chk b.t{display:block;font-size:12.5px}
 .chk .ck span.d{color:var(--muted)}
+.tile.livet{grid-column:1/-1;flex-direction:row;justify-content:flex-start;text-align:left;gap:12px;min-height:72px;padding:12px 14px}
+.tile.livet .lt{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+.tile.livet .lt .nm{font-size:14px}.tile.livet .tag{margin:0;justify-content:flex-start}
+.tile.livet .lr{display:flex;flex-direction:column;align-items:flex-end;gap:2px}.tile.livet .lr b{font-size:15px;font-variant-numeric:tabular-nums}
+.vcap{grid-column:1/-1;display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted);font-weight:600;margin:6px 2px -2px}
+.vcap svg{width:14px;height:14px}
+#tiles{grid-auto-rows:auto}#tiles .tile:not(.livet){min-height:84px;padding:10px 4px 9px}
 .tiles.two{grid-template-columns:repeat(2,minmax(0,1fr))}.tiles.four{grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}.tiles.four .tile{padding:10px 2px 9px}
 .tile .ic.num{font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums}
 .warn{font-size:12px;color:var(--amber-ink);background:var(--amber-bg);border-radius:var(--r-sm);padding:9px 11px;margin-top:8px;display:flex;gap:8px;align-items:flex-start}
@@ -495,7 +502,7 @@ details.setup summary::-webkit-details-marker{display:none}
 <div class="toast" id="toast" hidden></div>
 
 <script>
-const APP_VERSION='1.16.2';
+const APP_VERSION='1.17.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -570,11 +577,17 @@ function render(){
    m.onclick=()=>document.getElementById('openSet').click()}
   document.getElementById('foot').innerHTML='Fiyatlar uygulama açıkken OKX TR\'den anlık güncellenir; bot kesintisiz çalışır, yaklaşık 10 saniyede bir kontrol eder.<br>'+(L&&L.armed?'Gerçek hesap kartı OKX TR hesabındaki gerçek işlemleri gösterir; diğerleri sanal karşılaştırmadır.':'Gerçek para kullanılmıyor; tüm işlemler sanal.');
   const keys=Object.keys(S.strategies).sort((a,b)=>(b==='live')-(a==='live'));
-  const tg=document.getElementById('tiles');tg.style.gridTemplateColumns=`repeat(${keys.length===4?2:3},minmax(0,1fr))`;
-  tg.innerHTML=keys.map(k=>{const x=S.strategies[k];
+  const tg=document.getElementById('tiles');tg.style.gridTemplateColumns='repeat(3,minmax(0,1fr))';
+  const tileOf=k=>{const x=S.strategies[k];
     const sub=x.locked?`<span class="pc" style="color:var(--muted)">${ic('i-lock')} Kilitli</span>`:`<span class="pc ${cls(x.pnl_pct)}">${x.pnl_pct>0?'+':''}${nf(x.pnl_pct)}%</span>`;
-    return `<button class="tile ${k===sel?'on':''}" data-k="${k}"><span class="ic">${ic(ICON[k])}</span>
-      <span class="nm">${x.name}${x.live?`<small class="tag ${x.armed?'real':''}">${x.armed?'<i></i>Canlı emir':ic('i-flask')+'Deneme'}</small>`:`<small class="tag">Sanal · ${tl(x.start_cash||10000,0)}</small>`}</span>${sub}</button>`}).join('');
+    if(x.live)return `<button class="tile livet ${k===sel?'on':''}" data-k="${k}"><span class="ic">${ic(ICON[k])}</span>
+      <span class="lt"><span class="nm">${x.name}</span><small class="tag ${x.armed?'real':''}">${x.armed?'<i></i>Canlı emir':ic('i-flask')+'Deneme'}</small></span>
+      <span class="lr">${x.locked?sub:`<b>${tl(x.equity,2)}</b>${sub}`}</span></button>`;
+    return `<button class="tile ${k===sel?'on':''}" data-k="${k}"><span class="ic">${ic(ICON[k])}</span><span class="nm">${x.name}</span>${sub}</button>`};
+  const virt=keys.filter(k=>k!=='live');
+  tg.innerHTML=(S.strategies.live?tileOf('live'):'')
+    +(virt.length?`<div class="vcap">${ic('i-layers')}Sanal karşılaştırma · her biri ${tl(S.strategies[virt[0]].start_cash||10000,0)} ile</div>`:'')
+    +virt.map(tileOf).join('');
   tg.querySelectorAll('.tile').forEach(el=>el.onclick=()=>{sel=el.dataset.k;selPicked=true;localStore('masal_sel',sel);render();pollMarket(true)});
   const x=S.strategies[sel];
   const locked=!!x.locked;
@@ -748,7 +761,7 @@ function renderBacktest(){
   box.innerHTML=rows.map(([k,r],i)=>`<div class="row ${i===0?'best':''}"><div class="rank">${i+1}</div>
       <div class="mid"><b>${r.name}${k===sel?' · seçili':''}</b><span>${r.trades} işlem · kazanma %${nf(r.win_rate,0)} · en büyük düşüş %${nf(r.max_drawdown,1)}</span></div>
       <div class="end"><b class="${cls(r.pnl_pct)}">${r.pnl_pct>0?'+':''}${nf(r.pnl_pct)}%</b><span>${tl(r.final,0)}</span></div></div>`).join('')
-    +`<div class="note">Son ${B.days} gün, ${B.symbols.length} coin, gerçek OKX TR fiyatları, komisyon dahil. Aynı coinleri alıp hiç dokunmamak (al-tut): <b class="${cls(B.hold_pct)}">${B.hold_pct>0?'+':''}${nf(B.hold_pct)}%</b>. Geçmiş sonuç geleceği garanti etmez.</div>`;
+    +`<div class="note">${B.custom?`<b>Senin istediğin ayarlarla</b> (${dt(B.generated)}). `:''}Son ${B.days} gün, ${B.symbols.length} coin, gerçek OKX TR fiyatları, komisyon dahil. Aynı coinleri alıp hiç dokunmamak (al-tut): <b class="${cls(B.hold_pct)}">${B.hold_pct>0?'+':''}${nf(B.hold_pct)}%</b>. Geçmiş sonuç geleceği garanti etmez.</div>`;
 }
 
 function renderChart(){
@@ -818,6 +831,8 @@ function checks(d=draft,o=orig||{},diff=true){
     if(o.paused!==d.paused)ch.push(d.paused?'Yeni alım <b>durur</b>; korumalar çalışmaya devam eder':'Bot yeniden alım yapmaya başlar');
     if(ch.length)add('info','Kaydedince ne olacak',ch.join('<br>'));
   }
+  if(diff&&L&&!L.locked&&d.budget<(o.budget||0)){const cash=L.cash||0,cut=(o.budget||0)-d.budget;
+    if(cut>cash)add('info','Bütçe yatırılmış paranın altına iniyor',`Boşta ${T(cash)} var; kalan ${T(cut-cash)} coinler satıldıkça düşülür. Hiçbir coin zorla satılmaz.`)}
   if(!out.some(x=>x.lv==='bad'||x.lv==='warn2'))out.unshift({lv:'ok',t:'Ayarlar uyumlu',dsc:`Her alım ${T(per,per<10?2:0)} · en çok ${T(Math.min(maxUse,b))} kullanılır · acil fren ${T(b*(1-d.risk.kill_pct/100))} altında · günlük kayıp sınırı ${T(b*d.risk.daily_loss_pct/100)}`});
   return out}
 function homeChecks(){const el=document.getElementById('homeChk');if(!el)return;const st=S?.settings;
@@ -825,9 +840,18 @@ function homeChecks(){const el=document.getElementById('homeChk');if(!el)return;
   let list=[];try{list=checks(st,st,false).filter(c=>c.lv==='bad'||c.lv==='warn2')}catch(e){}
   el.innerHTML=list.length?`<section style="margin-top:12px"><div class="card chk">${list.map(c=>`<div class="ck ${c.lv}"><span class="ci">${ic(c.lv==='bad'?'i-stop':'i-info')}</span><div><b class="t">${c.t}</b><span class="d">${c.dsc}</span></div></div>`).join('')}
     <button class="btn sm" style="margin:2px 0 10px" onclick="document.getElementById('openSet').click()">${ic('i-gear')}Ayarlara git</button></div></section>`:''}
+function testInfo(){const req=orig?.test_req,cu=B?.custom;
+  if(req&&(!cu||cu.ts!==req.ts))return `<div class="ck info"><span class="ci">${ic('i-refresh')}</span><div><b class="t">Test çalışıyor…</b><span class="d">Son 30 günün fiyatlarıyla deneniyor; yaklaşık 1 dakika sürer.</span></div></div>`;
+  if(cu&&B?.results){const r=B.results[cu.strategy]||Object.values(B.results)[0];
+    return `<div class="ck ${r.pnl_pct>=0?'ok':'warn2'}"><span class="ci">${ic('i-flag')}</span><div><b class="t">Test sonucu: ${r.name} ${r.pnl_pct>0?'+':''}${nf(r.pnl_pct)}%</b><span class="d">${dt(B.generated)} · istediğin ayarlarla son ${B.days} gün · ${r.trades} satış · kazanma %${nf(r.win_rate,0)} · en büyük düşüş %${nf(r.max_drawdown,1)} · hiç dokunmasan %${nf(B.hold_pct)}</span></div></div>`}
+  return ''}
 function updateChecks(){const el=document.getElementById('checks');if(!el||!draft)return;
   const IC={bad:'i-stop',warn2:'i-info',info:'i-refresh',ok:'i-check'};
-  el.innerHTML=checks().map(c=>`<div class="ck ${c.lv}"><span class="ci">${ic(IC[c.lv])}</span><div><b class="t">${c.t}</b><span class="d">${c.dsc}</span></div></div>`).join('')}
+  el.innerHTML=checks().map(c=>`<div class="ck ${c.lv}"><span class="ci">${ic(IC[c.lv])}</span><div><b class="t">${c.t}</b><span class="d">${c.dsc}</span></div></div>`).join('')+testInfo()
+   +`<button class="btn sm" id="runTest" style="margin:2px 0 10px">${ic('i-flag')}Bu ayarlarla son 30 günü test et</button>`;
+  const b=document.getElementById('runTest');if(b)b.onclick=()=>{const s0=clean(draft);delete s0.test_req;delete s0._bad;
+    const keep=JSON.parse(JSON.stringify(orig));keep.test_req={ts:Date.now(),s:s0};
+    save(keep,'Test istendi; sonuç yaklaşık 1 dakikada burada görünür. Ayarların değişmedi.',true)}}
 function sizeWarn(){const b=draft.budget||0,st=draft.strategy;const v=st==='grid'?b*draft.grid.lot_pct/100:b*draft.risk.trade_pct/100;
   return v<MIN_ORDER?`<div class="warn" style="background:var(--red-bg);color:var(--red)">${ic('i-info')}<div>Alım tutarı ${tl(v,2)} çıkıyor. Bot ${MIN_ORDER} TL'nin altındaki emirleri göndermez; bu ayarla <b>hiç alım yapılmaz</b>. Bottaki parayı artır ya da ${st==='grid'?'kademe büyüklüğünü':'işlem büyüklüğünü'} yükselt.</div></div>`:''}
 const SECTIONS=[
@@ -1033,7 +1057,7 @@ async function loadSettings(){
   draft=JSON.parse(JSON.stringify(orig));renderConn();renderForm();
 }
 
-async function save(obj,msg){
+async function save(obj,msg,keepDraft){
   if(!token){toast('Kaydetmek için önce GitHub bağlantısını kur');document.getElementById('connSec').scrollIntoView({behavior:'smooth'});return}
   if(draft._bad&&draft._bad.size&&obj===undefined){toast('Kırmızı alanları düzelt');return}
   const data=obj||clean(draft),btn=document.getElementById('save');btn.textContent='Kaydediliyor…';
@@ -1041,7 +1065,8 @@ async function save(obj,msg){
     const cur=await fetch(API+'?t='+Date.now(),{headers:{Authorization:'Bearer '+token,Accept:'application/vnd.github+json'},cache:'no-store'}).then(r=>{if(!r.ok)throw r.status;return r.json()});
     const body={message:'Ayarlar uygulamadan güncellendi',content:btoa(unescape(encodeURIComponent(JSON.stringify(data,null,2)+'\n'))),sha:cur.sha,branch:'main'};
     const r=await fetch(API,{method:'PUT',headers:{Authorization:'Bearer '+token,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify(body)});
-    if(!r.ok)throw r.status;sha=(await r.json()).content.sha;orig=JSON.parse(JSON.stringify(data));draft=JSON.parse(JSON.stringify(data));
+    if(!r.ok)throw r.status;sha=(await r.json()).content.sha;const prev=keepDraft?clean(draft):null;orig=JSON.parse(JSON.stringify(data));draft=JSON.parse(JSON.stringify(data));
+    if(prev)for(const k in prev)if(k!=='test_req')draft[k]=prev[k];
     renderForm();if(S)render();toast(msg||'Kaydedildi. Bot yaklaşık 10 saniye içinde yeni ayarlarla çalışır.');
   }catch(e){toast(e===401||e===403?'Yetki hatası: anahtarın Contents yazma izni olmalı':'Kaydedilemedi, tekrar dene ('+e+')')}
   finally{btn.innerHTML=ic('i-check')+'Kaydet'}

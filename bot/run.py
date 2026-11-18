@@ -78,7 +78,14 @@ def setup_live(state, S):
         state["live"] = L
     elif budget != L.get("base", budget):  # bütçe değiştirildiyse aktif paraya yansıt
         diff = budget - L["base"]
-        L["base"], L["cash"], L["start_cash"] = budget, L["cash"] + diff, L["start_cash"] + diff
+        take = diff
+        if diff < 0 and L["cash"] + diff < 0:
+            # Bütçe, coinlere yatırılmış tutarın altına indirildi: nakit eksiye düşmesin,
+            # kalan fark coinler satıldıkça nakitten düşülür.
+            take = -max(L["cash"], 0.0)
+            L["pending_cut"] = round(L.get("pending_cut", 0.0) + (take - diff), 2)
+            note(L, f"Bütçe düşürüldü; {tr(take - diff)} TL coinler satıldıkça düşülecek")
+        L["base"], L["cash"], L["start_cash"] = budget, L["cash"] + take, L["start_cash"] + diff
         L["checkpoint"] = L.get("checkpoint", budget) + diff
         if L.get("day"):  # "Bugün" kâr/zararı para eklenip çıkarılınca bozulmasın
             L["day"]["start_equity"] = L["day"].get("start_equity", 0) + diff
@@ -213,6 +220,14 @@ def main():
         live.reconcile()  # borsada tetiklenen korumaları önce kayda geçir
     except Exception as e:
         note(L, f"Borsa kontrolü yapılamadı: {e}")
+    try:
+        live.check_holdings()  # kayıttaki coin miktarı OKX'tekiyle aynı mı
+    except Exception as e:
+        print("Bakiye eşleştirme yapılamadı:", e)
+    if L.get("pending_cut", 0) > 0 and L["cash"] > 0:  # bütçe düşürmesinin kalanını satıştan gelen nakitten al
+        t = min(L["cash"], L["pending_cut"])
+        L["cash"] -= t
+        L["pending_cut"] = round(L["pending_cut"] - t, 2)
 
     insts = set(_universe())
     for p in ports + [live]:  # elde tutulan coinler listeden düşse bile takip edilir

@@ -32,3 +32,30 @@ class Notifier:
             except Exception as e:
                 print("Bildirim gönderilemedi:", e)
         self.queue = []
+
+
+HB_ID = "masal-nabiz"
+
+
+def heartbeat(n, minutes=35):
+    """Ölü adam düğmesi: ntfy'da ileri tarihli bir "Bot durdu" mesajı bekletilir.
+    Bot çalıştıkça bu mesaj silinip yeniden kurulur; bot durursa süre dolunca telefona düşer."""
+    if not n.topic:
+        return
+    try:
+        urllib.request.urlopen(urllib.request.Request(f"https://ntfy.sh/{n.topic}/{HB_ID}", method="DELETE",
+                                                      headers={"User-Agent": "masal/1.0"}), timeout=10).read()
+    except Exception:
+        pass
+    if not (n.on and n.cats.get("alerts", True)):
+        return
+    m = {"topic": n.topic, "title": "Bot durdu", "priority": 5, "tags": ["rotating_light"],
+         "message": f"Masal botu {minutes} dakikadır çalışmıyor. Uygulamayı açıp kontrol et. "
+                    "OKX'teki kâr al / zarar durdur emirleri çalışmaya devam ediyor.",
+         "delay": f"{minutes}m", "sequence_id": HB_ID}
+    try:
+        urllib.request.urlopen(urllib.request.Request("https://ntfy.sh/", data=json.dumps(m).encode(), method="POST",
+                                                      headers={"Content-Type": "application/json", "User-Agent": "masal/1.0"}),
+                               timeout=10).read()
+    except Exception as e:
+        print("Nabız mesajı kurulamadı:", e)

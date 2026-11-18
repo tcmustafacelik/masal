@@ -18,7 +18,7 @@ DEFAULTS = {
     "interval_min": 5,      # bot turu sıklığı (dakika): 5 / 10 / 15 / 30 / 60
     "budget": 2000,         # bottaki başlangıç parası (TL)
     "kasa": 10000,          # hesaptaki toplam kasa (TL)
-    "topup": {"amount": 1000, "profit_pct": 5, "days": 7},
+    "topup": {"amount": 250, "profit_pct": 5, "days": 7},
     "risk": {"trade_pct": 10, "max_positions": 5, "stop_pct": 5, "daily_loss_pct": 3, "kill_pct": 15},
     "grid": {"step_pct": 2, "lot_pct": 4, "lot_tp_pct": 2.5, "max_lots": 3, "max_coins": 3, "stop_pct": 7},
     "dip": {"dip_pct": 3, "rsi_max": 35, "take_profit_pct": 4, "max_hold_hours": 48},

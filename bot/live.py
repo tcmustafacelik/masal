@@ -142,6 +142,9 @@ class LivePortfolio(Portfolio):
         self.log = state.setdefault("log", [])
         self.notifier = None
 
+    def equity(self):
+        return super().equity() - self.s.get("pending_cut", 0.0)
+
     def _emit(self, cat, title, msg, priority=3, tags=None):
         if self.notifier:
             if not self.armed:
@@ -240,6 +243,48 @@ class LivePortfolio(Portfolio):
             self._note(ts, f"HATA borsa koruması {inst}: {e}")
             self._emit("alerts", "Borsa koruması kurulamadı", f"{inst}: {e}. Bot saatlik kontrolle korumaya devam eder.",
                        4, ["warning"])
+
+    def check_holdings(self, every=60):
+        """Kayıttaki coin miktarını OKX'teki gerçek miktarla karşılaştırır (dakikada bir).
+        OKX'te daha az coin varsa (ör. elle satıldıysa) kayıt düzeltilir; bot hiçbir şey satmaz."""
+        if not self.armed or not self.s["positions"]:
+            return
+        now = int(time.time() * 1000)
+        if now - self.s.get("hold_ck", 0) < every * 1000:
+            return
+        self.s["hold_ck"] = now
+        ccys = [i.split("-")[0] for i in self.s["positions"]]
+        rows = self.api._req("GET", "/api/v5/account/balance?ccy=" + ",".join(ccys))
+        have = {d["ccy"]: float(d.get("cashBal") or d.get("eq") or 0) for d in (rows[0].get("details", []) if rows else [])}
+        for inst in list(self.s["positions"]):
+            pos = self.s["positions"][inst]
+            base = inst.split("-")[0]
+            rec = sum(l["qty"] for l in pos["lots"])
+            got = have.get(base, 0.0)
+            if rec <= 0 or got >= rec * 0.97:
+                continue
+            ratio = max(0.0, got / rec)
+            items = [(l["algo"], inst) for l in pos["lots"] if l.get("algo")]
+            try:
+                if items:
+                    self.cancel_items(items)
+            except Exception as e:
+                self._note(now, f"Koruma iptali uyarısı {inst}: {e}")
+            if ratio < 0.05:
+                del self.s["positions"][inst]
+                msg = f"OKX'te {base} kalmamış (kayıtta {rec:.6g}); pozisyon kayıttan çıkarıldı."
+            else:
+                for l in pos["lots"]:
+                    l["qty"] *= ratio
+                    l["cost"] *= ratio
+                    l["algo"] = None
+                    self._protect(now, inst, l)
+                msg = f"OKX'te {base} {got:.6g}, kayıtta {rec:.6g} görünüyordu; kayıt OKX'e göre düzeltildi ve korumalar yeniden kuruldu."
+            self._note(now, msg)
+            self._emit("alerts", f"Kayıt düzeltildi: {base}", msg + " Elle işlem yaptıysan bu normaldir.", 4, ["mag"])
+
+    def cancel_items(self, items):
+        self.api.cancel_algos(items)
 
     def reconcile(self):
         """Borsada tetiklenen kâr al / zarar durdur emirlerini kayda geçirir, eksik korumaları yeniden kurar."""

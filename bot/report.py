@@ -31,7 +31,7 @@ def build(state, S=None):
         items.append(("live", state["live"]))
     for key, s in items:
         p = Portfolio(s)
-        eq = p.equity()
+        eq = p.equity() - s.get("pending_cut", 0.0)
         sells = [t for t in s["trades"] if t["side"] == "SAT"]
         wins = [t for t in sells if t["pnl"] > 0]
         positions = []

@@ -1,7 +1,11 @@
 {
-  "version": "1.16.2",
+  "version": "1.17.0",
   "date": "2026-11-18",
   "notes": [
-    "Kademesi borsa alt sınırına yetmeyen coinde (BTC gibi) alt sınır kadar alınır"
+    "Bot kod güncellenince kendini yeniler",
+    "Bot durursa telefona bildirim (ölü adam düğmesi)",
+    "OKX bakiyesiyle kayıt eşleştirme, bütçe düşürme koruması",
+    "Ayarlardan 'bu ayarlarla test et'",
+    "Ana ekran: gerçek hesap üstte, sanal karşılaştırma altta"
   ]
 }
