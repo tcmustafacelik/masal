@@ -114,8 +114,10 @@ class Portfolio:
             del self.s["positions"][inst]
 
     def _can_open(self):
+        # Kademeli stratejide coin sayısını kendi ayarı (max_coins) belirler; genel "en fazla pozisyon" sınırı diğer stratejiler içindir
+        limit = self.cfg["max_coins"] if self.s["key"] == "grid" else self.risk["max_positions"]
         return (not self.s["halted"] and not self.s["blocked_today"] and not self.s.get("paused")
-                and len(self.s["positions"]) < self.risk["max_positions"]
+                and len(self.s["positions"]) < limit
                 and self.s["cash"] >= 50)
 
     # ---------- gün ve fren kontrolleri ----------
