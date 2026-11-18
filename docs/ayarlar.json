@@ -8,7 +8,7 @@
   "topup": {
     "amount": 600,
     "profit_pct": 5,
-    "days": 7
+    "days": 1
   },
   "risk": {
     "trade_pct": 10,
