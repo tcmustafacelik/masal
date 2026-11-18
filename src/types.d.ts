@@ -105,7 +105,6 @@ interface Settings {
   paused: boolean;
   liquidate: number;
   strategy: Exclude<StrategyKey, 'live'>;
-  interval_min?: number;
   budget: number;
   kasa: number;
   topup: { amount: number; profit_pct: number; days: number };

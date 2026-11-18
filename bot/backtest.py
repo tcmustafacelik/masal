@@ -75,8 +75,10 @@ def main(days=30, custom=False):
         "custom": {"ts": req.get("ts"), "strategy": req["s"].get("strategy")} if req else None,
     }
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
-    with open(OUT, "w", encoding="utf-8") as f:
+    tmp = OUT + ".tmp"  # yarım dosya okunmasın diye önce geçici dosyaya yazılır
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
+    os.replace(tmp, OUT)
     for k, r in results.items():
         print(f"{r['name']:<14} {r['pnl_pct']:>7}%  işlem {r['trades']:>3}  kazanma %{r['win_rate']}  "
               f"en büyük düşüş %{r['max_drawdown']}")

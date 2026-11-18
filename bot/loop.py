@@ -53,10 +53,10 @@ def custom_backtest():
     """Uygulamadan istenen "bu ayarlarla test et" isteği varsa çalıştırır."""
     req = (read_json("docs/ayarlar.json").get("test_req") or {})
     done = (read_json("docs/data/backtest.json").get("custom") or {}).get("ts")
-    if req.get("ts") and req.get("ts") != done:
-        print("İstenen geçmiş test çalışıyor…")
-        sh("python", "-m", "bot.backtest", "30", "--custom")
-        return True
+    if req.get("ts") and req.get("ts") != done and req.get("ts") != getattr(custom_backtest, "started", None):
+        if start_bt("--custom"):
+            custom_backtest.started = req["ts"]
+            print("İstenen geçmiş test arka planda başladı")
     return False
 
 
@@ -84,7 +84,7 @@ def push_data():
     d = "/tmp/masal-data"
     shutil.rmtree(d, ignore_errors=True)
     os.makedirs(d + "/docs")
-    shutil.copytree("docs/data", d + "/docs/data")
+    shutil.copytree("docs/data", d + "/docs/data", ignore=shutil.ignore_patterns("*.tmp"))
     sh("git", "init", "-q", "-b", "data", cwd=d)
     sh("git", "add", "-A", cwd=d)
     sh("git", "-c", "user.name=masal-bot", "-c", "user.email=masal-bot@users.noreply.github.com",
@@ -98,14 +98,34 @@ def push_data():
     return False
 
 
+BT = None  # arka planda çalışan geçmiş test (bot turlarını bekletmesin)
+
+
+def start_bt(*args):
+    global BT
+    if BT is None or BT.poll() is not None:
+        BT = subprocess.Popen(["python", "-m", "bot.backtest", "30", *args])
+        return True
+    return False
+
+
+def bt_finished():
+    """Arka plandaki test bittiyse True döner (sonuç hemen kaydedilsin diye)."""
+    global BT
+    if BT is not None and BT.poll() is not None:
+        BT = None
+        return True
+    return False
+
+
 def weekly_backtest():
     try:
         g = json.load(open("docs/data/backtest.json", encoding="utf-8")).get("generated", 0)
     except Exception:
         g = 0
     if time.time() * 1000 - g > 7 * 86400 * 1000:
-        print("Haftalık geçmiş test çalışıyor…")
-        sh("python", "-m", "bot.backtest", "30")
+        print("Haftalık geçmiş test arka planda başladı")
+        start_bt()
 
 
 def main():
@@ -131,8 +151,9 @@ def main():
                 except Exception as e:
                     print("Nabız kurulamadı:", e)
                 last_hb = time.time()
-            if custom_backtest():
-                last_sig = None  # sonucu hemen kaydet
+            custom_backtest()
+            if bt_finished():
+                last_sig = None  # test sonucunu hemen kaydet
             sig = run.main()
             errors = 0
             if sig != last_sig or time.time() - last_push >= HEARTBEAT:

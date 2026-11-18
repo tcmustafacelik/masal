@@ -1,7 +1,7 @@
 {
-  "version": "1.21.0",
+  "version": "1.21.1",
   "date": "2026-11-19",
   "notes": [
-    "Uygulama TypeScript ile yeniden derlendi (tür denetimli)"
+    "Geçmiş test arka planda çalışır, bot turlarını bekletmez"
   ]
 }

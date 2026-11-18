@@ -1,4 +1,4 @@
-const APP_VERSION='1.21.0';
+const APP_VERSION='1.21.1';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -337,7 +337,7 @@ function homeChecks(){const el=document.getElementById('homeChk');if(!el)return;
   el.innerHTML=list.length?`<section style="margin-top:12px"><div class="card chk">${list.map(c=>`<div class="ck ${c.lv}"><span class="ci">${ic(c.lv==='bad'?'i-stop':'i-info')}</span><div><b class="t">${c.t}</b><span class="d">${c.dsc}</span></div></div>`).join('')}
     <button class="btn sm" style="margin:2px 0 10px" onclick="document.getElementById('openSet').click()">${ic('i-gear')}Ayarlara git</button></div></section>`:''}
 function testInfo(){const req=orig?.test_req,cu=B?.custom;
-  if(req&&(!cu||cu.ts!==req.ts))return `<div class="ck info"><span class="ci">${ic('i-refresh')}</span><div><b class="t">Test çalışıyor…</b><span class="d">Son 30 günün fiyatlarıyla deneniyor; yaklaşık 1 dakika sürer.</span></div></div>`;
+  if(req&&(!cu||cu.ts!==req.ts))return `<div class="ck info"><span class="ci">${ic('i-refresh')}</span><div><b class="t">Test çalışıyor…</b><span class="d">Son 30 günün 15 dakikalık fiyatlarıyla deneniyor; 3–4 dakika sürer. Bot bu sırada çalışmaya devam eder.</span></div></div>`;
   if(cu&&B?.results){const r=B.results[cu.strategy]||Object.values(B.results)[0];
     return `<div class="ck ${r.pnl_pct>=0?'ok':'warn2'}"><span class="ci">${ic('i-flag')}</span><div><b class="t">Test sonucu: ${r.name} ${r.pnl_pct>0?'+':''}${nf(r.pnl_pct)}%</b><span class="d">${dt(B.generated)} · istediğin ayarlarla son ${B.days} gün · ${r.trades} satış · kazanma %${nf(r.win_rate,0)} · en büyük düşüş %${nf(r.max_drawdown,1)} · hiç dokunmasan %${nf(B.hold_pct)}</span></div></div>`}
   return ''}
@@ -347,7 +347,7 @@ function updateChecks(){const el=document.getElementById('checks');if(!el||!draf
    +`<button class="btn sm" id="runTest" style="margin:2px 0 10px">${ic('i-flag')}Bu ayarlarla son 30 günü test et</button>`;
   const b=document.getElementById('runTest');if(b)b.onclick=()=>{const s0=clean(draft);delete s0.test_req;delete s0._bad;
     const keep=JSON.parse(JSON.stringify(orig));keep.test_req={ts:Date.now(),s:s0};
-    save(keep,'Test istendi; sonuç yaklaşık 1 dakikada burada görünür. Ayarların değişmedi.',true)}}
+    save(keep,'Test istendi; sonuç 3–4 dakikada burada görünür. Ayarların değişmedi.',true)}}
 function sizeWarn(){const b=draft.budget||0,st=draft.strategy;const v=st==='grid'?b*draft.grid.lot_pct/100:b*draft.risk.trade_pct/100;
   return v<MIN_ORDER?`<div class="warn" style="background:var(--red-bg);color:var(--red)">${ic('i-info')}<div>Alım tutarı ${tl(v,2)} çıkıyor. Bot ${MIN_ORDER} TL'nin altındaki emirleri göndermez; bu ayarla <b>hiç alım yapılmaz</b>. Bottaki parayı artır ya da ${st==='grid'?'kademe büyüklüğünü':'işlem büyüklüğünü'} yükselt.</div></div>`:''}
 const SECTIONS=[
@@ -547,7 +547,6 @@ async function loadSettings(){
     else{orig=await fetch('ayarlar.json?t='+Date.now()).then(r=>r.json())}
   }catch(e){orig=S?.settings||null;if(e===401){token='';localStorage.removeItem('masal_token');toast('GitHub anahtarının süresi dolmuş, yeniden bağlan')}}
   if(!orig){document.getElementById('setForm').innerHTML=`<div class="empty">${ic('i-info')}<div>Ayarlar yüklenemedi</div></div>`;return}
-  if(orig&&!orig.interval_min)orig.interval_min=5;
   if(orig&&orig.grid&&orig.grid.use_pct==null)orig.grid.use_pct=40;
   if(orig&&!orig.notify)orig.notify={enabled:false,topic:'',trades:true,alerts:true,daily:true,money:true};
   topicPlain='';

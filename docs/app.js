@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.21.0';
+const APP_VERSION = '1.21.1';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -562,7 +562,7 @@ function homeChecks() {
 function testInfo() {
     const req = orig?.test_req, cu = B?.custom;
     if (req && (!cu || cu.ts !== req.ts))
-        return `<div class="ck info"><span class="ci">${ic('i-refresh')}</span><div><b class="t">Test çalışıyor…</b><span class="d">Son 30 günün fiyatlarıyla deneniyor; yaklaşık 1 dakika sürer.</span></div></div>`;
+        return `<div class="ck info"><span class="ci">${ic('i-refresh')}</span><div><b class="t">Test çalışıyor…</b><span class="d">Son 30 günün 15 dakikalık fiyatlarıyla deneniyor; 3–4 dakika sürer. Bot bu sırada çalışmaya devam eder.</span></div></div>`;
     if (cu && B?.results) {
         const r = B.results[cu.strategy] || Object.values(B.results)[0];
         return `<div class="ck ${r.pnl_pct >= 0 ? 'ok' : 'warn2'}"><span class="ci">${ic('i-flag')}</span><div><b class="t">Test sonucu: ${r.name} ${r.pnl_pct > 0 ? '+' : ''}${nf(r.pnl_pct)}%</b><span class="d">${dt(B.generated)} · istediğin ayarlarla son ${B.days} gün · ${r.trades} satış · kazanma %${nf(r.win_rate, 0)} · en büyük düşüş %${nf(r.max_drawdown, 1)} · hiç dokunmasan %${nf(B.hold_pct)}</span></div></div>`;
@@ -584,7 +584,7 @@ function updateChecks() {
             delete s0._bad;
             const keep = JSON.parse(JSON.stringify(orig));
             keep.test_req = { ts: Date.now(), s: s0 };
-            save(keep, 'Test istendi; sonuç yaklaşık 1 dakikada burada görünür. Ayarların değişmedi.', true);
+            save(keep, 'Test istendi; sonuç 3–4 dakikada burada görünür. Ayarların değişmedi.', true);
         };
 }
 function sizeWarn() {
@@ -976,8 +976,6 @@ async function loadSettings() {
         document.getElementById('setForm').innerHTML = `<div class="empty">${ic('i-info')}<div>Ayarlar yüklenemedi</div></div>`;
         return;
     }
-    if (orig && !orig.interval_min)
-        orig.interval_min = 5;
     if (orig && orig.grid && orig.grid.use_pct == null)
         orig.grid.use_pct = 40;
     if (orig && !orig.notify)
