@@ -1,8 +1,7 @@
 {
-  "version": "1.13.0",
+  "version": "1.13.1",
   "date": "2026-11-18",
   "notes": [
-    "PIN korumalı bağlantı linki",
-    "Animasyonlu PIN girişi"
+    "Bağlantı linki kısaltıldı"
   ]
 }

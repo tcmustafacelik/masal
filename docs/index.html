@@ -33,7 +33,7 @@
 *{box-sizing:border-box;margin:0;padding:0}
 [hidden]{display:none!important}
 .pinv{position:fixed;inset:0;z-index:70;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 20px calc(24px + env(safe-area-inset-bottom));animation:pinIn .3s cubic-bezier(.2,.8,.2,1)}
-.pinv.out{animation:pinOut .25s ease forwards}
+.pinv.out{animation:pinOut .25s ease forwards;pointer-events:none}
 @keyframes pinIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
 @keyframes pinOut{to{opacity:0;transform:translateY(10px)}}
 .pinv .plg{width:52px;height:52px;margin-bottom:16px}
@@ -435,7 +435,7 @@ footer{font-size:11.5px;color:var(--faint);text-align:center;margin-top:22px;lin
 <div class="toast" id="toast" hidden></div>
 
 <script>
-const APP_VERSION='1.13.0';
+const APP_VERSION='1.13.1';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -794,12 +794,18 @@ const b64uD=s=>atob(s.replace(/-/g,'+').replace(/_/g,'/'));
 async function makeLink(){
   const p1=await pinPad({title:'PIN belirle',sub:'Bağlantı linkini korumak için 6 haneli bir PIN seç. Linki açınca bu PIN sorulacak.'});if(!p1)return;
   const p2=await pinPad({title:'PIN\'i tekrar gir',sub:'Aynı 6 haneyi bir kez daha gir.',check:v=>v===p1||'PIN\'ler aynı değil'});if(!p2)return;
-  const box=await seal({t:token,p:pw||''},p1,300000);
-  const link=location.origin+location.pathname+'#bag='+b64u(JSON.stringify(box));
+  // Kısa link: linkte sadece 16 baytlık rastgele anahtar durur; şifreli paket depoda saklanır.
+  // Paket ancak link + PIN birlikte olursa açılır; yeni link oluşunca eskisi silinir.
+  const rnd=crypto.getRandomValues(new Uint8Array(16)),key=b64u(String.fromCharCode(...rnd)),id=await bagId(key);
+  const box=await seal({t:token,p:pw||''},key+':'+p1,300000);
+  try{await ghPut(`docs/bag/${id}.json`,JSON.stringify(box),'Bağlantı linki');
+    const old=localStore('masal_bag');if(old&&old!==id)ghDel(`docs/bag/${old}.json`).catch(()=>{});localStore('masal_bag',id)}
+  catch(e){return toast('Link kaydedilemedi, bağlantını kontrol et')}
+  const link=location.origin+location.pathname+'#'+key;
   const v=document.createElement('div');v.className='pinv';
   v.innerHTML=`<div class="plg">${document.querySelector('#logo .lg')?.outerHTML.replace(/id="h/g,'id="q').replace(/url\(#h/g,'url(#q')||''}</div><h3>Bağlantı linkin hazır</h3>
     <p>Notlar'a kaydet ya da kendine gönder. Dokununca Masal açılır, PIN'i girince GitHub'a bağlanır${pw?' ve gerçek hesabın kilidi açılır':''}. Linki kimseyle paylaşma.</p>
-    <div class="lnk">${link.slice(0,64)}…</div>
+    <div class="lnk" style="text-align:center">${link.replace(/^https?:\/\//,'')}</div>
     <div class="pact"><button class="btn" id="lkCopy">${ic('i-copy')}Kopyala</button><button class="btn" id="lkShare">${ic('i-link')}Paylaş</button></div>
     <button class="btn primary pdone" id="lkOk">Tamam</button>`;
   document.body.appendChild(v);
@@ -807,13 +813,23 @@ async function makeLink(){
   v.querySelector('#lkShare').onclick=()=>navigator.share?navigator.share({title:'Masal bağlantı linki',url:link}).catch(()=>{}):navigator.clipboard?.writeText(link).then(()=>toast('Paylaşım yok; link kopyalandı'));
   v.querySelector('#lkOk').onclick=()=>{v.classList.add('out');setTimeout(()=>v.remove(),250)};
 }
+async function bagId(key){const h=new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(key)));return [...h.slice(0,6)].map(b=>b.toString(16).padStart(2,'0')).join('')}
+async function ghPut(path,text,msg){const url=`https://api.github.com/repos/${REPO.o}/${REPO.r}/contents/${path}`;
+  const r=await fetch(url,{method:'PUT',headers:{Authorization:'Bearer '+token,Accept:'application/vnd.github+json'},body:JSON.stringify({message:msg,content:btoa(unescape(encodeURIComponent(text)))})});if(!r.ok)throw r.status}
+async function ghDel(path){const url=`https://api.github.com/repos/${REPO.o}/${REPO.r}/contents/${path}`,h={Authorization:'Bearer '+token,Accept:'application/vnd.github+json'};
+  const g=await fetch(url,{headers:h});if(!g.ok)return;const sha=(await g.json()).sha;await fetch(url,{method:'DELETE',headers:h,body:JSON.stringify({message:'Eski bağlantı linki silindi',sha})})}
 async function openLink(){
-  const m=location.hash.match(/^#bag=([\w-]+)/);if(!m)return;
+  const short=location.hash.match(/^#([\w-]{22})$/),m=location.hash.match(/^#bag=([\w-]+)/);if(!short&&!m)return;
   history.replaceState(null,'',location.pathname+location.search);
-  let box;try{box=JSON.parse(b64uD(m[1]))}catch(e){return toast('Bağlantı linki bozuk')}
+  let box,pre='';
+  if(short){pre=short[1]+':';const id=await bagId(short[1]);
+    for(const u of [`https://raw.githubusercontent.com/${REPO.o}/${REPO.r}/main/docs/bag/${id}.json`,`bag/${id}.json`]){
+      try{const r=await fetch(u+'?t='+Date.now(),{cache:'no-store'});if(r.ok){box=await r.json();break}}catch(e){}}
+    if(!box)return toast('Bu link geçersiz ya da yenisi oluşturulmuş')}
+  else{try{box=JSON.parse(b64uD(m[1]))}catch(e){return toast('Bağlantı linki bozuk')}}
   let tries=0,got=null;
   const ok=await pinPad({title:'PIN\'ini gir',sub:'Bağlantı linkini oluştururken seçtiğin 6 haneli PIN.',check:async v=>{
-    try{got=await unseal(box,v);return true}catch(e){tries++;return tries>=5?null:`PIN yanlış · ${5-tries} hakkın kaldı`}}});
+    try{got=await unseal(box,pre+v);return true}catch(e){tries++;return tries>=5?null:`PIN yanlış · ${5-tries} hakkın kaldı`}}});
   if(!ok||!got){if(tries>=5)toast('Çok fazla yanlış deneme; link kullanılamadı');return}
   token=got.t;localStore('masal_token',token);if(got.p){pw=got.p;localStore('masal_pw',pw)}
   toast('Bağlandı');
