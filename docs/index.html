@@ -391,7 +391,7 @@ footer{font-size:11.5px;color:var(--faint);text-align:center;margin-top:22px;lin
 <div class="toast" id="toast" hidden></div>
 
 <script>
-const APP_VERSION='1.9.0';
+const APP_VERSION='1.10.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -767,7 +767,7 @@ async function loadSettings(){
   }catch(e){orig=S?.settings||null;if(e===401){token='';localStorage.removeItem('masal_token');toast('GitHub anahtarının süresi dolmuş, yeniden bağlan')}}
   if(!orig){document.getElementById('setForm').innerHTML=`<div class="empty">${ic('i-info')}<div>Ayarlar yüklenemedi</div></div>`;return}
   if(orig&&!orig.interval_min)orig.interval_min=10;
-  if(orig&&!orig.notify)orig.notify={enabled:false,topic:'',trades:true,alerts:true,daily:true};
+  if(orig&&!orig.notify)orig.notify={enabled:false,topic:'',trades:true,alerts:true,daily:true,money:true};
   topicPlain='';
   if(pw&&orig.notify?.topic?.enc){try{topicPlain=await unseal(orig.notify.topic,pw)}catch(e){}}
   draft=JSON.parse(JSON.stringify(orig));renderConn();renderForm();
@@ -798,13 +798,14 @@ let leaveArm=0;function confirmLeave(){if(leaveArm)return true;leaveArm=1;toast(
 let topicPlain='';
 const swRow=(id,on,title,sub)=>`<div class="sw ${on?'on':''}" id="${id}"><div class="lb"><b style="font-size:13.5px">${title}</b><span style="font-size:11.5px;color:var(--muted);display:block">${sub}</span></div><div class="track"><i></i></div></div>`;
 function notifySection(){
-  const N=draft.notify||(draft.notify={enabled:false,topic:'',trades:true,alerts:true,daily:true});
+  const N=draft.notify||(draft.notify={enabled:false,topic:'',trades:true,alerts:true,daily:true,money:true});
   let h=`<section><h2>${ic('i-bell')}Bildirimler</h2><div class="card">`;
   if(!pw)return h+`<div style="font-size:13px;color:var(--muted)">${ic('i-lock')} Bildirimleri açmak için önce ana ekranda <b>Gerçek hesap</b> kutusuna dokunup kilidi aç.</div></div></section>`;
   h+=swRow('nOn',N.enabled,'Telefona bildirim gönder','Gerçek hesaptaki olaylar anında telefonuna düşer');
   if(N.enabled){
     h+=`<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line2);display:grid;gap:12px">
-      ${swRow('nTr',N.trades,'İşlemler','Alım, satım, borsada kâr al / zarar durdur')}
+      ${swRow('nMo',N.money!==false,'Para hareketleri','OKX\'e para yatırma, çekme, hesaplar arası aktarma')}
+      ${swRow('nTr',N.trades,'İşlemler','Alım, satım, borsada kâr al / zarar durdur; deneme modunda da gelir')}
       ${swRow('nAl',N.alerts,'Uyarılar','Hata, acil fren, OKX anahtarı sorunu, yetersiz bakiye')}
       ${swRow('nDy',N.daily,'Günlük özet','Her akşam 21:00 civarı günün sonucu')}</div>
       <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line2)">
@@ -824,7 +825,7 @@ function bindNotify(){
     if(N.enabled&&!topicPlain){topicPlain='masal-'+Array.from(crypto.getRandomValues(new Uint8Array(12)),b=>(b%36).toString(36)).join('');
       N.topic=await seal(topicPlain,pw)}
     renderForm()});
-  t('nTr',()=>{N.trades=!N.trades;renderForm()});t('nAl',()=>{N.alerts=!N.alerts;renderForm()});t('nDy',()=>{N.daily=!N.daily;renderForm()});
+  t('nTr',()=>{N.trades=!N.trades;renderForm()});t('nAl',()=>{N.alerts=!N.alerts;renderForm()});t('nDy',()=>{N.daily=!N.daily;renderForm()});t('nMo',()=>{N.money=N.money===false;renderForm()});
   t('nCopy',()=>{navigator.clipboard?.writeText(topicPlain).then(()=>toast('Konu adı kopyalandı'),()=>toast('Kopyalanamadı, elle seç'))});
   t('nTest',async()=>{try{const r=await fetch('https://ntfy.sh/',{method:'POST',body:JSON.stringify({topic:topicPlain,title:'Masal',message:'Test bildirimi: bağlantı çalışıyor.',tags:['white_check_mark']})});
     toast(r.ok?'Test bildirimi gönderildi':'Gönderilemedi ('+r.status+')')}catch(e){toast('Gönderilemedi, bağlantını kontrol et')}});

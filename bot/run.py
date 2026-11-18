@@ -168,7 +168,7 @@ def main():
     from .live import LivePortfolio
     L = setup_live(state, S)
     live = LivePortfolio(L, L["armed"])
-    live.notifier = N if L["armed"] else None
+    live.notifier = N  # deneme modunda da bildirim gelir, başlıkta "Deneme" yazar
     was_halted = L["halted"]
     try:
         live.reconcile()  # borsada tetiklenen korumaları önce kayda geçir
@@ -222,6 +222,12 @@ def main():
         N.add("alerts", "OKX bağlantısı çalışmıyor",
               state["okx"]["status"] + ". Anahtarın süresi dolmuş olabilir; uygulamadan yenileyebilirsin.", 5,
               ["key"])
+
+    try:
+        from . import money
+        money.scan(state, L, N, note)  # para yatırma / çekme / aktarma bildirimleri
+    except Exception as e:
+        print("Para hareketleri kontrol edilemedi:", e)
 
     daily_summary(L, live, N)
     state["updated"] = int(time.time() * 1000)

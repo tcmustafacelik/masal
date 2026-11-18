@@ -130,6 +130,10 @@ class LivePortfolio(Portfolio):
 
     def _emit(self, cat, title, msg, priority=3, tags=None):
         if self.notifier:
+            if not self.armed:
+                if cat != "trades":
+                    return  # deneme modunda sadece al-sat bildirimleri gelir
+                title, priority = "Deneme · " + title, 2
             self.notifier.add(cat, title, msg, priority, tags)
 
     def _once_per_day(self, key):
@@ -152,7 +156,10 @@ class LivePortfolio(Portfolio):
             return False
         if not self.armed:
             self._note(ts, f"[deneme] AL {inst.split('-')[0]} {para(amount)} TL · {reason}")
-            return super()._buy(ts, inst, price, amount, reason + " · deneme")
+            ok = super()._buy(ts, inst, price, amount, reason + " · deneme")
+            if ok is not False:
+                self._emit("trades", f"Alındı: {inst.split('-')[0]}", f"{para(amount)} TL · fiyat {fiyat(price)} · {reason}", 3, ["shopping_cart"])
+            return ok
         try:
             if self.api.available(config.QUOTE) < amount:
                 self._note(ts, f"Yetersiz TL bakiyesi, {inst} alınmadı")
@@ -264,7 +271,15 @@ class LivePortfolio(Portfolio):
                 self._note(ts, f"Koruma iptali uyarısı {inst}: {e}")
         if not self.armed:
             self._note(ts, f"[deneme] SAT {inst.split('-')[0]} · {reason}")
-            return super()._sell_lots(ts, inst, price, lots, reason + " · deneme")
+            n0 = len(self.s["trades"])
+            r = super()._sell_lots(ts, inst, price, lots, reason + " · deneme")
+            t = self.s["trades"][-1] if len(self.s["trades"]) > n0 else None
+            if t and t["side"] == "SAT":
+                pnl = t.get("pnl", 0); sign = "+" if pnl >= 0 else "−"
+                self._emit("trades", f"Satıldı: {inst.split('-')[0]} ({sign}{para(abs(pnl))} TL)",
+                           f"{para(t['amount'])} TL · fiyat {fiyat(price)} · {reason}", 3,
+                           ["chart_with_upwards_trend" if pnl >= 0 else "chart_with_downwards_trend"])
+            return r
         pos = self.s["positions"][inst]
         base = inst.split("-")[0]
         try:

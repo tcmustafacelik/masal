@@ -9,7 +9,7 @@ class Notifier:
     def __init__(self, S):
         n = S.get("notify") or {}
         self.on = bool(n.get("enabled"))
-        self.cats = {"trades": n.get("trades", True), "alerts": n.get("alerts", True), "daily": n.get("daily", True)}
+        self.cats = {"trades": n.get("trades", True), "alerts": n.get("alerts", True), "daily": n.get("daily", True), "money": n.get("money", True)}
         self.topic = ""
         if self.on and n.get("topic"):
             try:
