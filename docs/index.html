@@ -259,6 +259,17 @@ details.setup summary::-webkit-details-marker{display:none}
 .hsumk{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;text-align:center}
 .hsumk div{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:9px 4px}
 .hsumk b{display:block;font-size:15px;font-variant-numeric:tabular-nums}.hsumk span{font-size:11px;color:var(--muted)}
+.chk{padding:4px 12px}
+.chk .ck{display:flex;gap:9px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--line2);font-size:12.5px;line-height:1.45}
+.chk .ck:first-child{border-top:0}
+.chk .ck .ci{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;flex:none;margin-top:-1px}
+.chk .ck .ci svg{width:13px;height:13px}
+.chk .bad .ci{background:var(--red-bg);color:var(--red)}.chk .bad b.t{color:var(--red)}
+.chk .warn2 .ci{background:var(--amber-bg);color:var(--amber)}.chk .warn2 b.t{color:var(--amber-ink)}
+.chk .info .ci{background:var(--blue-bg);color:var(--blue)}
+.chk .ok .ci{background:var(--green-bg);color:var(--green)}.chk .ok b.t{color:var(--green)}
+.chk b.t{display:block;font-size:12.5px}
+.chk .ck span.d{color:var(--muted)}
 .tiles.two{grid-template-columns:repeat(2,minmax(0,1fr))}.tiles.four{grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}.tiles.four .tile{padding:10px 2px 9px}
 .tile .ic.num{font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums}
 .warn{font-size:12px;color:var(--amber-ink);background:var(--amber-bg);border-radius:var(--r-sm);padding:9px 11px;margin-top:8px;display:flex;gap:8px;align-items:flex-start}
@@ -367,6 +378,7 @@ details.setup summary::-webkit-details-marker{display:none}
 
 <div class="upbar" id="upbar" hidden></div>
 <main class="wrap" id="mainv">
+  <div id="homeChk"></div>
   <div class="err" id="err"></div>
   <div class="cols">
   <div class="colA">
@@ -483,7 +495,7 @@ details.setup summary::-webkit-details-marker{display:none}
 <div class="toast" id="toast" hidden></div>
 
 <script>
-const APP_VERSION='1.14.1';
+const APP_VERSION='1.15.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -545,7 +557,7 @@ async function load(quiet){lastLoad=Date.now();
 }
 
 function render(){
-  updLine();
+  updLine();homeChecks();
   const L=S.strategies.live;
   {const m=document.getElementById('mode'),halt=L&&L.halted,real=L&&L.armed,want=orig?orig.live:S.settings?.live;
    const pending=L&&!halt&&want!==undefined&&!!want!==!!real;
@@ -778,6 +790,44 @@ const SETP=(o,k,v)=>{const ks=k.split('.');const last=ks.pop();ks.reduce((a,x)=>
 const MIN_ORDER=10;
 const pctTL=(p)=>tl((draft.budget||0)*p/100,0);
 const sizeTL=(p)=>{const v=(draft.budget||0)*p/100;return v<MIN_ORDER?`${tl(v,2)} (${MIN_ORDER} TL altı, alım yapılamaz)`:tl(v,0)};
+function checks(d=draft,o=orig||{},diff=true){
+  const out=[],T=(v,dd=0)=>tl(v,dd);
+  const b=+d.budget||0,k=+d.kasa||0,st=d.strategy,fee=((S?.fee||.0025)+(S?.slippage||.001))*100;
+  const per=st==='grid'?b*d.grid.lot_pct/100:b*d.risk.trade_pct/100;
+  const maxUse=st==='grid'?per*d.grid.max_lots*d.grid.max_coins:per*d.risk.max_positions;
+  const add=(lv,t,dsc)=>out.push({lv,t,dsc});
+  if(per<MIN_ORDER)add('bad','Hiç alım yapılmaz',`Her alım ${T(per,2)} çıkıyor; bot ${MIN_ORDER} TL'nin altındaki emirleri göndermez. ${st==='grid'?'Kademe büyüklüğünü':'İşlem büyüklüğünü'} en az %${Math.ceil(MIN_ORDER*100/Math.max(b,1))} yap ya da bottaki parayı artır.`);
+  const L=S?.strategies?.live,inv=L&&!L.locked?(L.positions||[]).reduce((a,p)=>a+(p.cost||0),0):0;
+  if(d.live&&S?.okx&&S.okx.try!=null){
+    if(S.okx.try<per)add('bad','OKX\'te TL yetmiyor',`Alım-satım hesabında ${T(S.okx.try,2)} var; bir alım için ${T(per)} gerekir. Fonlama'dan Alım-satım'a aktar.`);
+    else if(S.okx.try+inv<b)add('warn2','OKX\'te para az',`Bot ${T(b)} ile çalışacak ama alım-satım hesabında ${T(S.okx.try)} boşta${inv?` ve ${T(inv)} coinde`:''} var.`)}
+  if(maxUse>b*1.001&&per>=MIN_ORDER)add('warn2','Para bütün kademelere yetmez',`Hepsi dolarsa ${T(maxUse)} gerekir, botta ${T(b)} var; son alımlar yapılamaz. ${st==='grid'?'Kademe ya da coin sayısını':'Pozisyon sayısını'} azalt veya parayı artır.`);
+  if(k<b)add('warn2','Kasa bottaki paradan küçük',`Kasa ${T(k)}, botta ${T(b)}. Kasadan ekleme hiç çalışmaz; kasayı en az ${T(b)} yap.`);
+  else if(d.topup.amount>0&&k-b<d.topup.amount)add('info','Kasadan ekleme yapılamaz',`Kasada eklenecek ${T(k-b)} kalıyor; ${T(d.topup.amount)}'lik ekleme için yetmez.`);
+  const tp=st==='grid'?d.grid.lot_tp_pct:st==='dip'?d.dip.take_profit_pct:null;
+  if(tp!=null&&tp<=fee*2)add('warn2','Kâr hedefi masrafı karşılamıyor',`Alış ve satışta toplam ~%${nf(fee*2,2)} komisyon ve kayma gidiyor; %${nf(tp,1)} kâr hedefi neredeyse hiç kazandırmaz.`);
+  if(diff&&orig&&JSON.stringify(o)!==JSON.stringify(clean(d))){
+    const ch=[];
+    if(o.budget!==d.budget)ch.push(`Bottaki para ${T(o.budget)} → <b>${T(b)}</b>; fark ${b>o.budget?'kullanılabilir paraya eklenir':'kullanılabilir paradan düşülür'}, coinler satılmaz`);
+    const oper=o.strategy==='grid'?o.budget*o.grid.lot_pct/100:o.budget*o.risk.trade_pct/100;
+    if(Math.abs(oper-per)>.005)ch.push(`Her alım ${T(oper,oper<10?2:0)} → <b>${T(per,per<10?2:0)}</b>`);
+    const ok_=o.budget*(1-o.risk.kill_pct/100),nk=b*(1-d.risk.kill_pct/100);if(Math.abs(ok_-nk)>.5)ch.push(`Acil fren ${T(ok_)} altı → <b>${T(nk)} altı</b>`);
+    const od=o.budget*o.risk.daily_loss_pct/100,nd=b*d.risk.daily_loss_pct/100;if(Math.abs(od-nd)>.5)ch.push(`Günlük kayıp sınırı ${T(od)} → <b>${T(nd)}</b>`);
+    if(o.live!==d.live)ch.push(d.live?'<b>Gerçek emir</b> başlar':'Deneme moduna geçilir; elde kalan coinler satılmaz');
+    if(o.strategy!==d.strategy)ch.push(`Strateji ${SNAMES[o.strategy]} → <b>${SNAMES[d.strategy]}</b>${o.live?'; eski stratejinin coinleri satılır':''}`);
+    if(o.paused!==d.paused)ch.push(d.paused?'Yeni alım <b>durur</b>; korumalar çalışmaya devam eder':'Bot yeniden alım yapmaya başlar');
+    if(ch.length)add('info','Kaydedince ne olacak',ch.join('<br>'));
+  }
+  if(!out.some(x=>x.lv==='bad'||x.lv==='warn2'))out.unshift({lv:'ok',t:'Ayarlar uyumlu',dsc:`Her alım ${T(per,per<10?2:0)} · en çok ${T(Math.min(maxUse,b))} kullanılır · acil fren ${T(b*(1-d.risk.kill_pct/100))} altında · günlük kayıp sınırı ${T(b*d.risk.daily_loss_pct/100)}`});
+  return out}
+function homeChecks(){const el=document.getElementById('homeChk');if(!el)return;const st=S?.settings;
+  if(!st||!st.grid){el.innerHTML='';return}
+  let list=[];try{list=checks(st,st,false).filter(c=>c.lv==='bad'||c.lv==='warn2')}catch(e){}
+  el.innerHTML=list.length?`<section style="margin-top:12px"><div class="card chk">${list.map(c=>`<div class="ck ${c.lv}"><span class="ci">${ic(c.lv==='bad'?'i-stop':'i-info')}</span><div><b class="t">${c.t}</b><span class="d">${c.dsc}</span></div></div>`).join('')}
+    <button class="btn sm" style="margin:2px 0 10px" onclick="document.getElementById('openSet').click()">${ic('i-gear')}Ayarlara git</button></div></section>`:''}
+function updateChecks(){const el=document.getElementById('checks');if(!el||!draft)return;
+  const IC={bad:'i-stop',warn2:'i-info',info:'i-refresh',ok:'i-check'};
+  el.innerHTML=checks().map(c=>`<div class="ck ${c.lv}"><span class="ci">${ic(IC[c.lv])}</span><div><b class="t">${c.t}</b><span class="d">${c.dsc}</span></div></div>`).join('')}
 function sizeWarn(){const b=draft.budget||0,st=draft.strategy;const v=st==='grid'?b*draft.grid.lot_pct/100:b*draft.risk.trade_pct/100;
   return v<MIN_ORDER?`<div class="warn" style="background:var(--red-bg);color:var(--red)">${ic('i-info')}<div>Alım tutarı ${tl(v,2)} çıkıyor. Bot ${MIN_ORDER} TL'nin altındaki emirleri göndermez; bu ayarla <b>hiç alım yapılmaz</b>. Bottaki parayı artır ya da ${st==='grid'?'kademe büyüklüğünü':'işlem büyüklüğünü'} yükselt.</div></div>`:''}
 const SECTIONS=[
@@ -927,8 +977,9 @@ function renderForm(){
    <div class="field" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line2)"><div class="lb"><b>Hepsini sat ve dur</b><span>Gerçek hesaptaki tüm coinleri hemen satar, botu durdurur</span></div>
    <button class="btn danger ${sellArm?'arm':''}" id="sellAll">${ic('i-sell')}${sellArm?'Emin misin? Dokun':'Hepsini sat'}</button></div></div></section>
    <div class="hint" style="margin:8px 2px 4px">Bot kesintisiz çalışır: yaklaşık 20 saniyede bir piyasayı, borsadaki korumaları ve para hareketlerini kontrol eder. Uygulama kapalı olsa da çalışır.</div>
-   <section><h2><span class="hb c-blue">${ic('i-target')}</span>Strateji</h2><div class="tiles" data-g="strat">${['grid','dip','trend'].map(k=>tile(draft.strategy===k,k,ICON[k],SNAMES[k])).join('')}</div>${sizeWarn()}
-   ${draft.strategy!==orig.strategy&&orig.live?`<div class="warn">${ic('i-info')}<div>Gerçek modda strateji değişince eski stratejinin açık coinleri satılır, yeni strateji temiz başlar.</div></div>`:''}</section>`;
+   <section><h2><span class="hb c-blue">${ic('i-target')}</span>Strateji</h2><div class="tiles" data-g="strat">${['grid','dip','trend'].map(k=>tile(draft.strategy===k,k,ICON[k],SNAMES[k])).join('')}</div>
+   ${draft.strategy!==orig.strategy&&orig.live?`<div class="warn">${ic('i-info')}<div>Gerçek modda strateji değişince eski stratejinin açık coinleri satılır, yeni strateji temiz başlar.</div></div>`:''}</section>
+   <section><h2><span class="hb c-violet">${ic('i-shield')}</span>Kontrol<span class="hsum" style="font-weight:500;color:var(--faint);font-size:11px">değiştirdikçe güncellenir</span></h2><div class="card chk" id="checks"></div></section>`;
   h+='<section style="margin-bottom:-2px"><h2><span class="hb c-gray">'+ic('i-layers')+'</span>Ayrıntılı ayarlar<span class="hsum" style="font-weight:500;color:var(--faint);font-size:11px">dokununca açılır</span></h2></section>';
   h+=notifySection();
   for(const sec of SECTIONS)h+=accOpen(sec.t,sec.t,sec.i,SEC_C[sec.t],SUMS[sec.t](),secDirty(sec.f.map(x=>x[0])))+`<div class="card">${sec.f.map(field).join('')}</div>`+ACC_END;
@@ -961,7 +1012,7 @@ function renderForm(){
 function clean(o){const c=JSON.parse(JSON.stringify(o,(k,v)=>k==='_bad'?undefined:v));return c}
 function refresh(){
   const d=clean(draft),ch=JSON.stringify(orig)!==JSON.stringify(d);
-  document.getElementById('savebar').hidden=!ch;document.getElementById('dirtyTag').hidden=!ch;
+  document.getElementById('savebar').hidden=!ch;document.getElementById('dirtyTag').hidden=!ch;updateChecks();
   document.querySelectorAll('.field[data-k]').forEach(el=>{const k=el.dataset.k;
     el.querySelector('.step').classList.toggle('changed',P(orig,k)!==P(d,k));
     const all=[...SECTIONS.flatMap(s=>s.f),...Object.values(STRAT_F).flat()].find(f=>f[0]===k);

@@ -1,7 +1,8 @@
 {
-  "version": "1.14.1",
+  "version": "1.15.0",
   "date": "2026-11-18",
   "notes": [
-    "Gerçek hesap ana ekranda ilk sırada ve seçili açılır"
+    "Ayarlarda Kontrol bölümü: değişikliğin TL karşılığı ve uyarılar",
+    "Ayarlarda sorun varsa ana ekranda uyarı"
   ]
 }
