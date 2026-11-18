@@ -1,8 +1,8 @@
 {
-  "version": "1.15.0",
+  "version": "1.15.1",
   "date": "2026-11-18",
   "notes": [
-    "Ayarlarda Kontrol bölümü: değişikliğin TL karşılığı ve uyarılar",
-    "Ayarlarda sorun varsa ana ekranda uyarı"
+    "Bakiye grafiği para eklenince bozulmuyor",
+    "Bugün kâr/zararı bütçe değişikliğinden etkilenmiyor"
   ]
 }

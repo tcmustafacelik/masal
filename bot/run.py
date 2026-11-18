@@ -80,11 +80,15 @@ def setup_live(state, S):
         diff = budget - L["base"]
         L["base"], L["cash"], L["start_cash"] = budget, L["cash"] + diff, L["start_cash"] + diff
         L["checkpoint"] = L.get("checkpoint", budget) + diff
+        if L.get("day"):  # "Bugün" kâr/zararı para eklenip çıkarılınca bozulmasın
+            L["day"]["start_equity"] = L["day"].get("start_equity", 0) + diff
         note(L, f"Bottaki başlangıç parası {tr(budget)} TL yapıldı")
     if L.get("paused", False) != bool(S["paused"]):
         note(L, "Bot durduruldu: yeni alım yapılmayacak" if S["paused"] else "Bot yeniden başlatıldı")
     L["paused"] = bool(S["paused"])
     L["kasa"], L["armed"] = float(S["kasa"]), armed
+    if not L.get("eq_v2"):  # eski grafik noktaları başlangıç parası bilgisi olmadan tutuluyordu; temiz başla
+        L["equity"], L["eq_v2"] = [], True
     L["scale"] = L["start_cash"] / config.START_CASH
     return L
 

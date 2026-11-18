@@ -129,9 +129,9 @@ class Portfolio:
         if eq <= self.s["day"]["start_equity"] - self.risk["daily_loss_limit"]:
             self.s["blocked_today"] = True
         if not self.s["equity"] or self.s["equity"][-1][0] != ts:
-            self.s["equity"].append([ts, round(eq, 2)])
+            self.s["equity"].append([ts, round(eq, 2), round(self.s.get("start_cash", eq), 2)])
         else:
-            self.s["equity"][-1][1] = round(eq, 2)
+            self.s["equity"][-1][1:] = [round(eq, 2), round(self.s.get("start_cash", eq), 2)]
         self.s["equity"] = self.s["equity"][-3000:]
         if len(self.s["trades"]) > 500:  # silinen eski işlemler coin özetinde saklanır
             arch = self.s.setdefault("coin_arch", {})

@@ -495,7 +495,7 @@ details.setup summary::-webkit-details-marker{display:none}
 <div class="toast" id="toast" hidden></div>
 
 <script>
-const APP_VERSION='1.15.0';
+const APP_VERSION='1.15.1';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -756,7 +756,7 @@ function renderChart(){
   const src=view==='live'?Object.fromEntries(Object.entries(S.strategies).filter(([k,v])=>v.equity_series).map(([k,v])=>[k,v.equity_series]))
     :(B?Object.fromEntries(Object.entries(B.results).map(([k,v])=>[k,v.equity])):{});
   note.textContent=view==='live'?(S.created?'Başlangıç '+dt(S.created).split(' ')[0]:''):(B?'Son '+B.days+' gün':'');
-  for(const k in src){const st=view==='live'?(S.strategies[k]?.start_cash||S.start_cash):S.start_cash;src[k]=src[k].map(([t,v])=>[t,(v/st-1)*100])}
+  for(const k in src){const st=view==='live'?(S.strategies[k]?.start_cash||S.start_cash):S.start_cash;src[k]=src[k].map(([t,v,b0])=>[t,(v/(b0||st)-1)*100])}
   const pts=Object.values(src).flat();
   if(pts.length<4||Object.values(src).every(s=>s.length<2)){
     box.innerHTML=`<div class="empty">${ic('i-chart')}<div>${view==='live'?'Grafik için veri birikiyor. Bot saatte bir nokta ekler.':'Geçmiş test verisi yok'}</div></div>`;leg.innerHTML='';return}
