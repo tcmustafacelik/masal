@@ -1,15 +1,18 @@
 name: Masal bot
 
+# Bot kesintisiz çalışır: her oturum ~50 dk sürer, ~20 sn'de bir tur atar ve bitince
+# bir sonraki oturumu kendisi başlatır. Zamanlayıcı ve ayar kaydı sadece yedek tetikleyicidir
+# (zincir bir sebeple koparsa yeniden başlatır).
 on:
   schedule:
-    - cron: "*/5 * * * *"    # 5 dakikada bir uyanır; asıl sıklık uygulamadaki ayardan gelir
-    - cron: "40 2 * * 1"     # pazartesi 05:40 (TR) geçmiş test yenilenir
+    - cron: "*/15 * * * *"
   push:
-    paths: ["docs/ayarlar.json"]   # uygulamada ayarlar kaydedilince hemen çalışır
+    paths: ["docs/ayarlar.json"]
   workflow_dispatch:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: masal-bot
@@ -18,50 +21,37 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 58
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: main   # her zaman en son ayar ve kayıtla çalış (art arda kayıtlarda eski kopya kullanılmasın)
+          ref: main
       - name: Son kayıtları al
         run: |
-          # Bot kayıtları "data" dalında tutulur; site her turda yeniden yayınlanmaz
           if git ls-remote --exit-code --heads origin data >/dev/null; then
             git fetch -q --depth 1 origin data
             git checkout FETCH_HEAD -- docs/data
             git reset -q docs/data
           fi
-      - name: Sıra kontrolü
-        id: gate
-        env:
-          EVENT: ${{ github.event_name }}
-          SCHEDULE: ${{ github.event.schedule }}
-        run: python3 -m bot.gate
       - uses: actions/setup-python@v5
-        if: steps.gate.outputs.run == 'true'
         with:
           python-version: "3.12"
       - name: Gerekli paket
-        if: steps.gate.outputs.run == 'true'
         run: pip install --quiet cryptography
-      - name: Bot turu
-        if: steps.gate.outputs.run == 'true'
+      - name: Bot (kesintisiz)
         env:
           OKX_API_KEY: ${{ secrets.OKX_API_KEY }}
           OKX_API_SECRET: ${{ secrets.OKX_API_SECRET }}
           OKX_API_PASSPHRASE: ${{ secrets.OKX_API_PASSPHRASE }}
-        run: python -m bot.run
-      - name: Geçmiş test (haftalık)
-        if: steps.gate.outputs.run == 'true' && github.event.schedule == '40 2 * * 1'
-        run: python -m bot.backtest 30
-      - name: Sonuçları kaydet
-        if: steps.gate.outputs.run == 'true'
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PYTHONUNBUFFERED: "1"
+        run: python -m bot.loop
+      - name: Sonraki oturumu başlat
+        if: success() || failure()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          rm -rf /tmp/dp && mkdir -p /tmp/dp/docs && cp -r docs/data /tmp/dp/docs/
-          cd /tmp/dp
-          git init -q -b data
-          git add -A
-          git -c user.name="masal-bot" -c user.email="masal-bot@users.noreply.github.com" commit -qm "Bot turu $(date -u +%Y-%m-%dT%H:%MZ)"
-          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" data
+          if [ "${{ job.status }}" != "success" ]; then sleep 60; fi
+          curl -sS -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/bot.yml/dispatches" \
+            -d '{"ref":"main"}'

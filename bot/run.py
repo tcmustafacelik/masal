@@ -154,6 +154,41 @@ def check_okx():
         return {"ok": False, "status": f"Bağlantı hatası: {e}"[:200], "ts": int(time.time() * 1000)}
 
 
+_CACHE = {"uni": (0, None), "bars": {}}
+
+
+def _universe():
+    t, u = _CACHE["uni"]
+    if u is None or time.time() - t > 600:
+        u = okx.universe()
+        _CACHE["uni"] = (time.time(), u)
+    return u
+
+
+def _candles(inst):
+    """Kapanmış saatlik mumlar sadece saat başında değişir; arada önbellekten verilir."""
+    hour = int(time.time() // 3600)
+    hit = _CACHE["bars"].get(inst)
+    if hit and hit[0] == hour and time.time() - hit[1] < 600:
+        return hit[2]
+    bars = okx.candles(inst, limit=300)
+    _CACHE["bars"][inst] = (hour, time.time(), bars)
+    time.sleep(0.1)
+    return bars
+
+
+def signature(state, S):
+    """Kaydedilmesi gereken bir değişiklik olup olmadığını anlamak için özet."""
+    parts = []
+    for s in list(state["portfolios"].values()) + [state.get("live") or {}]:
+        parts.append([len(s.get("trades", [])), sorted(s.get("positions", {})), len(s.get("log", [])),
+                      s.get("halted"), s.get("armed"), s.get("paused"), round(s.get("cash", 0), 2)])
+    parts.append(len((state.get("money") or {}).get("seen", [])))
+    parts.append((state.get("okx") or {}).get("ok"))
+    parts.append(json.dumps(S, sort_keys=True, default=str))
+    return json.dumps(parts, default=str)
+
+
 def main():
     S = settings.load()
     N = Notifier(S)
@@ -175,21 +210,20 @@ def main():
     except Exception as e:
         note(L, f"Borsa kontrolü yapılamadı: {e}")
 
-    insts = set(okx.universe())
+    insts = set(_universe())
     for p in ports + [live]:  # elde tutulan coinler listeden düşse bile takip edilir
         insts |= set(p.s["positions"])
 
     series, events = {}, []
     for inst in sorted(insts):
         try:
-            bars = okx.candles(inst, limit=300)
+            bars = _candles(inst)
         except Exception as e:
             print("Atlandı:", inst, e)
             continue
         series[inst] = bars
         last_seen = max((p.s["last_bar"].get(inst, 0) for p in ports), default=0)
         events += [(ts, inst, idx) for idx, (ts, _) in enumerate(bars) if ts > last_seen]
-        time.sleep(0.1)
 
     # İlk çalıştırmada geçmiş mumlar sadece göstergeleri ısıtır; yalnızca en son mum işlenir
     if not any(p.s["last_bar"] for p in ports):
@@ -235,7 +269,9 @@ def main():
     save_state(state)
     report.build(state, S)
     N.flush()
-    print(f"{len(events)} yeni mum işlendi, {len(series)} coin takipte.")
+    if events:
+        print(f"{len(events)} yeni mum işlendi, {len(series)} coin takipte.")
+    return signature(state, S)
 
 
 if __name__ == "__main__":
