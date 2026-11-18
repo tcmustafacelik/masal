@@ -30,6 +30,7 @@ jobs:
           MASAL_BUDGET: ${{ vars.MASAL_BUDGET }}
           MASAL_LIVE: ${{ vars.MASAL_LIVE }}
           MASAL_STRATEGY: ${{ vars.MASAL_STRATEGY }}
+          MASAL_KASA: ${{ vars.MASAL_KASA }}
         run: python -m bot.run
       - name: Geçmiş test (haftalık)
         if: github.event.schedule == '40 2 * * 1'

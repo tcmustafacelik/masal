@@ -26,20 +26,57 @@ def save_state(state):
         json.dump(state, f, ensure_ascii=False, separators=(",", ":"))
 
 
+TOPUP_AMOUNT = 1_000.0
+TOPUP_PROFIT = 0.05
+TOPUP_DAYS = 7
+
+
+def topup(p):
+    """Kâr ettikçe kasadan ek para: aktif para son eklemeden beri %5 kâra ulaştıysa ve
+    en az 7 gün geçtiyse +1.000 TL. Zarardayken ya da acil fren varken asla eklenmez."""
+    L = p.s
+    now = int(time.time() * 1000)
+    eq = p.equity()
+    days_ok = not L.get("last_topup") or now - L["last_topup"] >= TOPUP_DAYS * 86_400_000
+    room = L["kasa"] - L["start_cash"]
+    if L["halted"] or room < TOPUP_AMOUNT or not days_ok or eq < L["checkpoint"] * (1 + TOPUP_PROFIT):
+        return
+    L["cash"] += TOPUP_AMOUNT
+    L["start_cash"] += TOPUP_AMOUNT
+    L["topups"] = L.get("topups", 0) + 1
+    L["last_topup"] = now
+    L["checkpoint"] = eq + TOPUP_AMOUNT
+    L["scale"] = L["start_cash"] / config.START_CASH
+    L.setdefault("log", []).append([now, f"Kâr hedefi tuttu: kasadan +{TOPUP_AMOUNT:,.0f} TL eklendi"])
+
+
 def main():
     state = load_state()
     ports = [Portfolio(s) for s in state["portfolios"].values()]
 
     # Gerçek para modülü: MASAL_BUDGET tanımlıysa devreye girer
     budget = float(os.environ.get("MASAL_BUDGET") or 0)
+    kasa = float(os.environ.get("MASAL_KASA") or 10_000)
     armed = os.environ.get("MASAL_LIVE") == "1"
+    live = None
     if budget > 0:
         from .live import LivePortfolio
         key = os.environ.get("MASAL_STRATEGY") or "grid"
-        if "live" not in state or state["live"].get("key") != key:
+        was_armed = state.get("live", {}).get("armed")
+        if "live" not in state or state["live"].get("key") != key or (armed and was_armed is False):
+            # Deneme modundan gerçeğe geçince sanal pozisyonlar silinir, temiz başlanır
             state["live"] = new_state(key, cash=budget)
-        state["live"]["armed"] = armed
-        ports.append(LivePortfolio(state["live"], armed))
+            state["live"].update(base=budget, topups=0, last_topup=None, checkpoint=budget)
+        L = state["live"]
+        if budget != L.get("base", budget):  # bütçe elle değiştirildiyse aktif paraya yansıt
+            diff = budget - L["base"]
+            L["base"], L["cash"], L["start_cash"] = budget, L["cash"] + diff, L["start_cash"] + diff
+            L["checkpoint"] = L.get("checkpoint", budget) + diff
+            L.setdefault("log", []).append([int(time.time() * 1000), f"Başlangıç bütçesi elle {budget:,.0f} TL yapıldı"])
+        L["kasa"], L["armed"] = kasa, armed
+        L["scale"] = L["start_cash"] / config.START_CASH
+        live = LivePortfolio(L, armed)
+        ports.append(live)
 
     insts = set(okx.universe())
     for p in ports:  # elde tutulan coinler listeden düşse bile takip edilir
@@ -67,6 +104,8 @@ def main():
         events = [(ts, inst, idx) for inst, (ts, idx) in latest.items()]
 
     run_bars(ports, events, series)
+    if live:
+        topup(live)
     state["updated"] = int(time.time() * 1000)
     state["universe"] = sorted(series)
     save_state(state)

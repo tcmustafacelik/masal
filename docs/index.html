@@ -87,6 +87,19 @@ h2 svg.i{width:15px;height:15px}
 footer{font-size:11.5px;color:var(--faint);text-align:center;margin-top:22px;line-height:1.5}
 .tag{display:block;margin:3px auto 0;width:max-content;font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:5px;background:var(--line2);color:var(--muted)}
 .tag.real{background:var(--green-bg);color:var(--green)}
+.kasa{margin-top:8px}
+.kasa .top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px}
+.kasa .top b{font-size:14px;display:flex;align-items:center;gap:7px}
+.kasa .top span{font-size:12px;color:var(--muted)}
+.split{display:flex;height:10px;border-radius:4px;overflow:hidden;background:var(--line2)}
+.split i{display:block;height:100%}
+.kv{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
+.kv div{font-size:11.5px;color:var(--muted)}.kv b{display:block;font-size:14px;color:var(--text);font-variant-numeric:tabular-nums;margin-top:1px}
+.prog{margin-top:14px;padding-top:12px;border-top:1px solid var(--line2)}
+.prog .lbl{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:6px;gap:8px}
+.prog .lbl b{color:var(--text);font-weight:600}
+.bar2{height:6px;border-radius:3px;background:var(--line2);overflow:hidden}.bar2 i{display:block;height:100%;background:var(--amber);border-radius:3px}
+.hint{font-size:11.5px;color:var(--faint);margin-top:10px;line-height:1.4}
 .err{background:var(--red-bg);color:var(--red);border-radius:var(--r);padding:12px;margin-top:14px;font-size:13px;display:none}
 </style>
 </head>
@@ -138,6 +151,7 @@ footer{font-size:11.5px;color:var(--faint);text-align:center;margin-top:22px;lin
 
   <section>
     <div class="grid2" id="metrics"></div>
+    <div id="kasa"></div>
   </section>
 
   <section>
@@ -238,6 +252,7 @@ function render(){
     ['i-target','Kazanma oranı',wr,`${x.trades} kapanan işlem`,'']
   ].map(([i,k,v,s,c])=>`<div class="m"><div class="k">${ic(i)}${k}</div><div class="v ${c}">${v}</div><div class="s">${s}</div></div>`).join('');
 
+  renderKasa(x);
   renderChart();
 
   const pos=x.positions;
@@ -266,6 +281,24 @@ function render(){
   ].map(([i,b,s])=>`<div class="rule"><div class="ic">${ic(i)}</div><div><b>${b}</b><span>${s}</span></div></div>`).join('');
 
   document.querySelectorAll('.tile').forEach(el=>el.onclick=()=>{sel=el.dataset.k;localStore('masal_sel',sel);render()});
+}
+
+function renderKasa(x){
+  const box=document.getElementById('kasa');
+  if(!x.live||!x.kasa){box.innerHTML='';return}
+  const active=x.start_cash,reserve=Math.max(0,x.kasa-active),aw=Math.min(100,active/x.kasa*100);
+  const target=x.checkpoint*1.05,prog=Math.max(0,Math.min(1,(x.equity-x.checkpoint)/(target-x.checkpoint||1)));
+  const waitMs=x.last_topup?Math.max(0,x.last_topup+7*864e5-Date.now()):0,waitD=Math.ceil(waitMs/864e5);
+  const full=reserve<1000;
+  box.innerHTML=`<div class="card kasa">
+    <div class="top"><b>${ic('i-wallet')}Kasa</b><span>${tl(x.kasa,0)}</span></div>
+    <div class="split"><i style="width:${aw}%;background:var(--amber)"></i></div>
+    <div class="kv"><div>Botta aktif<b>${tl(active,0)}</b></div><div>Kasada yedek<b>${tl(reserve,0)}</b></div><div>Eklemeler<b>${x.topups} kez</b></div></div>
+    <div class="prog">${full?'<div class="lbl"><span>Kasanın tamamı botta; yeni ekleme yapılmayacak.</span></div>'
+      :`<div class="lbl"><span>Sonraki +1.000 TL için kâr hedefi</span><b>${tl(x.equity,0)} / ${tl(target,0)}</b></div>
+      <div class="bar2"><i style="width:${(prog*100).toFixed(1)}%"></i></div>
+      <div class="hint">Aktif para son eklemeden beri %5 kâra ulaşınca${waitD?` ve ${waitD} gün daha geçince`:''} kasadan +1.000 TL eklenir. Zarardayken ekleme yapılmaz. Başlangıç bütçesi GitHub ayarlarındaki <b>MASAL_BUDGET</b> ile elle değiştirilebilir.</div>`}
+    </div></div>`;
 }
 
 function renderLog(x){

@@ -38,6 +38,8 @@ def build(state):
             "desc": (f"{cfg['name']} stratejisi gerçek OKX TR hesabında, {start:,.0f} TL bütçeyle. "
                      + ("Emirler gerçek." if s.get("armed") else "Şu an deneme modunda: emir gönderilmiyor.")) if live else cfg["desc"],
             "live": live, "armed": bool(s.get("armed")), "start_cash": start, "log": s.get("log", [])[-20:][::-1],
+            "kasa": s.get("kasa"), "base": s.get("base"), "topups": s.get("topups", 0),
+            "last_topup": s.get("last_topup"), "checkpoint": s.get("checkpoint"),
             "risk": dict(p.risk, lot=p.cfg.get("lot")),
             "equity": round(eq, 2), "cash": round(s["cash"], 2),
             "pnl": round(eq - start, 2),
