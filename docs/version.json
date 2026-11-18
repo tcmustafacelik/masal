@@ -1,8 +1,8 @@
 {
-  "version": "1.6.0",
+  "version": "1.7.0",
   "date": "2026-11-18",
   "notes": [
-    "Yeni animasyonlu logo ve uygulama simgesi",
-    "Yeni slogan: Senin için çalışır"
+    "Tur sıklığı uygulamadan seçilir: 10 / 15 / 30 dk / 1 saat",
+    "Logoda yıldız yerine parlayan nabız noktası"
   ]
 }

@@ -2,7 +2,7 @@ name: Masal bot
 
 on:
   schedule:
-    - cron: "7 * * * *"      # her saat başını 7 geçe
+    - cron: "*/5 * * * *"    # 5 dakikada bir uyanır; asıl sıklık uygulamadaki ayardan gelir
     - cron: "40 2 * * 1"     # pazartesi 05:40 (TR) geçmiş test yenilenir
   push:
     paths: ["docs/ayarlar.json"]   # uygulamada ayarlar kaydedilince hemen çalışır
@@ -21,21 +21,31 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      - name: Sıra kontrolü
+        id: gate
+        env:
+          EVENT: ${{ github.event_name }}
+          SCHEDULE: ${{ github.event.schedule }}
+        run: python3 -m bot.gate
       - uses: actions/setup-python@v5
+        if: steps.gate.outputs.run == 'true'
         with:
           python-version: "3.12"
       - name: Gerekli paket
+        if: steps.gate.outputs.run == 'true'
         run: pip install --quiet cryptography
       - name: Bot turu
+        if: steps.gate.outputs.run == 'true'
         env:
           OKX_API_KEY: ${{ secrets.OKX_API_KEY }}
           OKX_API_SECRET: ${{ secrets.OKX_API_SECRET }}
           OKX_API_PASSPHRASE: ${{ secrets.OKX_API_PASSPHRASE }}
         run: python -m bot.run
       - name: Geçmiş test (haftalık)
-        if: github.event.schedule == '40 2 * * 1'
+        if: steps.gate.outputs.run == 'true' && github.event.schedule == '40 2 * * 1'
         run: python -m bot.backtest 30
       - name: Sonuçları kaydet
+        if: steps.gate.outputs.run == 'true'
         run: |
           git config user.name "masal-bot"
           git config user.email "masal-bot@users.noreply.github.com"
