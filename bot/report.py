@@ -72,7 +72,7 @@ def build(state, S=None):
         "updated": state.get("updated"), "created": state.get("created"),
         "mode": "Sanal", "start_cash": config.START_CASH,
         "risk": config.RISK, "fee": config.FEE_RATE, "slippage": config.SLIPPAGE,
-        "universe": state.get("universe", []), "strategies": strategies, "settings": S,
+        "universe": state.get("universe", []), "strategies": strategies, "settings": S, "okx": state.get("okx"),
     }
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, separators=(",", ":"))

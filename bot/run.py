@@ -102,6 +102,18 @@ def liquidate(p, S):
         note(L, "Uygulamadan istenen 'hepsini sat' tamamlandı")
 
 
+def check_okx():
+    """Anahtarlar tanımlıysa sadece okuma yaparak bağlantıyı ve TL bakiyesini kontrol eder (emir vermez)."""
+    if not os.environ.get("OKX_API_KEY"):
+        return {"ok": False, "status": "Anahtar tanımlı değil"}
+    try:
+        from .live import OkxPrivate
+        bal = OkxPrivate().available(config.QUOTE)
+        return {"ok": True, "status": "Bağlantı çalışıyor", "try": round(bal, 2), "ts": int(time.time() * 1000)}
+    except Exception as e:
+        return {"ok": False, "status": f"Bağlantı hatası: {e}"[:200], "ts": int(time.time() * 1000)}
+
+
 def main():
     S = settings.load()
     state = load_state()
@@ -148,6 +160,7 @@ def main():
     liquidate(live, S)
     topup(live, S)
 
+    state["okx"] = check_okx()
     state["updated"] = int(time.time() * 1000)
     state["universe"] = sorted(series)
     save_state(state)
