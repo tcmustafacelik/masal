@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#F4F5F7">
+<script>(function(){var m;try{m=localStorage.getItem('masal-tema')}catch(e){}m=m||'auto';var d=m==='dark'||(m==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=d?'dark':'light'})()</script>
 <title>Masal</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -17,6 +18,17 @@
   --amber:#D9861A;--amber-bg:#FFF3DF;--amber-line:#F0C27A;
   --green:#178A5B;--green-bg:#E6F5EE;--red:#C9473F;--red-bg:#FCEBEA;
   --r:10px;--r-sm:8px;
+  --pri-bg:#1D2430;--pri-fg:#fff;--amber-ink:#93570B;--red-line:#F1C4C0;--header-bg:rgba(244,245,247,.92);--logo-bg:#1D2430;--knob:#fff;--zero:#C9CED6;
+  --shadow:rgba(16,24,40,.10);color-scheme:light;
+}
+[data-theme=dark]{
+  --bg:#0F131A;--surface:#171C25;--line:#29303C;--line2:#1F2530;
+  --text:#E8ECF2;--muted:#9AA3B2;--faint:#6B7484;
+  --blue:#6E9BF0;--blue-bg:#1B2840;
+  --amber:#E39A2E;--amber-bg:#2B2215;--amber-line:#6B4A1E;
+  --green:#3DBE84;--green-bg:#13281F;--red:#F0736A;--red-bg:#2E1715;
+  --pri-bg:#E8ECF2;--pri-fg:#0F131A;--amber-ink:#F0B460;--red-line:#5A2A27;--header-bg:rgba(15,19,26,.9);--logo-bg:#222A36;--knob:#E8ECF2;--zero:#3A4250;
+  --shadow:rgba(0,0,0,.45);color-scheme:dark;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 [hidden]{display:none!important}
@@ -25,22 +37,39 @@ body{background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-syst
   padding:0 0 calc(24px + env(safe-area-inset-bottom))}
 .wrap{max-width:560px;margin:0 auto;padding:0 14px}
 svg.i{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-header{position:sticky;top:0;z-index:5;background:rgba(244,245,247,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line2)}
+header{position:sticky;top:0;z-index:5;background:var(--header-bg);backdrop-filter:blur(8px);border-bottom:1px solid var(--line2)}
 .bar{display:flex;align-items:center;gap:10px;padding:12px 0 10px}
 .logo{width:36px;height:36px;flex:none;cursor:pointer}
-.lg{width:100%;height:100%;display:block}
+.lg{width:100%;height:100%;display:block}.lg .lbg{fill:var(--logo-bg)}[data-theme=dark] .lg .lbg{stroke:#323B49;stroke-width:1}
 .lg path{stroke-dasharray:40;stroke-dashoffset:40;animation:draw .55s cubic-bezier(.4,0,.2,1) forwards}
 .lg .p1{animation-delay:.15s}.lg .p2{animation-delay:.6s}.lg .p3{animation-delay:.9s}
 .lg.done .p2{animation:draw .55s cubic-bezier(.4,0,.2,1) .6s forwards,glow 5s ease-in-out 2s infinite}
 @keyframes draw{to{stroke-dashoffset:0}}
 @keyframes glow{0%,100%{stroke-opacity:1}50%{stroke-opacity:.55}}
-#splash{position:fixed;inset:0;background:var(--bg);z-index:50;display:grid;place-items:center;transition:opacity .35s}
-#splash.out{opacity:0;pointer-events:none}
-#splash .sp{display:flex;flex-direction:column;align-items:center;gap:14px}
-#splash .lg.big{width:84px;height:84px}
-#splash b{font-size:20px;font-weight:600;letter-spacing:.4px;opacity:0;animation:fade .5s ease 1.1s forwards}
+#splash{position:fixed;inset:0;z-index:50;display:grid;place-items:center;overflow:hidden;
+  background:radial-gradient(120% 80% at 50% 40%,var(--surface) 0%,var(--bg) 72%);transition:opacity .45s ease,transform .45s ease}
+#splash.out{opacity:0;transform:scale(1.03);pointer-events:none}
+#splash .halo{position:absolute;left:50%;top:50%;width:300px;height:300px;margin:-190px 0 0 -150px;border-radius:50%;
+  background:radial-gradient(circle,rgba(227,154,46,.20) 0%,rgba(227,154,46,0) 62%);opacity:0;animation:halo 2.4s ease-out .3s forwards}
+@keyframes halo{0%{opacity:0;transform:scale(.6)}45%{opacity:1}100%{opacity:.8;transform:scale(1)}}
+#splash .sp{position:relative;display:flex;flex-direction:column;align-items:center}
+#splash .lg.big{width:88px;height:88px;filter:drop-shadow(0 10px 24px var(--shadow));opacity:0;transform:scale(.82) translateY(6px);
+  animation:pop .6s cubic-bezier(.2,.8,.2,1) .05s forwards}
+@keyframes pop{to{opacity:1;transform:none}}
+#splash .lg.big .tr{stroke:rgba(255,255,255,.13);stroke-dasharray:none;stroke-dashoffset:0;animation:none}
+#splash .lg.big .p1{animation-duration:.5s;animation-delay:.35s}
+#splash .lg.big .p2{animation-duration:.4s;animation-delay:.75s}
+#splash .lg.big .p3{animation-duration:.35s;animation-delay:1.05s}
+#splash .nm{margin-top:20px;font-size:24px;font-weight:650;letter-spacing:8px;margin-right:-8px;opacity:0;animation:nm .8s cubic-bezier(.2,.8,.2,1) .65s forwards}
+@keyframes nm{to{opacity:1;letter-spacing:1.5px;margin-right:-1.5px}}
+#splash .spt{margin-top:6px;font-size:11px;color:var(--muted);letter-spacing:2.5px;margin-right:-2.5px;text-transform:uppercase;opacity:0;animation:fade .6s ease 1s forwards}
+#splash .ld{margin-top:26px;width:112px;height:3px;border-radius:2px;background:var(--line);overflow:hidden;opacity:0;animation:fade .4s ease 1.1s forwards}
+#splash .ld i{display:block;height:100%;width:40%;border-radius:2px;background:linear-gradient(90deg,rgba(227,154,46,0),var(--amber),rgba(227,154,46,0));animation:ld 1.1s ease-in-out infinite}
+@keyframes ld{from{transform:translateX(-100%)}to{transform:translateX(250%)}}
 @keyframes fade{to{opacity:1}}
-@media (prefers-reduced-motion:reduce){.lg path{animation:none!important;stroke-dashoffset:0}#splash b{animation:none;opacity:1}}
+.thh{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:16px 0 8px}
+.thh b{font-size:13.5px;font-weight:600}.thh span{font-size:11.5px;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){.lg path{animation:none!important;stroke-dashoffset:0}#splash *{animation:none!important;opacity:1!important;transform:none!important}}
 .ttl{flex:1;min-width:0}
 .ttl b{display:block;font-size:16px;font-weight:600;letter-spacing:.2px}
 .ttl span{font-size:12px;color:var(--muted)}
@@ -73,7 +102,7 @@ h2 svg.i{width:15px;height:15px}
 .m .s{font-size:12px;color:var(--muted);margin-top:1px;font-variant-numeric:tabular-nums}
 .up{color:var(--green)}.dn{color:var(--red)}
 .alert{display:flex;gap:10px;align-items:flex-start;border-radius:var(--r);padding:11px 12px;font-size:13px;margin-top:10px}
-.alert.red{background:var(--red-bg);color:var(--red)}.alert.amb{background:var(--amber-bg);color:#93570B}
+.alert.red{background:var(--red-bg);color:var(--red)}.alert.amb{background:var(--amber-bg);color:var(--amber-ink)}
 .seg{display:inline-flex;background:var(--line2);border-radius:8px;padding:3px;gap:2px}
 .seg button{border:0;background:transparent;font:inherit;font-size:12px;font-weight:600;color:var(--muted);padding:5px 10px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:5px}
 .seg button svg.i{width:14px;height:14px}
@@ -122,11 +151,11 @@ footer{font-size:11.5px;color:var(--faint);text-align:center;margin-top:22px;lin
 .hint{font-size:11.5px;color:var(--faint);margin-top:10px;line-height:1.4}
 .sethead{display:flex;align-items:center;gap:10px;padding:14px 0 2px}
 .sethead b{font-size:17px;font-weight:600;flex:1}
-.dirty{font-size:11.5px;font-weight:600;padding:3px 8px;border-radius:6px;background:var(--amber-bg);color:#93570B}
+.dirty{font-size:11.5px;font-weight:600;padding:3px 8px;border-radius:6px;background:var(--amber-bg);color:var(--amber-ink)}
 .btn{border:1px solid var(--line);background:var(--surface);color:var(--text);font:inherit;font-size:13.5px;font-weight:600;padding:9px 14px;border-radius:var(--r-sm);cursor:pointer;display:inline-flex;align-items:center;gap:6px;justify-content:center}
 .btn:active{transform:scale(.98)}
-.btn.primary{background:var(--text);border-color:var(--text);color:#fff}
-.btn.danger{color:var(--red);border-color:#F1C4C0}
+.btn.primary{background:var(--pri-bg);border-color:var(--pri-bg);color:var(--pri-fg)}
+.btn.danger{color:var(--red);border-color:var(--red-line)}
 .btn.danger.arm{background:var(--red);border-color:var(--red);color:#fff}
 .btn svg.i{width:16px;height:16px}
 .field{display:flex;align-items:center;gap:10px;padding:11px 0;border-top:1px solid var(--line2)}
@@ -145,18 +174,18 @@ footer{font-size:11.5px;color:var(--faint);text-align:center;margin-top:22px;lin
 .sw{display:flex;align-items:center;gap:12px;cursor:pointer}
 .sw .lb{flex:1}
 .track{width:44px;height:26px;border-radius:7px;background:var(--line);position:relative;flex:none;transition:background .15s}
-.track i{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:5px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.15);transition:left .15s}
+.track i{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:5px;background:var(--knob);box-shadow:0 1px 2px rgba(0,0,0,.15);transition:left .15s}
 .sw.on .track{background:var(--amber)}.sw.on .track i{left:21px}
 .tiles.two{grid-template-columns:repeat(2,minmax(0,1fr))}
-.warn{font-size:12px;color:#93570B;background:var(--amber-bg);border-radius:var(--r-sm);padding:9px 11px;margin-top:8px;display:flex;gap:8px;align-items:flex-start}
+.warn{font-size:12px;color:var(--amber-ink);background:var(--amber-bg);border-radius:var(--r-sm);padding:9px 11px;margin-top:8px;display:flex;gap:8px;align-items:flex-start}
 .warn svg.i{width:16px;height:16px;margin-top:1px}
 .inp{width:100%;height:40px;border:1px solid var(--line);border-radius:var(--r-sm);padding:0 12px;font:inherit;font-size:14px;margin:10px 0 8px;background:var(--surface)}
 .steps{font-size:12.5px;color:var(--muted);line-height:1.5;padding-left:18px;margin-top:6px}
 .steps li{margin-top:3px}.steps b{color:var(--text)}
 .savebar{position:sticky;bottom:calc(10px + env(safe-area-inset-bottom));margin-top:18px;background:var(--surface);border:1px solid var(--amber-line);border-radius:var(--r);padding:10px;display:flex;align-items:center;gap:8px;box-shadow:0 6px 20px rgba(0,0,0,.08)}
-.savebar span{flex:1;font-size:12.5px;color:#93570B;display:flex;gap:6px;align-items:center;min-width:0}
+.savebar span{flex:1;font-size:12.5px;color:var(--amber-ink);display:flex;gap:6px;align-items:center;min-width:0}
 .savebar span svg.i{width:15px;height:15px}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom));background:var(--text);color:#fff;font-size:13px;padding:10px 14px;border-radius:var(--r-sm);max-width:calc(100% - 28px);z-index:20;box-shadow:0 6px 20px rgba(0,0,0,.18)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom));background:var(--pri-bg);color:var(--pri-fg);font-size:13px;padding:10px 14px;border-radius:var(--r-sm);max-width:calc(100% - 28px);z-index:20;box-shadow:0 6px 20px rgba(0,0,0,.18)}
 .okx{display:flex;gap:7px;align-items:flex-start;font-size:12px;border-radius:var(--r-sm);padding:8px 10px;margin:-2px 0 12px}
 .okx svg.i{width:15px;height:15px;margin-top:1px}.okx.ok{background:var(--green-bg);color:var(--green)}.okx.bad{background:var(--red-bg);color:var(--red)}
 .live{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;text-transform:none;letter-spacing:0;color:var(--muted);font-variant-numeric:tabular-nums}
@@ -170,7 +199,7 @@ footer{font-size:11.5px;color:var(--faint);text-align:center;margin-top:22px;lin
 .lock b{display:flex;gap:7px;align-items:center;font-size:14px}
 .lock p{font-size:12.5px;color:var(--muted);margin-top:4px}
 .prot{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 5px;border-radius:4px;background:var(--green-bg);color:var(--green);margin-left:4px;vertical-align:1px}
-.prot.no{background:var(--amber-bg);color:#93570B}
+.prot.no{background:var(--amber-bg);color:var(--amber-ink)}
 .metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media (min-width:600px){
   .wrap{max-width:780px;padding:0 20px}
@@ -187,9 +216,9 @@ footer{font-size:11.5px;color:var(--faint);text-align:center;margin-top:22px;lin
   #setForm{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 26px;align-items:start}
   #setv .sethead,#setv>section{max-width:none}
 }
-.upbar{position:sticky;top:0;z-index:30;background:var(--text);color:#fff}
+.upbar{position:sticky;top:0;z-index:30;background:var(--pri-bg);color:var(--pri-fg)}
 .upbar .in{max-width:1200px;margin:0 auto;padding:10px 14px;display:flex;align-items:center;gap:10px;font-size:13px}
-.upbar .in div{flex:1;min-width:0}.upbar b{font-weight:600}.upbar small{display:block;color:#C9CED6;font-size:11.5px;margin-top:1px}
+.upbar .in div{flex:1;min-width:0}.upbar b{font-weight:600}.upbar small{display:block;opacity:.7;font-size:11.5px;margin-top:1px}
 .upbar .btn{background:var(--amber);border-color:var(--amber);color:#fff;padding:7px 12px}
 .ver{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line2);font-size:13px}
 .ver span{color:var(--muted);font-size:12px;display:block}
@@ -230,15 +259,18 @@ footer{font-size:11.5px;color:var(--faint);text-align:center;margin-top:22px;lin
   <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></symbol>
   <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0112 0v5l1.5 2h-15L6 16z"/><path d="M10 20.5a2 2 0 004 0"/></symbol>
   <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 18h2"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4L6 18M18 6l1.4-1.4"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z"/></symbol>
+  <symbol id="i-auto" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17a8.5 8.5 0 000-17z" fill="currentColor" stroke="none"/></symbol>
   <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2h2"/></symbol>
 </svg>
 
-<div id="splash"><div class="sp"><svg class="lg big" viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="11" fill="#1D2430"/><path class="p1" pathLength="40" d="M11 35V14l13 14" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><path class="p2" pathLength="40" d="M24 28l13-14" fill="none" stroke="#E39A2E" stroke-width="4.5" stroke-linecap="round"/><path class="p3" pathLength="40" d="M37 14v21" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/></svg><b>Masal</b></div></div>
+<div id="splash"><div class="halo"></div><div class="sp"><svg class="lg big" viewBox="0 0 48 48" aria-hidden="true"><rect class="lbg" width="48" height="48" rx="11"/><path class="tr" d="M11 35V14l13 14 13-14v21" fill="none" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><path class="p1" pathLength="40" d="M11 35V14l13 14" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><path class="p2" pathLength="40" d="M24 28l13-14" fill="none" stroke="#E39A2E" stroke-width="4.5" stroke-linecap="round"/><path class="p3" pathLength="40" d="M37 14v21" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/></svg><div class="nm">Masal</div><div class="spt">Kripto bot</div><div class="ld"><i></i></div></div></div>
 
 <header>
   <div class="wrap">
     <div class="bar">
-      <div class="logo" id="logo"><svg class="lg" viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="11" fill="#1D2430"/><path class="p1" pathLength="40" d="M11 35V14l13 14" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><path class="p2" pathLength="40" d="M24 28l13-14" fill="none" stroke="#E39A2E" stroke-width="4.5" stroke-linecap="round"/><path class="p3" pathLength="40" d="M37 14v21" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/></svg></div>
+      <div class="logo" id="logo"><svg class="lg" viewBox="0 0 48 48" aria-hidden="true"><rect class="lbg" width="48" height="48" rx="11"/><path class="p1" pathLength="40" d="M11 35V14l13 14" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><path class="p2" pathLength="40" d="M24 28l13-14" fill="none" stroke="#E39A2E" stroke-width="4.5" stroke-linecap="round"/><path class="p3" pathLength="40" d="M37 14v21" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/></svg></div>
       <div class="ttl"><b>Masal</b><span>Kripto bot · OKX TR</span></div>
       <span class="chip" id="mode">Sanal mod</span>
       <button class="ibtn" id="reload" aria-label="Yenile"><svg class="i"><use href="#i-refresh"/></svg></button>
@@ -352,9 +384,9 @@ footer{font-size:11.5px;color:var(--faint);text-align:center;margin-top:22px;lin
 <div class="toast" id="toast" hidden></div>
 
 <script>
-const APP_VERSION='1.4.0';
+const APP_VERSION='1.5.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
-const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#1D2430'};
+const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
 let S=null,B=null,sel=localStore('masal_sel')||'dip',view='live';
 
@@ -582,12 +614,12 @@ function renderChart(){
   const x0=Math.min(...xs),x1=Math.max(...xs);let y0=Math.min(...ys),y1=Math.max(...ys);const pad=(y1-y0)*.12||1;y0-=pad;y1+=pad;
   const X=t=>pl+(t-x0)/(x1-x0||1)*(W-pl-pr),Y=v=>pt+(1-(v-y0)/(y1-y0))*(H-pt-pb);
   const path=s=>s.map((p,i)=>(i?'L':'M')+X(p[0]).toFixed(1)+' '+Y(p[1]).toFixed(1)).join(' ');
-  let g=`<line x1="0" x2="${W}" y1="${Y(0)}" y2="${Y(0)}" stroke="#C9CED6" stroke-dasharray="4 4" stroke-width="1"/>`;
-  g+=`<text x="${W-2}" y="${Y(0)-4}" text-anchor="end" font-size="10" fill="#9AA1AC">Başlangıç %0</text><text x="2" y="${pt+8}" font-size="10" fill="#9AA1AC">${y1>0?"+":""}${nf(y1,1)}%</text><text x="2" y="${H-pb-3}" font-size="10" fill="#9AA1AC">${nf(y0,1)}%</text>`;
+  let g=`<line x1="0" x2="${W}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--zero)" stroke-dasharray="4 4" stroke-width="1"/>`;
+  g+=`<text x="2" y="${Y(0)+12}" font-size="10" fill="var(--faint)">Başlangıç %0</text><text x="2" y="${pt+8}" font-size="10" fill="var(--faint)">${y1>0?"+":""}${nf(y1,1)}%</text><text x="2" y="${H-pb-3}" font-size="10" fill="var(--faint)">${nf(y0,1)}%</text>`;
   const order=Object.keys(src).filter(k=>k!==sel).concat(src[sel]?[sel]:[]);
   for(const k of order){const s=src[k];if(s.length<2)continue;const on=k===sel;
     g+=`<path d="${path(s)}" fill="none" stroke="${on?AMBER:COLORS[k]}" stroke-width="${on?2.4:1.3}" stroke-opacity="${on?1:.45}" stroke-linejoin="round"/>`;
-    if(on){const l=s[s.length-1];g+=`<circle cx="${X(l[0])}" cy="${Y(l[1])}" r="3.5" fill="${AMBER}" stroke="#fff" stroke-width="1.5"/>`}}
+    if(on){const l=s[s.length-1];g+=`<circle cx="${X(l[0])}" cy="${Y(l[1])}" r="3.5" fill="${AMBER}" stroke="var(--surface)" stroke-width="1.5"/>`}}
   g+=`<text x="2" y="${H-4}" font-size="10" fill="#9AA1AC">${dt(x0).split(' ')[0]}</text><text x="${W-2}" y="${H-4}" text-anchor="end" font-size="10" fill="#9AA1AC">${dt(x1).split(' ')[0]}</text>`;
   box.innerHTML=`<svg id="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${g}</svg>`;
   leg.innerHTML=Object.keys(src).map(k=>`<span><i style="background:${k===sel?AMBER:COLORS[k]};opacity:${k===sel?1:.6}"></i>${S.strategies[k]?.name||k}</span>`).join('');
@@ -778,17 +810,25 @@ let installEvt=null;
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvt=e;if(!document.getElementById('setv').hidden&&draft)renderForm()});
 window.addEventListener('appinstalled',()=>{installEvt=null;toast('Masal ana ekrana eklendi');if(draft)renderForm()});
 const standalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+function themeMode(){try{return localStorage.getItem('masal-tema')||'auto'}catch(e){return 'auto'}}
+const darkMQ=matchMedia('(prefers-color-scheme: dark)');
+function applyTheme(){const m=themeMode(),d=m==='dark'||(m==='auto'&&darkMQ.matches);document.documentElement.dataset.theme=d?'dark':'light';
+  document.querySelector('meta[name=theme-color]').content=d?'#0F131A':'#F4F5F7'}
+function setTheme(m){try{localStorage.setItem('masal-tema',m)}catch(e){}applyTheme()}
+darkMQ.addEventListener?.('change',applyTheme);applyTheme();
 function installSection(){
   let h=`<section><h2>${ic('i-phone')}Uygulama</h2><div class="card">`;
   if(standalone())h+=`<div style="display:flex;gap:8px;align-items:center;color:var(--green);font-weight:600;font-size:13.5px">${ic('i-check')}Masal ana ekranında uygulama olarak yüklü</div>`;
   else if(installEvt)h+=`<div style="font-size:13px;margin-bottom:10px">Masal'ı ana ekrana ekle; kendi simgesiyle uygulama gibi açılır, internet yokken de son verileri gösterir.</div><button class="btn primary" id="instBtn" style="width:100%">${ic('i-phone')}Ana ekrana ekle</button>`;
   else h+=`<ol class="steps" style="margin-top:0"><li><b>Android (Chrome):</b> sağ üstteki ⋮ → <b>Ana ekrana ekle</b></li><li><b>iPhone (Safari):</b> Paylaş → <b>Ana Ekrana Ekle</b></li><li><b>Bilgisayar (Chrome/Edge):</b> adres çubuğundaki <b>Yükle</b> simgesi</li></ol>`;
+  const tm=themeMode();
+  h+=`<div class="thh"><b>Tema</b><span>Bu cihazda, anında uygulanır</span></div><div class="tiles" id="themeTiles">${[['light','i-sun','Açık'],['dark','i-moon','Koyu'],['auto','i-auto','Otomatik']].map(([k,i,n])=>`<div class="tile${tm===k?' on':''}" data-th="${k}"><span class="ic">${ic(i)}</span><span class="nm">${n}</span></div>`).join('')}</div>`;
   const newer=remoteVer&&vcmp(remoteVer.version,APP_VERSION)>0;
   h+=`<div class="ver"><div><b>Sürüm ${APP_VERSION}</b><span>${newer?'Yeni sürüm hazır: '+remoteVer.version:'Güncel'}${remoteVer?.date?' · '+remoteVer.date.split('-').reverse().join('.'):''}</span></div>
     <button class="btn ${newer?'primary':''}" id="verBtn">${ic('i-refresh')}${newer?'Güncelle':'Denetle'}</button></div>`;
   return h+'</div></section>';
 }
-function bindInstall(){const v=document.getElementById('verBtn');if(v)v.onclick=()=>{if(remoteVer&&vcmp(remoteVer.version,APP_VERSION)>0)applyUpdate();else checkVersion(true)};const b=document.getElementById('instBtn');if(b)b.onclick=async()=>{installEvt.prompt();await installEvt.userChoice;installEvt=null;renderForm()}}
+function bindInstall(){document.querySelectorAll('#themeTiles .tile').forEach(t=>t.onclick=()=>{setTheme(t.dataset.th);document.querySelectorAll('#themeTiles .tile').forEach(x=>x.classList.toggle('on',x===t))});const v=document.getElementById('verBtn');if(v)v.onclick=()=>{if(remoteVer&&vcmp(remoteVer.version,APP_VERSION)>0)applyUpdate();else checkVersion(true)};const b=document.getElementById('instBtn');if(b)b.onclick=async()=>{installEvt.prompt();await installEvt.userChoice;installEvt=null;renderForm()}}
 
 /* ---------- sürüm ---------- */
 let remoteVer=null;
@@ -814,7 +854,7 @@ checkVersion();
 /* ---------- açılış, logo, çevrimdışı ---------- */
 let splashT0=Date.now();
 function hideSplash(){const sp=document.getElementById('splash');if(!sp||sp.classList.contains('out'))return;
-  setTimeout(()=>{sp.classList.add('out');setTimeout(()=>sp.remove(),400)},Math.max(0,1500-(Date.now()-splashT0)))}
+  setTimeout(()=>{sp.classList.add('out');setTimeout(()=>sp.remove(),400)},Math.max(0,1700-(Date.now()-splashT0)))}
 setTimeout(hideSplash,4000);
 document.querySelectorAll('.lg').forEach(l=>setTimeout(()=>l.classList.add('done'),1600));
 document.getElementById('logo').onclick=()=>{const l=document.querySelector('#logo .lg');const c=l.cloneNode(true);c.classList.remove('done');l.replaceWith(c);setTimeout(()=>c.classList.add('done'),1600)};

@@ -1,8 +1,8 @@
 {
-  "version": "1.4.0",
+  "version": "1.5.0",
   "date": "2026-11-18",
   "notes": [
-    "Uygulama sürümü ve yeni sürüm uyarısı eklendi",
-    "Üst satırda milisaniyelik canlı saat"
+    "Yeni açılış ekranı",
+    "Açık / Koyu / Otomatik tema (Ayarlar → Uygulama)"
   ]
 }
