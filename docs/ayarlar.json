@@ -4,10 +4,10 @@
   "liquidate": 0,
   "strategy": "grid",
   "interval_min": 5,
-  "budget": 4800,
-  "kasa": 5000,
+  "budget": 5000,
+  "kasa": 10000,
   "topup": {
-    "amount": 250,
+    "amount": 500,
     "profit_pct": 5,
     "days": 7
   },
@@ -20,7 +20,7 @@
   },
   "grid": {
     "step_pct": 2,
-    "lot_pct": 30,
+    "lot_pct": 4,
     "lot_tp_pct": 2.5,
     "max_lots": 3,
     "max_coins": 3,
