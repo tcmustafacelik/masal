@@ -100,3 +100,11 @@ def build(state, S=None):
         out["okx"] = None
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
+    # Tüm işlem geçmişi ayrı dosyada (uygulama sadece "Tümünü gör" açılınca indirir)
+    hist = {"updated": state.get("updated"), "strategies": {}}
+    for key, s in items:
+        hist["strategies"][key] = s.get("trades", [])
+    if vault.password() and "live" in hist["strategies"]:
+        hist["live_enc"] = vault.seal(hist["strategies"].pop("live"))
+    with open(os.path.join(os.path.dirname(OUT), "trades.json"), "w", encoding="utf-8") as f:
+        json.dump(hist, f, ensure_ascii=False, separators=(",", ":"))

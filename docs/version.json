@@ -1,7 +1,9 @@
 {
-  "version": "1.13.1",
+  "version": "1.14.0",
   "date": "2026-11-18",
   "notes": [
-    "Bağlantı linki kısaltıldı"
+    "Tüm işlem geçmişi ekranı",
+    "Ayarlar sadeleşti: katlanır bölümler, renkli başlıklar",
+    "Çok küçük alım tutarı uyarısı, mod geçişi anında görünür"
   ]
 }
