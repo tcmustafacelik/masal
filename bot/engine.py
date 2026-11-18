@@ -140,8 +140,7 @@ class Portfolio:
         day = self.s["day"]["date"]
         realized = sum(t.get("pnl", 0) for t in self.s["trades"][-200:]
                        if t["side"] == "SAT" and datetime.fromtimestamp(t["ts"] / 1000, TZ).strftime("%Y-%m-%d") == day)
-        if realized <= -self.risk["daily_loss_limit"]:
-            self.s["blocked_today"] = True
+        self.s["blocked_today"] = realized <= -self.risk["daily_loss_limit"]
         if not self.s["equity"] or self.s["equity"][-1][0] != ts:
             self.s["equity"].append([ts, round(eq, 2), round(self.s.get("start_cash", eq), 2)])
         else:

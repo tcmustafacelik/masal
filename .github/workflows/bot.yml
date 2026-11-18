@@ -1,6 +1,6 @@
 name: Masal bot
 
-# Bot kesintisiz çalışır: her oturum ~50 dk sürer, ~20 sn'de bir tur atar ve bitince
+# Bot kesintisiz çalışır: her oturum ~50 dk sürer, ~10 sn'de bir tur atar ve bitince
 # bir sonraki oturumu kendisi başlatır. Zamanlayıcı ve ayar kaydı sadece yedek tetikleyicidir
 # (zincir bir sebeple koparsa yeniden başlatır).
 on:

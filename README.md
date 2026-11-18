@@ -2,10 +2,14 @@
 
 Kişisel otomasyon sistemi. İlk modül: **OKX TR kripto botu**.
 
-- `bot/` — bot motoru (stratejiler, risk kuralları, gerçek emir modülü)
-- `docs/` — telefondan açılan uygulama (panel + Ayarlar ekranı) ve bot verileri
+- `bot/` — bot motoru (Python; stratejiler, risk kuralları, gerçek emir modülü)
+- `src/` — uygulamanın TypeScript kaynağı; `npm run build` ile `docs/app.js` üretilir
+- `docs/` — telefondan açılan uygulama (panel + Ayarlar ekranı)
 - `docs/ayarlar.json` — uygulamadaki Ayarlar ekranının kaydettiği ayarlar
-- `.github/workflows/bot.yml` — botu saatte bir ve ayarlar kaydedilince çalıştırır
+- `data` dalı — botun ürettiği veriler (özet, işlem geçmişi, geçmiş test)
+- `.github/workflows/bot.yml` — botu kesintisiz çalıştırır (~10 sn'de bir tur, 50 dk'lık oturumlar zincir hâlinde; yedek zamanlayıcı 5 dk)
+- `.github/workflows/denetim.yml` — uygulama kodunun tür denetimi ve derlemenin güncel olduğunu kontrol eder
+- `tools/surum.py` — yeni sürüm yayınlama
 
 ## Tek seferlik kurulum
 

@@ -1,8 +1,10 @@
 {
-  "version": "1.25.1",
+  "version": "1.25.2",
   "date": "2026-11-19",
   "notes": [
-    "Kâr/zarar renkli: yeşil kâr, kırmızı zarar",
-    "Elimdeki coinlerde zarar durdur ile kâr al arasında fiyatın yerini gösteren çubuk"
+    "Ayarlara Anlık alım anahtarı eklendi",
+    "Kademe büyüklüğü kutudan taşmıyor (en fazla 2 ondalık)",
+    "İşlem geçmişi ana ekranla aynı renkli kâr/zarar düzeninde",
+    "Günlük sınır bayrağı düzeltildi"
   ]
 }

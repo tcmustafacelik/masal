@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.25.1';
+const APP_VERSION = '1.25.2';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -17,7 +17,7 @@ const tl = (v, d = 2) => nf(v, d) + ' TL';
 const sgn = v => (v > 0 ? '+' : v < 0 ? '−' : '') + nf(Math.abs(v));
 const cls = v => v > 0 ? 'up' : v < 0 ? 'dn' : '';
 function px(v) { const a = Math.abs(v); return nf(v, a >= 1000 ? 0 : a >= 10 ? 2 : a >= 1 ? 3 : 5); }
-function fv(v, dec) { return dec > 0 ? String(v).replace('.', ',') : Number(v).toLocaleString('tr-TR'); }
+function fv(v, dec) { return dec > 0 ? String(Math.round(+v * 100) / 100).replace('.', ',') : Number(v).toLocaleString('tr-TR'); } // en fazla 2 ondalık: kutudan taşmasın
 function dt(ts, withYear) {
     const d = new Date(ts);
     const p = n => String(n).padStart(2, '0');
@@ -721,6 +721,8 @@ function checks(d = draft, o = orig || {}, diff = true) {
             ch.push(d.live ? '<b>Gerçek emir</b> başlar' : 'Deneme moduna geçilir; elde kalan coinler satılmaz');
         if (o.strategy !== d.strategy)
             ch.push(`Strateji ${SNAMES[o.strategy]} → <b>${SNAMES[d.strategy]}</b>${o.live ? '; eski stratejinin coinleri satılır' : ''}`);
+        if (!!o.grid?.instant !== !!d.grid?.instant)
+            ch.push(d.grid?.instant ? '<b>Anlık alım</b> açılır: fiyat alım seviyesine değince hemen alır' : 'Anlık alım kapanır: 15 dakikalık mum kapanışı beklenir');
         if (o.paused !== d.paused)
             ch.push(d.paused ? 'Yeni alım <b>durur</b>; korumalar çalışmaya devam eder' : 'Bot yeniden alım yapmaya başlar');
         if (ch.length)
@@ -830,7 +832,7 @@ const SUMS = {
     'Kasa': () => `${tl(draft.budget, 0)} botta · kasa ${tl(draft.kasa, 0)}`,
     'Kasadan ekleme': () => `+${tl(draft.topup.amount, 0)} · ${pc(draft.topup.profit_pct)} kârda · ${draft.topup.days} gün arayla`,
     'Koruma': () => draft.strategy === 'grid' ? `Günlük ${pc(draft.risk.daily_loss_pct)} · acil fren ${pc(draft.risk.kill_pct)}` : `Zarar ${pc(draft.risk.stop_pct)} · günlük ${pc(draft.risk.daily_loss_pct)} · acil fren ${pc(draft.risk.kill_pct)}`,
-    grid: () => `${tl(draft.budget * draft.grid.lot_pct / 100, 0)} kademe · ${draft.grid.max_coins} coine kadar · en çok ${tl(draft.budget * (draft.grid.use_pct ?? 40) / 100, 0)}`,
+    grid: () => `${tl(draft.budget * draft.grid.lot_pct / 100, 0)} kademe · ${draft.grid.max_coins} coine kadar · en çok ${tl(draft.budget * (draft.grid.use_pct ?? 40) / 100, 0)}${draft.grid.instant ? ' · anlık alım' : ''}`,
     dip: () => `Düşüş ${pc(draft.dip.dip_pct)} · kâr ${pc(draft.dip.take_profit_pct)} · en çok ${draft.dip.max_hold_hours} saat`,
     trend: () => `İz süren stop ${pc(draft.trend.trailing_pct)}`
 };
@@ -1069,7 +1071,9 @@ function renderForm() {
         h += accOpen(sec.t, sec.t, sec.i, SEC_C[sec.t], SUMS[sec.t](), secDirty(ff.map(x => x[0]))) + `<div class="card">${ff.map(field).join('')}</div>` + ACC_END;
     }
     const sf = STRAT_F[draft.strategy];
-    h += accOpen('strat', SNAMES[draft.strategy] + ' ayarları', ICON[draft.strategy], 'blue', SUMS[draft.strategy](), secDirty(sf.map(x => x[0]))) + `<div class="card">${sf.map(field).join('')}</div>` + ACC_END;
+    const grid = draft.strategy === 'grid';
+    h += accOpen('strat', SNAMES[draft.strategy] + ' ayarları', ICON[draft.strategy], 'blue', SUMS[draft.strategy](), secDirty([...sf.map(x => x[0]), ...(grid ? ['grid.instant'] : [])])) + `<div class="card">${sf.map(field).join('')}`
+        + (grid ? `<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line2)">${swRow('instSw', !!draft.grid.instant, 'Anlık alım', 'Açıkken fiyat alım seviyesine değdiği an alır; kapalıyken 15 dakikalık mumun kapanmasını bekler')}</div>` : '') + `</div>` + ACC_END;
     h += installSection();
     const f = document.getElementById('setForm');
     f.innerHTML = h;
@@ -1086,6 +1090,9 @@ function renderForm() {
     f.querySelectorAll('[data-g=mode] .tile').forEach(b => b.onclick = () => { draft.live = b.dataset.t === 'real'; renderForm(); });
     f.querySelectorAll('[data-g=strat] .tile').forEach(b => b.onclick = () => { draft.strategy = b.dataset.t; renderForm(); });
     document.getElementById('pauseSw').onclick = () => { draft.paused = !draft.paused; renderForm(); };
+    const isw = document.getElementById('instSw');
+    if (isw)
+        isw.onclick = () => { draft.grid.instant = !draft.grid.instant; renderForm(); };
     bindNotify();
     bindInstall();
     document.getElementById('sellAll').onclick = () => {
@@ -1287,8 +1294,8 @@ function renderHist() {
             h += `<div class="dayh"><span>${d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' })}</span>${dp ? `<b class="${cls(dp)}">${sgn(dp)} TL</b>` : ''}</div><div class="card list">`;
         }
         const sell = t.side === 'SAT', hm = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
-        h += `<div class="row">${cico(t.inst, t.side, t.pnl < 0)}<div class="mid"><b>${sym(t.inst)} · ${px(t.price)}</b><span>${t.reason}</span></div>
-      <div class="end"><b>${tl(t.amount, 0)}</b>${sell ? `<span class="${cls(t.pnl)}">${sgn(t.pnl)} TL · ${hm}</span>` : `<span>${hm}</span>`}</div></div>`;
+        h += `<div class="row">${cico(t.inst, t.side, t.pnl < 0)}<div class="mid"><b>${sym(t.inst)} ${sell ? 'satıldı' : 'alındı'}</b><span>${hm} · ${t.reason} · ${px(t.price)}</span></div>
+      <div class="end"><b>${tl(t.amount, 0)}</b>${sell ? `<span class="plc ${cls(t.pnl) || 'z'}">${sgn(t.pnl)} TL ${t.pnl >= 0 ? 'kâr' : 'zarar'}</span>` : `<span>harcandı</span>`}</div></div>`;
     }
     if (day)
         h += '</div>';
