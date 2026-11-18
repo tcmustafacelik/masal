@@ -118,6 +118,20 @@ def floor_to(x, step):
     return math.floor(x / step + 1e-9) * step
 
 
+_MIN = {}
+
+
+def min_order_try(inst, price):
+    """OKX'in bu coin için kabul ettiği en küçük emrin TL karşılığı (%3 pay ile)."""
+    if inst not in _MIN:
+        try:
+            from . import okx
+            _MIN[inst] = float(okx._get("/api/v5/public/instruments", {"instType": "SPOT", "instId": inst})[0]["minSz"])
+        except Exception:
+            _MIN[inst] = 0.0
+    return _MIN[inst] * price * 1.03
+
+
 class LivePortfolio(Portfolio):
     """Strateji kararları sanal motorla aynı; alım-satım gerçek emirle yapılır."""
 
@@ -153,6 +167,11 @@ class LivePortfolio(Portfolio):
     def _buy(self, ts, inst, price, amount, reason):
         amount = round(min(amount, self.s["cash"]), 2)
         if amount < 10:
+            return False
+        need = min_order_try(inst, price)
+        if amount < need:  # borsanın bu coin için en küçük emir tutarının altında: sessizce atla
+            if self._once_per_day("min_" + inst):
+                self._note(ts, f"{inst.split('-')[0]} atlandı: OKX bu coinde en az {para(need)} TL emir istiyor, kademe {para(amount)} TL")
             return False
         if not self.armed:
             self._note(ts, f"[deneme] AL {inst.split('-')[0]} {para(amount)} TL · {reason}")

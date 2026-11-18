@@ -1,8 +1,7 @@
 {
-  "version": "1.16.0",
+  "version": "1.16.1",
   "date": "2026-11-18",
   "notes": [
-    "Bot ~10 saniyede bir kontrol eder",
-    "Uygulama yeni veriyi 4 saniyede bir yoklar"
+    "Borsanın en küçük emir tutarına yetmeyen coin sessizce atlanır"
   ]
 }
