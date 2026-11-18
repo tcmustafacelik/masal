@@ -495,7 +495,7 @@ details.setup summary::-webkit-details-marker{display:none}
 <div class="toast" id="toast" hidden></div>
 
 <script>
-const APP_VERSION='1.15.1';
+const APP_VERSION='1.16.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -539,12 +539,12 @@ async function getData(f){const t=Date.now();
   try{const r=await fetch(`https://raw.githubusercontent.com/${REPO.o}/${REPO.r}/data/docs/data/${f}?t=${t}`,{cache:'no-store'});if(r.ok)return await r.json()}catch(e){}
   const r=await fetch('data/'+f+'?t='+t);if(!r.ok)throw 0;return r.json()}
 let lastLoad=0,dataSha='';
-// Botun her kaydı "data" dalında yeni bir sürüm oluşturur; uygulama 8 saniyede bir bakar, değiştiyse hemen yeniler
+// Botun her kaydı "data" dalında yeni bir sürüm oluşturur; uygulama 4 saniyede bir bakar, değiştiyse hemen yeniler
 async function watchData(){if(document.hidden||!S)return;
   if(token){try{const r=await fetch(`https://api.github.com/repos/${REPO.o}/${REPO.r}/commits/data?t=${Date.now()}`,{headers:{Authorization:'Bearer '+token,Accept:'application/vnd.github.sha'},cache:'no-store'});
     if(r.ok){const sha=(await r.text()).trim();if(dataSha&&sha!==dataSha)load(true);dataSha=sha}}catch(e){}return}
   if(Date.now()-lastLoad>6e4)load(true)}
-setInterval(watchData,8000);
+setInterval(watchData,4000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&S)load(true)});
 async function load(quiet){lastLoad=Date.now();
   const btn=document.getElementById('reload');if(!quiet)btn.classList.add('spin');
@@ -568,7 +568,7 @@ function render(){
      :real?`<span class="mi">${ic('i-coins')}</span><span><b>Gerçek</b><small>OKX TR'de</small></span>`
      :`<span class="mi">${ic('i-flask')}</span><span><b>Deneme</b><small>Emir gitmez</small></span>`;
    m.onclick=()=>document.getElementById('openSet').click()}
-  document.getElementById('foot').innerHTML='Fiyatlar uygulama açıkken OKX TR\'den anlık güncellenir; bot kesintisiz çalışır, yaklaşık 20 saniyede bir kontrol eder.<br>'+(L&&L.armed?'Gerçek hesap kartı OKX TR hesabındaki gerçek işlemleri gösterir; diğerleri sanal karşılaştırmadır.':'Gerçek para kullanılmıyor; tüm işlemler sanal.');
+  document.getElementById('foot').innerHTML='Fiyatlar uygulama açıkken OKX TR\'den anlık güncellenir; bot kesintisiz çalışır, yaklaşık 10 saniyede bir kontrol eder.<br>'+(L&&L.armed?'Gerçek hesap kartı OKX TR hesabındaki gerçek işlemleri gösterir; diğerleri sanal karşılaştırmadır.':'Gerçek para kullanılmıyor; tüm işlemler sanal.');
   const keys=Object.keys(S.strategies).sort((a,b)=>(b==='live')-(a==='live'));
   const tg=document.getElementById('tiles');tg.style.gridTemplateColumns=`repeat(${keys.length===4?2:3},minmax(0,1fr))`;
   tg.innerHTML=keys.map(k=>{const x=S.strategies[k];
@@ -976,7 +976,7 @@ function renderForm(){
    <div class="card" style="margin-top:8px"><div class="sw ${draft.paused?'on':''}" id="pauseSw"><div class="lb"><b style="font-size:13.5px">Botu durdur</b><span style="font-size:11.5px;color:var(--muted);display:block">Yeni alım yapılmaz; açık pozisyonların zarar sınırı çalışmaya devam eder</span></div><div class="track"><i></i></div></div>
    <div class="field" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line2)"><div class="lb"><b>Hepsini sat ve dur</b><span>Gerçek hesaptaki tüm coinleri hemen satar, botu durdurur</span></div>
    <button class="btn danger ${sellArm?'arm':''}" id="sellAll">${ic('i-sell')}${sellArm?'Emin misin? Dokun':'Hepsini sat'}</button></div></div></section>
-   <div class="hint" style="margin:8px 2px 4px">Bot kesintisiz çalışır: yaklaşık 20 saniyede bir piyasayı, borsadaki korumaları ve para hareketlerini kontrol eder. Uygulama kapalı olsa da çalışır.</div>
+   <div class="hint" style="margin:8px 2px 4px">Bot kesintisiz çalışır: yaklaşık 10 saniyede bir piyasayı, borsadaki korumaları ve para hareketlerini kontrol eder. Uygulama kapalı olsa da çalışır.</div>
    <section><h2><span class="hb c-blue">${ic('i-target')}</span>Strateji</h2><div class="tiles" data-g="strat">${['grid','dip','trend'].map(k=>tile(draft.strategy===k,k,ICON[k],SNAMES[k])).join('')}</div>
    ${draft.strategy!==orig.strategy&&orig.live?`<div class="warn">${ic('i-info')}<div>Gerçek modda strateji değişince eski stratejinin açık coinleri satılır, yeni strateji temiz başlar.</div></div>`:''}</section>
    <section><h2><span class="hb c-violet">${ic('i-shield')}</span>Kontrol<span class="hsum" style="font-weight:500;color:var(--faint);font-size:11px">değiştirdikçe güncellenir</span></h2><div class="card chk" id="checks"></div></section>`;
@@ -994,7 +994,7 @@ function renderForm(){
   document.getElementById('pauseSw').onclick=()=>{draft.paused=!draft.paused;renderForm()};
   bindNotify();bindInstall();
   document.getElementById('sellAll').onclick=()=>{if(!sellArm){sellArm=setTimeout(()=>{sellArm=0;renderForm()},4000);return renderForm()}
-    clearTimeout(sellArm);sellArm=0;const keep=JSON.parse(JSON.stringify(orig));keep.liquidate=Date.now();keep.paused=true;save(keep,'Hepsini sat isteği gönderildi; bot yaklaşık 20 saniye içinde satar ve durur.')};
+    clearTimeout(sellArm);sellArm=0;const keep=JSON.parse(JSON.stringify(orig));keep.liquidate=Date.now();keep.paused=true;save(keep,'Hepsini sat isteği gönderildi; bot yaklaşık 10 saniye içinde satar ve durur.')};
   f.querySelectorAll('.field[data-k]').forEach(el=>{const k=el.dataset.k,inp=el.querySelector('input');
     const set=(raw,fromBtn)=>{const st=+inp.dataset.step,mn=+inp.dataset.min,mx=+inp.dataset.max,dc=+inp.dataset.dec;
       const r0=String(raw).trim();let v=dc>0?parseFloat(r0.replace(',','.')):parseFloat(r0.replace(/[.,\s]/g,''));
@@ -1042,7 +1042,7 @@ async function save(obj,msg){
     const body={message:'Ayarlar uygulamadan güncellendi',content:btoa(unescape(encodeURIComponent(JSON.stringify(data,null,2)+'\n'))),sha:cur.sha,branch:'main'};
     const r=await fetch(API,{method:'PUT',headers:{Authorization:'Bearer '+token,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify(body)});
     if(!r.ok)throw r.status;sha=(await r.json()).content.sha;orig=JSON.parse(JSON.stringify(data));draft=JSON.parse(JSON.stringify(data));
-    renderForm();if(S)render();toast(msg||'Kaydedildi. Bot yaklaşık 20 saniye içinde yeni ayarlarla çalışır.');
+    renderForm();if(S)render();toast(msg||'Kaydedildi. Bot yaklaşık 10 saniye içinde yeni ayarlarla çalışır.');
   }catch(e){toast(e===401||e===403?'Yetki hatası: anahtarın Contents yazma izni olmalı':'Kaydedilemedi, tekrar dene ('+e+')')}
   finally{btn.innerHTML=ic('i-check')+'Kaydet'}
 }
