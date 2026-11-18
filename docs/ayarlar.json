@@ -24,7 +24,8 @@
     "max_lots": 3,
     "max_coins": 20,
     "stop_pct": 12,
-    "use_pct": 24
+    "use_pct": 24,
+    "trend_filter_pct": 1
   },
   "dip": {
     "dip_pct": 3,

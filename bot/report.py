@@ -16,7 +16,8 @@ def describe(key, c):
     pct = lambda v: f"%{v * 100:g}".replace(".", ",")
     if key == "grid":
         return (f"Her {pct(c['step'])} düşüşte küçük bir kademe daha alır (en fazla {c['max_lots']}), "
-                f"her kademeyi {pct(c['lot_tp'])} kârla ayrı satar.")
+                f"her kademeyi {pct(c['lot_tp'])} kârla ayrı satar."
+                + (f" Coin bir günde {pct(c['coin_filter'])}'den fazla geriliyorsa yeni alımı bekletir." if c.get("coin_filter") else ""))
     if key == "dip":
         return (f"Fiyat 20 saatlik ortalamanın {pct(c['dip_pct'])} altına inip aşırı satımdayken alır; "
                 f"{pct(c['take_profit'])} kârda ya da {c['max_hold_bars'] // config.BPH} saat dolunca satar.")

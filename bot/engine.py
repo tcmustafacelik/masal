@@ -196,6 +196,23 @@ class Portfolio:
         if self._can_open() and pf <= ps and f > s and price > b:
             self._buy(ts, inst, price, self.risk["trade_size"], "Yükseliş kesişimi")
 
+    def _entry_ok(self, closes, price, extra=False):
+        """Düşüş filtresi: düşen bıçağı tutmamak için yeni alımı erteler (ayarlardan açılır)."""
+        c = self.cfg
+        if extra and not c.get("filter_all"):
+            return True
+        if c.get("mkt_filter") and MARKET["down"]:
+            return False
+        cf = c.get("coin_filter")
+        if cf:
+            n, lag = 48 * config.BPH, 24 * config.BPH
+            now, prev = sma(closes, n), sma(closes[:-lag], n)
+            if now and prev and now < prev * (1 - cf):
+                return False
+        if c.get("confirm") and len(closes) > 1 and closes[-1] <= closes[-2]:
+            return False
+        return True
+
     def _grid(self, ts, inst, closes, price, pos):
         c = self.cfg
         if pos:
@@ -212,13 +229,27 @@ class Portfolio:
                 self._sell_lots(ts, inst, price, list(pos["lots"]), "Zarar sınırı")
             elif (len(pos["lots"]) < c["max_lots"] and not self.s["halted"] and not self.s["blocked_today"]
                   and not self.s.get("paused") and self._room(c["lot"])
-                  and price <= pos["lots"][-1]["entry"] * (1 - c["step"])):
+                  and price <= pos["lots"][-1]["entry"] * (1 - c["step"]) and self._entry_ok(closes, price, True)):
                 self._buy(ts, inst, price, c["lot"], f"{len(pos['lots']) + 1}. kademe")
             return
         m = sma(closes, 20 * config.BPH)  # son 20 saatin ortalaması
         if (self._can_open() and len(self.s["positions"]) < c["max_coins"] and self._room(c["lot"])
-                and m and price <= m * (1 - c["step"])):
+                and m and price <= m * (1 - c["step"]) and self._entry_ok(closes, price)):
             self._buy(ts, inst, price, c["lot"], "1. kademe")
+
+
+MARKET = {"down": False}  # piyasa geneli (BTC) sert düşüşte mi; run_bars her mumda günceller
+MARKET_REF = "BTC-TRY"
+
+
+def _market_down(series, group, th):
+    """BTC son 48 saatin ortalamasının th oranından fazla altındaysa piyasa 'düşüşte' sayılır."""
+    for _, inst, idx in group:
+        if inst == MARKET_REF:
+            closes = [c for _, c in series[inst][max(0, idx - 299): idx + 1]]
+            m = sma(closes, 48 * config.BPH)
+            return bool(m and closes[-1] < m * (1 - th))
+    return MARKET["down"]
 
 
 def _dip_rank(series, inst, idx):
@@ -237,6 +268,8 @@ def run_bars(portfolios, events, series):
         while i < len(events) and events[i][0] == ts:
             group.append(events[i])
             i += 1
+        th = config.STRATEGIES["grid"].get("mkt_filter") or 0
+        MARKET["down"] = _market_down(series, group, th) if th else False
         for p in portfolios:
             p.start_bar(ts)
             for _, inst, idx in sorted(group, key=lambda g: _dip_rank(series, g[1], g[2])):
