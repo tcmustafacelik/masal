@@ -40,12 +40,17 @@ svg.i{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-widt
 header{position:sticky;top:0;z-index:5;background:var(--header-bg);backdrop-filter:blur(8px);border-bottom:1px solid var(--line2)}
 .bar{display:flex;align-items:center;gap:10px;padding:12px 0 10px}
 .logo{width:36px;height:36px;flex:none;cursor:pointer}
-.lg{width:100%;height:100%;display:block}.lg .lbg{fill:var(--logo-bg)}[data-theme=dark] .lg .lbg{stroke:#323B49;stroke-width:1}
-.lg path{stroke-dasharray:40;stroke-dashoffset:40;animation:draw .55s cubic-bezier(.4,0,.2,1) forwards}
-.lg .p1{animation-delay:.15s}.lg .p2{animation-delay:.6s}.lg .p3{animation-delay:.9s}
-.lg.done .p2{animation:draw .55s cubic-bezier(.4,0,.2,1) .6s forwards,glow 5s ease-in-out 2s infinite}
+.lg{width:100%;height:100%;display:block;overflow:visible}
+.lg .p1,.lg .p2,.lg .p3{stroke-dasharray:40;stroke-dashoffset:40;animation:draw .55s cubic-bezier(.4,0,.2,1) forwards}
+.lg .p1{animation-delay:.15s}.lg .p2{animation-delay:.55s}.lg .p3{animation-delay:.85s}
+.lg .edge{stroke-dasharray:100;stroke-dashoffset:100;opacity:0}
+.lg .shine{transform:translateX(-24px) skewX(-18deg);animation:shine 9s ease-in-out 1.6s infinite}
+.lg .spark{transform-box:fill-box;transform-origin:center;transform:scale(0);animation:spark .5s cubic-bezier(.3,1.6,.5,1) 1.25s forwards,twinkle 3.2s ease-in-out 2s infinite}
+.lg.done .p2{filter:drop-shadow(0 0 1.6px rgba(255,180,70,.55))}
 @keyframes draw{to{stroke-dashoffset:0}}
-@keyframes glow{0%,100%{stroke-opacity:1}50%{stroke-opacity:.55}}
+@keyframes shine{0%{transform:translateX(-24px) skewX(-18deg)}12%,100%{transform:translateX(64px) skewX(-18deg)}}
+@keyframes spark{0%{transform:scale(0) rotate(-90deg)}100%{transform:scale(1) rotate(0)}}
+@keyframes twinkle{0%,100%{opacity:1;transform:scale(1) rotate(0)}50%{opacity:.55;transform:scale(.72) rotate(45deg)}}
 #splash{position:fixed;inset:0;z-index:50;display:grid;place-items:center;overflow:hidden;
   background:radial-gradient(120% 80% at 50% 40%,var(--surface) 0%,var(--bg) 72%);transition:opacity .45s ease,transform .45s ease}
 #splash.out{opacity:0;transform:scale(1.03);pointer-events:none}
@@ -53,13 +58,19 @@ header{position:sticky;top:0;z-index:5;background:var(--header-bg);backdrop-filt
   background:radial-gradient(circle,rgba(227,154,46,.20) 0%,rgba(227,154,46,0) 62%);opacity:0;animation:halo 2.4s ease-out .3s forwards}
 @keyframes halo{0%{opacity:0;transform:scale(.6)}45%{opacity:1}100%{opacity:.8;transform:scale(1)}}
 #splash .sp{position:relative;display:flex;flex-direction:column;align-items:center}
-#splash .lg.big{width:88px;height:88px;filter:drop-shadow(0 10px 24px var(--shadow));opacity:0;transform:scale(.82) translateY(6px);
-  animation:pop .6s cubic-bezier(.2,.8,.2,1) .05s forwards}
-@keyframes pop{to{opacity:1;transform:none}}
-#splash .lg.big .tr{stroke:rgba(255,255,255,.13);stroke-dasharray:none;stroke-dashoffset:0;animation:none}
-#splash .lg.big .p1{animation-duration:.5s;animation-delay:.35s}
-#splash .lg.big .p2{animation-duration:.4s;animation-delay:.75s}
-#splash .lg.big .p3{animation-duration:.35s;animation-delay:1.05s}
+#splash .lg.big{width:96px;height:96px;filter:drop-shadow(0 14px 28px var(--shadow)) drop-shadow(0 0 22px rgba(244,167,59,.22));opacity:0;transform:perspective(400px) rotateX(18deg) rotateY(-22deg) scale(.7);
+  animation:pop .8s cubic-bezier(.2,1.3,.4,1) .05s forwards}
+@keyframes pop{to{opacity:1;transform:perspective(400px) rotateX(0) rotateY(0) scale(1)}}
+#splash .lg.big .p1{animation-duration:.5s;animation-delay:.45s}
+#splash .lg.big .p3{animation-duration:.35s;animation-delay:.8s}
+#splash .lg.big .p2{animation-duration:.45s;animation-delay:1s}
+#splash .lg.big .edge{animation:edge 1.5s ease-in-out .3s forwards}
+@keyframes edge{0%{opacity:1;stroke-dashoffset:100}55%{opacity:1;stroke-dashoffset:0}100%{opacity:.0;stroke-dashoffset:0}}
+#splash .lg.big .shine{animation:shine 2.6s ease-in-out 1.35s infinite}
+#splash .lg.big .spark{animation:spark .55s cubic-bezier(.3,1.6,.5,1) 1.4s forwards,twinkle 1.6s ease-in-out 2s infinite}
+#splash .pt{position:absolute;left:50%;top:50%;width:var(--s);height:var(--s);border-radius:50%;background:#F4A73B;box-shadow:0 0 6px #F4A73B;opacity:0;
+  animation:rise var(--d) ease-out var(--w) infinite}
+@keyframes rise{0%{opacity:0;transform:translate(var(--x),40px) scale(.6)}20%{opacity:.9}100%{opacity:0;transform:translate(calc(var(--x)*1.5),-150px) scale(1)}}
 #splash .nm{margin-top:20px;font-size:24px;font-weight:650;letter-spacing:8px;margin-right:-8px;opacity:0;animation:nm .8s cubic-bezier(.2,.8,.2,1) .65s forwards}
 @keyframes nm{to{opacity:1;letter-spacing:1.5px;margin-right:-1.5px}}
 #splash .spt{margin-top:6px;font-size:11px;color:var(--muted);letter-spacing:2.5px;margin-right:-2.5px;text-transform:uppercase;opacity:0;animation:fade .6s ease 1s forwards}
@@ -69,7 +80,7 @@ header{position:sticky;top:0;z-index:5;background:var(--header-bg);backdrop-filt
 @keyframes fade{to{opacity:1}}
 .thh{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:16px 0 8px}
 .thh b{font-size:13.5px;font-weight:600}.thh span{font-size:11.5px;color:var(--muted)}
-@media (prefers-reduced-motion:reduce){.lg path{animation:none!important;stroke-dashoffset:0}#splash *{animation:none!important;opacity:1!important;transform:none!important}}
+@media (prefers-reduced-motion:reduce){.lg path,.lg rect{animation:none!important;stroke-dashoffset:0}.lg .spark{transform:none}.lg .shine{display:none}#splash *{animation:none!important;opacity:1!important;transform:none!important}}
 .ttl{flex:1;min-width:0}
 .ttl b{display:block;font-size:16px;font-weight:600;letter-spacing:.2px}
 .ttl span{font-size:12px;color:var(--muted)}
@@ -265,13 +276,13 @@ footer{font-size:11.5px;color:var(--faint);text-align:center;margin-top:22px;lin
   <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2h2"/></symbol>
 </svg>
 
-<div id="splash"><div class="halo"></div><div class="sp"><svg class="lg big" viewBox="0 0 48 48" aria-hidden="true"><rect class="lbg" width="48" height="48" rx="11"/><path class="tr" d="M11 35V14l13 14 13-14v21" fill="none" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><path class="p1" pathLength="40" d="M11 35V14l13 14" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><path class="p2" pathLength="40" d="M24 28l13-14" fill="none" stroke="#E39A2E" stroke-width="4.5" stroke-linecap="round"/><path class="p3" pathLength="40" d="M37 14v21" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/></svg><div class="nm">Masal</div><div class="spt">Kripto bot</div><div class="ld"><i></i></div></div></div>
+<div id="splash"><div class="halo"></div><i class="pt" style="--x:-8px;--s:3px;--d:2.7s;--w:0.67s"></i><i class="pt" style="--x:47px;--s:3px;--d:2.6s;--w:0.68s"></i><i class="pt" style="--x:39px;--s:3px;--d:2.2s;--w:1.21s"></i><i class="pt" style="--x:-73px;--s:3px;--d:2.3s;--w:1.19s"></i><i class="pt" style="--x:54px;--s:3px;--d:3.3s;--w:1.48s"></i><i class="pt" style="--x:59px;--s:3px;--d:2.9s;--w:1.16s"></i><i class="pt" style="--x:-34px;--s:3px;--d:2.9s;--w:0.79s"></i><i class="pt" style="--x:17px;--s:3px;--d:2.8s;--w:1.40s"></i><i class="pt" style="--x:53px;--s:5px;--d:2.4s;--w:1.41s"></i><i class="pt" style="--x:73px;--s:3px;--d:2.6s;--w:1.37s"></i><div class="sp"><svg class="lg big" viewBox="0 0 48 48" aria-hidden="true"><defs><linearGradient id="sbg" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2C3850"/><stop offset=".55" stop-color="#18202D"/><stop offset="1" stop-color="#0C1017"/></linearGradient><radialGradient id="sgl" cx="38" cy="12" r="26" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#F5A83A" stop-opacity=".38"/><stop offset="1" stop-color="#F5A83A" stop-opacity="0"/></radialGradient><linearGradient id="sau" x1="24" y1="30" x2="38" y2="12" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#E06A12"/><stop offset=".6" stop-color="#F4A73B"/><stop offset="1" stop-color="#FFE09A"/></linearGradient><linearGradient id="swh" x1="0" y1="13" x2="0" y2="36" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#BCC7D8"/></linearGradient><linearGradient id="sed" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFE09A"/><stop offset=".5" stop-color="#F4A73B"/><stop offset="1" stop-color="#E06A12"/></linearGradient><linearGradient id="ssh" x1="0" y1="0" x2="14" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".32"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient><clipPath id="scl"><rect width="48" height="48" rx="12"/></clipPath></defs><rect width="48" height="48" rx="12" fill="url(#sbg)"/><rect width="48" height="48" rx="12" fill="url(#sgl)"/><rect x=".75" y=".75" width="46.5" height="46.5" rx="11.25" fill="none" stroke="#fff" stroke-opacity=".09" stroke-width="1.5"/><rect class="edge" x="1" y="1" width="46" height="46" rx="11" pathLength="100" fill="none" stroke="url(#sed)" stroke-width="2"/><path class="tr" d="M11 35V14l13 14 13-14v21" fill="none" stroke="#fff" stroke-opacity=".1" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/><path class="p1" pathLength="40" d="M11 35V14l13 14" fill="none" stroke="url(#swh)" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/><path class="p3" pathLength="40" d="M37 14v21" fill="none" stroke="url(#swh)" stroke-width="4.6" stroke-linecap="round"/><path class="p2" pathLength="40" d="M24 28l13-14" fill="none" stroke="url(#sau)" stroke-width="4.6" stroke-linecap="round"/><g clip-path="url(#scl)"><rect class="shine" x="0" y="-6" width="14" height="60" fill="url(#ssh)"/></g><path class="spark" d="M41 4.2l1.1 2.9 2.9 1.1-2.9 1.1-1.1 2.9-1.1-2.9-2.9-1.1 2.9-1.1z" fill="#FFE3A3"/></svg><div class="nm">Masal</div><div class="spt">Senin için çalışır</div><div class="ld"><i></i></div></div></div>
 
 <header>
   <div class="wrap">
     <div class="bar">
-      <div class="logo" id="logo"><svg class="lg" viewBox="0 0 48 48" aria-hidden="true"><rect class="lbg" width="48" height="48" rx="11"/><path class="p1" pathLength="40" d="M11 35V14l13 14" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><path class="p2" pathLength="40" d="M24 28l13-14" fill="none" stroke="#E39A2E" stroke-width="4.5" stroke-linecap="round"/><path class="p3" pathLength="40" d="M37 14v21" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/></svg></div>
-      <div class="ttl"><b>Masal</b><span>Kripto bot · OKX TR</span></div>
+      <div class="logo" id="logo"><svg class="lg" viewBox="0 0 48 48" aria-hidden="true"><defs><linearGradient id="hbg" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2C3850"/><stop offset=".55" stop-color="#18202D"/><stop offset="1" stop-color="#0C1017"/></linearGradient><radialGradient id="hgl" cx="38" cy="12" r="26" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#F5A83A" stop-opacity=".38"/><stop offset="1" stop-color="#F5A83A" stop-opacity="0"/></radialGradient><linearGradient id="hau" x1="24" y1="30" x2="38" y2="12" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#E06A12"/><stop offset=".6" stop-color="#F4A73B"/><stop offset="1" stop-color="#FFE09A"/></linearGradient><linearGradient id="hwh" x1="0" y1="13" x2="0" y2="36" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#BCC7D8"/></linearGradient><linearGradient id="hed" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFE09A"/><stop offset=".5" stop-color="#F4A73B"/><stop offset="1" stop-color="#E06A12"/></linearGradient><linearGradient id="hsh" x1="0" y1="0" x2="14" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".32"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient><clipPath id="hcl"><rect width="48" height="48" rx="12"/></clipPath></defs><rect width="48" height="48" rx="12" fill="url(#hbg)"/><rect width="48" height="48" rx="12" fill="url(#hgl)"/><rect x=".75" y=".75" width="46.5" height="46.5" rx="11.25" fill="none" stroke="#fff" stroke-opacity=".09" stroke-width="1.5"/><rect class="edge" x="1" y="1" width="46" height="46" rx="11" pathLength="100" fill="none" stroke="url(#hed)" stroke-width="2"/><path class="tr" d="M11 35V14l13 14 13-14v21" fill="none" stroke="#fff" stroke-opacity=".1" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/><path class="p1" pathLength="40" d="M11 35V14l13 14" fill="none" stroke="url(#hwh)" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/><path class="p3" pathLength="40" d="M37 14v21" fill="none" stroke="url(#hwh)" stroke-width="4.6" stroke-linecap="round"/><path class="p2" pathLength="40" d="M24 28l13-14" fill="none" stroke="url(#hau)" stroke-width="4.6" stroke-linecap="round"/><g clip-path="url(#hcl)"><rect class="shine" x="0" y="-6" width="14" height="60" fill="url(#hsh)"/></g><path class="spark" d="M41 4.2l1.1 2.9 2.9 1.1-2.9 1.1-1.1 2.9-1.1-2.9-2.9-1.1 2.9-1.1z" fill="#FFE3A3"/></svg></div>
+      <div class="ttl"><b>Masal</b><span>Senin için çalışır</span></div>
       <span class="chip" id="mode">Sanal mod</span>
       <button class="ibtn" id="reload" aria-label="Yenile"><svg class="i"><use href="#i-refresh"/></svg></button>
       <button class="ibtn" id="openSet" aria-label="Ayarlar"><svg class="i"><use href="#i-gear"/></svg></button>
@@ -384,7 +395,7 @@ footer{font-size:11.5px;color:var(--faint);text-align:center;margin-top:22px;lin
 <div class="toast" id="toast" hidden></div>
 
 <script>
-const APP_VERSION='1.5.0';
+const APP_VERSION='1.6.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -854,7 +865,7 @@ checkVersion();
 /* ---------- açılış, logo, çevrimdışı ---------- */
 let splashT0=Date.now();
 function hideSplash(){const sp=document.getElementById('splash');if(!sp||sp.classList.contains('out'))return;
-  setTimeout(()=>{sp.classList.add('out');setTimeout(()=>sp.remove(),400)},Math.max(0,1700-(Date.now()-splashT0)))}
+  setTimeout(()=>{sp.classList.add('out');setTimeout(()=>sp.remove(),400)},Math.max(0,2400-(Date.now()-splashT0)))}
 setTimeout(hideSplash,4000);
 document.querySelectorAll('.lg').forEach(l=>setTimeout(()=>l.classList.add('done'),1600));
 document.getElementById('logo').onclick=()=>{const l=document.querySelector('#logo .lg');const c=l.cloneNode(true);c.classList.remove('done');l.replaceWith(c);setTimeout(()=>c.classList.add('done'),1600)};
