@@ -1,4 +1,4 @@
-const APP_VERSION='1.22.0';
+const APP_VERSION='1.22.1';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -37,25 +37,41 @@ async function openLive(){
 }
 
 // Bot kayıtları ayrı "data" dalında tutulur (site her turda yeniden yayınlanmasın diye)
-async function getData(f){const t=Date.now();
-  if(token){try{const r=await fetch(`https://api.github.com/repos/${REPO.o}/${REPO.r}/contents/docs/data/${f}?ref=data&t=${t}`,{headers:{Authorization:'Bearer '+token,Accept:'application/vnd.github.raw+json'},cache:'no-store'});if(r.ok)return await r.json()}catch(e){}}
-  try{const r=await fetch(`https://raw.githubusercontent.com/${REPO.o}/${REPO.r}/data/docs/data/${f}?t=${t}`,{cache:'no-store'});if(r.ok)return await r.json()}catch(e){}
-  const r=await fetch('data/'+f+'?t='+t);if(!r.ok)throw 0;return r.json()}
+/** Süre sınırlı istek: VPN ya da zayıf bağlantıda askıda kalan istek sonsuza kadar beklenmez. */
+async function tfetch(url: string, opt: RequestInit = {}, ms = 8000): Promise<Response> {
+  const c = new AbortController(), t = setTimeout(() => c.abort(), ms);
+  try { return await fetch(url, {...opt, signal: c.signal}); } finally { clearTimeout(t); }
+}
+const CACHE_KEY = 'masal_cache_';
+/** Bot kayıtları sırayla üç kaynaktan denenir; hepsi başarısızsa telefonda saklanan son veri kullanılır. */
+async function getData<T = any>(f: string): Promise<T> {
+  const t = Date.now();
+  const tries: [string, RequestInit][] = [];
+  if (token) tries.push([`https://api.github.com/repos/${REPO.o}/${REPO.r}/contents/docs/data/${f}?ref=data&t=${t}`, {headers: {Authorization: 'Bearer ' + token, Accept: 'application/vnd.github.raw+json'}, cache: 'no-store'}]);
+  tries.push([`https://raw.githubusercontent.com/${REPO.o}/${REPO.r}/data/docs/data/${f}?t=${t}`, {cache: 'no-store'}]);
+  for (const [u, o] of tries) {
+    try { const r = await tfetch(u, o); if (r.ok) { const j = await r.json(); try { localStorage.setItem(CACHE_KEY + f, JSON.stringify(j)); } catch (e) {} return j; } } catch (e) {}
+  }
+  try { const c = localStorage.getItem(CACHE_KEY + f); if (c) { offlineData = true; return JSON.parse(c); } } catch (e) {}
+  throw new Error('veri alınamadı');
+}
+let offlineData = false, retryTimer: ReturnType<typeof setTimeout> = null;
 let lastLoad=0,dataSha='';
 // Botun her kaydı "data" dalında yeni bir sürüm oluşturur; uygulama 4 saniyede bir bakar, değiştiyse hemen yeniler
 async function watchData(){if(document.hidden||!S)return;
-  if(token){try{const r=await fetch(`https://api.github.com/repos/${REPO.o}/${REPO.r}/commits/data?t=${Date.now()}`,{headers:{Authorization:'Bearer '+token,Accept:'application/vnd.github.sha'},cache:'no-store'});
+  if(token){try{const r=await tfetch(`https://api.github.com/repos/${REPO.o}/${REPO.r}/commits/data?t=${Date.now()}`,{headers:{Authorization:'Bearer '+token,Accept:'application/vnd.github.sha'},cache:'no-store'});
     if(r.ok){const sha=(await r.text()).trim();if(dataSha&&sha!==dataSha)load(true);dataSha=sha}}catch(e){}return}
   if(Date.now()-lastLoad>6e4)load(true)}
 setInterval(watchData,4000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&S)load(true)});
-async function load(quiet?: boolean) {lastLoad=Date.now();
+async function load(quiet?: boolean) {lastLoad=Date.now();offlineData=false;clearTimeout(retryTimer);
   const btn=document.getElementById('reload');if(!quiet)btn.classList.add('spin');
   const err=document.getElementById('err');err.style.display='none';
   try{
     const [s,b]=await Promise.all([getData('summary.json'),getData('backtest.json').catch(()=>null)]);
-    S=s;B=b;await openLive();if(!selPicked&&S.strategies.live?.armed&&!S.strategies.live.locked)sel='live';if(!S.strategies[sel])sel = Object.keys(S.strategies)[0] as StrategyKey;render();pollMarket(true);
-  }catch(e){console.error(e);err.textContent='Veriler yüklenemedi. Bağlantını kontrol edip yenile düğmesine dokun.';err.style.display='block'}
+    S=s;B=b;await openLive();
+    if(offlineData){err.innerHTML=`Bağlantı kurulamadı; <b>${dt(S.updated)}</b> tarihli son veri gösteriliyor. Kendiliğinden yeniden deneniyor…`;err.style.display='block';retryTimer=setTimeout(()=>load(true),15000)}if(!selPicked&&S.strategies.live?.armed&&!S.strategies.live.locked)sel='live';if(!S.strategies[sel])sel = Object.keys(S.strategies)[0] as StrategyKey;render();pollMarket(true);
+  }catch(e){console.error(e);err.textContent='Veriler alınamadı (bağlantı ya da VPN). Kendiliğinden yeniden deneniyor…';err.style.display='block';retryTimer=setTimeout(()=>load(true),10000)}
   finally{btn.classList.remove('spin');hideSplash()}
 }
 
@@ -196,7 +212,9 @@ async function pollMarket(now){
   if(!mkBusy){mkBusy=true;
     try{
       const list=marketList();
-      const res=await Promise.all(list.map(i=>fetch('https://tr.okx.com/api/v5/market/ticker?instId='+i,{cache:'no-store'}).then(r=>r.json()).catch(()=>null)));
+      const res=await Promise.all(list.map(i=>tfetch('https://tr.okx.com/api/v5/market/ticker?instId='+i,{cache:'no-store'},6000).then(r=>r.json()).catch(()=>null)));
+      okxDown=!res.some(r=>r?.data?.[0]);
+      if(okxDown&&!lastTick){const tg=document.getElementById('liveTag');tg.innerHTML='<i></i>Erişilemiyor';tg.classList.remove('on')}
       res.forEach((r,k)=>{const t=r?.data?.[0];if(!t)return;const inst=list[k],last=+t.last,prev=LP[inst]?.last;
         LP[inst]={last,vol:+t.volCcy24h,ch:(last/(+t.open24h)-1)*100,dir:prev==null?0:Math.sign(last-prev),ts:+t.ts};
         lastTick=Math.max(lastTick,+t.ts)});
@@ -210,8 +228,10 @@ async function pollMarket(now){
     mkBusy=false}
   mkTimer=setTimeout(pollMarket,2000);
 }
+let okxDown=false;
 function renderMarket(){
   const list=marketList(),box=document.getElementById('market');
+  if(okxDown&&!list.some(i=>LP[i])){box.className='card list mk';box.innerHTML=`<div class="empty">${ic('i-info')}<div>OKX TR'ye ulaşılamıyor. VPN açıksa OKX TR yurt dışı bağlantıyı engelliyor olabilir; VPN'i kapatınca canlı fiyatlar gelir. Bot bundan etkilenmez.</div></div>`;return}
   const rows=list.filter(i=>LP[i]);
   box.className='card list mk';
   box.innerHTML=rows.length?rows.map(i=>{const q=LP[i];
@@ -454,16 +474,16 @@ async function makeLink(){
 }
 async function bagId(key){const h=new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(key)));return [...h.slice(0,6)].map(b=>b.toString(16).padStart(2,'0')).join('')}
 async function ghPut(path,text,msg){const url=`https://api.github.com/repos/${REPO.o}/${REPO.r}/contents/${path}`;
-  const r=await fetch(url,{method:'PUT',headers:{Authorization:'Bearer '+token,Accept:'application/vnd.github+json'},body:JSON.stringify({message:msg,content:btoa(unescape(encodeURIComponent(text)))})});if(!r.ok)throw r.status}
+  const r=await tfetch(url,{method:'PUT',headers:{Authorization:'Bearer '+token,Accept:'application/vnd.github+json'},body:JSON.stringify({message:msg,content:btoa(unescape(encodeURIComponent(text)))})});if(!r.ok)throw r.status}
 async function ghDel(path){const url=`https://api.github.com/repos/${REPO.o}/${REPO.r}/contents/${path}`,h={Authorization:'Bearer '+token,Accept:'application/vnd.github+json'};
-  const g=await fetch(url,{headers:h});if(!g.ok)return;const sha=(await g.json()).sha;await fetch(url,{method:'DELETE',headers:h,body:JSON.stringify({message:'Eski bağlantı linki silindi',sha})})}
+  const g=await tfetch(url,{headers:h});if(!g.ok)return;const sha=(await g.json()).sha;await tfetch(url,{method:'DELETE',headers:h,body:JSON.stringify({message:'Eski bağlantı linki silindi',sha})})}
 async function openLink(){
   const short=location.hash.match(/^#([\w-]{22})$/),m=location.hash.match(/^#bag=([\w-]+)/);if(!short&&!m)return;
   history.replaceState(null,'',location.pathname+location.search);
   let box,pre='';
   if(short){pre=short[1]+':';const id=await bagId(short[1]);
     for(const u of [`https://raw.githubusercontent.com/${REPO.o}/${REPO.r}/main/docs/bag/${id}.json`,`bag/${id}.json`]){
-      try{const r=await fetch(u+'?t='+Date.now(),{cache:'no-store'});if(r.ok){box=await r.json();break}}catch(e){}}
+      try{const r=await tfetch(u+'?t='+Date.now(),{cache:'no-store'});if(r.ok){box=await r.json();break}}catch(e){}}
     if(!box)return toast('Bu link geçersiz ya da yenisi oluşturulmuş')}
   else{try{box=JSON.parse(b64uD(m[1]))}catch(e){return toast('Bağlantı linki bozuk')}}
   let tries=0,got=null;
@@ -485,7 +505,7 @@ function renderConn(){
   const mk=document.getElementById('mkLink');if(mk)mk.onclick=makeLink;
   const u=document.getElementById('unlink');if(u)u.onclick=()=>{token='';localStorage.removeItem('masal_token');renderConn()};
   const l=document.getElementById('link');if(l)l.onclick=async()=>{const t = (document.getElementById('tok') as HTMLInputElement).value.trim();if(!t)return toast('Anahtarı yapıştır');
-    l.textContent='Kontrol ediliyor…';try{const r=await fetch(API,{headers:{Authorization:'Bearer '+t,Accept:'application/vnd.github+json'}});
+    l.textContent='Kontrol ediliyor…';try{const r=await tfetch(API,{headers:{Authorization:'Bearer '+t,Accept:'application/vnd.github+json'}});
       if(!r.ok)throw r.status;token=t;localStore('masal_token',t);await loadSettings();toast('Bağlandı')}catch(e){toast(e===404?'Depo ya da dosya bulunamadı: izinleri kontrol et':'Anahtar geçersiz ya da yetkisi yok');renderConn()}};
 }
 
@@ -543,9 +563,9 @@ function refresh(){
 
 async function loadSettings(){
   try{
-    if(token){const r=await fetch(API+'?t='+Date.now(),{headers:{Authorization:'Bearer '+token,Accept:'application/vnd.github+json'},cache:'no-store'});
+    if(token){const r=await tfetch(API+'?t='+Date.now(),{headers:{Authorization:'Bearer '+token,Accept:'application/vnd.github+json'},cache:'no-store'});
       if(!r.ok)throw r.status;const j=await r.json();sha=j.sha;orig=JSON.parse(decodeURIComponent(escape(atob(j.content.replace(/\n/g,'')))))}
-    else{orig=await fetch('ayarlar.json?t='+Date.now()).then(r=>r.json())}
+    else{orig=await tfetch('ayarlar.json?t='+Date.now()).then(r=>r.json())}
   }catch(e){orig=S?.settings||null;if(e===401){token='';localStorage.removeItem('masal_token');toast('GitHub anahtarının süresi dolmuş, yeniden bağlan')}}
   if(!orig){document.getElementById('setForm').innerHTML=`<div class="empty">${ic('i-info')}<div>Ayarlar yüklenemedi</div></div>`;return}
   if(orig&&orig.grid&&orig.grid.use_pct==null)orig.grid.use_pct=40;
@@ -561,9 +581,9 @@ async function save(obj?: Settings, msg?: string, keepDraft?: boolean) {
   if(draft._bad&&draft._bad.size&&obj===undefined){toast('Kırmızı alanları düzelt');return}
   const data=obj||clean(draft),btn=document.getElementById('save');btn.textContent='Kaydediliyor…';
   try{
-    const cur=await fetch(API+'?t='+Date.now(),{headers:{Authorization:'Bearer '+token,Accept:'application/vnd.github+json'},cache:'no-store'}).then(r=>{if(!r.ok)throw r.status;return r.json()});
+    const cur=await tfetch(API+'?t='+Date.now(),{headers:{Authorization:'Bearer '+token,Accept:'application/vnd.github+json'},cache:'no-store'}).then(r=>{if(!r.ok)throw r.status;return r.json()});
     const body={message:'Ayarlar uygulamadan güncellendi',content:btoa(unescape(encodeURIComponent(JSON.stringify(data,null,2)+'\n'))),sha:cur.sha,branch:'main'};
-    const r=await fetch(API,{method:'PUT',headers:{Authorization:'Bearer '+token,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify(body)});
+    const r=await tfetch(API,{method:'PUT',headers:{Authorization:'Bearer '+token,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify(body)});
     if(!r.ok)throw r.status;sha=(await r.json()).content.sha;const prev=keepDraft?clean(draft):null;orig=JSON.parse(JSON.stringify(data));draft=JSON.parse(JSON.stringify(data));
     if(prev)for(const k in prev)if(k!=='test_req')draft[k]=prev[k];
     renderForm();if(S)render();toast(msg||'Kaydedildi. Bot yaklaşık 10 saniye içinde yeni ayarlarla çalışır.');
@@ -647,7 +667,7 @@ function bindNotify(){
     renderForm()});
   t('nTr',()=>{N.trades=!N.trades;renderForm()});t('nAl',()=>{N.alerts=!N.alerts;renderForm()});t('nDy',()=>{N.daily=!N.daily;renderForm()});t('nMo',()=>{N.money=N.money===false;renderForm()});
   t('nCopy',()=>{navigator.clipboard?.writeText(topicPlain).then(()=>toast('Konu adı kopyalandı'),()=>toast('Kopyalanamadı, elle seç'))});
-  t('nTest',async()=>{try{const r=await fetch('https://ntfy.sh/',{method:'POST',body:JSON.stringify({topic:topicPlain,title:'Masal',message:'Test bildirimi: bağlantı çalışıyor.',tags:['white_check_mark']})});
+  t('nTest',async()=>{try{const r=await tfetch('https://ntfy.sh/',{method:'POST',body:JSON.stringify({topic:topicPlain,title:'Masal',message:'Test bildirimi: bağlantı çalışıyor.',tags:['white_check_mark']})});
     toast(r.ok?'Test bildirimi gönderildi':'Gönderilemedi ('+r.status+')')}catch(e){toast('Gönderilemedi, bağlantını kontrol et')}});
 }
 
@@ -681,7 +701,7 @@ function bindInstall(){document.querySelectorAll<HTMLElement>('#themeTiles .tile
 let remoteVer=null;
 const vcmp=(a,b)=>{const x=a.split('.').map(Number),y=b.split('.').map(Number);for(let i=0;i<3;i++){if((x[i]||0)!==(y[i]||0))return (x[i]||0)-(y[i]||0)}return 0};
 async function checkVersion(manual?: boolean) {
-  try{remoteVer=await fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.json())}catch(e){if(manual)toast('Sürüm bilgisi alınamadı');return}
+  try{remoteVer=await tfetch('version.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.json())}catch(e){if(manual)toast('Sürüm bilgisi alınamadı');return}
   const bar=document.getElementById('upbar');
   if(vcmp(remoteVer.version,APP_VERSION)>0){
     bar.innerHTML=`<div class="in">${ic('i-refresh')}<div><b>Yeni sürüm algılandı: ${remoteVer.version}</b><small>${(remoteVer.notes||[]).slice(0,2).join(' · ')}</small></div><button class="btn" id="upBtn">Güncelle</button></div>`;

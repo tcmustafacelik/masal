@@ -1,7 +1,7 @@
 {
-  "version": "1.22.0",
+  "version": "1.22.1",
   "date": "2026-11-19",
   "notes": [
-    "Düşüş filtresi: geriye giden coinde yeni alım beklenir"
+    "VPN ve zayıf bağlantıda: süre sınırı, kendiliğinden yeniden deneme, son veriyi gösterme"
   ]
 }

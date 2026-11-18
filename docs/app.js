@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.22.0';
+const APP_VERSION = '1.22.1';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -64,27 +64,49 @@ async function openLive() {
     }
 }
 // Bot kayıtları ayrı "data" dalında tutulur (site her turda yeniden yayınlanmasın diye)
+/** Süre sınırlı istek: VPN ya da zayıf bağlantıda askıda kalan istek sonsuza kadar beklenmez. */
+async function tfetch(url, opt = {}, ms = 8000) {
+    const c = new AbortController(), t = setTimeout(() => c.abort(), ms);
+    try {
+        return await fetch(url, { ...opt, signal: c.signal });
+    }
+    finally {
+        clearTimeout(t);
+    }
+}
+const CACHE_KEY = 'masal_cache_';
+/** Bot kayıtları sırayla üç kaynaktan denenir; hepsi başarısızsa telefonda saklanan son veri kullanılır. */
 async function getData(f) {
     const t = Date.now();
-    if (token) {
+    const tries = [];
+    if (token)
+        tries.push([`https://api.github.com/repos/${REPO.o}/${REPO.r}/contents/docs/data/${f}?ref=data&t=${t}`, { headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github.raw+json' }, cache: 'no-store' }]);
+    tries.push([`https://raw.githubusercontent.com/${REPO.o}/${REPO.r}/data/docs/data/${f}?t=${t}`, { cache: 'no-store' }]);
+    for (const [u, o] of tries) {
         try {
-            const r = await fetch(`https://api.github.com/repos/${REPO.o}/${REPO.r}/contents/docs/data/${f}?ref=data&t=${t}`, { headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github.raw+json' }, cache: 'no-store' });
-            if (r.ok)
-                return await r.json();
+            const r = await tfetch(u, o);
+            if (r.ok) {
+                const j = await r.json();
+                try {
+                    localStorage.setItem(CACHE_KEY + f, JSON.stringify(j));
+                }
+                catch (e) { }
+                return j;
+            }
         }
         catch (e) { }
     }
     try {
-        const r = await fetch(`https://raw.githubusercontent.com/${REPO.o}/${REPO.r}/data/docs/data/${f}?t=${t}`, { cache: 'no-store' });
-        if (r.ok)
-            return await r.json();
+        const c = localStorage.getItem(CACHE_KEY + f);
+        if (c) {
+            offlineData = true;
+            return JSON.parse(c);
+        }
     }
     catch (e) { }
-    const r = await fetch('data/' + f + '?t=' + t);
-    if (!r.ok)
-        throw 0;
-    return r.json();
+    throw new Error('veri alınamadı');
 }
+let offlineData = false, retryTimer = null;
 let lastLoad = 0, dataSha = '';
 // Botun her kaydı "data" dalında yeni bir sürüm oluşturur; uygulama 4 saniyede bir bakar, değiştiyse hemen yeniler
 async function watchData() {
@@ -92,7 +114,7 @@ async function watchData() {
         return;
     if (token) {
         try {
-            const r = await fetch(`https://api.github.com/repos/${REPO.o}/${REPO.r}/commits/data?t=${Date.now()}`, { headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github.sha' }, cache: 'no-store' });
+            const r = await tfetch(`https://api.github.com/repos/${REPO.o}/${REPO.r}/commits/data?t=${Date.now()}`, { headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github.sha' }, cache: 'no-store' });
             if (r.ok) {
                 const sha = (await r.text()).trim();
                 if (dataSha && sha !== dataSha)
@@ -111,6 +133,8 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && S)
     load(true); });
 async function load(quiet) {
     lastLoad = Date.now();
+    offlineData = false;
+    clearTimeout(retryTimer);
     const btn = document.getElementById('reload');
     if (!quiet)
         btn.classList.add('spin');
@@ -121,6 +145,11 @@ async function load(quiet) {
         S = s;
         B = b;
         await openLive();
+        if (offlineData) {
+            err.innerHTML = `Bağlantı kurulamadı; <b>${dt(S.updated)}</b> tarihli son veri gösteriliyor. Kendiliğinden yeniden deneniyor…`;
+            err.style.display = 'block';
+            retryTimer = setTimeout(() => load(true), 15000);
+        }
         if (!selPicked && S.strategies.live?.armed && !S.strategies.live.locked)
             sel = 'live';
         if (!S.strategies[sel])
@@ -130,8 +159,9 @@ async function load(quiet) {
     }
     catch (e) {
         console.error(e);
-        err.textContent = 'Veriler yüklenemedi. Bağlantını kontrol edip yenile düğmesine dokun.';
+        err.textContent = 'Veriler alınamadı (bağlantı ya da VPN). Kendiliğinden yeniden deneniyor…';
         err.style.display = 'block';
+        retryTimer = setTimeout(() => load(true), 10000);
     }
     finally {
         btn.classList.remove('spin');
@@ -329,7 +359,13 @@ async function pollMarket(now) {
         mkBusy = true;
         try {
             const list = marketList();
-            const res = await Promise.all(list.map(i => fetch('https://tr.okx.com/api/v5/market/ticker?instId=' + i, { cache: 'no-store' }).then(r => r.json()).catch(() => null)));
+            const res = await Promise.all(list.map(i => tfetch('https://tr.okx.com/api/v5/market/ticker?instId=' + i, { cache: 'no-store' }, 6000).then(r => r.json()).catch(() => null)));
+            okxDown = !res.some(r => r?.data?.[0]);
+            if (okxDown && !lastTick) {
+                const tg = document.getElementById('liveTag');
+                tg.innerHTML = '<i></i>Erişilemiyor';
+                tg.classList.remove('on');
+            }
             res.forEach((r, k) => {
                 const t = r?.data?.[0];
                 if (!t)
@@ -360,8 +396,14 @@ async function pollMarket(now) {
     }
     mkTimer = setTimeout(pollMarket, 2000);
 }
+let okxDown = false;
 function renderMarket() {
     const list = marketList(), box = document.getElementById('market');
+    if (okxDown && !list.some(i => LP[i])) {
+        box.className = 'card list mk';
+        box.innerHTML = `<div class="empty">${ic('i-info')}<div>OKX TR'ye ulaşılamıyor. VPN açıksa OKX TR yurt dışı bağlantıyı engelliyor olabilir; VPN'i kapatınca canlı fiyatlar gelir. Bot bundan etkilenmez.</div></div>`;
+        return;
+    }
     const rows = list.filter(i => LP[i]);
     box.className = 'card list mk';
     box.innerHTML = rows.length ? rows.map(i => {
@@ -750,17 +792,17 @@ async function makeLink() {
 async function bagId(key) { const h = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(key))); return [...h.slice(0, 6)].map(b => b.toString(16).padStart(2, '0')).join(''); }
 async function ghPut(path, text, msg) {
     const url = `https://api.github.com/repos/${REPO.o}/${REPO.r}/contents/${path}`;
-    const r = await fetch(url, { method: 'PUT', headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' }, body: JSON.stringify({ message: msg, content: btoa(unescape(encodeURIComponent(text))) }) });
+    const r = await tfetch(url, { method: 'PUT', headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' }, body: JSON.stringify({ message: msg, content: btoa(unescape(encodeURIComponent(text))) }) });
     if (!r.ok)
         throw r.status;
 }
 async function ghDel(path) {
     const url = `https://api.github.com/repos/${REPO.o}/${REPO.r}/contents/${path}`, h = { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' };
-    const g = await fetch(url, { headers: h });
+    const g = await tfetch(url, { headers: h });
     if (!g.ok)
         return;
     const sha = (await g.json()).sha;
-    await fetch(url, { method: 'DELETE', headers: h, body: JSON.stringify({ message: 'Eski bağlantı linki silindi', sha }) });
+    await tfetch(url, { method: 'DELETE', headers: h, body: JSON.stringify({ message: 'Eski bağlantı linki silindi', sha }) });
 }
 async function openLink() {
     const short = location.hash.match(/^#([\w-]{22})$/), m = location.hash.match(/^#bag=([\w-]+)/);
@@ -773,7 +815,7 @@ async function openLink() {
         const id = await bagId(short[1]);
         for (const u of [`https://raw.githubusercontent.com/${REPO.o}/${REPO.r}/main/docs/bag/${id}.json`, `bag/${id}.json`]) {
             try {
-                const r = await fetch(u + '?t=' + Date.now(), { cache: 'no-store' });
+                const r = await tfetch(u + '?t=' + Date.now(), { cache: 'no-store' });
                 if (r.ok) {
                     box = await r.json();
                     break;
@@ -839,7 +881,7 @@ function renderConn() {
                 return toast('Anahtarı yapıştır');
             l.textContent = 'Kontrol ediliyor…';
             try {
-                const r = await fetch(API, { headers: { Authorization: 'Bearer ' + t, Accept: 'application/vnd.github+json' } });
+                const r = await tfetch(API, { headers: { Authorization: 'Bearer ' + t, Accept: 'application/vnd.github+json' } });
                 if (!r.ok)
                     throw r.status;
                 token = t;
@@ -954,7 +996,7 @@ function refresh() {
 async function loadSettings() {
     try {
         if (token) {
-            const r = await fetch(API + '?t=' + Date.now(), { headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' }, cache: 'no-store' });
+            const r = await tfetch(API + '?t=' + Date.now(), { headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' }, cache: 'no-store' });
             if (!r.ok)
                 throw r.status;
             const j = await r.json();
@@ -962,7 +1004,7 @@ async function loadSettings() {
             orig = JSON.parse(decodeURIComponent(escape(atob(j.content.replace(/\n/g, '')))));
         }
         else {
-            orig = await fetch('ayarlar.json?t=' + Date.now()).then(r => r.json());
+            orig = await tfetch('ayarlar.json?t=' + Date.now()).then(r => r.json());
         }
     }
     catch (e) {
@@ -1007,10 +1049,10 @@ async function save(obj, msg, keepDraft) {
     const data = obj || clean(draft), btn = document.getElementById('save');
     btn.textContent = 'Kaydediliyor…';
     try {
-        const cur = await fetch(API + '?t=' + Date.now(), { headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' }, cache: 'no-store' }).then(r => { if (!r.ok)
+        const cur = await tfetch(API + '?t=' + Date.now(), { headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' }, cache: 'no-store' }).then(r => { if (!r.ok)
             throw r.status; return r.json(); });
         const body = { message: 'Ayarlar uygulamadan güncellendi', content: btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2) + '\n'))), sha: cur.sha, branch: 'main' };
-        const r = await fetch(API, { method: 'PUT', headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        const r = await tfetch(API, { method: 'PUT', headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
         if (!r.ok)
             throw r.status;
         sha = (await r.json()).content.sha;
@@ -1162,7 +1204,7 @@ function bindNotify() {
     t('nCopy', () => { navigator.clipboard?.writeText(topicPlain).then(() => toast('Konu adı kopyalandı'), () => toast('Kopyalanamadı, elle seç')); });
     t('nTest', async () => {
         try {
-            const r = await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: topicPlain, title: 'Masal', message: 'Test bildirimi: bağlantı çalışıyor.', tags: ['white_check_mark'] }) });
+            const r = await tfetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: topicPlain, title: 'Masal', message: 'Test bildirimi: bağlantı çalışıyor.', tags: ['white_check_mark'] }) });
             toast(r.ok ? 'Test bildirimi gönderildi' : 'Gönderilemedi (' + r.status + ')');
         }
         catch (e) {
@@ -1225,7 +1267,7 @@ const vcmp = (a, b) => { const x = a.split('.').map(Number), y = b.split('.').ma
 } return 0; };
 async function checkVersion(manual) {
     try {
-        remoteVer = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json());
+        remoteVer = await tfetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json());
     }
     catch (e) {
         if (manual)
