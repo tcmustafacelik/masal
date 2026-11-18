@@ -21,6 +21,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main   # her zaman en son ayar ve kayıtla çalış (art arda kayıtlarda eski kopya kullanılmasın)
       - name: Sıra kontrolü
         id: gate
         env:
@@ -52,4 +54,8 @@ jobs:
           git add docs/data
           git diff --cached --quiet && exit 0
           git commit -m "Bot turu $(date -u +%Y-%m-%dT%H:%MZ)"
-          for i in 1 2 3; do git pull --rebase -q && git push && break; sleep 5; done
+          for i in 1 2 3 4; do
+            if git pull --rebase -q -X theirs; then git push && exit 0; else git rebase --abort || true; fi
+            sleep 5
+          done
+          echo "Kayıt gönderilemedi"; exit 1
