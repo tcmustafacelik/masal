@@ -19,12 +19,12 @@
   },
   "grid": {
     "step_pct": 1.5,
-    "lot_pct": 4,
+    "lot_pct": 5.224,
     "lot_tp_pct": 4,
     "max_lots": 3,
     "max_coins": 20,
     "stop_pct": 12,
-    "use_pct": 40,
+    "use_pct": 52,
     "trend_filter_pct": 1,
     "instant": true
   },
