@@ -276,3 +276,37 @@ def run_bars(portfolios, events, series):
                 closes = [c for _, c in series[inst][max(0, idx - 299): idx + 1]]
                 p.on_bar(ts, inst, closes)
             p.end_bar(ts)
+
+
+def watch(p, series):
+    """Uygulamadaki "Bot ne yapıyor" kartı için: her coinin alım şartına ne kadar uzak olduğu.
+    g: fiyatın alım fiyatına uzaklığı (%; 0 ve altı = şart sağlandı), f: düşüş filtresi bekletiyor."""
+    c = p.cfg
+    if p.s["key"] != "grid":
+        return None
+    out = []
+    for inst, bars in series.items():
+        closes = [x for _, x in bars[-300:]]
+        if not closes:
+            continue
+        price = closes[-1]
+        pos = p.s["positions"].get(inst)
+        if pos:
+            lots = pos["lots"]
+            if len(lots) >= c["max_lots"]:
+                continue
+            target = lots[-1]["entry"] * (1 - c["step"])
+            filt = False
+        else:
+            m = sma(closes, 20 * config.BPH)
+            if not m:
+                continue
+            target = m * (1 - c["step"])
+            filt = not p._entry_ok(closes, price)
+        out.append({"i": inst, "p": price, "t": target, "g": round((price / target - 1) * 100, 2),
+                    "f": filt, "h": len(pos["lots"]) if pos else 0})
+    out.sort(key=lambda x: x["g"])
+    used = sum(l["cost"] for q in p.s["positions"].values() for l in q["lots"])
+    cap = (c.get("max_use") or 1) * p.s.get("start_cash", config.START_CASH)
+    return {"items": out, "used": round(used, 2), "cap": round(cap, 2), "lot": round(c.get("lot", 0), 2),
+            "room": used + c.get("lot", 0) <= cap + 0.01, "coins": len(p.s["positions"]), "max_coins": c["max_coins"]}

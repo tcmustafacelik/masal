@@ -1,7 +1,7 @@
 {
-  "version": "1.22.1",
+  "version": "1.23.0",
   "date": "2026-11-19",
   "notes": [
-    "VPN ve zayıf bağlantıda: süre sınırı, kendiliğinden yeniden deneme, son veriyi gösterme"
+    "Ana ekran yenilendi: büyük özet kartı, 'Bot şimdi ne yapıyor' kartı ve alıma yakın coinler, terimler için ? açıklamaları, ayrıntılar katlanır"
   ]
 }

@@ -86,6 +86,9 @@ def build(state, S=None):
             "recent": s["trades"][-40:][::-1],
             "equity_series": s["equity"][-24 * 30 * config.BPH:][::config.BPH],
             "halted": s["halted"], "halt_reason": s["halt_reason"], "blocked_today": s["blocked_today"],
+            "watch": s.get("watch") if live else None,
+            "cfg": {k: p.cfg.get(k) for k in ("step", "lot", "lot_tp", "max_lots", "max_coins", "stop", "max_use", "coin_filter")}
+            if s["key"] == "grid" else None,
         }
     out = {
         "updated": state.get("updated"), "created": state.get("created"),

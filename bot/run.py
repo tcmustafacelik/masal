@@ -8,7 +8,7 @@ import time
 
 from . import config, okx, report, settings, vault
 from .notify import Notifier
-from .engine import Portfolio, new_state, run_bars
+from .engine import Portfolio, new_state, run_bars, watch
 
 STATE_FILE = os.path.join(os.path.dirname(__file__), "..", "docs", "data", "state.json")
 
@@ -264,6 +264,10 @@ def main():
     run_bars([live], live_events, series)
     liquidate(live, S)
     topup(live, S, N if L["armed"] else None)
+    try:
+        L["watch"] = watch(live, series)  # uygulamada "Bot ne yapıyor" kartı
+    except Exception as e:
+        print("İzleme listesi hazırlanamadı:", e)
 
     if L["armed"] and L["halted"] and not was_halted:
         N.add("alerts", "Acil fren devrede", f"{L['halt_reason']}. Gerçek hesaptaki her şey satıldı, bot durdu.",

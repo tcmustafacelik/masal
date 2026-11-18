@@ -1,8 +1,8 @@
-const APP_VERSION='1.22.1';
+const APP_VERSION='1.23.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
-let S: Summary = null, B: Backtest = null, sel = (localStore('masal_sel') || 'dip') as StrategyKey, view: 'live' | 'bt' = 'live', selPicked = false;
+let S: Summary = null, B: Backtest = null, sel = 'live' as StrategyKey, view: 'live' | 'bt' = 'live', selPicked = false;
 
 function localStore(k: string, v?: string): string | null {try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
 const nf=(v,d=2)=>new Intl.NumberFormat('tr-TR',{minimumFractionDigits:d,maximumFractionDigits:d}).format(v);
@@ -70,7 +70,7 @@ async function load(quiet?: boolean) {lastLoad=Date.now();offlineData=false;clea
   try{
     const [s,b]=await Promise.all([getData('summary.json'),getData('backtest.json').catch(()=>null)]);
     S=s;B=b;await openLive();
-    if(offlineData){err.innerHTML=`Bağlantı kurulamadı; <b>${dt(S.updated)}</b> tarihli son veri gösteriliyor. Kendiliğinden yeniden deneniyor…`;err.style.display='block';retryTimer=setTimeout(()=>load(true),15000)}if(!selPicked&&S.strategies.live?.armed&&!S.strategies.live.locked)sel='live';if(!S.strategies[sel])sel = Object.keys(S.strategies)[0] as StrategyKey;render();pollMarket(true);
+    if(offlineData){err.innerHTML=`Bağlantı kurulamadı; <b>${dt(S.updated)}</b> tarihli son veri gösteriliyor. Kendiliğinden yeniden deneniyor…`;err.style.display='block';retryTimer=setTimeout(()=>load(true),15000)}if(!selPicked&&S.strategies.live)sel='live';if(!S.strategies[sel])sel = Object.keys(S.strategies)[0] as StrategyKey;render();pollMarket(true);
   }catch(e){console.error(e);err.textContent='Veriler alınamadı (bağlantı ya da VPN). Kendiliğinden yeniden deneniyor…';err.style.display='block';retryTimer=setTimeout(()=>load(true),10000)}
   finally{btn.classList.remove('spin');hideSplash()}
 }
@@ -89,53 +89,127 @@ function render(){
    m.onclick=()=>document.getElementById('openSet').click()}
   document.getElementById('foot').innerHTML='Fiyatlar uygulama açıkken OKX TR\'den anlık güncellenir; bot kesintisiz çalışır, yaklaşık 10 saniyede bir kontrol eder.<br>'+(L&&L.armed?'Gerçek hesap kartı OKX TR hesabındaki gerçek işlemleri gösterir; diğerleri sanal karşılaştırmadır.':'Gerçek para kullanılmıyor; tüm işlemler sanal.');
   const keys = (Object.keys(S.strategies) as StrategyKey[]).sort((a, b) => Number(b === 'live') - Number(a === 'live'));
-  const tg=document.getElementById('tiles');tg.style.gridTemplateColumns='repeat(3,minmax(0,1fr))';
-  const tileOf=k=>{const x=S.strategies[k];
-    const sub=x.locked?`<span class="pc" style="color:var(--muted)">${ic('i-lock')} Kilitli</span>`:`<span class="pc ${cls(x.pnl_pct)}">${x.pnl_pct>0?'+':''}${nf(x.pnl_pct)}%</span>`;
-    if(x.live)return `<button class="tile livet ${k===sel?'on':''}" data-k="${k}"><span class="ic">${ic(ICON[k])}</span>
-      <span class="lt"><span class="nm">${x.name}</span><small class="tag ${x.armed?'real':''}">${x.armed?'<i></i>Canlı emir':ic('i-flask')+'Deneme'}</small></span>
-      <span class="lr">${x.locked?sub:`<b>${tl(x.equity,2)}</b>${sub}`}</span></button>`;
-    return `<button class="tile ${k===sel?'on':''}" data-k="${k}"><span class="ic">${ic(ICON[k])}</span><span class="nm">${x.name}</span>${sub}</button>`};
   const virt=keys.filter(k=>k!=='live');
-  tg.innerHTML=(S.strategies.live?tileOf('live'):'')
-    +(virt.length?`<div class="vcap">${ic('i-layers')}Sanal karşılaştırma · her biri ${tl(S.strategies[virt[0]].start_cash||10000,0)} ile</div>`:'')
-    +virt.map(tileOf).join('');
-  tg.querySelectorAll<HTMLElement>('.tile').forEach(el=>el.onclick=()=>{sel = el.dataset.k as StrategyKey;selPicked=true;localStore('masal_sel',sel);render();pollMarket(true)});
+  const tg=document.getElementById('tiles');tg.style.gridTemplateColumns=`repeat(${Math.max(1,virt.length)},minmax(0,1fr))`;
+  tg.innerHTML=virt.map(k=>{const v=S.strategies[k];
+    return `<button class="tile ${k===sel?'on':''}" data-k="${k}"><span class="ic">${ic(ICON[k])}</span><span class="nm">${v.name}</span><span class="pc ${cls(v.pnl_pct)}">${v.pnl_pct>0?'+':''}${nf(v.pnl_pct)}%</span></button>`}).join('');
+  tg.querySelectorAll<HTMLElement>('.tile').forEach(el=>el.onclick=()=>pick(el.dataset.k as StrategyKey));
+  {const best=virt.slice().sort((a,b)=>S.strategies[b].pnl_pct-S.strategies[a].pnl_pct)[0];
+   document.getElementById('cmpSum').textContent=virt.length?`Her biri ${tl(S.strategies[virt[0]].start_cash||10000,0)} sanal parayla · önde: ${S.strategies[best].name} ${S.strategies[best].pnl_pct>0?'+':''}${nf(S.strategies[best].pnl_pct)}%`:'—'}
   const x=S.strategies[sel];
   const locked=!!x.locked;
-  ['sumSec','chartSec'].forEach(id=>document.getElementById(id).hidden=locked);
+  document.getElementById('chartSec').hidden=locked;
+  document.getElementById('desc').textContent=sel==='live'?'Bir kartı seçince üstteki özet o stratejiyi gösterir.':x.desc;
   if(locked){
-    document.getElementById('desc').textContent='';
-    document.getElementById('alerts').innerHTML=`<div class="lock"><b>${ic('i-lock')}Gerçek hesap verileri şifreli</b>
+    document.getElementById('hero').className='hero';
+    document.getElementById('hero').innerHTML=`<div class="hh"><span class="hn">${ic('i-lock')}Gerçek hesap</span></div><div class="lock" style="margin-top:10px"><b>${ic('i-lock')}Veriler şifreli</b>
       <p>Bakiye ve işlemlerin herkese açık sayfada şifreli duruyor. Görmek için OKX'te API anahtarını oluştururken belirlediğin şifreyi (Passphrase) gir. Şifre sadece bu cihazda saklanır.</p>
       <input class="inp" id="pwIn" type="password" placeholder="OKX şifresi" autocomplete="off"><button class="btn primary" id="pwBtn" style="width:100%">${ic('i-lock')}Kilidi aç</button></div>`;
+    document.getElementById('alerts').innerHTML='';
     document.getElementById('pwBtn').onclick=async()=>{const v = (document.getElementById('pwIn') as HTMLInputElement).value;if(!v)return toast('Şifreyi gir');
       try{const o=await unseal(S.live_enc,v);pw=v;localStore('masal_pw',v);S.strategies.live=o.strategy;S.okx=o.okx;render();toast('Kilit açıldı')}
       catch(e){toast('Şifre yanlış')}};
-    ['positions','trades'].forEach(id=>document.getElementById(id).innerHTML=`<div class="empty">${ic('i-lock')}<div>Kilitli</div></div>`);
-    document.getElementById('logSec').style.display='none';
-    renderBacktest();renderRules(S.risk);renderMarket();return;
+    ['positions','trades','coins'].forEach(id=>document.getElementById(id).innerHTML=`<div class="empty">${ic('i-lock')}<div>Kilitli</div></div>`);
+    document.getElementById('nowSec').hidden=true;document.getElementById('kasa').innerHTML='';
+    document.getElementById('logSec').hidden=true;
+    renderBacktest();renderRules(x.risk||S.risk,null);renderMarket();return;
   }
-  document.getElementById('desc').textContent=x.desc;
   let al='';
   if(x.halted)al+=`<div class="alert red">${ic('i-power')}<div><b>Acil fren devrede.</b> ${x.halt_reason}. Bot bu stratejide yeni işlem açmıyor.</div></div>`;
-  else if(x.paused)al+=`<div class="alert amb">${ic('i-pause')}<div><b>Bot durduruldu.</b> Yeni alım yapılmıyor; açık pozisyonların koruması devam ediyor.</div></div>`;
-  else if(x.blocked_today)al+=`<div class="alert amb">${ic('i-stop')}<div><b>Günlük zarar sınırına ulaşıldı.</b> Bugün yeni işlem açılmayacak.</div></div>`;
   document.getElementById('alerts').innerHTML=al;
   renderMetrics(x);
+  renderNow(x);
   renderKasa(x);
   renderChart();
   renderPositions(x);renderCoins(x);
-  const tr=x.recent.slice(0,15);
+  const tr=x.recent.slice(0,12);
   document.getElementById('trades').innerHTML=tr.length?tr.map(t=>{const sell=t.side==='SAT';
     return `<div class="row">${cico(t.inst,t.side,t.pnl<0)}
-      <div class="mid"><b>${sym(t.inst)} · ${px(t.price)}</b><span>${t.reason}</span></div>
-      <div class="end"><b>${tl(t.amount,0)}</b>${sell?`<span class="${cls(t.pnl)}">${sgn(t.pnl)} TL · ${dt(t.ts)}</span>`:`<span>${dt(t.ts)}</span>`}</div></div>`}).join('')
+      <div class="mid"><b>${sym(t.inst)} ${sell?'satıldı':'alındı'}</b><span>${dt(t.ts)} · ${t.reason} · ${px(t.price)}</span></div>
+      <div class="end"><b>${tl(t.amount,0)}</b>${sell?`<span class="${cls(t.pnl)}">${sgn(t.pnl)} TL ${t.pnl>=0?'kâr':'zarar'}</span>`:`<span>harcandı</span>`}</div></div>`}).join('')
     :`<div class="empty">${ic('i-list')}<div>Henüz işlem yok. Bot fırsat bekliyor.</div></div>`;
   renderBacktest();
   renderLog(x);
-  renderRules(x.risk||S.risk);
+  renderRules(x.risk||S.risk,x.cfg);
   renderMarket();
+}
+function pick(k: StrategyKey){sel=k;selPicked=true;localStore('masal_sel',sel);render();pollMarket(true);
+  if(k!=='live')window.scrollTo({top:0,behavior:'smooth'})}
+
+/* ---------- açıklamalar ("?" düğmeleri) ---------- */
+const pp=(v,d=1)=>'%'+nf(v*100,Math.round(v*1000)%10?d:0);
+function gloss(k: string): [string, string] {
+  const L=S?.strategies?.live,c=(L&&!L.locked&&L.cfg)||null;
+  const step=c?pp(c.step):'%1,5',tp=c?pp(c.lot_tp):'%4',stop=c?pp(c.stop):'%12',ml=c?c.max_lots:4,mc=c?c.max_coins:20,lot=c?tl(c.lot,0):'bir kademe',use=c?pp(c.max_use,0):'%40',cf=c?.coin_filter?pp(c.coin_filter):'%1';
+  const G={
+    nasil:['Bot nasıl alıp satar?',`<p>Bot <b>10 saniyede bir</b> piyasaya bakar, kararını <b>15 dakikalık mum</b> kapanınca verir.</p>
+      <ul><li><b>Alım:</b> Bir coin son 20 saatin ortalamasından <b>${step}</b> aşağı inince ${lot}'lik bir parça (kademe) alır.</li>
+      <li><b>Düşerse:</b> Her ${step} düşüşte bir kademe daha alır, bir coinde en fazla <b>${ml}</b> kademe.</li>
+      <li><b>Satış:</b> Her kademe kendi alış fiyatının <b>${tp}</b> üstüne çıkınca ayrı satılır.</li>
+      <li><b>Zarar kesme:</b> Ortalama maliyetin <b>${stop}</b> altına inerse o coindeki her şey satılır.</li>
+      <li><b>Düşüş filtresi:</b> Coin bir günde ${cf}'den fazla geriliyorsa "düşen bıçak" sayılır, yeni alım bekletilir.</li></ul>
+      <p>Aynı anda en fazla <b>${mc}</b> coin tutulur ve bütçenin en fazla <b>${use}</b>'ı coine yatırılır; kalanı güvenlik payıdır.</p>`],
+    yakin:['Alıma yakın coinler',`<p>Her satır bir coinin <b>alım fiyatına ne kadar uzak</b> olduğunu gösterir.</p>
+      <ul><li><span class="chip m">%0,8 düşerse</span> fiyat bu kadar daha inerse bot alır.</li>
+      <li><span class="chip g">Alım şartında</span> fiyat alım seviyesinde; 15 dakikalık mum bu seviyede kapanırsa bot alır.</li>
+      <li><span class="chip a">Düşüş filtresi</span> coin hızlı düşüyor; düşüş yavaşlayana kadar alım bekletiliyor.</li>
+      <li><span class="chip b">2. kademe</span> zaten elde olan coin; bu kadar daha düşerse bir kademe daha eklenir.</li></ul>
+      <p>Şartta görünüp alınmıyorsa: mum henüz kapanmamıştır, ya da bütçe sınırı / coin sayısı dolmuştur.</p>`],
+    pozisyon:['Elimdeki coinler',`<ul><li><b>Ort.</b> ortalama alış fiyatın, yanındaki şimdiki fiyat.</li>
+      <li><b>Kademe:</b> o coinden kaç parça alındığı.</li>
+      <li><b>Kâr al / zarar durdur:</b> botun satacağı fiyatlar.</li>
+      <li><b>Borsa korumalı:</b> bu satış emirleri OKX'te bekliyor; bot ya da telefon kapalı olsa bile çalışır.</li></ul>
+      <p>Sağdaki tutar coinin şu anki değeri, altındaki rakam satılsa ne kadar kâr/zarar edeceğin (komisyon hariç).</p>`],
+    coinkz:['Coin bazında kâr/zarar',`<p>Her coin için şimdiye kadar elde edilen sonuç:</p>
+      <ul><li><b>Kapanan:</b> satılmış kademelerden kesinleşmiş kâr/zarar.</li><li><b>Açık:</b> elde duran kısmın şu anki, henüz kesinleşmemiş kâr/zararı.</li></ul>
+      <p>Başlıktaki toplam ikisinin toplamıdır.</p>`],
+    use:['Coinlere ayrılan sınır',`<p>Bot bütçenin en fazla <b>${use}</b>'ını aynı anda coine yatırır. Çubuk bunun ne kadarının dolu olduğunu gösterir.</p>
+      <p>Çubuk dolunca bot yeni coin almaz; bir kademe kârla satılınca yer açılır ve yeniden alım yapar. Bu sınır sert düşüşte paranın tamamının coinde kalmasını engeller.</p>`],
+    kasa:['Kasa',`<p><b>Kasa</b>, bu iş için ayırdığın toplam para. <b>Botta aktif</b> kısmı bot kullanır, <b>yedek</b> kısmı bekler.</p><p>Bot kâr ettikçe kasadan kademeli ekleme yapar; zarardayken ekleme yapmaz.</p>`]
+  };
+  return G[k]||['',''];
+}
+function openGloss(k: string){const [t,h]=gloss(k);if(!t)return;
+  document.getElementById('qTitle').textContent=t;document.getElementById('qText').innerHTML=h;document.getElementById('qsh').hidden=false}
+document.addEventListener('click',e=>{const q=(e.target as HTMLElement).closest<HTMLElement>('.qm');if(q){e.preventDefault();e.stopPropagation();openGloss(q.dataset.q)}});
+document.getElementById('qOk').onclick=()=>document.getElementById('qsh').hidden=true;
+document.getElementById('qsh').onclick=e=>{if(e.target===e.currentTarget)(e.currentTarget as HTMLElement).hidden=true};
+document.querySelectorAll<HTMLElement>('.adv .acch').forEach(b=>b.onclick=()=>b.parentElement.classList.toggle('open'));
+
+/* ---------- "Bot şimdi ne yapıyor" ---------- */
+let nowAll=false;
+function nextBar(){const m=15*6e4,t=Math.ceil((Date.now()+1000)/m)*m,d=new Date(t);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
+function renderNow(x: Strategy){
+  const sec=document.getElementById('nowSec'),box=document.getElementById('now');
+  if(!x.live){sec.hidden=true;return}
+  sec.hidden=false;
+  const w=x.watch,c=x.cfg,used=w?w.used:x.positions.reduce((a,p)=>a+p.cost,0);
+  let st:[string,string,string,string];
+  if(x.halted)st=['red','i-power','Durdu: acil fren devrede',`${x.halt_reason||''}. Yeni işlem açılmıyor.`];
+  else if(x.paused)st=['amb','i-pause','Beklemede: yeni alım yapmıyor','Ayarlardan durdurdun. Elindeki coinlerin kâr al / zarar durdur koruması sürüyor.'];
+  else if(x.blocked_today)st=['amb','i-stop','Bugünlük durdu','Günlük zarar sınırına ulaşıldı; yarın yeniden alım yapar. Satışlar sürüyor.'];
+  else if(w&&!w.room)st=['amb','i-layers','Bütçe sınırı dolu',`Coinlere ayrılan ${tl(w.cap,0)}'nin ${tl(used,0)}'si kullanımda. Bir kademe kârla satılınca yeniden alır.`];
+  else if(w&&w.coins>=w.max_coins)st=['amb','i-layers','Coin sayısı dolu',`Aynı anda en fazla ${w.max_coins} coin tutuluyor. Biri satılınca yeni coin alır.`];
+  else st=['','i-target',x.armed?'Fırsat kolluyor':'Fırsat kolluyor (deneme)',
+    c?`${w?w.items.length+' coini':'Coinleri'} izliyor. Bir coin 20 saatlik ortalamasının ${pp(c.step)} altına inince ${tl(c.lot,0)} alır, ${pp(c.lot_tp)} kârda satar.`
+     :'Coinleri izliyor; strateji şartı oluşunca alım yapar.'];
+  let h=`<div class="st ${st[0]}"><span class="si">${ic(st[1])}</span><div><b>${st[2]}</b><p>${st[3]}</p></div></div>`;
+  if(w&&w.items.length){
+    const items=w.items.map(it=>{const cur=livePrice(it.i,it.p);return {...it,cur,gap:(cur/it.t-1)*100}}).sort((a,b)=>(a.f?1:0)-(b.f?1:0)||a.gap-b.gap);
+    const show=nowAll?items:items.slice(0,5);
+    h+=`<div class="wh">${ic('i-list')}Alıma en yakın coinler<button class="qm" data-q="yakin" aria-label="Açıklama">?</button></div><div class="list">`;
+    h+=show.map(it=>{let chip:string;
+      if(it.f)chip=`<span class="chip a">${ic('i-pause')}Düşüş filtresi</span>`;
+      else if(it.gap<=0)chip=`<span class="chip g">${ic('i-check')}Alım şartında</span>`;
+      else chip=`<span class="chip ${it.h?'b':'m'}">%${nf(it.gap,it.gap<10?1:0)} düşerse</span>`;
+      const near=it.f||it.gap<=0?'':`<div class="near"><i style="width:${Math.max(4,Math.min(100,100-it.gap*20)).toFixed(0)}%"></i></div>`;
+      return `<div class="row">${cico(it.i)}<div class="mid"><b>${sym(it.i)}</b><span>${it.h?`Elde ${it.h} kademe · ${it.h+1}. alım ${px(it.t)}`:`Alım ${px(it.t)} · şimdi ${px(it.cur)}`}</span></div><div class="end">${chip}${near}</div></div>`}).join('');
+    h+='</div>';
+    if(items.length>5)h+=`<button class="more" id="nowMore">${nowAll?'Daha az göster':`Tümünü göster (${items.length} coin)`}</button>`;
+  }
+  h+=`<div class="nf">${ic('i-clock')}Sonraki karar ${nextBar()}'te (15 dakikalık mum kapanışı) · fiyatlar 10 sn'de bir kontrol edilir</div>`;
+  box.innerHTML=h;
+  const mb=document.getElementById('nowMore');if(mb)mb.onclick=()=>{nowAll=!nowAll;renderNow(x)};
 }
 
 function updLine(){
@@ -150,15 +224,26 @@ function updLine(){
 function livePrice(inst,fallback){return LP[inst]?.last??fallback}
 function liveEquity(x){return x.cash+x.positions.reduce((a,p)=>a+p.qty*livePrice(p.inst,p.price),0)}
 
-function renderMetrics(x){
+function renderMetrics(x: Strategy){
   const eq=liveEquity(x),pnl=eq-x.start_cash,pct=(eq/x.start_cash-1)*100,today=x.today_pnl+(eq-x.equity);
-  const wr=x.win_rate==null?'—':'%'+nf(x.win_rate,0);
-  document.getElementById('metrics').innerHTML=[
-    ['i-wallet','Bakiye',tl(eq),`Nakit ${tl(x.cash,0)} · başlangıç ${tl(x.start_cash,0)}`,''],
-    ['i-pnl','Toplam kâr/zarar',sgn(pnl)+' TL',`${pct>0?'+':''}${nf(pct)}%`,cls(pnl)],
-    ['i-day','Bugün',sgn(today)+' TL','Gün başından beri',cls(today)],
-    ['i-target','Kazanma oranı',wr,`${x.trades} kapanan işlem`,'']
-  ].map(([i,k,v,s,c])=>`<div class="m"><div class="k">${ic(i)}${k}</div><div class="v ${c}">${v}</div><div class="s">${s}</div></div>`).join('');
+  const inCoins=eq-x.cash,live=sel==='live';
+  const hero=document.getElementById('hero');hero.className='hero'+(live?'':' virt');
+  const tag=live?(x.armed?`<span class="pill real"><i></i>Gerçek para</span>`:`<span class="pill demo">${ic('i-flask')}Deneme</span>`):`<span class="pill virt">${ic('i-layers')}Sanal</span>`;
+  const big=nf(eq,2).split(',');
+  let h=`<div class="hh"><span class="hn">${ic(live?'i-wallet':ICON[sel])}${live?'Gerçek hesap':x.name}</span>${tag}
+    ${live?'':`<button class="back" id="backLive">${ic('i-back')}Gerçek hesap</button>`}</div>
+    <div class="big">${big[0]}<small>,${big[1]} TL</small></div>
+    <div class="chg"><span class="${cls(pnl)}"><em>Toplam</em>${sgn(pnl)} TL · ${pct>0?'+':''}${nf(pct)}%</span><span class="${cls(today)}"><em>Bugün</em>${sgn(today)} TL</span></div>
+    <div class="hk"><div><span>Boşta nakit</span><b>${tl(x.cash,0)}</b></div><div><span>Coinlerde</span><b>${tl(inCoins,0)}</b></div>
+      <div><span>Kazanma</span><b>${x.win_rate==null?'—':'%'+nf(x.win_rate,0)}</b></div></div>`;
+  const w=x.watch;
+  if(live&&w&&w.cap){const used=x.positions.reduce((a,p)=>a+p.cost,0),r=Math.min(100,used/w.cap*100);
+    h+=`<div class="use"><div class="ul">Coinlere ayrılan sınır<button class="qm" data-q="use" aria-label="Açıklama">?</button><b>${tl(used,0)} / ${tl(w.cap,0)}</b></div>
+      <div class="ub"><i class="${w.room?'':'full'}" style="width:${r.toFixed(1)}%"></i></div>
+      <div class="uh">${x.positions.length}/${w.max_coins} coin · ${x.trades} kapanan işlem · başlangıç ${tl(x.start_cash,0)}</div></div>`}
+  else h+=`<div class="use">${live?'':`<div class="uh" style="color:var(--text);font-size:12.5px;line-height:1.45">${x.desc}</div>`}<div class="uh">${x.trades} kapanan işlem · başlangıç ${tl(x.start_cash,0)}${live?'':' (sanal para)'}</div></div>`;
+  hero.innerHTML=h;
+  const bl=document.getElementById('backLive');if(bl)bl.onclick=()=>pick('live');
 }
 
 const ICON_BAD = new Set<string>(), ICON_OK = new Set<string>();
@@ -180,7 +265,8 @@ function renderCoins(x){
       <div class="end"><b class="${cls(c.tot)}">${sgn(c.tot)} TL</b><span>${det}</span></div></div>`}).join('');
 }
 function renderPositions(x){
-  const pos=x.positions;
+  const pos=x.positions,ps=document.getElementById('posSum');
+  {const T=pos.reduce((a,p)=>a+p.qty*livePrice(p.inst,p.price)-p.cost,0);ps.className='hsum '+cls(T);ps.textContent=pos.length?`${pos.length} coin · ${sgn(T)} TL`:''}
   document.getElementById('positions').innerHTML=pos.length?pos.map(p=>{const cur=livePrice(p.inst,p.price),val=p.qty*cur,pl=val-p.cost,plp=(val/p.cost-1)*100;
     const prot=p.protected===true?'<span class="prot">Borsa korumalı</span>':p.protected===false?'<span class="prot no">Koruma bekliyor</span>':'';
     const tgt=(p.tp||p.sl)?` · ${p.tp?'kâr al '+px(p.tp):''}${p.tp&&p.sl?' / ':''}${p.sl?'zarar durdur '+px(p.sl):''}`:'';
@@ -190,15 +276,26 @@ function renderPositions(x){
     :`<div class="empty">${ic('i-box')}<div>Şu an açık pozisyon yok</div></div>`;
 }
 
-function renderRules(R){
-  document.getElementById('rules').innerHTML=[
-    R.lot?['i-coins',tl(R.lot,0),'Kademe başına alım']:['i-coins',tl(R.trade_size,0),'İşlem başına en fazla'],
+function renderRules(R: Risk, c?: GridCfg | null){
+  const rows=c?[
+    ['i-coins',tl(c.lot,0),'Kademe başına alım'],
+    ['i-layers',c.max_coins+' coin','Aynı anda en fazla'],
+    ['i-grid',c.max_lots+' kademe','Bir coinde en fazla'],
+    ['i-pnl',pp(c.lot_tp)+' kâr','Her kademe ayrı satılır'],
+    ['i-stop',pp(c.stop)+' zarar','Ortalamanın altına inerse hepsini satar'],
+    ['i-wallet',pp(c.max_use,0)+' bütçe','Aynı anda coinde en fazla'],
+    ['i-calx',tl(R.daily_loss_limit,0),'Günlük kayıp sınırı'],
+    ['i-power',tl(R.kill_switch,0),'Altına inerse acil fren']
+  ]:[
+    ['i-coins',tl(R.trade_size,0),'İşlem başına en fazla'],
     ['i-layers',R.max_positions+' pozisyon','Aynı anda en fazla'],
     ['i-stop','%'+nf(R.stop_loss*100,1)+' zarar','Bu noktada otomatik satar'],
     ['i-calx',tl(R.daily_loss_limit,0),'Günlük kayıp sınırı'],
-    ['i-power',tl(R.kill_switch,0),'Altına inerse acil fren'],
-    ['i-info','%'+nf((S.fee+S.slippage)*100,2),'Komisyon + kayma (tek yön)']
-  ].map(([i,b,s])=>`<div class="rule"><div class="ic">${ic(i)}</div><div><b>${b}</b><span>${s}</span></div></div>`).join('');
+    ['i-power',tl(R.kill_switch,0),'Altına inerse acil fren']
+  ];
+  rows.push(['i-info','%'+nf((S.fee+S.slippage)*100,2),'Komisyon + kayma (tek yön)']);
+  document.getElementById('rules').innerHTML=rows.map(([i,b,s])=>`<div class="rule"><div class="ic">${ic(i)}</div><div><b>${b}</b><span>${s}</span></div></div>`).join('');
+  document.getElementById('rulesSum').textContent=c?`Zarar kes ${pp(c.stop)} · acil fren ${tl(R.kill_switch,0)} · günlük sınır ${tl(R.daily_loss_limit,0)}`:`Zarar kes %${nf(R.stop_loss*100,1)} · acil fren ${tl(R.kill_switch,0)}`;
 }
 
 /* ---------- anlık piyasa: uygulama açıkken OKX TR'den doğrudan ---------- */
@@ -232,13 +329,16 @@ let okxDown=false;
 function renderMarket(){
   const list=marketList(),box=document.getElementById('market');
   if(okxDown&&!list.some(i=>LP[i])){box.className='card list mk';box.innerHTML=`<div class="empty">${ic('i-info')}<div>OKX TR'ye ulaşılamıyor. VPN açıksa OKX TR yurt dışı bağlantıyı engelliyor olabilir; VPN'i kapatınca canlı fiyatlar gelir. Bot bundan etkilenmez.</div></div>`;return}
-  const rows=list.filter(i=>LP[i]);
+  const all=list.filter(i=>LP[i]),rows=mkAll?all:all.slice(0,6);
   box.className='card list mk';
   box.innerHTML=rows.length?rows.map(i=>{const q=LP[i];
     return `<div class="row">${cico(i)}<div class="mid"><b>${sym(i)}</b><span>Hacim ${q.vol>=1e6?nf(q.vol/1e6,1)+' Mn':nf(q.vol/1e3,0)+' B'} TL</span></div>
       <div class="end"><b class="pxv ${q.dir>0?'flash-up':q.dir<0?'flash-dn':''}">${px(q.last)}</b><span class="${cls(q.ch)}">${q.ch>0?'+':''}${nf(q.ch)}% · 24 sa</span></div></div>`}).join('')
+    +(all.length>6?`<button class="more" id="mkMore">${mkAll?'Daha az göster':`Tümünü göster (${all.length} coin)`}</button>`:'')
     :`<div class="empty">${ic('i-pnl')}<div>Fiyatlar yükleniyor…</div></div>`;
+  const mb=document.getElementById('mkMore');if(mb)mb.onclick=()=>{mkAll=!mkAll;renderMarket()};
 }
+let mkAll=false;
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)pollMarket(true)});
 
 function okxLine(){const o=S.okx;if(!o)return '';
@@ -251,7 +351,7 @@ function renderKasa(x){
   const waitMs=x.last_topup?Math.max(0,x.last_topup+7*864e5-Date.now()):0,waitD=Math.ceil(waitMs/864e5);
   const full=reserve<1000;
   box.innerHTML=`<div class="card kasa">
-    <div class="top"><b>${ic('i-wallet')}Kasa</b><span>${tl(x.kasa,0)}</span></div>
+    <div class="top"><b>${ic('i-wallet')}Kasa<button class="qm" data-q="kasa" aria-label="Açıklama">?</button></b><span>${tl(x.kasa,0)}</span></div>
     ${okxLine()}
     <div class="split"><i style="width:${aw}%;background:var(--amber)"></i></div>
     <div class="kv"><div>Botta aktif<b>${tl(active,0)}</b></div><div>Kasada yedek<b>${tl(reserve,0)}</b></div><div>Eklemeler<b>${x.topups} kez</b></div></div>
@@ -264,8 +364,8 @@ function renderKasa(x){
 
 function renderLog(x){
   const sec=document.getElementById('logSec');
-  if(!x.live){sec.style.display='none';return}
-  sec.style.display='';
+  if(!x.live){sec.hidden=true;return}
+  sec.hidden=false;document.getElementById('logSum').textContent=x.log.length?'Son not: '+x.log[0][1]:'Henüz kayıt yok';
   document.getElementById('log').innerHTML=x.log.length?x.log.map(([ts,t])=>`<div class="row"><div class="mid"><b style="white-space:normal;font-weight:500">${t}</b><span>${dt(ts)}</span></div></div>`).join('')
     :`<div class="empty">${ic('i-info')}<div>Henüz kayıt yok</div></div>`;
 }
