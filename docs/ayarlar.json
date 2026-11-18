@@ -3,7 +3,7 @@
   "paused": false,
   "liquidate": 0,
   "strategy": "grid",
-  "budget": 5000,
+  "budget": 6000,
   "kasa": 10000,
   "topup": {
     "amount": 500,
