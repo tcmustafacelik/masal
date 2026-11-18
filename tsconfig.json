@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "preserve",
+    "moduleDetection": "legacy",
+    "rootDir": "src",
+    "outDir": "docs",
+    "removeComments": false,
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "noEmitOnError": true,
+    "skipLibCheck": true
+  },
+  "files": ["src/types.d.ts", "src/app.ts"]
+}

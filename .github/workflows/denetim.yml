@@ -1,0 +1,28 @@
+name: Uygulama denetimi
+
+# Uygulama kodu (TypeScript) her gönderimde tür denetiminden geçer ve
+# yayındaki docs/app.js'in kaynakla aynı olduğu doğrulanır.
+on:
+  push:
+    paths: ["src/**", "tsconfig.json", "package.json", "package-lock.json", "docs/app.js"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "lts/*"
+      - run: npm ci --silent
+      - name: Tür denetimi
+        run: npm run check
+      - name: Derleme güncel mi
+        run: |
+          npm run build --silent
+          git diff --exit-code docs/app.js || { echo "docs/app.js kaynakla aynı değil: npm run build çalıştırılmalı"; exit 1; }

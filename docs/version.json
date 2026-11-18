@@ -1,7 +1,7 @@
 {
-  "version": "1.20.0",
+  "version": "1.21.0",
   "date": "2026-11-19",
   "notes": [
-    "Bot en son Python 3.15 ile çalışır"
+    "Uygulama TypeScript ile yeniden derlendi (tür denetimli)"
   ]
 }
