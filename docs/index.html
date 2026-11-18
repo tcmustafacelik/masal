@@ -187,6 +187,12 @@ footer{font-size:11.5px;color:var(--faint);text-align:center;margin-top:22px;lin
   #setForm{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 26px;align-items:start}
   #setv .sethead,#setv>section{max-width:none}
 }
+.upbar{position:sticky;top:0;z-index:30;background:var(--text);color:#fff}
+.upbar .in{max-width:1200px;margin:0 auto;padding:10px 14px;display:flex;align-items:center;gap:10px;font-size:13px}
+.upbar .in div{flex:1;min-width:0}.upbar b{font-weight:600}.upbar small{display:block;color:#C9CED6;font-size:11.5px;margin-top:1px}
+.upbar .btn{background:var(--amber);border-color:var(--amber);color:#fff;padding:7px 12px}
+.ver{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line2);font-size:13px}
+.ver span{color:var(--muted);font-size:12px;display:block}
 .err{background:var(--red-bg);color:var(--red);border-radius:var(--r);padding:12px;margin-top:14px;font-size:13px;display:none}
 </style>
 </head>
@@ -242,6 +248,7 @@ footer{font-size:11.5px;color:var(--faint);text-align:center;margin-top:22px;lin
   </div>
 </header>
 
+<div class="upbar" id="upbar" hidden></div>
 <main class="wrap" id="mainv">
   <div class="err" id="err"></div>
   <div class="cols">
@@ -345,6 +352,7 @@ footer{font-size:11.5px;color:var(--faint);text-align:center;margin-top:22px;lin
 <div class="toast" id="toast" hidden></div>
 
 <script>
+const APP_VERSION='1.4.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#1D2430'};
 const AMBER='#D9861A';
@@ -775,9 +783,33 @@ function installSection(){
   if(standalone())h+=`<div style="display:flex;gap:8px;align-items:center;color:var(--green);font-weight:600;font-size:13.5px">${ic('i-check')}Masal ana ekranında uygulama olarak yüklü</div>`;
   else if(installEvt)h+=`<div style="font-size:13px;margin-bottom:10px">Masal'ı ana ekrana ekle; kendi simgesiyle uygulama gibi açılır, internet yokken de son verileri gösterir.</div><button class="btn primary" id="instBtn" style="width:100%">${ic('i-phone')}Ana ekrana ekle</button>`;
   else h+=`<ol class="steps" style="margin-top:0"><li><b>Android (Chrome):</b> sağ üstteki ⋮ → <b>Ana ekrana ekle</b></li><li><b>iPhone (Safari):</b> Paylaş → <b>Ana Ekrana Ekle</b></li><li><b>Bilgisayar (Chrome/Edge):</b> adres çubuğundaki <b>Yükle</b> simgesi</li></ol>`;
+  const newer=remoteVer&&vcmp(remoteVer.version,APP_VERSION)>0;
+  h+=`<div class="ver"><div><b>Sürüm ${APP_VERSION}</b><span>${newer?'Yeni sürüm hazır: '+remoteVer.version:'Güncel'}${remoteVer?.date?' · '+remoteVer.date.split('-').reverse().join('.'):''}</span></div>
+    <button class="btn ${newer?'primary':''}" id="verBtn">${ic('i-refresh')}${newer?'Güncelle':'Denetle'}</button></div>`;
   return h+'</div></section>';
 }
-function bindInstall(){const b=document.getElementById('instBtn');if(b)b.onclick=async()=>{installEvt.prompt();await installEvt.userChoice;installEvt=null;renderForm()}}
+function bindInstall(){const v=document.getElementById('verBtn');if(v)v.onclick=()=>{if(remoteVer&&vcmp(remoteVer.version,APP_VERSION)>0)applyUpdate();else checkVersion(true)};const b=document.getElementById('instBtn');if(b)b.onclick=async()=>{installEvt.prompt();await installEvt.userChoice;installEvt=null;renderForm()}}
+
+/* ---------- sürüm ---------- */
+let remoteVer=null;
+const vcmp=(a,b)=>{const x=a.split('.').map(Number),y=b.split('.').map(Number);for(let i=0;i<3;i++){if((x[i]||0)!==(y[i]||0))return (x[i]||0)-(y[i]||0)}return 0};
+async function checkVersion(manual){
+  try{remoteVer=await fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.json())}catch(e){if(manual)toast('Sürüm bilgisi alınamadı');return}
+  const bar=document.getElementById('upbar');
+  if(vcmp(remoteVer.version,APP_VERSION)>0){
+    bar.innerHTML=`<div class="in">${ic('i-refresh')}<div><b>Yeni sürüm algılandı: ${remoteVer.version}</b><small>${(remoteVer.notes||[]).slice(0,2).join(' · ')}</small></div><button class="btn" id="upBtn">Güncelle</button></div>`;
+    bar.hidden=false;document.getElementById('upBtn').onclick=applyUpdate;
+  }else{bar.hidden=true;if(manual)toast('Masal güncel: sürüm '+APP_VERSION)}
+  if(!document.getElementById('setv').hidden&&draft)renderForm();
+}
+async function applyUpdate(){
+  try{const regs=await navigator.serviceWorker?.getRegistrations?.()||[];for(const r of regs)await r.update();
+    const ks=await caches?.keys?.()||[];for(const k of ks)await caches.delete(k)}catch(e){}
+  location.replace(location.pathname+'?v='+(remoteVer?.version||Date.now()));
+}
+setInterval(()=>{if(!document.hidden)checkVersion()},60000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkVersion()});
+checkVersion();
 
 /* ---------- açılış, logo, çevrimdışı ---------- */
 let splashT0=Date.now();
