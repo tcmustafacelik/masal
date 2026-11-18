@@ -1,7 +1,7 @@
 {
-  "version": "1.24.0",
+  "version": "1.24.1",
   "date": "2026-11-19",
   "notes": [
-    "Anlık alım: fiyat alım seviyesine değdiği an alır, 15 dakikalık mumu beklemez"
+    "Düğmelere dokununca çıkan mavi kare ve yazı seçilmesi tüm uygulamada kaldırıldı"
   ]
 }

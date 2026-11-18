@@ -393,6 +393,14 @@ details.setup summary::-webkit-details-marker{display:none}
 .qsh .btn{width:100%;margin-top:8px}
 @keyframes qup{from{transform:translateY(100%)}to{transform:none}}
 @media (min-width:900px){.qsh{align-items:center}.qsh .qb{border-radius:16px}}
+/* ---- dokunma: Android'in mavi kare vurgusu ve yazı seçilmesi yok; yerine yumuşak basılma efekti ---- */
+*{-webkit-tap-highlight-color:transparent}
+button,.tile,.acch,.row,.seg,.mode,.chip,.pill,h2,label,.m,.rule,.hero,.kv{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+button:focus{outline:none}button:focus-visible{outline:2px solid var(--amber-line);outline-offset:2px}
+.btn,.ibtn,.tile,.acch,.mode,.seg button,.qm,.more,.back{transition:transform .08s ease,background-color .15s ease,border-color .15s ease}
+.btn:active,.ibtn:active,.tile:active,.mode:active,.seg button:active,.more:active,.back:active{transform:scale(.97)}
+.acch:active{background:var(--line2)}
+input,textarea,.inp{-webkit-user-select:text;user-select:text}
 </style>
 </head>
 <body>
@@ -562,6 +570,6 @@ details.setup summary::-webkit-details-marker{display:none}
 <div class="toast" id="toast" hidden></div>
 <div class="qsh" id="qsh" hidden><div class="qb"><div class="gr"></div><h3><span><svg class="i"><use href="#i-info"/></svg></span><b id="qTitle"></b></h3><div class="qt" id="qText"></div><button class="btn primary" id="qOk">Anladım</button></div></div>
 
-<script src="app.js?v=1.24.0"></script>
+<script src="app.js?v=1.24.1"></script>
 </body>
 </html>
