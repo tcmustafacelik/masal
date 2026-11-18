@@ -20,10 +20,10 @@
   },
   "grid": {
     "step_pct": 2,
-    "lot_pct": 4,
+    "lot_pct": 2,
     "lot_tp_pct": 2.5,
     "max_lots": 3,
-    "max_coins": 3,
+    "max_coins": 6,
     "stop_pct": 7
   },
   "dip": {
