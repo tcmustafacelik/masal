@@ -133,6 +133,14 @@ class Portfolio:
         else:
             self.s["equity"][-1][1] = round(eq, 2)
         self.s["equity"] = self.s["equity"][-3000:]
+        if len(self.s["trades"]) > 500:  # silinen eski işlemler coin özetinde saklanır
+            arch = self.s.setdefault("coin_arch", {})
+            for t in self.s["trades"][:-500]:
+                c = arch.setdefault(t["inst"], {"pnl": 0.0, "sells": 0, "wins": 0, "buys": 0, "bought": 0.0})
+                if t["side"] == "SAT":
+                    c["pnl"] += t.get("pnl", 0); c["sells"] += 1; c["wins"] += t.get("pnl", 0) > 0
+                else:
+                    c["buys"] += 1; c["bought"] += t.get("amount", 0)
         self.s["trades"] = self.s["trades"][-500:]
 
     # ---------- strateji ----------

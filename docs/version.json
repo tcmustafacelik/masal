@@ -1,7 +1,9 @@
 {
-  "version": "1.8.2",
+  "version": "1.9.0",
   "date": "2026-11-18",
   "notes": [
-    "Logonun kenarında dönen altın ışık"
+    "Coin bazında kâr/zarar bölümü",
+    "Ana ekran simgesi yenilendi",
+    "Ayarlarda binlik ayraç, işlem satırlarında düzen"
   ]
 }

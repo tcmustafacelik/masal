@@ -1,13 +1,14 @@
 {
   "name": "Masal",
+  "description": "Senin için çalışır",
   "short_name": "Masal",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#F4F5F7",
+  "background_color": "#111A2E",
   "theme_color": "#F4F5F7",
   "icons": [
-    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
-    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+    {"src": "logo-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+    {"src": "logo-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
   ]
 }

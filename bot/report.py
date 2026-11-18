@@ -48,6 +48,21 @@ def build(state, S=None):
                 "tp": pos["lots"][0].get("tp"), "sl": pos["lots"][0].get("sl"),
                 "protected": all(l.get("algo") for l in pos["lots"]) if s.get("armed") else None,
             })
+        coins = {k: dict(v) for k, v in s.get("coin_arch", {}).items()}
+        for t in s["trades"]:
+            c = coins.setdefault(t["inst"], {"pnl": 0.0, "sells": 0, "wins": 0, "buys": 0, "bought": 0.0})
+            if t["side"] == "SAT":
+                c["pnl"] += t.get("pnl", 0); c["sells"] += 1; c["wins"] += t.get("pnl", 0) > 0
+            else:
+                c["buys"] += 1; c["bought"] += t.get("amount", 0)
+        coin_list = []
+        for inst, c in coins.items():
+            op = next((x for x in positions if x["inst"] == inst), None)
+            coin_list.append({"inst": inst, "realized": round(c["pnl"], 2), "sells": c["sells"], "wins": int(c["wins"]),
+                              "buys": c["buys"], "bought": round(c["bought"], 2),
+                              "open_qty": op["qty"] if op else 0, "open_cost": op["cost"] if op else 0,
+                              "open_pnl": op["pnl"] if op else 0, "price": op["price"] if op else None})
+        coin_list.sort(key=lambda x: -(x["realized"] + x["open_pnl"]))
         cfg = config.STRATEGIES[s["key"]]
         start = s.get("start_cash", config.START_CASH)
         live = key == "live"
@@ -66,6 +81,7 @@ def build(state, S=None):
             "trades": len(sells), "win_rate": round(len(wins) / len(sells) * 100, 1) if sells else None,
             "realized": round(sum(t["pnl"] for t in sells), 2),
             "positions": sorted(positions, key=lambda x: -x["value"]),
+            "coins": coin_list,
             "recent": s["trades"][-40:][::-1],
             "equity_series": s["equity"][-24 * 30:],
             "halted": s["halted"], "halt_reason": s["halt_reason"], "blocked_today": s["blocked_today"],
