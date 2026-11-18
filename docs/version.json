@@ -1,7 +1,7 @@
 {
-  "version": "1.23.0",
+  "version": "1.23.1",
   "date": "2026-11-19",
   "notes": [
-    "Ana ekran yenilendi: büyük özet kartı, 'Bot şimdi ne yapıyor' kartı ve alıma yakın coinler, terimler için ? açıklamaları, ayrıntılar katlanır"
+    "Güncellemeden sonra boş ekran kalması düzeltildi (sayfa ve kod artık hep aynı sürüm)"
   ]
 }

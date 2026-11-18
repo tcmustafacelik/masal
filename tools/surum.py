@@ -11,4 +11,6 @@ import subprocess
 subprocess.run(["npm", "run", "build", "--silent"], cwd=root, check=True)  # TypeScript -> docs/app.js
 sw = root / "docs/sw.js"
 sw.write_text(re.sub(r"const CACHE = 'masal-[^']*'", f"const CACHE = 'masal-{ver}'", sw.read_text()))
+ix = root / "docs/index.html"  # sayfa her zaman kendi sürümünün kodunu yüklesin
+ix.write_text(re.sub(r'src="app\.js(\?v=[^"]*)?"', f'src="app.js?v={ver}"', ix.read_text()))
 print("Sürüm", ver)

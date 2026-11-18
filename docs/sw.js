@@ -1,5 +1,5 @@
 // Masal: çevrimdışıyken son görüntülenen sayfa ve veriler gösterilir. Her zaman önce ağ denenir.
-const CACHE = 'masal-1.23.0';
+const CACHE = 'masal-1.23.1';
 const SHELL = ['./', 'index.html', 'app.js', 'manifest.webmanifest', 'favicon.svg', 'logo-192.png', 'logo-512.png'];
 
 self.addEventListener('install', e => {
@@ -16,7 +16,7 @@ self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET' || url.origin !== location.origin) return; // OKX ve GitHub isteklerine dokunma
   const key = url.origin + url.pathname; // ?t= önbellek kırıcıyı yok say
   e.respondWith(
-    fetch(e.request).then(r => {
+    fetch(e.request, {cache: 'no-cache'}).then(r => { // tarayıcı önbelleğini atla: sayfa ve kod hep aynı sürüm
       if (r.ok) { const copy = r.clone(); caches.open(CACHE).then(c => c.put(key, copy)); }
       return r;
     }).catch(() => caches.match(key).then(m => m || caches.match('index.html')))
