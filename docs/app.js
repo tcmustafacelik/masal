@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.36.0';
+const APP_VERSION = '1.36.1';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -1163,44 +1163,44 @@ function sizeWarn() {
 }
 const SECTIONS = [
     { t: 'Kasa', i: 'i-wallet', f: [
-            ['budget', 'Bottaki başlangıç parası', 'Bot kasadan bu kadarla işlem yapar', 'TL', 100, 100, 1e7, 0],
-            ['kasa', 'Kasa', 'Hesaptaki toplam para; bot bunu asla aşmaz', 'TL', 500, 500, 1e8, 0]
+            ['budget', 'Bottaki başlangıç parası', 'Botun işlem yaptığı para', 'TL', 100, 100, 1e7, 0],
+            ['kasa', 'Kasa', 'Hesaptaki toplam; bot aşmaz', 'TL', 500, 500, 1e8, 0]
         ] },
     { t: 'Kasadan ekleme', i: 'i-plus', f: [
-            ['topup.amount', 'Ekleme tutarı', 'Kâr hedefi her tuttuğunda kasadan eklenir', 'TL', 100, 0, 1e7, 0],
-            ['topup.profit_pct', 'Kâr hedefi', 'Son eklemeden beri bu kadar kâr olunca', '%', .5, .5, 100, 1],
+            ['topup.amount', 'Ekleme tutarı', 'Her kâr hedefinde kasadan', 'TL', 100, 0, 1e7, 0],
+            ['topup.profit_pct', 'Kâr hedefi', 'Son eklemeden beri', '%', .5, .5, 100, 1],
             ['topup.days', 'Bekleme süresi', 'İki ekleme arasında en az', 'gün', 1, 0, 365, 0]
         ] },
     { t: 'Koruma', i: 'i-shield', f: [
-            ['risk.stop_pct', 'Zarar sınırı', 'İşlem bu kadar zarara geçince otomatik satılır', '%', .5, .5, 50, 1],
-            ['risk.daily_loss_pct', 'Günlük kayıp sınırı', () => `Bottaki paranın; şu an ${pctTL(draft.risk.daily_loss_pct)}. Gün içinde satışlarla kesinleşen zarar bunu aşarsa o gün yeni alım yok (anlık dalgalanma saymaz)`, '%', .5, .5, 50, 1],
-            ['risk.kill_pct', 'Acil fren', () => `Bottaki para bu kadar eriyince her şey satılır ve bot durur (${tl(draft.budget * (1 - draft.risk.kill_pct / 100), 0)} altı)`, '%', 1, 1, 90, 0],
-            ['risk.max_positions', 'En fazla pozisyon', 'Aynı anda açık tutulacak coin sayısı', 'adet', 1, 1, 30, 0],
-            ['risk.trade_pct', 'İşlem büyüklüğü', () => `Düşüşte al ve Trend için bottaki paranın; şu an ${sizeTL(draft.risk.trade_pct)}`, '%', 1, 1, 100, 0]
+            ['risk.stop_pct', 'Zarar sınırı', 'Bu zararda otomatik satılır', '%', .5, .5, 50, 1],
+            ['risk.daily_loss_pct', 'Günlük kayıp sınırı', () => `Şu an ${pctTL(draft.risk.daily_loss_pct)}; aşılırsa o gün alım yok`, '%', .5, .5, 50, 1],
+            ['risk.kill_pct', 'Acil fren', () => `${tl(draft.budget * (1 - draft.risk.kill_pct / 100), 0)} altında her şey satılır`, '%', 1, 1, 90, 0],
+            ['risk.max_positions', 'En fazla pozisyon', 'Aynı anda tutulan coin', 'adet', 1, 1, 30, 0],
+            ['risk.trade_pct', 'İşlem büyüklüğü', () => `Bottaki paranın; şu an ${sizeTL(draft.risk.trade_pct)}`, '%', 1, 1, 100, 0]
         ] },
     { t: 'Kâr hedefi', i: 'i-flag', f: [
-            ['target.amount', 'Hedef kâr', () => `Toplam kâr bu tutara ulaşınca bütün coinler satılır ve bot durur (bottaki para ${tl(draft.budget + (draft.target?.amount || 0), 0)} olunca)`, 'TL', 500, 100, 1e8, 0]
+            ['target.amount', 'Hedef kâr', () => `Bu kârda her şey satılır, bot durur`, 'TL', 500, 100, 1e8, 0]
         ] },
 ];
 // "Kasa dahil toplam" seçiliyken hedef alanı: bottaki para + kasadaki yedek
-const TGT_TOTAL = ['target.amount', 'Hedef toplam para', () => `Bottaki para ile kasadaki yedek paranın toplamı bu tutara ulaşınca bütün coinler satılır ve bot durur (şu an kasa ${tl(draft.kasa, 0)})`, 'TL', 500, 100, 1e8, 0];
+const TGT_TOTAL = ['target.amount', 'Hedef toplam para', () => `Bot + kasa bu tutara ulaşınca her şey satılır`, 'TL', 500, 100, 1e8, 0];
 // Kademeli stratejide zarar sınırı, coin sayısı ve alım tutarı kendi ayarlarından gelir; genel alanlar gizlenir
 const GRID_HIDE = new Set(['risk.stop_pct', 'risk.max_positions', 'risk.trade_pct']);
 function secFields(sec) { return draft?.strategy === 'grid' ? sec.f.filter(f => !GRID_HIDE.has(f[0])) : sec.f; }
 const STRAT_F = {
-    grid: [['grid.sma_hours', 'Ortalama süresi', 'Alım fiyatı son bu kadar saatin ortalamasına göre hesaplanır; kısa süre daha sık alır', 'saat', 2, 4, 72, 0],
-        ['grid.step_pct', 'Kademe aralığı', 'Fiyat bu kadar düşünce bir kademe daha alınır', '%', .5, .5, 20, 1],
-        ['grid.step3_pct', '3. kademe aralığı', '2. kademeden sonra fiyat bu kadar daha düşünce 3. kademe alınır; hızlı düşüşte kademeler bir anda dolmaz', '%', .5, .5, 30, 1],
+    grid: [['grid.sma_hours', 'Ortalama süresi', 'Alım fiyatı bu ortalamaya göre', 'saat', 2, 4, 72, 0],
+        ['grid.step_pct', 'Kademe aralığı', 'Bu kadar düşünce yeni kademe', '%', .5, .5, 20, 1],
+        ['grid.step3_pct', '3. kademe aralığı', '2. kademeden sonra bu kadar düşüş', '%', .5, .5, 30, 1],
         ['grid.lot_pct', 'Kademe büyüklüğü', () => `Bottaki paranın; şu an ${sizeTL(draft.grid.lot_pct)}`, '%', .5, .5, 50, 1],
-        ['grid.lot2_pct', '2. kademe tutarı', () => `1. kademenin yüzdesi; şu an ${tl(draft.budget * draft.grid.lot_pct / 100 * (draft.grid.lot2_pct ?? 100) / 100, 0)}`, '%', 5, 10, 100, 0],
-        ['grid.lot3_pct', '3. kademe tutarı', () => `1. kademenin yüzdesi; şu an ${tl(draft.budget * draft.grid.lot_pct / 100 * (draft.grid.lot3_pct ?? 100) / 100, 0)}`, '%', 5, 10, 100, 0],
-        ['grid.lot_tp_pct', 'Kademe kârı', 'Her kademe bu kârla ayrı satılır', '%', .5, .5, 50, 1],
+        ['grid.lot2_pct', '2. kademe tutarı', () => `1. kademeye göre; ${tl(draft.budget * draft.grid.lot_pct / 100 * (draft.grid.lot2_pct ?? 100) / 100, 0)}`, '%', 5, 10, 100, 0],
+        ['grid.lot3_pct', '3. kademe tutarı', () => `1. kademeye göre; ${tl(draft.budget * draft.grid.lot_pct / 100 * (draft.grid.lot3_pct ?? 100) / 100, 0)}`, '%', 5, 10, 100, 0],
+        ['grid.lot_tp_pct', 'Kademe kârı', 'Her kademe ayrı satılır', '%', .5, .5, 50, 1],
         ['grid.max_lots', 'En fazla kademe', 'Bir coinde', 'adet', 1, 1, 10, 0],
-        ['grid.max_coins', 'En fazla coin', 'Aynı anda kademeli alınan; fırsatlar en derin düşüşten başlayarak sıralanır', 'adet', 1, 1, 100, 0],
-        ['grid.use_pct', 'Toplam kullanım sınırı', () => `Coinlere en fazla bottaki paranın bu kadarı yatırılır; şu an ${pctTL(draft.grid.use_pct ?? 40)}`, '%', 2, 5, 100, 0],
-        ['grid.trend_filter_pct', 'Düşüş filtresi', 'Coinin 48 saatlik ortalaması bir günde bu kadar gerilediyse yeni alım beklenir; 0 = kapalı', '%', .5, 0, 10, 1],
-        ['grid.stop_pct', 'Toplu zarar sınırı', 'Ortalama maliyetin bu kadar altında tüm kademeler satılır', '%', .5, 1, 50, 1]],
-    dip: [['dip.dip_pct', 'Düşüş eşiği', 'Fiyat 20 saatlik ortalamanın bu kadar altına inince', '%', .5, .5, 30, 1],
+        ['grid.max_coins', 'En fazla coin', 'Aynı anda tutulan coin', 'adet', 1, 1, 100, 0],
+        ['grid.use_pct', 'Toplam kullanım sınırı', () => `Coinlere en fazla; şu an ${pctTL(draft.grid.use_pct ?? 40)}`, '%', 2, 5, 100, 0],
+        ['grid.trend_filter_pct', 'Düşüş filtresi', 'Günde bu kadar düşen beklenir; 0 kapalı', '%', .5, 0, 10, 1],
+        ['grid.stop_pct', 'Toplu zarar sınırı', 'Ortalamanın altında hepsi satılır', '%', .5, 1, 50, 1]],
+    dip: [['dip.dip_pct', 'Düşüş eşiği', 'Ortalamanın bu kadar altında alır', '%', .5, .5, 30, 1],
         ['dip.rsi_max', 'Aşırı satım eşiği', 'RSI bu değerin altındayken alınır', '', 1, 5, 60, 0],
         ['dip.take_profit_pct', 'Kâr hedefi', 'Bu kâra ulaşınca satılır', '%', .5, .5, 50, 1],
         ['dip.max_hold_hours', 'En uzun bekleme', 'Bu süre dolunca satılır', 'saat', 1, 1, 500, 0]],
@@ -1462,7 +1462,7 @@ function renderForm() {
     for (const sec of SECTIONS) {
         const tg = sec.t === 'Kâr hedefi', ff = tg && draft.target.mode === 'total' ? [TGT_TOTAL] : secFields(sec);
         h += accOpen(sec.t, sec.t, sec.i, SEC_C[sec.t], SUMS[sec.t](), secDirty([...ff.map(x => x[0]), ...(tg ? ['target.on', 'target.mode'] : [])])) + `<div class="card">`
-            + (tg ? `<div style="margin-bottom:4px">${swRow('tgtSw', !!draft.target.on, 'Hedefte dur', 'Açıkken hedefe ulaşınca bütün coinler satılır ve yeni alım durur. Kapalıyken bot olduğu gibi devam eder.')}</div>
+            + (tg ? `<div style="margin-bottom:4px">${swRow('tgtSw', !!draft.target.on, 'Hedefte dur', 'Hedefte her şey satılır, bot durur')}</div>
         <div class="field"><div class="lb"><b>Hedef türü</b><span>${draft.target.mode === 'total' ? 'Bot + kasadaki yedek para toplamı' : 'Sadece kâr (başlangıç parasının üstü)'}</span></div>
         <div class="seg" id="tgtMode"><button type="button" data-m="profit" class="${draft.target.mode !== 'total' ? 'on' : ''}">Kâr</button><button type="button" data-m="total" class="${draft.target.mode === 'total' ? 'on' : ''}">Kasa dahil</button></div></div>` : '')
             + `${ff.map(field).join('')}</div>` + ACC_END;
@@ -1470,7 +1470,7 @@ function renderForm() {
     const sf = STRAT_F[draft.strategy];
     const grid = draft.strategy === 'grid';
     h += accOpen('strat', SNAMES[draft.strategy] + ' ayarları', ICON[draft.strategy], 'blue', SUMS[draft.strategy](), secDirty([...sf.map(x => x[0]), ...(grid ? ['grid.instant'] : [])])) + `<div class="card">${sf.map(field).join('')}`
-        + (grid ? `<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line2)">${swRow('instSw', !!draft.grid.instant, 'Anlık alım', 'Açıkken fiyat alım seviyesine değdiği an alır; kapalıyken 15 dakikalık mumun kapanmasını bekler')}</div>` : '') + `</div>` + ACC_END;
+        + (grid ? `<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line2)">${swRow('instSw', !!draft.grid.instant, 'Anlık alım', 'Fiyat değince hemen alır')}</div>` : '') + `</div>` + ACC_END;
     h += installSection();
     const f = document.getElementById('setForm');
     f.innerHTML = h;
@@ -1818,15 +1818,15 @@ function installSection() {
     else
         h += `<ol class="steps" style="margin-top:0"><li><b>Android (Chrome):</b> sağ üstteki ⋮ → <b>Ana ekrana ekle</b></li><li><b>iPhone (Safari):</b> Paylaş → <b>Ana Ekrana Ekle</b></li><li><b>Bilgisayar (Chrome/Edge):</b> adres çubuğundaki <b>Yükle</b> simgesi</li></ol>`;
     const tm = themeMode();
-    h += `<div class="thh"><b>Tema</b><span>Bu cihazda, anında uygulanır</span></div><div class="tiles" id="themeTiles">${[['light', 'i-sun', 'Açık'], ['dark', 'i-moon', 'Koyu'], ['auto', 'i-auto', 'Otomatik']].map(([k, i, n]) => `<div class="tile${tm === k ? ' on' : ''}" data-th="${k}"><span class="ic">${ic(i)}</span><span class="nm">${n}</span></div>`).join('')}</div>`;
-    h += `<div class="thh"><b>Dil</b><span>Bu cihazda, anında uygulanır</span></div><div class="tiles two" id="langTiles">${[['tr', 'TR', 'Türkçe'], ['en', 'EN', 'English']].map(([k, g, n]) => `<div class="tile${LANG === k ? ' on' : ''}" data-lg="${k}"><span class="ic"><b class="qg">${g}</b></span><span class="nm" data-noi18n>${n}</span></div>`).join('')}</div>`;
+    h += `<div class="prf"><b>Tema</b><div class="seg mini" id="themeTiles">${[['light', 'i-sun', 'Açık'], ['dark', 'i-moon', 'Koyu'], ['auto', 'i-auto', 'Otomatik']].map(([k, i, n]) => `<button type="button" class="${tm === k ? 'on' : ''}" data-th="${k}">${ic(i)}${n}</button>`).join('')}</div></div>`;
+    h += `<div class="prf"><b>Dil</b><div class="seg mini" id="langTiles">${[['tr', 'Türkçe'], ['en', 'English']].map(([k, n]) => `<button type="button" class="${LANG === k ? 'on' : ''}" data-lg="${k}">${n}</button>`).join('')}</div></div>`;
     const newer = remoteVer && vcmp(remoteVer.version, APP_VERSION) > 0;
     h += `<div class="ver"><div><b>Sürüm ${APP_VERSION}</b><span>${newer ? 'Yeni sürüm hazır: ' + remoteVer.version : 'Güncel'}${remoteVer?.date ? ' · ' + remoteVer.date.split('-').reverse().join('.') : ''}</span></div>
     <button class="btn ${newer ? 'primary' : ''}" id="verBtn">${ic('i-refresh')}${newer ? 'Güncelle' : 'Denetle'}</button></div>`;
     return h + '</div>' + ACC_END;
 }
 function bindInstall() {
-    document.querySelectorAll('#langTiles .tile').forEach(t => t.onclick = async () => {
+    document.querySelectorAll('#langTiles button').forEach(t => t.onclick = async () => {
         const l = t.dataset.lg;
         if (l === LANG)
             return;
@@ -1838,7 +1838,7 @@ function bindInstall() {
         }
         setLang(l);
     });
-    document.querySelectorAll('#themeTiles .tile').forEach(t => t.onclick = () => { setTheme(t.dataset.th); document.querySelectorAll('#themeTiles .tile').forEach(x => x.classList.toggle('on', x === t)); });
+    document.querySelectorAll('#themeTiles button').forEach(t => t.onclick = () => { setTheme(t.dataset.th); document.querySelectorAll('#themeTiles button').forEach(x => x.classList.toggle('on', x === t)); });
     const v = document.getElementById('verBtn');
     if (v)
         v.onclick = () => { if (remoteVer && vcmp(remoteVer.version, APP_VERSION) > 0)

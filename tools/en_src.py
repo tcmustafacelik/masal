@@ -359,6 +359,17 @@ EN = {
     "{0} {1} {2} {3} · fiyat {4}": "{0} {1} {2} {3} · price {4}",
     "{0} alınamıyor: {1} {2} bu coinde bu hesaba işlem izni vermiyor (yerel düzenleme kısıtı). Listeden çıkarıldı.":
         "{0} can't be bought: {1} {2} does not allow this account to trade this coin (local regulation). Removed from the list.",
+    "Botun işlem yaptığı para": "Money the bot trades with", "Hesaptaki toplam; bot aşmaz": "Account total; the bot never exceeds it",
+    "Her kâr hedefinde kasadan": "From the treasury at each profit target", "Son eklemeden beri": "Since the last top-up",
+    "Şu an {0} {1}; aşılırsa o gün alım yok": "Now {0} {1}; no buys that day if exceeded",
+    "{0} {1} altında her şey satılır": "Everything is sold below {0} {1}", "Bu zararda otomatik satılır": "Sold automatically at this loss",
+    "Aynı anda tutulan coin": "Coins held at once", "Bu kârda her şey satılır, bot durur": "Everything is sold at this profit, the bot stops",
+    "Bot + kasa bu tutara ulaşınca her şey satılır": "Everything is sold when bot + treasury reach this",
+    "Alım fiyatı bu ortalamaya göre": "Buy price is based on this average", "Bu kadar düşünce yeni kademe": "New step after this drop",
+    "{0} kademeden sonra bu kadar düşüş": "Drop needed after step {0}", "{0} kademeye göre; {1} {2}": "Relative to step {0}; {1} {2}",
+    "Coinlere en fazla; şu an {0} {1}": "Max into coins; now {0} {1}", "Günde bu kadar düşen beklenir; {0} kapalı": "Coins falling this much in a day wait; {0} off",
+    "Ortalamanın altında hepsi satılır": "All sold this far below the average", "Ortalamanın bu kadar altında alır": "Buys this far below the average",
+    "Hedefte her şey satılır, bot durur": "At the target everything is sold, the bot stops", "Fiyat değince hemen alır": "Buys the moment the price touches",
 }
 
 

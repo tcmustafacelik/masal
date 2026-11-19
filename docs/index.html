@@ -95,6 +95,8 @@ header{position:sticky;top:0;z-index:5;background:var(--header-bg);backdrop-filt
 #splash .ld i{display:block;height:100%;width:40%;border-radius:2px;background:linear-gradient(90deg,rgba(227,154,46,0),#E39A2E,rgba(227,154,46,0));animation:ld 1.1s ease-in-out infinite}
 @keyframes ld{from{transform:translateX(-100%)}to{transform:translateX(250%)}}
 @keyframes fade{to{opacity:1}}
+.prf{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--line2)}.prf:first-of-type{margin-top:10px}.prf b{font-size:13.5px;font-weight:600}
+.seg.mini button{padding:6px 10px;font-size:12.5px}.seg.mini button svg.i{width:14px;height:14px}
 .thh{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:16px 0 8px}
 .thh b{font-size:13.5px;font-weight:600}.thh span{font-size:11.5px;color:var(--muted)}
 @media (prefers-reduced-motion:reduce){.lg *{animation:none!important;opacity:1!important}.lg .shine{display:none}#splash *{animation:none!important;opacity:1!important;transform:none!important}}
@@ -623,6 +625,6 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 <div class="toast" id="toast" hidden></div>
 <div class="qsh" id="qsh" hidden><div class="qb"><div class="gr"></div><h3><span><svg class="i" id="qIco"><use href="#i-info"/></svg></span><b id="qTitle"></b></h3><div class="qt" id="qText"></div><button class="btn primary" id="qOk">Anladım</button></div></div>
 
-<script src="app.js?v=1.36.0"></script>
+<script src="app.js?v=1.36.1"></script>
 </body>
 </html>
