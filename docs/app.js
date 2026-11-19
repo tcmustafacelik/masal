@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.28.0';
+const APP_VERSION = '1.29.0';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -290,7 +290,8 @@ function gloss(k) {
         pozisyon: ['Elimdeki coinler', `<ul><li><b>Alış → şimdi:</b> ortalama alış fiyatın ve şu anki fiyat.</li>
       <li><b>Çubuk:</b> solda kırmızı <b>zarar durdur</b>, sağda yeşil <b>kâr al</b> fiyatı. Yuvarlak, fiyatın şu an nerede olduğunu gösterir; ince çizgi alış fiyatın. Yuvarlak sağa gittikçe kâra yaklaşırsın.</li>
       <li><span class="shd">${ic('i-shield')}</span> <b>Borsa korumalı:</b> bu satış emirleri OKX'te bekliyor; bot ya da telefon kapalı olsa bile çalışır.</li>
-      <li><b>Sağdaki renkli kutu:</b> şimdi satılsa ne kadar kâr (yeşil) ya da zarar (kırmızı) edeceğin.</li></ul>`],
+      <li><b>Sağdaki renkli kutu:</b> şimdi satılsa ne kadar kâr (yeşil) ya da zarar (kırmızı) edeceğin.</li>
+      <li><b>Elle satmak için</b> satırı sola kaydır ve kırmızı <b>Sat</b> düğmesine dokun; bot birkaç saniye içinde piyasa fiyatından satar.</li></ul>`],
         coinkz: ['Coin bazında kâr/zarar', `<p>Her coin için şimdiye kadar elde edilen sonuç:</p>
       <ul><li><b>Kapanan:</b> satılmış kademelerden kesinleşmiş kâr/zarar.</li><li><b>Açık:</b> elde duran kısmın şu anki, henüz kesinleşmemiş kâr/zararı.</li></ul>
       <p>Başlıktaki toplam ikisinin toplamıdır.</p>`],
@@ -449,8 +450,13 @@ function renderCoins(x) {
       <div class="end"><b class="${cls(c.tot)}">${sgn(c.tot)} TL</b><span>${det}</span></div></div>`;
     }).join('');
 }
+// Satırı sola kaydırınca "Sat" düğmesi çıkar (sadece gerçek hesapta). Kaydırılırken liste yenilenmez.
+let swOpen = '', swDrag = false, swJust = 0;
+const SELLING = {};
 function renderPositions(x) {
-    const pos = x.positions, ps = document.getElementById('posSum');
+    if (swDrag)
+        return;
+    const pos = x.positions, ps = document.getElementById('posSum'), canSell = sel === 'live' && !!x.armed;
     {
         const T = pos.reduce((a, p) => a + p.qty * sellPrice(p.inst, p.price) - p.cost, 0);
         ps.className = 'hsum ' + cls(T);
@@ -465,11 +471,104 @@ function renderPositions(x) {
             rng = `<div class="rng"><i class="av" style="left:${k(p.avg).toFixed(1)}%"></i><i class="mk ${cls(pl)}" style="left:${k(cur).toFixed(1)}%"></i></div>
         <div class="rngl"><em class="dn">${lg ? 'Zarar' : 'Zarar durdur'} ${px(p.sl)}</em><em class="up">${lg ? 'Kâr' : 'Kâr al'} ${px(p.tp)}</em></div>`;
         }
-        return `<div class="row pos">${cico(p.inst)}
+        const row = `<div class="row pos${canSell ? ' swc' : ''}">${cico(p.inst)}
       <div class="mid"><b>${sym(p.inst)}${pq(p.inst)}${prot}${p.lots > 1 ? `<small> · ${p.lots} kademe</small>` : ''}</b><span>Alış ${px(p.avg)} → satış ${px(cur)}<br>${ago(p.since)} alındı${volTxt(p.inst) ? ` · hacim ${volTxt(p.inst)}` : ''}</span>${rng}</div>
       <div class="end"><b>${tl(val, 0)}</b><span class="plc ${cls(pl) || 'z'}">${sgn(pl)} TL</span><span class="plp ${cls(pl)}">${plp > 0 ? '+' : ''}${nf(plp)}%</span></div></div>`;
+        return canSell ? `<div class="swr${swOpen === p.inst ? ' open' : ''}${SELLING[p.inst] ? ' busy' : ''}" data-i="${p.inst}"><button class="swb" data-sell="${p.inst}">${ic('i-sell')}${SELLING[p.inst] ? 'Satılıyor' : 'Sat'}</button>${row}</div>` : row;
     }).join('')
         : `<div class="empty">${ic('i-box')}<div>Şu an açık pozisyon yok</div></div>`;
+}
+{
+    const box = document.getElementById('positions');
+    let sx = 0, sy = 0, el = null, dx = 0, lock = '';
+    const start = (x, y, t) => { const w = t.closest('.swr'); if (!w)
+        return; el = w; sx = x; sy = y; dx = 0; lock = ''; };
+    const move = (x, y, ev) => {
+        if (!el)
+            return;
+        const ddx = x - sx, ddy = y - sy;
+        if (!lock)
+            lock = Math.abs(ddx) > 8 && Math.abs(ddx) > Math.abs(ddy) ? 'x' : (Math.abs(ddy) > 8 ? 'y' : '');
+        if (lock !== 'x')
+            return;
+        ev.preventDefault?.();
+        swDrag = true;
+        const base = el.classList.contains('open') ? -88 : 0;
+        dx = Math.min(0, Math.max(-110, base + ddx));
+        el.querySelector('.swc').style.transform = `translateX(${dx}px)`;
+    };
+    const end = () => {
+        if (!el)
+            return;
+        const c = el.querySelector('.swc');
+        c.style.transform = '';
+        if (lock === 'x') {
+            swOpen = dx < -44 ? el.dataset.i : '';
+            box.querySelectorAll('.swr').forEach(w => w.classList.toggle('open', w.dataset.i === swOpen));
+        }
+        if (lock === 'x')
+            swJust = Date.now();
+        el = null;
+        swDrag = false;
+        lock = '';
+    };
+    box.addEventListener('touchstart', e => start(e.touches[0].clientX, e.touches[0].clientY, e.target), { passive: true });
+    box.addEventListener('touchmove', e => move(e.touches[0].clientX, e.touches[0].clientY, e), { passive: false });
+    box.addEventListener('touchend', end);
+    box.addEventListener('touchcancel', end);
+    box.addEventListener('pointerdown', e => { if (e.pointerType === 'mouse')
+        start(e.clientX, e.clientY, e.target); });
+    box.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' && e.buttons)
+        move(e.clientX, e.clientY, e); });
+    box.addEventListener('pointerup', e => { if (e.pointerType === 'mouse')
+        end(); });
+    box.addEventListener('click', e => {
+        const b = e.target.closest('.swb');
+        if (b) {
+            sellCoin(b.dataset.sell);
+            return;
+        }
+        if (Date.now() - swJust < 400)
+            return; // kaydırmanın bıraktığı tıklama satırı kapatmasın
+        if (swOpen && !e.target.closest('.swr.open .swb')) {
+            swOpen = '';
+            box.querySelectorAll('.swr.open').forEach(w => w.classList.remove('open'));
+        }
+    });
+}
+// Tek coini sat: ayarlar.json'a satış isteği yazılır, bot ~10 sn içinde piyasa fiyatından satar
+async function sellCoin(inst) {
+    if (SELLING[inst])
+        return;
+    if (!token) {
+        toast('Satmak için önce Ayarlar\'dan GitHub bağlantısını kur');
+        return;
+    }
+    SELLING[inst] = true;
+    swOpen = '';
+    if (S)
+        render();
+    try {
+        const cur = await tfetch(API + '?t=' + Date.now(), { headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' }, cache: 'no-store' }).then(r => { if (!r.ok)
+            throw r.status; return r.json(); });
+        const data = JSON.parse(decodeURIComponent(escape(atob(cur.content.replace(/\n/g, '')))));
+        data.sell = { ts: Date.now(), insts: [inst] };
+        const body = { message: 'Uygulamadan satış: ' + inst, content: btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2) + '\n'))), sha: cur.sha, branch: 'main' };
+        const r = await tfetch(API, { method: 'PUT', headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        if (!r.ok)
+            throw r.status;
+        sha = (await r.json()).content.sha;
+        if (orig)
+            orig.sell = data.sell;
+        if (draft)
+            draft.sell = data.sell;
+        toast(`${sym(inst)} satış isteği gönderildi; bot yaklaşık 10 saniye içinde satar.`);
+    }
+    catch (e) {
+        toast('Satış isteği gönderilemedi (' + e + '), tekrar dene');
+    }
+    setTimeout(() => { delete SELLING[inst]; if (S)
+        render(); }, 60000);
 }
 function renderRules(R, c) {
     const rows = c ? [
@@ -584,7 +683,7 @@ function okxLine() {
     const o = S.okx;
     if (!o)
         return '';
-    return `<div class="okx ${o.ok ? 'ok' : 'bad'}">${ic(o.ok ? 'i-check' : 'i-info')}<span>OKX TR: ${o.status}${o.ok ? ` · hesaptaki TL ${tl(o.try)}` : ''}</span></div>`;
+    return `<div class="okx ${o.ok ? 'ok' : 'bad'}">${ic(o.ok ? 'i-check' : 'i-info')}<span>OKX TR: ${o.status}${o.ok ? ` · boşta ${tl(o.try)}${o.usdt_tl ? ` + ${tl(o.usdt_tl)} (${o.quote || 'USDT'})` : ''}` : ''}</span></div>`;
 }
 function renderKasa(x) {
     const box = document.getElementById('kasa');
@@ -705,10 +804,11 @@ function checks(d = draft, o = orig || {}, diff = true) {
         add('bad', 'Hiç alım yapılmaz', `Her alım ${T(per, 2)} çıkıyor; bot ${MIN_ORDER} TL'nin altındaki emirleri göndermez. ${st === 'grid' ? 'Kademe büyüklüğünü' : 'İşlem büyüklüğünü'} en az %${Math.ceil(MIN_ORDER * 100 / Math.max(b, 1))} yap ya da bottaki parayı artır.`);
     const L = S?.strategies?.live, inv = L && !L.locked ? (L.positions || []).reduce((a, p) => a + (p.cost || 0), 0) : 0;
     if (d.live && S?.okx && S.okx.try != null) {
-        if (S.okx.try < per)
-            add('bad', 'OKX\'te TL yetmiyor', `Alım-satım hesabında ${T(S.okx.try, 2)} var; bir alım için ${T(per)} gerekir. Fonlama'dan Alım-satım'a aktar.`);
-        else if (S.okx.try + inv < b)
-            add('warn2', 'OKX\'te para az', `Bot ${T(b)} ile çalışacak ama alım-satım hesabında ${T(S.okx.try)} boşta${inv ? ` ve ${T(inv)} coinde` : ''} var.`);
+        const free = S.okx.try + (S.okx.usdt_tl || 0); // TL + boştaki USDT/USDC/EUR'nun TL karşılığı
+        if (free < per)
+            add('bad', 'OKX\'te para yetmiyor', `Alım-satım hesabında ${T(free, 2)} var; bir alım için ${T(per)} gerekir. Fonlama'dan Alım-satım'a aktar.`);
+        else if (free + inv < b)
+            add('warn2', 'OKX\'te para az', `Bot ${T(b)} ile çalışacak ama alım-satım hesabında ${T(free)} boşta${inv ? ` ve ${T(inv)} coinde` : ''} var.`);
     }
     if (maxUse > b * 1.001 && per >= MIN_ORDER)
         add('warn2', 'Para bütün kademelere yetmez', `Hepsi dolarsa ${T(maxUse)} gerekir, botta ${T(b)} var; son alımlar yapılamaz. ${st === 'grid' ? 'Kademe ya da coin sayısını' : 'Pozisyon sayısını'} azalt veya parayı artır.`);

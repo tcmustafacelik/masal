@@ -1,9 +1,9 @@
 {
-  "version": "1.28.0",
+  "version": "1.29.0",
   "date": "2026-11-19",
   "notes": [
-    "Ayarlar'da İşlem paritesi seçimi: USDT, USDC, EUR, TRY",
-    "Her coinin yanında paritesi yazar (USDT, TRY...)",
-    "TRUMP kârla satıldı, ilk USDT alımı yapıldı"
+    "Elimdeki coinlerde satırı sola kaydırıp Sat ile tek coin satılabilir",
+    "Ayarlar kontrolü ve OKX bilgisi boştaki USDT'yi de sayar",
+    "Tek seferlik LIT onarım kodu kaldırıldı"
   ]
 }

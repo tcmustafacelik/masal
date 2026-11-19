@@ -427,6 +427,14 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 .qtiles{grid-template-columns:repeat(4,minmax(0,1fr))!important}
 .qtiles .tile .pc{font-size:10.5px!important;line-height:1.25;text-align:center}
 .qg{font-size:17px;font-weight:800;line-height:1;font-style:normal}
+/* ---- elimdeki coinler: sola kaydır → Sat ---- */
+.swr{position:relative;overflow:hidden;border-top:1px solid var(--line2)}.swr:first-child{border-top:0}
+.swr .swc{position:relative;z-index:1;background:var(--surface);transition:transform .22s cubic-bezier(.2,.8,.2,1);border-top:0!important;touch-action:pan-y}
+.swr:first-child .swc{padding-top:2px}.swr:last-child .swc{padding-bottom:2px}.swr:not(:first-child) .swc{padding-top:10px}
+.swr.open .swc{transform:translateX(-88px)}
+.swb{position:absolute;right:0;top:0;bottom:0;width:88px;border:0;background:var(--red);color:#fff;font:700 13px/1.2 inherit;font-family:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;cursor:pointer}
+.swb svg{width:18px;height:18px}
+.swr.busy .swb{background:var(--amber)}.swr.busy .swc{opacity:.75}
 </style>
 </head>
 <body>
@@ -596,6 +604,6 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 <div class="toast" id="toast" hidden></div>
 <div class="qsh" id="qsh" hidden><div class="qb"><div class="gr"></div><h3><span><svg class="i"><use href="#i-info"/></svg></span><b id="qTitle"></b></h3><div class="qt" id="qText"></div><button class="btn primary" id="qOk">Anladım</button></div></div>
 
-<script src="app.js?v=1.28.0"></script>
+<script src="app.js?v=1.29.0"></script>
 </body>
 </html>

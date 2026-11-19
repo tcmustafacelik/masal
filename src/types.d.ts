@@ -101,6 +101,9 @@ interface OkxStatus {
   ok: boolean;
   status: string;
   try?: number;
+  usdt?: number;
+  usdt_tl?: number;
+  quote?: string;
   ts?: number;
 }
 
@@ -112,6 +115,7 @@ interface Settings {
   liquidate: number;
   strategy: Exclude<StrategyKey, 'live'>;
   quote?: string;
+  sell?: { ts: number; insts: string[] };
   budget: number;
   kasa: number;
   topup: { amount: number; profit_pct: number; days: number };
