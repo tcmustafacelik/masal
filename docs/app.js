@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.35.1';
+const APP_VERSION = '1.35.2';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -1060,7 +1060,7 @@ const STRAT_F = {
         ['grid.lot3_pct', '3. kademe tutarı', () => `1. kademenin yüzdesi; şu an ${tl(draft.budget * draft.grid.lot_pct / 100 * (draft.grid.lot3_pct ?? 100) / 100, 0)}`, '%', 5, 10, 100, 0],
         ['grid.lot_tp_pct', 'Kademe kârı', 'Her kademe bu kârla ayrı satılır', '%', .5, .5, 50, 1],
         ['grid.max_lots', 'En fazla kademe', 'Bir coinde', 'adet', 1, 1, 10, 0],
-        ['grid.max_coins', 'En fazla coin', 'Aynı anda kademeli alınan; fırsatlar en derin düşüşten başlayarak sıralanır', 'adet', 1, 1, 40, 0],
+        ['grid.max_coins', 'En fazla coin', 'Aynı anda kademeli alınan; fırsatlar en derin düşüşten başlayarak sıralanır', 'adet', 1, 1, 100, 0],
         ['grid.use_pct', 'Toplam kullanım sınırı', () => `Coinlere en fazla bottaki paranın bu kadarı yatırılır; şu an ${pctTL(draft.grid.use_pct ?? 40)}`, '%', 2, 5, 100, 0],
         ['grid.trend_filter_pct', 'Düşüş filtresi', 'Coinin 48 saatlik ortalaması bir günde bu kadar gerilediyse yeni alım beklenir; 0 = kapalı', '%', .5, 0, 10, 1],
         ['grid.stop_pct', 'Toplu zarar sınırı', 'Ortalama maliyetin bu kadar altında tüm kademeler satılır', '%', .5, 1, 50, 1]],
