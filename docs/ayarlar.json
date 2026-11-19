@@ -28,8 +28,8 @@
     "trend_filter_pct": 1,
     "instant": true,
     "step3_pct": 4,
-    "lot2_pct": 45,
-    "lot3_pct": 35,
+    "lot2_pct": 80,
+    "lot3_pct": 40,
     "sma_hours": 8
   },
   "dip": {
