@@ -1,7 +1,8 @@
 {
-  "version": "1.30.1",
+  "version": "1.31.0",
   "date": "2026-11-19",
   "notes": [
-    "Kâr hedefinde hedef türü: Kâr ya da Kasa dahil toplam para"
+    "Kademeler küçülür: 444 → 222 → 111 TL (ayarlanabilir)",
+    "3. kademe %3 daha düşüşte alınır"
   ]
 }

@@ -26,7 +26,9 @@
     "stop_pct": 12,
     "use_pct": 52,
     "trend_filter_pct": 1,
-    "instant": true
+    "instant": true,
+    "step3_pct": 3,
+    "lot_decay_pct": 50
   },
   "dip": {
     "dip_pct": 3,

@@ -233,9 +233,9 @@ class Portfolio:
             if price <= avg * (1 - c["stop"]):
                 self._sell_lots(ts, inst, price, list(pos["lots"]), "Zarar sınırı")
             elif (len(pos["lots"]) < c["max_lots"] and not self.s["halted"] and not self.s["blocked_today"]
-                  and not self.s.get("paused") and self._room(c["lot"])
-                  and price <= pos["lots"][-1]["entry"] * (1 - c["step"]) and self._entry_ok(closes, price, True)):
-                self._buy(ts, inst, price, c["lot"], f"{len(pos['lots']) + 1}. kademe")
+                  and not self.s.get("paused") and self._room(lot_for(c, len(pos["lots"])))
+                  and price <= pos["lots"][-1]["entry"] * (1 - step_for(c, len(pos["lots"]))) and self._entry_ok(closes, price, True)):
+                self._buy(ts, inst, price, lot_for(c, len(pos["lots"])), f"{len(pos['lots']) + 1}. kademe")
             return
         m = sma(closes, 20 * config.BPH)  # son 20 saatin ortalaması
         if (self._can_open() and len(self.s["positions"]) < c["max_coins"] and self._room(c["lot"])
@@ -283,6 +283,18 @@ def run_bars(portfolios, events, series):
             p.end_bar(ts)
 
 
+def lot_for(c, n):
+    """Elde n kademe varken bir sonraki kademenin tutarı: her kademe bir öncekinin lot_decay katı
+    (kullanıcı tercihi: 444 → 222 → 111; düşüşte bir coine giren para azalır)."""
+    return c["lot"] * (c.get("lot_decay") or 1.0) ** n
+
+
+def step_for(c, n):
+    """Elde n kademe varken bir sonraki kademe için gereken düşüş: 2. kademe normal aralıkla,
+    3. ve sonrası daha geniş aralıkla (step3) alınır; hızlı düşüşte kademeler bir anda dolmasın."""
+    return (c.get("step3") or c["step"]) if n >= 2 else c["step"]
+
+
 def watch(p, series):
     """Uygulamadaki "Bot ne yapıyor" kartı için: her coinin alım şartına ne kadar uzak olduğu.
     g: fiyatın alım fiyatına uzaklığı (%; 0 ve altı = şart sağlandı), f: düşüş filtresi bekletiyor."""
@@ -300,7 +312,7 @@ def watch(p, series):
             lots = pos["lots"]
             if len(lots) >= c["max_lots"]:
                 continue
-            target = lots[-1]["entry"] * (1 - c["step"])
+            target = lots[-1]["entry"] * (1 - step_for(c, len(lots)))
             filt = False
         else:
             m = sma(closes, 20 * config.BPH)

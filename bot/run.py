@@ -8,7 +8,7 @@ import time
 
 from . import config, okx, report, settings, vault
 from .notify import Notifier
-from .engine import Portfolio, new_state, run_bars, watch
+from .engine import Portfolio, new_state, run_bars, watch, step_for, lot_for
 
 STATE_FILE = os.path.join(os.path.dirname(__file__), "..", "docs", "data", "state.json")
 
@@ -283,14 +283,14 @@ def instant_buys(live, series):
         inst, price = it["i"], prices.get(it["i"])
         if not price or it["f"] or price > it["t"]:
             continue
-        if s["halted"] or s["blocked_today"] or s.get("paused") or not live._room(c["lot"]):
-            break
+        if s["halted"] or s["blocked_today"] or s.get("paused") or not live._room(lot_for(c, c["max_lots"] - 1)):
+            break  # en küçük kademeye bile yer yok
         pos = s["positions"].get(inst)
         if pos:
             n = len(pos["lots"])
-            if n < c["max_lots"] and price <= pos["lots"][-1]["entry"] * (1 - c["step"]):
-                live._buy(ts, inst, price, c["lot"], f"{n + 1}. kademe · anlık")
-        elif live._can_open() and len(s["positions"]) < c["max_coins"]:
+            if n < c["max_lots"] and price <= pos["lots"][-1]["entry"] * (1 - step_for(c, n)) and live._room(lot_for(c, n)):
+                live._buy(ts, inst, price, lot_for(c, n), f"{n + 1}. kademe · anlık")
+        elif live._can_open() and len(s["positions"]) < c["max_coins"] and live._room(c["lot"]):
             live._buy(ts, inst, price, c["lot"], "1. kademe · anlık")
         s["last_prices"][inst] = price
 
