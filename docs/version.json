@@ -1,7 +1,7 @@
 {
-  "version": "1.36.1",
+  "version": "1.36.2",
   "date": "2026-11-19",
   "notes": [
-    "Ayarlar sadeleşti: kısa açıklamalar, tema ve dil tek satırda"
+    "Bot 5 saniyede bir kontrol eder"
   ]
 }

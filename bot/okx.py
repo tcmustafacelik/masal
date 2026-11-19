@@ -1,4 +1,5 @@
 """OKX TR herkese açık piyasa verisi. Anahtar gerektirmez."""
+import gzip
 import json
 import threading
 import time
@@ -31,9 +32,12 @@ def _get(path, params=None, retries=3):
     for attempt in range(retries):
         try:
             _throttle()
-            req = urllib.request.Request(url, headers={"User-Agent": "masal/1.0"})
+            req = urllib.request.Request(url, headers={"User-Agent": "masal/1.0", "Accept-Encoding": "gzip"})
             with urllib.request.urlopen(req, timeout=15) as r:
-                body = json.load(r)
+                raw = r.read()
+                if r.headers.get("Content-Encoding") == "gzip":  # sıkıştırılmış: tüm fiyat listesi ~390 KB yerine ~100 KB
+                    raw = gzip.decompress(raw)
+                body = json.loads(raw)
             if body.get("code") != "0":
                 raise RuntimeError(f"OKX hata {body.get('code')}: {body.get('msg')}")
             return body["data"]

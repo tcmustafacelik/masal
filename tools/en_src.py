@@ -370,6 +370,9 @@ EN = {
     "Coinlere en fazla; şu an {0} {1}": "Max into coins; now {0} {1}", "Günde bu kadar düşen beklenir; {0} kapalı": "Coins falling this much in a day wait; {0} off",
     "Ortalamanın altında hepsi satılır": "All sold this far below the average", "Ortalamanın bu kadar altında alır": "Buys this far below the average",
     "Hedefte her şey satılır, bot durur": "At the target everything is sold, the bot stops", "Fiyat değince hemen alır": "Buys the moment the price touches",
+    "{0} satış isteği gönderildi; bot birkaç saniye içinde satar.": "{0} sell request sent; the bot sells within seconds.",
+    "Hepsini sat isteği gönderildi; bot birkaç saniye içinde satar ve durur.": "Sell-all request sent; the bot sells and stops within seconds.",
+    "Kaydedildi. Bot birkaç saniye içinde yeni ayarlarla çalışır.": "Saved. The bot runs with the new settings within seconds.",
 }
 
 

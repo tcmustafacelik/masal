@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.36.1';
+const APP_VERSION = '1.36.2';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -321,7 +321,7 @@ function render() {
                     : `<span class="mi">${ic('i-flask')}</span><span><b>Deneme</b><small>Emir gitmez</small></span>`;
         m.onclick = () => document.getElementById('openSet').click();
     }
-    document.getElementById('foot').innerHTML = 'Fiyatlar uygulama açıkken OKX TR\'den anlık güncellenir; bot kesintisiz çalışır, yaklaşık 10 saniyede bir kontrol eder.<br>' + (L && L.armed ? 'Ekrandaki rakamlar OKX TR hesabındaki gerçek işlemlerdir.' : 'Gerçek para kullanılmıyor; tüm işlemler sanal.');
+    document.getElementById('foot').innerHTML = 'Fiyatlar uygulama açıkken OKX TR\'den anlık güncellenir; bot kesintisiz çalışır, yaklaşık 5 saniyede bir kontrol eder.<br>' + (L && L.armed ? 'Ekrandaki rakamlar OKX TR hesabındaki gerçek işlemlerdir.' : 'Gerçek para kullanılmıyor; tüm işlemler sanal.');
     const keys = Object.keys(S.strategies).sort((a, b) => Number(b === 'live') - Number(a === 'live'));
     const virt = keys.filter(k => k !== 'live');
     const tg = document.getElementById('tiles');
@@ -419,7 +419,7 @@ function gloss(k) {
     const L = S?.strategies?.live, c = (L && !L.locked && L.cfg) || null;
     const step = c ? pp(c.step) : '%1,5', tp = c ? pp(c.lot_tp) : '%4', stop = c ? pp(c.stop) : '%12', ml = c ? c.max_lots : 4, mc = c ? c.max_coins : 20, lot = c ? tl(c.lot, 0) : 'bir kademe', use = c ? pp(c.max_use, 0) : '%40', cf = c?.coin_filter ? pp(c.coin_filter) : '%1', qt = S?.settings?.quote || S?.okx?.quote || 'USDT';
     const G = {
-        nasil: ['Bot nasıl alıp satar?', `${c?.instant ? '<p>Bot <b>10 saniyede bir</b> fiyatlara bakar; fiyat alım seviyesine değdiği an alır. Alım seviyesi son kapanan 15 dakikalık mumlara göre hesaplanır.</p>' : '<p>Bot <b>10 saniyede bir</b> piyasaya bakar, kararını <b>15 dakikalık mum</b> kapanınca verir.</p>'}
+        nasil: ['Bot nasıl alıp satar?', `${c?.instant ? '<p>Bot <b>5 saniyede bir</b> fiyatlara bakar; fiyat alım seviyesine değdiği an alır. Alım seviyesi son kapanan 15 dakikalık mumlara göre hesaplanır.</p>' : '<p>Bot <b>5 saniyede bir</b> piyasaya bakar, kararını <b>15 dakikalık mum</b> kapanınca verir.</p>'}
       <ul><li><b>Alım:</b> Bir coin son ${c?.sma_h || 20} saatin ortalamasından <b>${step}</b> aşağı inince ${lot}'lik bir parça (kademe) alır.</li>
       <li><b>Düşerse:</b> ${step} düşüşte 2. kademeyi${c?.step3 && c.step3 > c.step ? `, ${pp(c.step3)} daha düşüşte 3. kademeyi` : ''} alır; bir coinde en fazla <b>${ml}</b> kademe.${c && ((c.lot2 ?? 1) < 1 || (c.lot3 ?? 1) < 1) ? ` Kademe tutarları: ${tl(c.lot, 0)} → ${tl(c.lot * (c.lot2 ?? 1), 0)} → ${tl(c.lot * (c.lot3 ?? 1), 0)}.` : ''}</li>
       <li><b>Satış:</b> Her kademe kendi alış fiyatının <b>${tp}</b> üstüne çıkınca ayrı satılır.</li>
@@ -611,8 +611,8 @@ function renderNow(x) {
         if (items.length > 5)
             h += `<button class="more" id="nowMore">${nowAll ? 'Daha az göster' : `Tümünü göster (${items.length} coin)`}</button>`;
     }
-    h += c?.instant ? `<div class="nf">${ic('i-clock')}Anlık alım açık: fiyat alım seviyesine değdiği an alır (10 sn'de bir kontrol)</div>`
-        : `<div class="nf">${ic('i-clock')}Sonraki karar ${nextBar()}'te (15 dakikalık mum kapanışı) · fiyatlar 10 sn'de bir kontrol edilir</div>`;
+    h += c?.instant ? `<div class="nf">${ic('i-clock')}Anlık alım açık: fiyat alım seviyesine değdiği an alır (5 sn'de bir kontrol)</div>`
+        : `<div class="nf">${ic('i-clock')}Sonraki karar ${nextBar()}'te (15 dakikalık mum kapanışı) · fiyatlar 5 sn'de bir kontrol edilir</div>`;
     box.innerHTML = h;
     const mb = document.getElementById('nowMore');
     if (mb)
@@ -782,7 +782,7 @@ function renderPositions(x) {
         }
     });
 }
-// Tek coini sat: ayarlar.json'a satış isteği yazılır, bot ~10 sn içinde piyasa fiyatından satar
+// Tek coini sat: ayarlar.json'a satış isteği yazılır, bot ~5 sn içinde piyasa fiyatından satar
 async function sellCoin(inst) {
     if (SELLING[inst])
         return;
@@ -808,7 +808,7 @@ async function sellCoin(inst) {
             orig.sell = data.sell;
         if (draft)
             draft.sell = data.sell;
-        toast(`${sym(inst)} satış isteği gönderildi; bot yaklaşık 10 saniye içinde satar.`);
+        toast(`${sym(inst)} satış isteği gönderildi; bot birkaç saniye içinde satar.`);
     }
     catch (e) {
         toast('Satış isteği gönderilemedi (' + e + '), tekrar dene');
@@ -1449,7 +1449,7 @@ function renderForm() {
    <div class="card" style="margin-top:8px"><div class="sw ${draft.paused ? 'on' : ''}" id="pauseSw"><div class="lb"><b style="font-size:13.5px">Botu durdur</b><span style="font-size:11.5px;color:var(--muted);display:block">Yeni alım yapılmaz; açık pozisyonların zarar sınırı çalışmaya devam eder</span></div><div class="track"><i></i></div></div>
    <div class="field" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line2)"><div class="lb"><b>Hepsini sat ve dur</b><span>Gerçek hesaptaki tüm coinleri hemen satar, botu durdurur</span></div>
    <button class="btn danger ${sellArm ? 'arm' : ''}" id="sellAll">${ic('i-sell')}${sellArm ? 'Emin misin? Dokun' : 'Hepsini sat'}</button></div></div></section>
-   <div class="hint" style="margin:8px 2px 4px">Bot kesintisiz çalışır: yaklaşık 10 saniyede bir piyasayı, borsadaki korumaları ve para hareketlerini kontrol eder. Uygulama kapalı olsa da çalışır.</div>
+   <div class="hint" style="margin:8px 2px 4px">Bot kesintisiz çalışır: yaklaşık 5 saniyede bir piyasayı, borsadaki korumaları ve para hareketlerini kontrol eder. Uygulama kapalı olsa da çalışır.</div>
    <section><h2><span class="hb c-amber">${ic('i-coins')}</span>İşlem paritesi</h2><div class="tiles qtiles" data-g="quote">${QUOTES.map(([q, g, sub]) => `<button class="tile ${(draft.quote || 'USDT') === q ? 'on' : ''}" data-t="${q}"><span class="ic"><b class="qg">${g}</b></span><span class="nm">${q}</span><span class="pc" style="color:var(--muted);font-weight:500">${sub}</span></button>`).join('')}</div>
    <div class="hint" style="margin:8px 2px 0">Yeni alımlar bu paritede yapılır; gereken para TL'den otomatik çevrilir. Eldeki coinler kendi paritesinde satılır. Bütün tutarlar TL karşılığıyla görünür.</div></section>
    <section><h2><span class="hb c-blue">${ic('i-target')}</span>Strateji</h2><div class="tiles" data-g="strat">${['grid', 'dip', 'trend'].map(k => tile(draft.strategy === k, k, ICON[k], SNAMES[k])).join('')}</div>
@@ -1505,7 +1505,7 @@ function renderForm() {
         const keep = JSON.parse(JSON.stringify(orig));
         keep.liquidate = Date.now();
         keep.paused = true;
-        save(keep, 'Hepsini sat isteği gönderildi; bot yaklaşık 10 saniye içinde satar ve durur.');
+        save(keep, 'Hepsini sat isteği gönderildi; bot birkaç saniye içinde satar ve durur.');
     };
     f.querySelectorAll('.field[data-k]').forEach(el => {
         const k = el.dataset.k, inp = el.querySelector('input');
@@ -1631,7 +1631,7 @@ async function save(obj, msg, keepDraft) {
         renderForm();
         if (S)
             render();
-        toast(msg || 'Kaydedildi. Bot yaklaşık 10 saniye içinde yeni ayarlarla çalışır.');
+        toast(msg || 'Kaydedildi. Bot birkaç saniye içinde yeni ayarlarla çalışır.');
     }
     catch (e) {
         toast(e === 401 || e === 403 ? 'Yetki hatası: anahtarın Contents yazma izni olmalı' : 'Kaydedilemedi, tekrar dene (' + e + ')');

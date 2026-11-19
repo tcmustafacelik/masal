@@ -1,4 +1,4 @@
-"""Kesintisiz çalışma: bot GitHub'da yaklaşık 50 dakika boyunca ~10 saniyede bir tur atar.
+"""Kesintisiz çalışma: bot GitHub'da yaklaşık 50 dakika boyunca ~5 saniyede bir tur atar.
 
 Her turda:
   * uygulamadan kaydedilen son ayarları GitHub'dan çeker (ayar ~20 sn'de uygulanır),
@@ -17,7 +17,7 @@ import traceback
 from . import run
 
 DURATION = int(os.environ.get("LOOP_MIN", "50")) * 60
-STEP = int(os.environ.get("LOOP_STEP", "10"))
+STEP = int(os.environ.get("LOOP_STEP", "5"))
 HEARTBEAT = 30
 
 
