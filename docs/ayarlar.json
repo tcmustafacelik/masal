@@ -3,8 +3,8 @@
   "paused": false,
   "liquidate": 0,
   "strategy": "grid",
-  "budget": 9100,
-  "kasa": 10000,
+  "budget": 15600,
+  "kasa": 16500,
   "topup": {
     "amount": 600,
     "profit_pct": 5,
@@ -19,7 +19,7 @@
   },
   "grid": {
     "step_pct": 1.5,
-    "lot_pct": 4.883956,
+    "lot_pct": 2.8489744,
     "lot_tp_pct": 4,
     "max_lots": 3,
     "max_coins": 20,
@@ -56,5 +56,8 @@
       "TRUMP-TRY"
     ]
   },
-  "quote": "USDT"
+  "quote": "USDT",
+  "convert": {
+    "ts": 1795069848278
+  }
 }
