@@ -4,7 +4,7 @@
   "liquidate": 0,
   "strategy": "grid",
   "budget": 15600,
-  "kasa": 16500,
+  "kasa": 22500,
   "topup": {
     "amount": 600,
     "profit_pct": 5,
