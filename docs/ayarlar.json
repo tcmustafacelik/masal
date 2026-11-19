@@ -61,7 +61,7 @@
     "ts": 1795069848278
   },
   "target": {
-    "on": false,
+    "on": true,
     "amount": 20000,
     "mode": "total"
   }
