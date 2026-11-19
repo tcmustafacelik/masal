@@ -1,4 +1,4 @@
-const APP_VERSION='1.38.3';
+const APP_VERSION='1.38.4';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -732,7 +732,7 @@ const STRAT_F={
   ['grid.lot_tp_pct','Kademe kârı','Her kademe ayrı satılır','%',.5,.5,50,1],
   ['grid.max_lots','En fazla kademe','Bir coinde','adet',1,1,10,0],
   ['grid.max_coins','En fazla coin','Aynı anda tutulan coin','adet',1,1,100,0],
-  ['grid.use_pct','Toplam kullanım sınırı',()=>`Coinlere en fazla; şu an ${pctTL(draft.grid.use_pct??40)}`,'%',2,5,100,0],
+  ['grid.use_pct','Toplam kullanım sınırı',()=>`Coinlere en fazla; şu an ${pctTL(draft.grid.use_pct??40)}`,'%',1,5,100,2],
   ['grid.trend_filter_pct','Düşüş filtresi','Günde bu kadar düşen beklenir; 0 kapalı','%',.5,0,10,1],
   ['grid.stop_pct','Toplu zarar sınırı','Ortalamanın altında hepsi satılır','%',.5,1,50,1]],
  dip:[['dip.dip_pct','Düşüş eşiği','Ortalamanın bu kadar altında alır','%',.5,.5,30,1],

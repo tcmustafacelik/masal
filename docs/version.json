@@ -1,7 +1,7 @@
 {
-  "version": "1.38.3",
+  "version": "1.38.4",
   "date": "2026-11-19",
   "notes": [
-    "Eşitleme kontrolü istek hakkı harcamaz; mum yenilemesi hızlandı"
+    "Kullanım sınırı küsuratlı gösterilir"
   ]
 }
