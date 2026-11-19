@@ -247,6 +247,7 @@ def check_okx():
 
 
 _CACHE = {"uni": (0, None), "bars": {}}
+PERF = {}  # son turların süresi (uygulamadaki bulut ekranı ve hız takibi için)
 
 
 def _universe():
@@ -328,6 +329,7 @@ def signature(state, S):
 
 
 def main():
+    t_start = time.time()
     S = settings.load()
     N = Notifier(S)
     state = load_state()
@@ -418,7 +420,9 @@ def main():
               5, ["rotating_light"])
 
     prev = state.get("okx") or {}
-    state["okx"] = check_okx()
+    # Hesap kontrolü (6 istek) dakikada bir yeter; araya giren turlar önceki sonucu kullanır
+    if not prev or time.time() * 1000 - (prev.get("ts") or 0) > 60_000 or not prev.get("ok"):
+        state["okx"] = check_okx()
     if "quote_ok" in state["okx"] and state["okx"]["quote_ok"] != prev.get("quote_ok"):
         print(f"{config.QUOTE} paritesi işlem izni: {'var' if state['okx']['quote_ok'] else 'YOK - ' + state['okx'].get('quote_err', '')}"
               f" · USDT bakiyesi {state['okx'].get('usdt')}")
@@ -438,11 +442,15 @@ def main():
 
     try:
         from . import money
-        money.scan(state, L, N, note)  # para yatırma / çekme / aktarma bildirimleri
+        if time.time() - _CACHE.get("money", 0) >= 30:  # para hareketleri 30 sn'de bir (her biri 4-5 istek)
+            _CACHE["money"] = time.time()
+            money.scan(state, L, N, note)  # para yatırma / çekme / aktarma bildirimleri
     except Exception as e:
         print("Para hareketleri kontrol edilemedi:", e)
 
     daily_summary(L, live, N)
+    PERF["main"] = round(time.time() - t_start, 2)
+    state["perf"] = dict(PERF)
     # Gönderilen bildirimler buluta da yazılır (gerçek hesabın şifreli kaydında): uygulama her cihazda aynı listeyi görür
     if N.queue:
         now_ms = int(time.time() * 1000)

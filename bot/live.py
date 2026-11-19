@@ -82,6 +82,11 @@ class OkxPrivate:
     def algo(self, algo_id):
         return self._req("GET", f"/api/v5/trade/order-algo?algoId={algo_id}")[0]
 
+    def pending_algo_ids(self):
+        """Borsada bekleyen bütün koruma emirlerinin kimlikleri (tek istek). Liste eksik olabilirse None."""
+        rows = self._req("GET", "/api/v5/trade/orders-algo-pending?ordType=oco,conditional&limit=100")
+        return None if len(rows) >= 100 else {r.get("algoId") for r in rows}
+
     def cancel_algos(self, items):
         if items:
             self._req("POST", "/api/v5/trade/cancel-algos", [{"algoId": a, "instId": i} for a, i in items])
@@ -414,6 +419,12 @@ class LivePortfolio(Portfolio):
         if not self.armed:
             return
         now = int(time.time() * 1000)
+        # Hız: bekleyen korumalar tek istekle alınır; sadece listede olmayan (tetiklenmiş/iptal) emirler tek tek sorulur
+        try:
+            pending = self.api.pending_algo_ids() if any(l.get("algo") for p in self.s["positions"].values() for l in p["lots"]) else set()
+        except Exception as e:
+            print("Bekleyen korumalar alınamadı, tek tek bakılıyor:", e)
+            pending = None
         for inst in ([only] if only else list(self.s["positions"])):
             if inst not in self.s["positions"]:
                 continue
@@ -422,6 +433,8 @@ class LivePortfolio(Portfolio):
                 if not lot.get("algo"):
                     self._protect(now, inst, lot)
                     continue
+                if pending is not None and lot["algo"] in pending:
+                    continue  # koruma borsada bekliyor, değişiklik yok
                 try:
                     a = self.api.algo(lot["algo"])
                 except Exception as e:

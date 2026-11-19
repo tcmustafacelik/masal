@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.37.0';
+const APP_VERSION = '1.38.0';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -220,7 +220,7 @@ async function getData(f) {
 }
 let offlineData = false, retryTimer = null;
 let lastLoad = 0, dataSha = '', lastB = 0;
-// Botun her kaydı "data" dalında yeni bir sürüm oluşturur; uygulama 4 saniyede bir bakar, değiştiyse hemen yeniler
+// Botun her kaydı "data" dalında yeni bir sürüm oluşturur; uygulama 2 saniyede bir bakar, değiştiyse hemen yeniler
 async function watchData() {
     if (document.hidden || !S)
         return;
@@ -242,10 +242,10 @@ async function watchData() {
         }
         return;
     }
-    if (Date.now() - lastLoad > 6e4)
+    if (Date.now() - lastLoad > 15000)
         load(true);
 }
-setInterval(watchData, 4000);
+setInterval(watchData, 2000); // otomatik eşitleme her zaman açık: 2 sn'de bir buluta bakılır
 document.addEventListener('visibilitychange', () => { if (!document.hidden && S)
     load(true); });
 async function load(quiet) {
@@ -501,8 +501,9 @@ function openCloud() {
     document.getElementById('qText').innerHTML = `<div class="cld ${off ? 'off' : 'ok'}">${ic(off ? 'i-cloud-off' : 'i-cloud')}<b>${off ? 'Bağlantı yok, son veri gösteriliyor' : 'Eşitlendi'}</b></div>
     <div class="kvl"><span>Son eşitleme</span><b>${tm(syncOk)}</b></div>
     <div class="kvl"><span>Botun son kaydı</span><b>${tm(S?.updated || 0)}</b></div>
-    <div class="kvl"><span>Otomatik yedek</span><b class="up">Açık</b></div>
-    <p class="cldn">Bot her işlemde ve en geç 30 saniyede bir bütün kayıtları buluta (GitHub) yedekler. Uygulama birkaç saniyede bir bakar, değişiklik varsa hemen yeniler. Ayarlar <b>Kaydet</b>'e basınca buluta yazılır.</p>
+    <div class="kvl"><span>Otomatik eşitleme</span><b class="up">Her zaman açık · ${token ? 2 : 15} sn</b></div>
+    ${S?.perf?.turn ? `<div class="kvl"><span>Botun tur süresi</span><b>${nf(S.perf.turn, 1)} sn</b></div>` : ''}
+    <p class="cldn">Bot her işlemde ve en geç 30 saniyede bir bütün kayıtları buluta (GitHub) yedekler. Uygulama buluta sürekli bakar, değişiklik olunca hemen yeniler; fiyatlar 2 saniyede bir borsadan canlı gelir. Ayarlar <b>Kaydet</b>'e basınca buluta yazılır.</p>
     <button class="btn" id="syncNow" style="width:100%;margin-bottom:10px">${ic('i-refresh')}Şimdi eşitle</button>`;
     q.hidden = false;
     document.getElementById('syncNow').onclick = async () => { q.hidden = true; await load(); toast(syncBad ? 'Eşitlenemedi, bağlantını kontrol et' : 'Eşitlendi'); };

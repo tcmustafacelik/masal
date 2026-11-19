@@ -32,14 +32,28 @@ def code_rev(ref):
     return a + b
 
 
+_FETCH = {"t": None, "ok": False}
+
+
+def _fetch_main():
+    _FETCH["ok"] = sh("git", "fetch", "-q", "--depth", "1", "origin", "main").returncode == 0
+
+
 def refresh_settings():
-    """Son ayarları çeker; ana daldaki bot kodunun sürümünü döndürür."""
-    r = sh("git", "fetch", "-q", "--depth", "1", "origin", "main")
-    if r.returncode == 0:
-        sh("git", "checkout", "FETCH_HEAD", "--", "docs/ayarlar.json")
-        sh("git", "reset", "-q", "docs/ayarlar.json")
-        return code_rev("FETCH_HEAD")
-    return None
+    """Son ayarları çeker; ana daldaki bot kodunun sürümünü döndürür.
+    git fetch (0,5-1 sn) arka planda yürür: tur onu beklemez, biten çekimin sonucu bir sonraki turda uygulanır."""
+    rev = None
+    th = _FETCH["t"]
+    if th is not None and not th.is_alive():
+        if _FETCH["ok"]:
+            sh("git", "checkout", "FETCH_HEAD", "--", "docs/ayarlar.json")
+            sh("git", "reset", "-q", "docs/ayarlar.json")
+            rev = code_rev("FETCH_HEAD")
+        _FETCH["t"] = None
+    if _FETCH["t"] is None:
+        _FETCH["t"] = threading.Thread(target=_fetch_main, daemon=True)
+        _FETCH["t"].start()
+    return rev
 
 
 def read_json(path):
@@ -190,6 +204,7 @@ def main():
             if errors >= 5:
                 raise  # üst üste hata: oturum biter, bir dakika sonra yenisi başlar
         took = time.time() - t0
+        run.PERF["turn"] = round(took, 2)
         if took > STEP:
             print(f"Uzun tur: {took:.1f} sn")
         time.sleep(max(1, STEP - took))

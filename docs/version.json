@@ -1,7 +1,7 @@
 {
-  "version": "1.37.0",
+  "version": "1.38.0",
   "date": "2026-11-19",
   "notes": [
-    "Bulut: eşitleme simgesi, bildirim geçmişi ve dil/tema bulutta; günlük özet saati ayarlanır"
+    "Hız: bot turu hızlandı, sürekli otomatik eşitleme (2 sn), uygulama kodu önbellekten anında açılır"
   ]
 }

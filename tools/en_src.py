@@ -376,8 +376,9 @@ EN = {
     "Saat {0}": "At {0}", "Özet saati": "Summary time", "Günlük özet bu saatte gelir": "The daily summary arrives at this hour",
     "Bulut eşitleme": "Cloud sync", "Eşitlendi": "Synced", "Bağlantı yok, son veri gösteriliyor": "No connection, showing last data",
     "Son eşitleme": "Last sync", "Botun son kaydı": "Bot's last save", "Otomatik yedek": "Auto backup",
-    "Bot her işlemde ve en geç {0} saniyede bir bütün kayıtları buluta ({1}) yedekler. Uygulama birkaç saniyede bir bakar, değişiklik varsa hemen yeniler. Ayarlar":
-        "The bot backs up all records to the cloud ({1}) on every action and at least every {0} seconds. The app checks every few seconds and refreshes right away on changes. Settings are written to the cloud when you tap",
+    "Bot her işlemde ve en geç {0} saniyede bir bütün kayıtları buluta ({1}) yedekler. Uygulama buluta sürekli bakar, değişiklik olunca hemen yeniler; fiyatlar {2} saniyede bir borsadan canlı gelir. Ayarlar":
+        "The bot backs up all records to the cloud ({1}) on every action and at least every {0} seconds. The app watches the cloud constantly and refreshes on any change; prices come live from the exchange every {2} seconds. Settings are written to the cloud when you tap",
+    "Otomatik eşitleme": "Auto sync", "Her zaman açık · {0} sn": "Always on · {0} s", "Botun tur süresi": "Bot cycle time", "{0} sn": "{0} s",
     "'e basınca buluta yazılır.": ".", "Şimdi eşitle": "Sync now", "Eşitlenemedi, bağlantını kontrol et": "Couldn't sync, check your connection",
     "Bulut": "Cloud", "Bulut: eşitlendi": "Cloud: synced", "Bulut: bağlantı yok": "Cloud: no connection",
 }
