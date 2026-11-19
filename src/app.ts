@@ -1,8 +1,8 @@
-const APP_VERSION='1.38.1';
+const APP_VERSION='1.38.2';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
-let S: Summary = null, B: Backtest = null, sel = 'live' as StrategyKey, view: 'live' | 'bt' = 'live', selPicked = false;
+let S: Summary = null, B: Backtest = null, sel = 'live' as StrategyKey, view: 'live' | 'bt' = 'live';
 
 function localStore(k: string, v?: string): string | null {try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
 const nf=(v,d=2)=>new Intl.NumberFormat('tr-TR',{minimumFractionDigits:d,maximumFractionDigits:d}).format(v);
@@ -131,7 +131,7 @@ async function load(quiet?: boolean) {lastLoad=Date.now();offlineData=false;clea
   try{
     // açılışta son kayıtlı veri hemen gösterilir (bekleme yok), taze veri gelince yerine yazılır
     if(!S){try{const c=localStorage.getItem(CACHE_KEY+'summary.json');if(c){S=JSON.parse(c);B=JSON.parse(localStorage.getItem(CACHE_KEY+'backtest.json')||'null');await openLive();
-      if(!selPicked&&S.strategies.live)sel='live';if(!S.strategies[sel])sel=Object.keys(S.strategies)[0] as StrategyKey;render();hideSplash()}}catch(e){S=null}}
+      if(S.strategies.live)sel='live';if(!S.strategies[sel])sel=Object.keys(S.strategies)[0] as StrategyKey;render();hideSplash()}}catch(e){S=null}}
     // geçmiş test haftada bir değişir: 10 dakikada bir yeterli
     const needB=!B||Date.now()-lastB>6e5;
     const [s,b]=await Promise.all([getData('summary.json'),needB?getData('backtest.json').catch(()=>null):Promise.resolve(B)]);
@@ -140,9 +140,9 @@ async function load(quiet?: boolean) {lastLoad=Date.now();offlineData=false;clea
     syncMark(!offlineData);
     // dil ve tema buluttan: başka cihazda değiştirildiyse bu cihaz da uyar (az önce burada değiştirildiyse bekler)
     {const st=S.settings as any,recent=Date.now()-+(localStore('masal_pref_ts')||0)<180000;
-     if(st&&!recent){if(st.theme&&st.theme!==themeMode())setTheme(st.theme);if(st.lang&&st.lang!==LANG){setLang(st.lang);return}}}
+     if(st&&!recent){if(st.theme&&st.theme!==themeMode())setTheme(st.theme);if(st.lang&&st.lang!==LANG){localStore('masal_pref_ts',String(Date.now()));setLang(st.lang);return}}}
     nMerge();
-    if(offlineData){err.innerHTML=`Bağlantı kurulamadı; <b>${dt(S.updated)}</b> tarihli son veri gösteriliyor. Kendiliğinden yeniden deneniyor…`;err.style.display='block';retryTimer=setTimeout(()=>load(true),15000)}if(!selPicked&&S.strategies.live)sel='live';if(!S.strategies[sel])sel = Object.keys(S.strategies)[0] as StrategyKey;render();pollMarket();startNotes();
+    if(offlineData){err.innerHTML=`Bağlantı kurulamadı; <b>${dt(S.updated)}</b> tarihli son veri gösteriliyor. Kendiliğinden yeniden deneniyor…`;err.style.display='block';retryTimer=setTimeout(()=>load(true),15000)}if(S.strategies.live)sel='live';if(!S.strategies[sel])sel = Object.keys(S.strategies)[0] as StrategyKey;render();pollMarket();startNotes();
   }catch(e){syncMark(false);console.error(e);err.textContent='Veriler alınamadı (bağlantı ya da VPN). Kendiliğinden yeniden deneniyor…';err.style.display='block';retryTimer=setTimeout(()=>load(true),10000)}
   finally{btn.classList.remove('spin');hideSplash();cloudUI()}
 }
@@ -160,20 +160,10 @@ function render(){
      :`<span class="mi">${ic('i-flask')}</span><span><b>Deneme</b><small>Emir gitmez</small></span>`;
    m.onclick=()=>document.getElementById('openSet').click()}
   document.getElementById('foot').innerHTML='Fiyatlar uygulama açıkken OKX TR\'den anlık güncellenir; bot kesintisiz çalışır, yaklaşık 5 saniyede bir kontrol eder.<br>'+(L&&L.armed?'Ekrandaki rakamlar OKX TR hesabındaki gerçek işlemlerdir.':'Gerçek para kullanılmıyor; tüm işlemler sanal.');
-  const keys = (Object.keys(S.strategies) as StrategyKey[]).sort((a, b) => Number(b === 'live') - Number(a === 'live'));
-  const virt=keys.filter(k=>k!=='live');
-  const tg=document.getElementById('tiles');tg.style.gridTemplateColumns=`repeat(${Math.max(1,virt.length)},minmax(0,1fr))`;
-  tg.innerHTML=virt.map(k=>{const v=S.strategies[k];
-    return `<button class="tile ${k===sel?'on':''}" data-k="${k}"><span class="ic">${ic(ICON[k])}</span><span class="nm">${v.name}</span><span class="pc ${cls(v.pnl_pct)}">${spc(v.pnl_pct)}</span></button>`}).join('');
-  tg.querySelectorAll<HTMLElement>('.tile').forEach(el=>el.onclick=()=>pick(el.dataset.k as StrategyKey));
-  // gerçek hesap açıkken sanal karşılaştırma gizli (kullanıcı isteği: ekran sade kalsın)
-  {const cmp=document.querySelector<HTMLElement>('[data-adv=cmp]');const hideV=!!(S.strategies.live&&!S.strategies.live.locked)||!virt.length;if(cmp)cmp.hidden=hideV;if(hideV&&sel!=='live'){sel='live'}}
-  {const best=virt.slice().sort((a,b)=>S.strategies[b].pnl_pct-S.strategies[a].pnl_pct)[0];
-   document.getElementById('cmpSum').textContent=virt.length?`Her biri ${tl(S.strategies[virt[0]].start_cash||10000,0)} sanal parayla · önde: ${S.strategies[best].name} ${spc(S.strategies[best].pnl_pct)}`:'—'}
+  if(S.strategies.live&&sel!=='live')sel='live'; // sanal stratejiler kapalı: her zaman gerçek hesap
   const x=S.strategies[sel];
   const locked=!!x.locked;
   document.getElementById('chartSec').hidden=locked;
-  document.getElementById('desc').textContent=sel==='live'?'Bir kartı seçince üstteki özet o stratejiyi gösterir.':x.desc;
   if(locked){
     document.getElementById('hero').className='hero';
     document.getElementById('hero').innerHTML=`<div class="hh"><span class="hn">${ic('i-lock')}Gerçek hesap</span></div><div class="lock" style="margin-top:10px"><b>${ic('i-lock')}Veriler şifreli</b>
@@ -207,8 +197,6 @@ function render(){
   renderRules(x.risk||S.risk,x.cfg);
   renderMarket();
 }
-function pick(k: StrategyKey){sel=k;selPicked=true;localStore('masal_sel',sel);render();pollMarket();
-  if(k!=='live')window.scrollTo({top:0,behavior:'smooth'})}
 
 /* ---------- açıklamalar ("?" düğmeleri) ---------- */
 const pp=(v,d=1)=>'%'+nf(v*100,Math.round(v*1000)%10?d:0);
@@ -415,7 +403,7 @@ function renderMetrics(x: Strategy){
   const tag=live?(x.armed?`<span class="pill real"><i></i>Gerçek para</span>`:`<span class="pill demo">${ic('i-flask')}Deneme</span>`):`<span class="pill virt">${ic('i-layers')}Sanal</span>`;
   const big=nf(eq,2).split(',');
   let h=`<div class="hh"><span class="hn">${ic(live?'i-wallet':ICON[sel])}${live?'Gerçek hesap':x.name}</span>${tag}
-    ${live?'':`<button class="back" id="backLive">${ic('i-back')}Gerçek hesap</button>`}</div>
+    </div>
     <div class="big">${big[0]}<small>,${big[1]} TL</small></div>
     <div class="chg"><span class="${cls(pnl)}"><em>Toplam</em>${sgn(pnl)} TL · ${spc(pct)}</span><span class="${cls(today)}"><em>Bugün</em>${sgn(today)} TL</span></div>
     <div class="hk"><div><span>Boşta nakit</span><b>${tl(x.cash,0)}</b></div><div><span>Coinlerde</span><b>${tl(inCoins,0)}</b></div>
@@ -427,7 +415,6 @@ function renderMetrics(x: Strategy){
       <div class="uh">${x.positions.length}/${w.max_coins} coin · ${x.trades} kapanan işlem · başlangıç ${tl(x.start_cash,0)}</div></div>`}
   else h+=`<div class="use">${live?'':`<div class="uh" style="color:var(--text);font-size:12.5px;line-height:1.45">${x.desc}</div>`}<div class="uh">${x.trades} kapanan işlem · başlangıç ${tl(x.start_cash,0)}${live?'':' (sanal para)'}</div></div>`;
   hero.innerHTML=h;
-  const bl=document.getElementById('backLive');if(bl)bl.onclick=()=>pick('live');
 }
 
 const ICON_BAD = new Set<string>(), ICON_OK = new Set<string>();
@@ -710,8 +697,6 @@ function updateChecks(){const el=document.getElementById('checks');if(!el||!draf
   const b=document.getElementById('runTest');if(b)b.onclick=()=>{const s0=clean(draft);delete s0.test_req;delete s0._bad;
     const keep=JSON.parse(JSON.stringify(orig));keep.test_req={ts:Date.now(),s:s0};
     save(keep,'Test istendi; sonuç 3–4 dakikada burada görünür. Ayarların değişmedi.',true)}}
-function sizeWarn(){const b=draft.budget||0,st=draft.strategy;const v=st==='grid'?b*draft.grid.lot_pct/100:b*draft.risk.trade_pct/100;
-  return v<MIN_ORDER?`<div class="warn" style="background:var(--red-bg);color:var(--red)">${ic('i-info')}<div>Alım tutarı ${tl(v,2)} çıkıyor. Bot ${MIN_ORDER} TL'nin altındaki emirleri göndermez; bu ayarla <b>hiç alım yapılmaz</b>. Bottaki parayı artır ya da ${st==='grid'?'kademe büyüklüğünü':'işlem büyüklüğünü'} yükselt.</div></div>`:''}
 const SECTIONS=[
  {t:'Kasa',i:'i-wallet',f:[
   ['budget','Bottaki başlangıç parası','Botun işlem yaptığı para','TL',100,100,1e7,0],
@@ -949,19 +934,20 @@ async function loadSettings(){
 }
 
 /** Ayarlardaki tek bir şeyi buluta yazar (bekleyen başka değişikliklere dokunmadan): dil, tema, bildirim temizleme. */
-async function cloudPatch(fn: (o: Settings) => void, msg: string): Promise<boolean> {
+async function cloudPatch(fn: (o: Settings) => void, msg: string, retry = true): Promise<boolean> {
   if (!token) return false;
   try {
     const cur = await tfetch(API + '?t=' + Date.now(), {headers: {Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json'}, cache: 'no-store'}).then(r => { if (!r.ok) throw r.status; return r.json(); });
     const o = JSON.parse(decodeURIComponent(escape(atob(cur.content.replace(/\n/g, ''))))); fn(o);
     const body = {message: msg, content: btoa(unescape(encodeURIComponent(JSON.stringify(o, null, 2) + '\n'))), sha: cur.sha, branch: 'main'};
     const r = await tfetch(API, {method: 'PUT', headers: {Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+    if (r.status === 409 && retry) return cloudPatch(fn, msg, false); // aynı anda başka kayıt: güncel hâli alıp bir kez daha dene
     if (!r.ok) throw r.status; sha = (await r.json()).content.sha;
     if (orig) fn(orig); if (draft) fn(draft); if (S?.settings) fn(S.settings);
     return true;
   } catch (e) { return false; }
 }
-async function save(obj?: Settings, msg?: string, keepDraft?: boolean) {
+async function save(obj?: Settings, msg?: string, keepDraft?: boolean, retry = true) {
   if(!token){toast('Kaydetmek için önce GitHub bağlantısını kur');document.getElementById('connSec').scrollIntoView({behavior:'smooth'});return}
   if(draft._bad&&draft._bad.size&&obj===undefined){toast('Kırmızı alanları düzelt');return}
   const data=obj||clean(draft),btn=document.getElementById('save');btn.textContent='Kaydediliyor…';
@@ -969,6 +955,7 @@ async function save(obj?: Settings, msg?: string, keepDraft?: boolean) {
     const cur=await tfetch(API+'?t='+Date.now(),{headers:{Authorization:'Bearer '+token,Accept:'application/vnd.github+json'},cache:'no-store'}).then(r=>{if(!r.ok)throw r.status;return r.json()});
     const body={message:'Ayarlar uygulamadan güncellendi',content:btoa(unescape(encodeURIComponent(JSON.stringify(data,null,2)+'\n'))),sha:cur.sha,branch:'main'};
     const r=await tfetch(API,{method:'PUT',headers:{Authorization:'Bearer '+token,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(r.status===409&&retry){btn.innerHTML=ic('i-check')+'Kaydet';return save(obj||data,msg,keepDraft,false)} // çakışma: güncel sürümle bir kez daha
     if(!r.ok)throw r.status;sha=(await r.json()).content.sha;const prev=keepDraft?clean(draft):null;orig=JSON.parse(JSON.stringify(data));draft=JSON.parse(JSON.stringify(data));
     if(prev)for(const k in prev)if(k!=='test_req')draft[k]=prev[k];
     renderForm();if(S)render();toast(msg||'Kaydedildi. Bot birkaç saniye içinde yeni ayarlarla çalışır.');

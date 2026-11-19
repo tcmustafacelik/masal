@@ -1,7 +1,7 @@
 {
-  "version": "1.38.1",
+  "version": "1.38.2",
   "date": "2026-11-19",
   "notes": [
-    "Veri küçüldü: sanal stratejiler kapandı, eşitleme daha hızlı"
+    "Temizlik: eski sanal strateji kodu kaldırıldı, kayıt çakışmasında otomatik yeniden deneme"
   ]
 }
