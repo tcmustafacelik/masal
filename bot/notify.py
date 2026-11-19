@@ -67,6 +67,10 @@ class Notifier:
         if self.on and self.topic and self.cats.get(cat, True):
             if self.en:
                 title, message = to_en(title), to_en(message)
+            # Öncelik en az 4: telefon uykudayken (Doze) normal öncelikli bildirimler uygulama açılana kadar
+            # bekletilebiliyor; yüksek öncelik anında iletilir. Günlük özet acil değil, normal kalır.
+            if cat != "daily":
+                priority = max(priority, 4)
             self.queue.append({"topic": self.topic, "title": title, "message": message,
                                "priority": priority, "tags": tags or []})
 
