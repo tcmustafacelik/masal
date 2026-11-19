@@ -19,13 +19,20 @@ def _key(pw, salt):
     return hashlib.pbkdf2_hmac("sha256", pw.encode(), salt, ITER, 32)
 
 
+_SEAL = {}  # oturum boyunca aynı tuz ve anahtar: PBKDF2 (150 bin tur) her kayıtta yeniden hesaplanmaz
+
+
 def seal(obj, pw=None):
     pw = pw if pw is not None else password()
     if not pw:
         return obj
     from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-    salt, iv = os.urandom(16), os.urandom(12)
-    ct = AESGCM(_key(pw, salt)).encrypt(iv, json.dumps(obj, ensure_ascii=False, separators=(",", ":")).encode(), None)
+    if pw not in _SEAL:
+        salt = os.urandom(16)
+        _SEAL[pw] = (salt, _key(pw, salt))
+    salt, key = _SEAL[pw]
+    iv = os.urandom(12)  # her kayıtta yeni IV (AES-GCM güvenliği için şart)
+    ct = AESGCM(key).encrypt(iv, json.dumps(obj, ensure_ascii=False, separators=(",", ":")).encode(), None)
     b = lambda x: base64.b64encode(x).decode()
     return {"enc": 1, "iter": ITER, "salt": b(salt), "iv": b(iv), "ct": b(ct)}
 

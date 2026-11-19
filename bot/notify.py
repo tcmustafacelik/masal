@@ -1,8 +1,48 @@
 """Telefona bildirim: ntfy.sh üzerinden. Konu adı ayarlarda şifreli saklanır."""
 import json
+import os
+import re
 import urllib.request
 
 from . import vault
+
+
+_TOK = re.compile(r"[+−-]?%?\d[\d.,:]*%?|\b[A-Z][A-Z0-9]{1,11}\b")
+_EN = None
+
+
+def _en_num(v):
+    if re.fullmatch(r"\d+\.", v):  # sıra sayısı: "2." → "2" (İngilizcede "step 2")
+        return v[:-1]
+    if re.search(r"\.(\d{1,2}|\d{4,})(?!\d)", v):  # tarih (19.11), sayı değil
+        return v
+    if not re.fullmatch(r"[+−-]?%?[\d.,]+%?", v) or ":" in v:
+        return v
+    pct = "%" in v
+    x = v.replace("%", "").replace(".", "\x01").replace(",", ".").replace("\x01", ",")
+    return x + "%" if pct else x
+
+
+def to_en(text):
+    """Uygulamayla aynı sözlük (docs/en.json) ve aynı kalıp yöntemiyle İngilizceye çevirir; bulunamazsa aynen bırakır."""
+    global _EN
+    if _EN is None:
+        try:
+            with open(os.path.join(os.path.dirname(__file__), "..", "docs", "en.json"), encoding="utf-8") as f:
+                _EN = json.load(f)
+        except Exception:
+            _EN = {}
+    out = []
+    for line in str(text).split("\n"):
+        core = " ".join(line.split())
+        if core in _EN:
+            out.append(_EN[core])
+            continue
+        vals = []
+        key = _TOK.sub(lambda m: (vals.append(m.group(0)), "{%d}" % (len(vals) - 1))[1], core)
+        e = _EN.get(key)
+        out.append(re.sub(r"\{(\d+)\}", lambda m: _en_num(vals[int(m.group(1))]), e) if e is not None else line)
+    return "\n".join(out)
 
 
 class Notifier:
@@ -17,9 +57,12 @@ class Notifier:
             except ValueError as e:
                 print("Bildirim konusu çözülemedi:", e)
         self.queue = []
+        self.en = S.get("lang") == "en"
 
     def add(self, cat, title, message, priority=3, tags=None):
         if self.on and self.topic and self.cats.get(cat, True):
+            if self.en:
+                title, message = to_en(title), to_en(message)
             self.queue.append({"topic": self.topic, "title": title, "message": message,
                                "priority": priority, "tags": tags or []})
 
@@ -53,6 +96,9 @@ def heartbeat(n, minutes=10):
          "message": f"Masal botu {minutes} dakikadır çalışmıyor. Uygulamayı açıp kontrol et. "
                     "OKX'teki kâr al / zarar durdur emirleri çalışmaya devam ediyor.",
          "delay": f"{minutes}m", "sequence_id": HB_ID}
+    if n.en:
+        m["title"], m["message"] = "Bot stopped", (f"The Masal bot has not run for {minutes} minutes. Open the app to check. "
+                                                    "Take-profit / stop-loss orders on OKX keep working.")
     try:
         urllib.request.urlopen(urllib.request.Request("https://ntfy.sh/", data=json.dumps(m).encode(), method="POST",
                                                       headers={"Content-Type": "application/json", "User-Agent": "masal/1.0"}),

@@ -429,7 +429,7 @@ def main():
               "Bot sadece spot (nakit) işlem yapar ama hesapta borç kaydı var. OKX'te Varlıklar bölümünü kontrol et.", 5, ["warning"])
     if L["armed"] and state["okx"].get("quote_ok") is False and live._once_per_day("quote"):
         N.add("alerts", f"{config.QUOTE} paritesinde işlem yapılamıyor",
-              f"OKX, {config.QUOTE} paritesinde emir iznini reddetti: {state['okx'].get('quote_err', '')}. Bot TL'deki coinleri yönetmeye devam eder.",
+              f"OKX, {config.QUOTE} paritesinde emir iznini reddetti: {tr_err(state['okx'].get('quote_err', ''))}. Bot TL'deki coinleri yönetmeye devam eder.",
               5, ["warning"])
     if L["armed"] and not state["okx"]["ok"] and (prev.get("ok") or live._once_per_day("okx")):
         N.add("alerts", "OKX bağlantısı çalışmıyor",

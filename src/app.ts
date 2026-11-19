@@ -1,4 +1,4 @@
-const APP_VERSION='1.35.3';
+const APP_VERSION='1.36.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -18,11 +18,71 @@ function ago(ts){const m=Math.round((Date.now()-ts)/60000);if(m<1)return 'az ön
 const ic=(id,c='i')=>`<svg class="${c}"><use href="#${id}"/></svg>`;
 const sym=inst=>inst.split('-')[0];
 
+/* ---------- dil: varsayılan Türkçe; İngilizce seçilince ekrandaki yazılar sözlükle (docs/en.json) çevrilir ----------
+   Kodda bütün yazılar Türkçe kalır. Çeviri, ekrana gelen her yazıya uygulanır: sayılar ve coin adları yer tutucu
+   olur ({0}, {1}…), kalıp sözlükte aranır, sayılar İngilizce biçime (1,234.5 · 1.5%) çevrilerek geri konur. */
+let LANG: 'tr' | 'en' = (localStore('masal_lang') === 'en' ? 'en' : 'tr');
+let EN: Record<string, string> = {};
+const I18N_TOK = /[+−-]?%?\d[\d.,:]*%?|\b[A-Z][A-Z0-9]{1,11}\b/g;
+const I18N_MISS = new Set<string>();
+function enNum(v: string): string {
+  if (/^\d+\.$/.test(v)) return v.slice(0, -1); // sıra sayısı: "2." → "2"
+  if (/\.(\d{1,2}|\d{4,})(?!\d)/.test(v)) return v; // nokta 3 haneyi ayırmıyorsa tarih (19.11), sayı değil
+  if (!/\d/.test(v) || v.includes(':') || !/^[+−-]?%?[\d.,]+%?$/.test(v)) return v;
+  const pct = v.includes('%'); let x = v.replace(/%/g, '');
+  x = x.replace(/\./g, '\u0001').replace(/,/g, '.').replace(/\u0001/g, ',');
+  return pct ? x + '%' : x;
+}
+function trKey(core: string): [string, string[]] { const vals: string[] = []; let n = 0;
+  const key = core.replace(I18N_TOK, m => { vals.push(m); return '{' + (n++) + '}'; }); return [key, vals]; }
+function tx(s: string): string {
+  if (LANG === 'tr' || !s) return s;
+  const core = s.replace(/\s+/g, ' ').trim(); if (!core) return s;
+  if (EN[core] != null) return s.replace(s.trim(), EN[core]);
+  const [key, vals] = trKey(core); const e = EN[key];
+  if (e == null) {
+    // sadece sayı/kısaltma olan yazılar (15.644 · %73 · ,04 TL): sayılar İngilizce biçime çevrilir
+    if (!/[a-zçğıöşü]/.test(key)) return s.replace(/^(\s*),(?=\d)/, '$1.').replace(I18N_TOK, m => enNum(m));
+    I18N_MISS.add(key); return s;
+  }
+  const lead = s.match(/^\s*/)[0], tail = s.match(/\s*$/)[0];
+  return lead + e.replace(/\{(\d+)\}/g, (_, i) => enNum(vals[+i] ?? '')) + tail;
+}
+const I18N_DONE = new WeakMap<Node, string>();
+function txNode(root: Node) {
+  if (LANG === 'tr') return;
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+  let n: Node | null = root;
+  while (n) {
+    if (n.nodeType === 3) {
+      const p = n.parentElement?.tagName; const t = n as Text;
+      if (p !== 'SCRIPT' && p !== 'STYLE' && I18N_DONE.get(t) !== t.data) { const v = tx(t.data); if (v !== t.data) t.data = v; I18N_DONE.set(t, t.data); }
+    } else if (n.nodeType === 1) {
+      const el = n as Element;
+      for (const a of ['aria-label', 'placeholder', 'title']) { const v = el.getAttribute(a); if (v) { const nv = tx(v); if (nv !== v) el.setAttribute(a, nv); } }
+    }
+    n = w.nextNode();
+  }
+}
+async function initLang() {
+  document.documentElement.lang = LANG;
+  if (LANG === 'tr') return;
+  try { EN = await tfetch('en.json?v=' + APP_VERSION, {cache: 'no-cache'}).then(r => r.json()); } catch (e) { EN = {}; }
+  txNode(document.body);
+  new MutationObserver(ms => { for (const m of ms) { if (m.type === 'characterData') txNode(m.target); else m.addedNodes.forEach(a => txNode(a)); } })
+    .observe(document.body, {subtree: true, childList: true, characterData: true});
+}
+(window as any).__miss = I18N_MISS;
+function setLang(l: 'tr' | 'en') { localStore('masal_lang', l); location.reload(); }
+
 /* ---------- şifreleme (bot ile aynı: PBKDF2-SHA256 + AES-GCM) ---------- */
 const b64d=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0)),b64e=u=>btoa(String.fromCharCode(...new Uint8Array(u)));
 async function deriveKey(pw,salt,iter){const km=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveKey']);
   return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:iter,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['encrypt','decrypt'])}
-async function unseal(box: Sealed, pw: string): Promise<any> {const k=await deriveKey(pw,b64d(box.salt),box.iter||150000);
+const KEYS=new Map<string,Promise<CryptoKey>>(); // aynı tuz için anahtar bir kez türetilir (bot oturum boyunca aynı tuzu kullanır)
+async function unseal(box: Sealed, pw: string): Promise<any> {const id=pw+'|'+box.salt+'|'+(box.iter||150000);
+  if(!KEYS.has(id)){if(KEYS.size>20)KEYS.clear();KEYS.set(id,deriveKey(pw,b64d(box.salt),box.iter||150000))}
+  let k:CryptoKey;try{k=await KEYS.get(id)}catch(e){KEYS.delete(id);throw e}
   return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:b64d(box.iv)},k,b64d(box.ct))))}
 async function seal(obj: unknown, pw: string, iter = 150000): Promise<Sealed> {const salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12));
   const k=await deriveKey(pw,salt,iter);const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},k,new TextEncoder().encode(JSON.stringify(obj)));
@@ -57,7 +117,7 @@ async function getData<T = any>(f: string): Promise<T> {
   throw new Error('veri alınamadı');
 }
 let offlineData = false, retryTimer: ReturnType<typeof setTimeout> = null;
-let lastLoad=0,dataSha='';
+let lastLoad=0,dataSha='',lastB=0;
 // Botun her kaydı "data" dalında yeni bir sürüm oluşturur; uygulama 4 saniyede bir bakar, değiştiyse hemen yeniler
 async function watchData(){if(document.hidden||!S)return;
   if(token){try{const r=await tfetch(`https://api.github.com/repos/${REPO.o}/${REPO.r}/commits/data?t=${Date.now()}`,{headers:{Authorization:'Bearer '+token,Accept:'application/vnd.github.sha'},cache:'no-store'});
@@ -69,7 +129,13 @@ async function load(quiet?: boolean) {lastLoad=Date.now();offlineData=false;clea
   const btn=document.getElementById('reload');if(!quiet)btn.classList.add('spin');
   const err=document.getElementById('err');err.style.display='none';
   try{
-    const [s,b]=await Promise.all([getData('summary.json'),getData('backtest.json').catch(()=>null)]);
+    // açılışta son kayıtlı veri hemen gösterilir (bekleme yok), taze veri gelince yerine yazılır
+    if(!S){try{const c=localStorage.getItem(CACHE_KEY+'summary.json');if(c){S=JSON.parse(c);B=JSON.parse(localStorage.getItem(CACHE_KEY+'backtest.json')||'null');await openLive();
+      if(!selPicked&&S.strategies.live)sel='live';if(!S.strategies[sel])sel=Object.keys(S.strategies)[0] as StrategyKey;render();hideSplash()}}catch(e){S=null}}
+    // geçmiş test haftada bir değişir: 10 dakikada bir yeterli
+    const needB=!B||Date.now()-lastB>6e5;
+    const [s,b]=await Promise.all([getData('summary.json'),needB?getData('backtest.json').catch(()=>null):Promise.resolve(B)]);
+    if(needB)lastB=Date.now();
     S=s;B=b;await openLive();
     if(offlineData){err.innerHTML=`Bağlantı kurulamadı; <b>${dt(S.updated)}</b> tarihli son veri gösteriliyor. Kendiliğinden yeniden deneniyor…`;err.style.display='block';retryTimer=setTimeout(()=>load(true),15000)}if(!selPicked&&S.strategies.live)sel='live';if(!S.strategies[sel])sel = Object.keys(S.strategies)[0] as StrategyKey;render();pollMarket();startNotes();
   }catch(e){console.error(e);err.textContent='Veriler alınamadı (bağlantı ya da VPN). Kendiliğinden yeniden deneniyor…';err.style.display='block';retryTimer=setTimeout(()=>load(true),10000)}
@@ -442,7 +508,8 @@ async function pollMarket(){
       renderMarket();updLine();
     }catch(e){document.getElementById('liveTag').classList.remove('on')}
     mkBusy=false}
-  mkTimer=setTimeout(pollMarket,2000);
+  // ana ekran açıkken 2 sn'de bir; ayarlar ya da geçmiş açıkken fiyat gösterilmediği için seyrek (veri tasarrufu)
+  mkTimer=setTimeout(pollMarket,document.getElementById('mainv').hidden?8000:2000);
 }
 let okxDown=false;
 function renderMarket(){
@@ -850,7 +917,7 @@ async function save(obj?: Settings, msg?: string, keepDraft?: boolean) {
 let toastT;function toast(t){const el=document.getElementById('toast');el.textContent=t;el.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>el.hidden=true,3800)}
 let HIST: Trade[] = null, hCoin = '', hSide: '' | Side = '';
 function showHist(on){document.getElementById('mainv').hidden=on;document.getElementById('histv').hidden=!on;
-  document.querySelector('header').hidden=on;scrollTo(0,0)}
+  document.querySelector('header').hidden=on;scrollTo(0,0);if(!on)pollMarket()}
 async function openHistory(){hCoin='';hSide='';showHist(true);
   const body=document.getElementById('histBody');body.innerHTML=`<div class="empty">${ic('i-refresh')}<div>Yükleniyor…</div></div>`;
   const x=S.strategies[sel];document.getElementById('histTitle').textContent='İşlem geçmişi · '+(x?.name||'');
@@ -872,7 +939,7 @@ function renderHist(){const body=document.getElementById('histBody');const all=H
   let day='';
   for(const t of rows){const d=new Date(t.ts),dk=d.toDateString();
     if(dk!==day){if(day)h+='</div>';day=dk;const dp=rows.filter(r=>new Date(r.ts).toDateString()===dk&&r.side==='SAT').reduce((a,r)=>a+(r.pnl||0),0);
-      h+=`<div class="dayh"><span>${d.toLocaleDateString('tr-TR',{day:'numeric',month:'long',weekday:'long'})}</span>${dp?`<b class="${cls(dp)}">${sgn(dp)} TL</b>`:''}</div><div class="card list">`}
+      h+=`<div class="dayh"><span>${d.toLocaleDateString(LANG==='en'?'en-GB':'tr-TR',{day:'numeric',month:'long',weekday:'long'})}</span>${dp?`<b class="${cls(dp)}">${sgn(dp)} TL</b>`:''}</div><div class="card list">`}
     const sell=t.side==='SAT',hm=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
     h+=`<div class="row">${cico(t.inst,t.side,t.pnl<0)}<div class="mid"><b>${sym(t.inst)}${pq(t.inst)} ${sell?'satıldı':'alındı'}</b><span>${hm} · ${t.reason} · ${px(t.price)}</span></div>
       <div class="end"><b>${tl(t.amount,0)}</b>${sell?`<span class="plc ${cls(t.pnl)||'z'}">${sgn(t.pnl)} TL ${t.pnl>=0?'kâr':'zarar'}</span>`:`<span>harcandı</span>`}</div></div>`}
@@ -884,7 +951,7 @@ function renderHist(){const body=document.getElementById('histBody');const all=H
 document.getElementById('histBtn').onclick=openHistory;
 document.getElementById('closeHist').onclick=()=>showHist(false);
 function showSettings(on){document.getElementById('mainv').hidden=on;document.getElementById('setv').hidden=!on;
-  document.querySelector('header').hidden=on;scrollTo(0,0);if(on)loadSettings()}
+  document.querySelector('header').hidden=on;scrollTo(0,0);if(on)loadSettings();else pollMarket()}
 document.getElementById('openSet').onclick=()=>showSettings(true);
 document.getElementById('closeSet').onclick=()=>{if(draft&&JSON.stringify(orig)!==JSON.stringify(clean(draft))&&!confirmLeave())return;showSettings(false)};
 let leaveArm=0;function confirmLeave(){if(leaveArm)return true;leaveArm=1;toast('Kaydedilmemiş değişiklik var. Çıkmak için geri tuşuna tekrar dokun.');setTimeout(()=>leaveArm=0,3500);return false}
@@ -941,18 +1008,22 @@ function setTheme(m){try{localStorage.setItem('masal-tema',m)}catch(e){}applyThe
 darkMQ.addEventListener?.('change',applyTheme);applyTheme();
 function installSection(){
   const tmn={light:'Açık',dark:'Koyu',auto:'Otomatik'}[themeMode()];
-  let h=accOpen('app','Uygulama','i-phone','gray',`Sürüm ${APP_VERSION} · tema ${tmn}${remoteVer&&vcmp(remoteVer.version,APP_VERSION)>0?' · yeni sürüm var':''}`,false)+`<div class="card">`;
+  let h=accOpen('app','Uygulama','i-phone','gray',`Sürüm ${APP_VERSION} · tema ${tmn} · ${LANG==='en'?'English':'Türkçe'}${remoteVer&&vcmp(remoteVer.version,APP_VERSION)>0?' · yeni sürüm var':''}`,false)+`<div class="card">`;
   if(standalone())h+=`<div style="display:flex;gap:8px;align-items:center;color:var(--green);font-weight:600;font-size:13.5px">${ic('i-check')}Masal ana ekranında uygulama olarak yüklü</div>`;
   else if(installEvt)h+=`<div style="font-size:13px;margin-bottom:10px">Masal'ı ana ekrana ekle; kendi simgesiyle uygulama gibi açılır, internet yokken de son verileri gösterir.</div><button class="btn primary" id="instBtn" style="width:100%">${ic('i-phone')}Ana ekrana ekle</button>`;
   else h+=`<ol class="steps" style="margin-top:0"><li><b>Android (Chrome):</b> sağ üstteki ⋮ → <b>Ana ekrana ekle</b></li><li><b>iPhone (Safari):</b> Paylaş → <b>Ana Ekrana Ekle</b></li><li><b>Bilgisayar (Chrome/Edge):</b> adres çubuğundaki <b>Yükle</b> simgesi</li></ol>`;
   const tm=themeMode();
   h+=`<div class="thh"><b>Tema</b><span>Bu cihazda, anında uygulanır</span></div><div class="tiles" id="themeTiles">${[['light','i-sun','Açık'],['dark','i-moon','Koyu'],['auto','i-auto','Otomatik']].map(([k,i,n])=>`<div class="tile${tm===k?' on':''}" data-th="${k}"><span class="ic">${ic(i)}</span><span class="nm">${n}</span></div>`).join('')}</div>`;
+  h+=`<div class="thh"><b>Dil</b><span>Bu cihazda, anında uygulanır</span></div><div class="tiles two" id="langTiles">${[['tr','TR','Türkçe'],['en','EN','English']].map(([k,g,n])=>`<div class="tile${LANG===k?' on':''}" data-lg="${k}"><span class="ic"><b class="qg">${g}</b></span><span class="nm" data-noi18n>${n}</span></div>`).join('')}</div>`;
   const newer=remoteVer&&vcmp(remoteVer.version,APP_VERSION)>0;
   h+=`<div class="ver"><div><b>Sürüm ${APP_VERSION}</b><span>${newer?'Yeni sürüm hazır: '+remoteVer.version:'Güncel'}${remoteVer?.date?' · '+remoteVer.date.split('-').reverse().join('.'):''}</span></div>
     <button class="btn ${newer?'primary':''}" id="verBtn">${ic('i-refresh')}${newer?'Güncelle':'Denetle'}</button></div>`;
   return h+'</div>'+ACC_END;
 }
-function bindInstall(){document.querySelectorAll<HTMLElement>('#themeTiles .tile').forEach(t=>t.onclick=()=>{setTheme(t.dataset.th);document.querySelectorAll<HTMLElement>('#themeTiles .tile').forEach(x=>x.classList.toggle('on',x===t))});const v=document.getElementById('verBtn');if(v)v.onclick=()=>{if(remoteVer&&vcmp(remoteVer.version,APP_VERSION)>0)applyUpdate();else checkVersion(true)};const b=document.getElementById('instBtn');if(b)b.onclick=async()=>{installEvt.prompt();await installEvt.userChoice;installEvt=null;renderForm()}}
+function bindInstall(){document.querySelectorAll<HTMLElement>('#langTiles .tile').forEach(t=>t.onclick=async()=>{const l=t.dataset.lg as 'tr'|'en';if(l===LANG)return;
+    // bildirimler de aynı dilde gelsin: GitHub bağlıysa dil ayarlara da yazılır (bot okur)
+    if(token&&orig&&(orig.lang||'tr')!==l){const keep=JSON.parse(JSON.stringify(orig));keep.lang=l;await save(keep,'Dil kaydedildi',true)}
+    setLang(l)});document.querySelectorAll<HTMLElement>('#themeTiles .tile').forEach(t=>t.onclick=()=>{setTheme(t.dataset.th);document.querySelectorAll<HTMLElement>('#themeTiles .tile').forEach(x=>x.classList.toggle('on',x===t))});const v=document.getElementById('verBtn');if(v)v.onclick=()=>{if(remoteVer&&vcmp(remoteVer.version,APP_VERSION)>0)applyUpdate();else checkVersion(true)};const b=document.getElementById('instBtn');if(b)b.onclick=async()=>{installEvt.prompt();await installEvt.userChoice;installEvt=null;renderForm()}}
 
 /* ---------- sürüm ---------- */
 let remoteVer=null;
@@ -985,4 +1056,4 @@ if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceW
 document.getElementById('save').onclick=()=>save();
 document.getElementById('undo').onclick=()=>{draft=JSON.parse(JSON.stringify(orig));renderForm()};
 
-(async()=>{await openLink();load()})();
+(async()=>{await initLang();await openLink();load()})();

@@ -12,6 +12,7 @@ PATH = os.path.join(os.path.dirname(__file__), "..", "docs", "ayarlar.json")
 
 DEFAULTS = {
     "live": False,          # True: gerçek emir gönderilir
+    "lang": "tr",           # bildirim dili (uygulamadaki Dil seçimiyle yazılır)
     "paused": False,        # True: gerçek hesapta yeni alım yapılmaz (açık pozisyonlar korunur)
     "liquidate": 0,         # zaman damgası; yeniyse gerçek hesaptaki her şey satılır
     "sell": {"ts": 0, "insts": []},

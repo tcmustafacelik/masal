@@ -116,6 +116,7 @@ interface Settings {
   liquidate: number;
   strategy: Exclude<StrategyKey, 'live'>;
   quote?: string;
+  lang?: string;
   sell?: { ts: number; insts: string[] };
   target?: { on: boolean; amount: number; mode?: string };
   convert?: { ts: number };

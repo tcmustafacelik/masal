@@ -1,7 +1,7 @@
 {
-  "version": "1.35.3",
+  "version": "1.36.0",
   "date": "2026-11-19",
   "notes": [
-    "Temizlik ve hız: kullanılmayan kod ve stiller kaldırıldı, piyasa fiyatları daha hızlı işlenir"
+    "İngilizce dil seçeneği (varsayılan Türkçe); açılış anında son veriyle; daha hızlı şifre çözme ve daha az veri"
   ]
 }
