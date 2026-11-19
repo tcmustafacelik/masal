@@ -13,7 +13,7 @@ BAR_MS = config.BAR_MIN * 60_000  # mum süresi
 
 _GATE = threading.Lock()
 _LAST = [0.0]
-MIN_GAP = 0.07  # istekler arası en az ~70 ms: paralel çekimde OKX'in herkese açık sınırının (20 istek/2 sn) altında kalır
+MIN_GAP = 0.055  # istekler arası en az ~55 ms (~18 istek/sn): OKX mum sınırının (40 istek/2 sn) altında
 
 
 def _throttle():

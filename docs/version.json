@@ -1,7 +1,7 @@
 {
-  "version": "1.38.2",
+  "version": "1.38.3",
   "date": "2026-11-19",
   "notes": [
-    "Temizlik: eski sanal strateji kodu kaldırıldı, kayıt çakışmasında otomatik yeniden deneme"
+    "Eşitleme kontrolü istek hakkı harcamaz; mum yenilemesi hızlandı"
   ]
 }

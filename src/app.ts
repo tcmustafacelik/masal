@@ -1,4 +1,4 @@
-const APP_VERSION='1.38.2';
+const APP_VERSION='1.38.3';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -117,11 +117,14 @@ async function getData<T = any>(f: string): Promise<T> {
   throw new Error('veri alınamadı');
 }
 let offlineData = false, retryTimer: ReturnType<typeof setTimeout> = null;
-let lastLoad=0,dataSha='',lastB=0;
+let lastLoad=0,dataSha='',dataTag='',lastB=0;
 // Botun her kaydı "data" dalında yeni bir sürüm oluşturur; uygulama 2 saniyede bir bakar, değiştiyse hemen yeniler
 async function watchData(){if(document.hidden||!S)return;
-  if(token){try{const r=await tfetch(`https://api.github.com/repos/${REPO.o}/${REPO.r}/commits/data?t=${Date.now()}`,{headers:{Authorization:'Bearer '+token,Accept:'application/vnd.github.sha'},cache:'no-store'});
-    if(r.ok){const sha=(await r.text()).trim();syncMark(true);if(dataSha&&sha!==dataSha)load(true);dataSha=sha}else syncMark(false)}catch(e){syncMark(false)}return}
+  // ETag ile sorulur: değişiklik yoksa GitHub 304 döner ve bu, saatlik istek hakkından düşmez (2 sn'de bir bakmak güvenli)
+  if(token){try{const h:Record<string,string>={Authorization:'Bearer '+token,Accept:'application/vnd.github.sha'};if(dataTag)h['If-None-Match']=dataTag;
+    const r=await tfetch(`https://api.github.com/repos/${REPO.o}/${REPO.r}/commits/data`,{headers:h,cache:'no-store'});
+    if(r.status===304){syncMark(true);return}
+    if(r.ok){dataTag=r.headers.get('ETag')||'';const sha=(await r.text()).trim();syncMark(true);if(dataSha&&sha!==dataSha)load(true);dataSha=sha}else syncMark(false)}catch(e){syncMark(false)}return}
   if(Date.now()-lastLoad>15000)load(true)}
 setInterval(watchData,2000); // otomatik eşitleme her zaman açık: 2 sn'de bir buluta bakılır
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&S)load(true)});
