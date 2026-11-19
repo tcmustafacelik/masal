@@ -1,7 +1,8 @@
 {
-  "version": "1.31.1",
+  "version": "1.31.2",
   "date": "2026-11-19",
   "notes": [
-    "Kademe tutarları ayrı ayrı: 2. kademe 444 TL, 3. kademe 222 TL"
+    "Alıma yakın coinlerde şimdiki fiyat ve alım fiyatı hep birlikte görünür",
+    "Ortalama süresi ayarlanabilir"
   ]
 }

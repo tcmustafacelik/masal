@@ -96,7 +96,7 @@ interface Strategy {
 
 interface WatchItem { i: string; p: number; t: number; g: number; f: boolean; h: number }
 interface Watch { items: WatchItem[]; used: number; cap: number; lot: number; room: boolean; coins: number; max_coins: number }
-interface GridCfg { step: number; lot: number; lot_tp: number; max_lots: number; max_coins: number; stop: number; max_use: number; coin_filter?: number | null; instant?: boolean; step3?: number; lot2?: number; lot3?: number }
+interface GridCfg { step: number; lot: number; lot_tp: number; max_lots: number; max_coins: number; stop: number; max_use: number; coin_filter?: number | null; instant?: boolean; step3?: number; lot2?: number; lot3?: number; sma_h?: number }
 
 interface OkxStatus {
   ok: boolean;
@@ -123,7 +123,7 @@ interface Settings {
   kasa: number;
   topup: { amount: number; profit_pct: number; days: number };
   risk: { trade_pct: number; max_positions: number; stop_pct: number; daily_loss_pct: number; kill_pct: number };
-  grid: { step_pct: number; lot_pct: number; lot_tp_pct: number; max_lots: number; max_coins: number; stop_pct: number; use_pct?: number; trend_filter_pct?: number; instant?: boolean; step3_pct?: number; lot2_pct?: number; lot3_pct?: number };
+  grid: { step_pct: number; lot_pct: number; lot_tp_pct: number; max_lots: number; max_coins: number; stop_pct: number; use_pct?: number; trend_filter_pct?: number; instant?: boolean; step3_pct?: number; lot2_pct?: number; lot3_pct?: number; sma_hours?: number };
   dip: { dip_pct: number; rsi_max: number; take_profit_pct: number; max_hold_hours: number };
   trend: { trailing_pct: number };
   notify: { enabled: boolean; topic: string | Sealed; trades: boolean; alerts: boolean; daily: boolean; money?: boolean };

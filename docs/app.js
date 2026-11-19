@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.31.1';
+const APP_VERSION = '1.31.2';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -273,7 +273,7 @@ function gloss(k) {
     const step = c ? pp(c.step) : '%1,5', tp = c ? pp(c.lot_tp) : '%4', stop = c ? pp(c.stop) : '%12', ml = c ? c.max_lots : 4, mc = c ? c.max_coins : 20, lot = c ? tl(c.lot, 0) : 'bir kademe', use = c ? pp(c.max_use, 0) : '%40', cf = c?.coin_filter ? pp(c.coin_filter) : '%1';
     const G = {
         nasil: ['Bot nasıl alıp satar?', `${c?.instant ? '<p>Bot <b>10 saniyede bir</b> fiyatlara bakar; fiyat alım seviyesine değdiği an alır. Alım seviyesi son kapanan 15 dakikalık mumlara göre hesaplanır.</p>' : '<p>Bot <b>10 saniyede bir</b> piyasaya bakar, kararını <b>15 dakikalık mum</b> kapanınca verir.</p>'}
-      <ul><li><b>Alım:</b> Bir coin son 20 saatin ortalamasından <b>${step}</b> aşağı inince ${lot}'lik bir parça (kademe) alır.</li>
+      <ul><li><b>Alım:</b> Bir coin son ${c?.sma_h || 20} saatin ortalamasından <b>${step}</b> aşağı inince ${lot}'lik bir parça (kademe) alır.</li>
       <li><b>Düşerse:</b> ${step} düşüşte 2. kademeyi${c?.step3 && c.step3 > c.step ? `, ${pp(c.step3)} daha düşüşte 3. kademeyi` : ''} alır; bir coinde en fazla <b>${ml}</b> kademe.${c && ((c.lot2 ?? 1) < 1 || (c.lot3 ?? 1) < 1) ? ` Kademe tutarları: ${tl(c.lot, 0)} → ${tl(c.lot * (c.lot2 ?? 1), 0)} → ${tl(c.lot * (c.lot3 ?? 1), 0)}.` : ''}</li>
       <li><b>Satış:</b> Her kademe kendi alış fiyatının <b>${tp}</b> üstüne çıkınca ayrı satılır.</li>
       <li><b>Zarar kesme:</b> Ortalama maliyetin <b>${stop}</b> altına inerse o coindeki her şey satılır.</li>
@@ -344,7 +344,7 @@ function renderNow(x) {
         st = ['amb', 'i-layers', 'Coin sayısı dolu', `Aynı anda en fazla ${w.max_coins} coin tutuluyor. Biri satılınca yeni coin alır.`];
     else
         st = ['', 'i-target', x.armed ? 'Fırsat kolluyor' : 'Fırsat kolluyor (deneme)',
-            c ? `${w ? w.items.length + ' coini' : 'Coinleri'} izliyor. Bir coin 20 saatlik ortalamasının ${pp(c.step)} altına inince ${tl(c.lot, 0)} alır, ${pp(c.lot_tp)} kârda satar.`
+            c ? `${w ? w.items.length + ' coini' : 'Coinleri'} izliyor. Bir coin ${c.sma_h || 20} saatlik ortalamasının ${pp(c.step)} altına inince ${tl(c.lot, 0)} alır, ${pp(c.lot_tp)} kârda satar.`
                 : 'Coinleri izliyor; strateji şartı oluşunca alım yapar.'];
     let h = `<div class="st ${st[0]}"><span class="si">${ic(st[1])}</span><div><b>${st[2]}</b><p>${st[3]}</p></div></div>`;
     if (w && w.items.length) {
@@ -361,7 +361,7 @@ function renderNow(x) {
             else
                 chip = `<span class="chip ${it.h ? 'b' : 'm'}">%${nf(it.gap, it.gap < 10 ? 1 : 0)} düşerse</span>`;
             const near = it.f || it.gap <= 0 ? '' : `<div class="near"><i style="width:${Math.max(4, Math.min(100, 100 - it.gap * 20)).toFixed(0)}%"></i></div>`;
-            return `<div class="row">${cico(it.i)}<div class="mid"><b>${sym(it.i)}${pq(it.i)}</b><span>${it.h ? `Elde ${it.h} kademe · ${it.h + 1}. alım ${px(it.t)}` : `Alım ${px(it.t)} · şimdi ${px(it.cur)}`}${volTxt(it.i) ? `<br>Hacim ${volTxt(it.i)}` : ''}</span></div><div class="end">${chip}${near}</div></div>`;
+            return `<div class="row">${cico(it.i)}<div class="mid"><b>${sym(it.i)}${pq(it.i)}</b><span>${it.h ? `Elde ${it.h} kademe · ` : ''}Şimdi ${px(it.cur)} → ${it.h ? `${it.h + 1}. alım` : 'alım'} ${px(it.t)}${volTxt(it.i) ? `<br>Hacim ${volTxt(it.i)}` : ''}</span></div><div class="end">${chip}${near}</div></div>`;
         }).join('');
         h += '</div>';
         if (items.length > 5)
@@ -935,7 +935,8 @@ const TGT_TOTAL = ['target.amount', 'Hedef toplam para', () => `Bottaki para ile
 const GRID_HIDE = new Set(['risk.stop_pct', 'risk.max_positions', 'risk.trade_pct']);
 function secFields(sec) { return draft?.strategy === 'grid' ? sec.f.filter(f => !GRID_HIDE.has(f[0])) : sec.f; }
 const STRAT_F = {
-    grid: [['grid.step_pct', 'Kademe aralığı', 'Fiyat bu kadar düşünce bir kademe daha alınır', '%', .5, .5, 20, 1],
+    grid: [['grid.sma_hours', 'Ortalama süresi', 'Alım fiyatı son bu kadar saatin ortalamasına göre hesaplanır; kısa süre daha sık alır', 'saat', 2, 4, 72, 0],
+        ['grid.step_pct', 'Kademe aralığı', 'Fiyat bu kadar düşünce bir kademe daha alınır', '%', .5, .5, 20, 1],
         ['grid.lot_pct', 'Kademe büyüklüğü', () => `Bottaki paranın; şu an ${sizeTL(draft.grid.lot_pct)}`, '%', .5, .5, 50, 1],
         ['grid.step3_pct', '3. kademe aralığı', '2. kademeden sonra fiyat bu kadar daha düşünce 3. kademe alınır; hızlı düşüşte kademeler bir anda dolmaz', '%', .5, .5, 30, 1],
         ['grid.lot2_pct', '2. kademe tutarı', () => `1. kademenin yüzdesi; şu an ${tl(draft.budget * draft.grid.lot_pct / 100 * (draft.grid.lot2_pct ?? 100) / 100, 0)}`, '%', 5, 10, 100, 0],

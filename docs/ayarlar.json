@@ -29,7 +29,8 @@
     "instant": true,
     "step3_pct": 3,
     "lot2_pct": 100,
-    "lot3_pct": 50
+    "lot3_pct": 50,
+    "sma_hours": 20
   },
   "dip": {
     "dip_pct": 3,

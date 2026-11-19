@@ -237,7 +237,7 @@ class Portfolio:
                   and price <= pos["lots"][-1]["entry"] * (1 - step_for(c, len(pos["lots"]))) and self._entry_ok(closes, price, True)):
                 self._buy(ts, inst, price, lot_for(c, len(pos["lots"])), f"{len(pos['lots']) + 1}. kademe")
             return
-        m = sma(closes, 20 * config.BPH)  # son 20 saatin ortalaması
+        m = sma(closes, int(c.get("sma_h", 20)) * config.BPH)  # son N saatin ortalaması (ayarlardan)
         if (self._can_open() and len(self.s["positions"]) < c["max_coins"] and self._room(c["lot"])
                 and m and price <= m * (1 - c["step"]) and self._entry_ok(closes, price)):
             self._buy(ts, inst, price, c["lot"], "1. kademe")
@@ -317,7 +317,7 @@ def watch(p, series):
             target = lots[-1]["entry"] * (1 - step_for(c, len(lots)))
             filt = False
         else:
-            m = sma(closes, 20 * config.BPH)
+            m = sma(closes, int(c.get("sma_h", 20)) * config.BPH)
             if not m:
                 continue
             target = m * (1 - c["step"])
