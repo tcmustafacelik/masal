@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.31.3';
+const APP_VERSION = '1.32.0';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -13,7 +13,7 @@ catch (e) {
     return null;
 } }
 const nf = (v, d = 2) => new Intl.NumberFormat('tr-TR', { minimumFractionDigits: d, maximumFractionDigits: d }).format(v);
-const tl = (v, d = 2) => nf(v, d) + ' TL';
+const tl = (v, d = 2) => nf(v, d) + '\u00a0TL'; // bölünmez boşluk: "TL" satır sonunda tek başına kalmasın
 const sgn = v => (v > 0 ? '+' : v < 0 ? '−' : '') + nf(Math.abs(v));
 const cls = v => v > 0 ? 'up' : v < 0 ? 'dn' : '';
 function px(v) { const a = Math.abs(v); return nf(v, a >= 1000 ? 0 : a >= 10 ? 2 : a >= 1 ? 3 : 5); }
@@ -441,13 +441,13 @@ function renderCoins(x) {
     box.innerHTML = list.map(c => {
         const parts = [];
         if (c.sells)
-            parts.push(`${c.sells} satış · ${c.wins} kârlı`);
+            parts.push(`${c.sells} satış`);
         else
             parts.push(`${c.buys} alım`);
         if (c.bought)
             parts.push(tl(c.bought, 0) + ' alındı');
-        parts.push(c.open_qty ? 'elde' : 'kapandı');
-        const det = [c.sells ? `kapanan ${sgn(c.realized)}` : '', c.open_qty ? `açık ${sgn(c.op)}` : ''].filter(Boolean).join(' · ') + ' TL';
+        // sağ alt: hem kesinleşen hem açık kâr/zarar varsa ayrıntı; coin elde ise "elde" etiketi
+        const det = c.open_qty ? (c.sells ? `kapanan ${sgn(c.realized)} · açık ${sgn(c.op)}` : 'elde, satılmadı') : 'kapandı';
         return `<div class="row">${cico(c.inst)}
       <div class="mid"><b>${sym(c.inst)}${pq(c.inst)}</b><span>${parts.join(' · ')}</span></div>
       <div class="end"><b class="${cls(c.tot)}">${sgn(c.tot)} TL</b><span>${det}</span></div></div>`;
@@ -575,7 +575,7 @@ async function sellCoin(inst) {
 }
 function renderRules(R, c) {
     const rows = c ? [
-        ['i-coins', tl(c.lot, 0), 'Kademe başına alım'],
+        ['i-coins', (c.lot2 ?? 1) === 1 && (c.lot3 ?? 1) === 1 ? tl(c.lot, 0) : `${nf(c.lot, 0)} → ${nf(c.lot * (c.lot2 ?? 1), 0)} → ${tl(c.lot * (c.lot3 ?? 1), 0)}`, 'Kademe tutarları (1. → 2. → 3.)'],
         ['i-layers', c.max_coins + ' coin', 'Aynı anda en fazla'],
         ['i-grid', c.max_lots + ' kademe', 'Bir coinde en fazla'],
         ['i-pnl', pp(c.lot_tp) + ' kâr', 'Her kademe ayrı satılır'],
@@ -631,7 +631,7 @@ async function pollMarket(now) {
                 if (!last)
                     return;
                 const prev = LP[inst]?.last;
-                LP[inst] = { last, bid: +t.bidPx * k || 0, vol: +t.volCcy24h * k, ch: (last / (+t.open24h) - 1) * 100, dir: prev == null ? 0 : Math.sign(last - prev), ts: +t.ts };
+                LP[inst] = { last, bid: +t.bidPx * k || 0, vol: +t.volCcy24h * k, ch: (+t.last / (+t.open24h) - 1) * 100, dir: prev == null ? 0 : Math.sign(last - prev), ts: +t.ts };
                 if (list.includes(inst))
                     lastTick = Math.max(lastTick, +t.ts);
             });
@@ -695,18 +695,19 @@ function renderKasa(x) {
         return;
     }
     const active = x.start_cash, reserve = Math.max(0, x.kasa - active), aw = Math.min(100, active / x.kasa * 100);
-    const target = x.checkpoint * 1.05, prog = Math.max(0, Math.min(1, (x.equity - x.checkpoint) / (target - x.checkpoint || 1)));
-    const waitMs = x.last_topup ? Math.max(0, x.last_topup + 7 * 864e5 - Date.now()) : 0, waitD = Math.ceil(waitMs / 864e5);
-    const full = reserve < 1000;
+    const T = S?.settings?.topup || { amount: 600, profit_pct: 5, days: 1 }, amt = +T.amount || 0;
+    const target = x.checkpoint * (1 + (+T.profit_pct || 5) / 100), prog = Math.max(0, Math.min(1, (liveEquity(x) - x.checkpoint) / (target - x.checkpoint || 1)));
+    const waitMs = x.last_topup ? Math.max(0, x.last_topup + (+T.days || 0) * 864e5 - Date.now()) : 0, waitD = Math.ceil(waitMs / 864e5);
+    const full = amt <= 0 || reserve < amt;
     box.innerHTML = `<div class="card kasa">
     <div class="top"><b>${ic('i-wallet')}Kasa<button class="qm" data-q="kasa" aria-label="Açıklama">?</button></b><span>${tl(x.kasa, 0)}</span></div>
     ${okxLine()}
     <div class="split"><i style="width:${aw}%;background:var(--amber)"></i></div>
     <div class="kv"><div>Botta aktif<b>${tl(active, 0)}</b></div><div>Kasada yedek<b>${tl(reserve, 0)}</b></div><div>Eklemeler<b>${x.topups} kez</b></div></div>
-    <div class="prog">${full ? '<div class="lbl"><span>Kasanın tamamı botta; yeni ekleme yapılmayacak.</span></div>'
-        : `<div class="lbl"><span>Sonraki +1.000 TL için kâr hedefi</span><b>${tl(x.equity, 0)} / ${tl(target, 0)}</b></div>
+    <div class="prog">${full ? `<div class="lbl"><span>${amt <= 0 ? 'Kasadan ekleme kapalı.' : 'Kasada ekleme için yeterli yedek yok; yeni ekleme yapılmayacak.'}</span></div>`
+        : `<div class="lbl"><span>Sonraki +${tl(amt, 0)} için kâr hedefi</span><b>${tl(liveEquity(x), 0)} / ${tl(target, 0)}</b></div>
       <div class="bar2"><i style="width:${(prog * 100).toFixed(1)}%"></i></div>
-      <div class="hint">Aktif para son eklemeden beri %5 kâra ulaşınca${waitD ? ` ve ${waitD} gün daha geçince` : ''} kasadan +1.000 TL eklenir. Zarardayken ekleme yapılmaz. Başlangıç parası ve kurallar Ayarlar ekranından değiştirilebilir.</div>`}
+      <div class="hint">Aktif para son eklemeden beri %${nf(+T.profit_pct || 5, (+T.profit_pct || 5) % 1 ? 1 : 0)} kâra ulaşınca${waitD ? ` ve ${waitD} gün daha geçince` : ''} kasadan +${tl(amt, 0)} eklenir. Zarardayken ekleme yapılmaz. Başlangıç parası ve kurallar Ayarlar ekranından değiştirilebilir.</div>`}
     </div></div>`;
 }
 function renderLog(x) {
@@ -938,8 +939,8 @@ function secFields(sec) { return draft?.strategy === 'grid' ? sec.f.filter(f => 
 const STRAT_F = {
     grid: [['grid.sma_hours', 'Ortalama süresi', 'Alım fiyatı son bu kadar saatin ortalamasına göre hesaplanır; kısa süre daha sık alır', 'saat', 2, 4, 72, 0],
         ['grid.step_pct', 'Kademe aralığı', 'Fiyat bu kadar düşünce bir kademe daha alınır', '%', .5, .5, 20, 1],
-        ['grid.lot_pct', 'Kademe büyüklüğü', () => `Bottaki paranın; şu an ${sizeTL(draft.grid.lot_pct)}`, '%', .5, .5, 50, 1],
         ['grid.step3_pct', '3. kademe aralığı', '2. kademeden sonra fiyat bu kadar daha düşünce 3. kademe alınır; hızlı düşüşte kademeler bir anda dolmaz', '%', .5, .5, 30, 1],
+        ['grid.lot_pct', 'Kademe büyüklüğü', () => `Bottaki paranın; şu an ${sizeTL(draft.grid.lot_pct)}`, '%', .5, .5, 50, 1],
         ['grid.lot2_pct', '2. kademe tutarı', () => `1. kademenin yüzdesi; şu an ${tl(draft.budget * draft.grid.lot_pct / 100 * (draft.grid.lot2_pct ?? 100) / 100, 0)}`, '%', 5, 10, 100, 0],
         ['grid.lot3_pct', '3. kademe tutarı', () => `1. kademenin yüzdesi; şu an ${tl(draft.budget * draft.grid.lot_pct / 100 * (draft.grid.lot3_pct ?? 100) / 100, 0)}`, '%', 5, 10, 100, 0],
         ['grid.lot_tp_pct', 'Kademe kârı', 'Her kademe bu kârla ayrı satılır', '%', .5, .5, 50, 1],
@@ -967,7 +968,7 @@ const SUMS = {
         return t.on ? (tot ? `Açık · kasa dahil ${a} olunca her şey satılır` : `Açık · +${a} kârda her şey satılır`) : `Kapalı · ${tot ? 'kasa dahil ' : 'kâr '}${a}`;
     },
     'Koruma': () => draft.strategy === 'grid' ? `Günlük ${pc(draft.risk.daily_loss_pct)} · acil fren ${pc(draft.risk.kill_pct)}` : `Zarar ${pc(draft.risk.stop_pct)} · günlük ${pc(draft.risk.daily_loss_pct)} · acil fren ${pc(draft.risk.kill_pct)}`,
-    grid: () => `${tl(draft.budget * draft.grid.lot_pct / 100, 0)} kademe · ${draft.grid.max_coins} coine kadar · en çok ${tl(draft.budget * (draft.grid.use_pct ?? 40) / 100, 0)}${draft.grid.instant ? ' · anlık alım' : ''}`,
+    grid: () => `${(() => { const l = draft.budget * draft.grid.lot_pct / 100, a = (draft.grid.lot2_pct ?? 100) / 100, c = (draft.grid.lot3_pct ?? 100) / 100; return a === 1 && c === 1 ? tl(l, 0) + ' kademe' : `${nf(l, 0)} → ${nf(l * a, 0)} → ${tl(l * c, 0)}`; })()} · ${draft.grid.max_coins} coine kadar · en çok ${tl(draft.budget * (draft.grid.use_pct ?? 40) / 100, 0)}${draft.grid.instant ? ' · anlık alım' : ''}`,
     dip: () => `Düşüş ${pc(draft.dip.dip_pct)} · kâr ${pc(draft.dip.take_profit_pct)} · en çok ${draft.dip.max_hold_hours} saat`,
     trend: () => `İz süren stop ${pc(draft.trend.trailing_pct)}`
 };

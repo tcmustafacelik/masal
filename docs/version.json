@@ -1,7 +1,10 @@
 {
-  "version": "1.31.3",
+  "version": "1.32.0",
   "date": "2026-11-19",
   "notes": [
-    "Alıma yakın coinler sadeleşti: şimdi ve alım fiyatı yan yana, kademe sayısı küçük etiket"
+    "Piyasa listesinde 24 saatlik değişim düzeltildi (USDT paritelerinde yanlış yüzde görünüyordu)",
+    "Kasa kartı ayarlardaki ekleme kurallarını gösterir",
+    "Coin bazında kâr/zarar satırları sadeleşti",
+    "TL tutarları satır sonunda bölünmez; kademe tutarları her yerde 444 → 444 → 222 olarak görünür"
   ]
 }

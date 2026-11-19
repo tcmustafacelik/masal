@@ -169,7 +169,7 @@ def check_target(p, S, N):
         return
     ts = int(time.time() * 1000)
     for inst in list(L["positions"]):
-        p._sell_lots(ts, inst, L["last_prices"].get(inst, 0), list(L["positions"][inst]["lots"]), "Kâr hedefi")
+        p._sell_lots(ts, inst, L["last_prices"].get(inst, 0), list(L["positions"][inst]["lots"]), "Hedef tuttu: hepsini sat")
     if L["positions"]:
         note(L, "Kâr hedefi tuttu ama bazı coinler satılamadı; bir sonraki turda tekrar denenecek")
         return
