@@ -208,8 +208,13 @@ class LivePortfolio(Portfolio):
                 spend = min(spend, self.api.available(q))
                 if spend * k < 10:
                     return self._no_funds(ts, inst)
-            elif self.api.available(q) < spend:
-                return self._no_funds(ts, inst)
+            elif self.api.available(q) < spend:  # TL paritesinde TL yetmezse boştaki USDT'den çevrilir
+                need_usdt = (spend - self.api.available(q)) / okx.rate("USDT") * 1.004 + 0.2
+                if self.api.available("USDT") < need_usdt:
+                    return self._no_funds(ts, inst)
+                self.api.market("USDT-TRY", "sell", f"{math.ceil(need_usdt * 100) / 100:.2f}")
+                self._note(ts, f"{need_usdt:.2f} USDT → TL çevrildi")
+                spend = min(spend, self.api.available(q))
             o = self.api.market(inst, "buy", f"{math.floor(spend * 100) / 100:.2f}", quote=True)
             filled = float(o.get("accFillSz") or 0)
             if filled <= 0:
@@ -273,6 +278,21 @@ class LivePortfolio(Portfolio):
         c = self.api.market("USDC-USDT", "buy", f"{math.ceil(need_usdt * 100) / 100:.2f}", quote=True)
         self._note(ts, f"{need_usdt:.2f} USDT → {float(c.get('accFillSz') or 0):.2f} USDC çevrildi")
         return True
+
+    def convert_all(self, ts):
+        """Alım-satım hesabındaki boş TL'nin tamamını seçili pariteye (USDT/USDC/EUR) çevirir."""
+        q = config.QUOTE
+        if q == config.CASH:
+            return 0.0
+        tl = math.floor((self.api.available(config.CASH) - 1) * 100) / 100  # kuruş farkları için 1 TL bırakılır
+        if tl < 20:
+            return 0.0
+        c = self.api.market("USDT-TRY", "buy", f"{tl:.2f}", quote=True)
+        got = float(c.get("accFillSz") or 0)
+        self._note(ts, f"{para(tl)} TL → {got:.2f} USDT çevrildi (hepsini çevir)")
+        if q != "USDT" and got > 1:
+            self._fund(ts, q, got / (okx.usdc_usdt() if q == "USDC" else 1 / okx.usdt_eur()) * 0.995)
+        return tl
 
     def _no_funds(self, ts, inst):
         self._note(ts, f"Yetersiz bakiye, {inst} alınmadı")

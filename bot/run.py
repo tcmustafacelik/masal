@@ -134,6 +134,23 @@ def liquidate(p, S):
         note(L, "Uygulamadan istenen 'hepsini sat' tamamlandı")
 
 
+def convert_request(p, S, N):
+    """Uygulamadan/ayarlardan istenen 'boş TL'nin hepsini çevir' isteğini bir kez uygular."""
+    L, ts_req = p.s, int((S.get("convert") or {}).get("ts") or 0)
+    if not ts_req or ts_req <= L.get("converted_at", 0) or not p.armed:
+        return
+    L["converted_at"] = ts_req
+    try:
+        tl = p.convert_all(int(time.time() * 1000))
+        if tl:
+            N.add("money", f"{tr(tl)} TL {config.QUOTE}'ye çevrildi",
+                  f"Alım-satım hesabındaki boş TL {config.QUOTE}'ye çevrildi; bot yeni alımlarda bunu kullanır.", 3, ["currency_exchange"])
+        else:
+            note(L, "Çevrilecek boş TL yok (Fonlama'dan Alım-satım hesabına aktarıldı mı?)")
+    except Exception as e:
+        note(L, f"HATA TL çevirme: {e}")
+
+
 def sell_selected(p, S):
     """Uygulamadan/ayarlardan istenen coinleri bir kez satar (zaman damgası yeniyse)."""
     L, req = p.s, S.get("sell") or {}
@@ -322,6 +339,7 @@ def main():
     run_bars([live], live_events, series)
     liquidate(live, S)
     sell_selected(live, S)
+    convert_request(live, S, N)
     topup(live, S, N if L["armed"] else None)
     try:
         instant_buys(live, series)  # fiyat alım seviyesine değdiği an al (mum kapanışını bekleme)

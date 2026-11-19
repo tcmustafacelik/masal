@@ -14,7 +14,8 @@ DEFAULTS = {
     "live": False,          # True: gerçek emir gönderilir
     "paused": False,        # True: gerçek hesapta yeni alım yapılmaz (açık pozisyonlar korunur)
     "liquidate": 0,         # zaman damgası; yeniyse gerçek hesaptaki her şey satılır
-    "sell": {"ts": 0, "insts": []},  # seçili coinleri elle sat: zaman damgası yeniyse listedekiler bir kez satılır
+    "sell": {"ts": 0, "insts": []},
+    "convert": {"ts": 0},   # zaman damgası yeniyse alım-satım hesabındaki boş TL'nin tamamı seçili pariteye çevrilir  # seçili coinleri elle sat: zaman damgası yeniyse listedekiler bir kez satılır
     "strategy": "grid",
     "quote": "USDT",        # yeni alımların paritesi: TRY, USDT ya da USDC
     "budget": 2000,         # bottaki başlangıç parası (TL)
