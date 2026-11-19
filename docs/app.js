@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.26.0';
+const APP_VERSION = '1.26.1';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -283,6 +283,7 @@ function gloss(k) {
       <ul><li><span class="chip m">%0,8 düşerse</span> fiyat bu kadar daha inerse bot alır.</li>
       <li><span class="chip g">Alım şartında</span> fiyat alım seviyesinde; ${c?.instant ? 'bot birkaç saniye içinde alır' : '15 dakikalık mum bu seviyede kapanırsa bot alır'}.</li>
       <li><span class="chip a">Düşüş filtresi</span> coin hızlı düşüyor; düşüş yavaşlayana kadar alım bekletiliyor.</li>
+      <li><span class="chip a">Şartta · bütçe dolu</span> fiyat uygun ama coinlere ayrılan para dolu; bir kademe satılınca alır.</li>
       <li><span class="chip b">2. kademe</span> zaten elde olan coin; bu kadar daha düşerse bir kademe daha eklenir.</li></ul>
       <p>Şartta görünüp alınmıyorsa: ${c?.instant ? '' : 'mum henüz kapanmamıştır, ya da '}bütçe sınırı / coin sayısı dolmuştur.</p>`],
         pozisyon: ['Elimdeki coinler', `<ul><li><b>Alış → şimdi:</b> ortalama alış fiyatın ve şu anki fiyat.</li>
@@ -345,13 +346,14 @@ function renderNow(x) {
     if (w && w.items.length) {
         const items = w.items.map(it => { const cur = livePrice(it.i, it.p); return { ...it, cur, gap: (cur / it.t - 1) * 100 }; }).sort((a, b) => (a.f ? 1 : 0) - (b.f ? 1 : 0) || a.gap - b.gap);
         const show = nowAll ? items : items.slice(0, 5);
+        const full = !w.room || w.coins >= w.max_coins || !!x.paused || !!x.halted || !!x.blocked_today; // alım şartı var ama alım yapılamıyor
         h += `<div class="wh">${ic('i-list')}Alıma en yakın coinler<button class="qm" data-q="yakin" aria-label="Açıklama">?</button></div><div class="list">`;
         h += show.map(it => {
             let chip;
             if (it.f)
                 chip = `<span class="chip a">${ic('i-pause')}Düşüş filtresi</span>`;
             else if (it.gap <= 0)
-                chip = `<span class="chip g">${ic('i-check')}Alım şartında</span>`;
+                chip = full ? `<span class="chip a">${ic('i-layers')}Şartta · bütçe dolu</span>` : `<span class="chip g">${ic('i-check')}Alım şartında</span>`;
             else
                 chip = `<span class="chip ${it.h ? 'b' : 'm'}">%${nf(it.gap, it.gap < 10 ? 1 : 0)} düşerse</span>`;
             const near = it.f || it.gap <= 0 ? '' : `<div class="near"><i style="width:${Math.max(4, Math.min(100, 100 - it.gap * 20)).toFixed(0)}%"></i></div>`;

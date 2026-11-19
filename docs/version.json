@@ -1,9 +1,7 @@
 {
-  "version": "1.26.0",
+  "version": "1.26.1",
   "date": "2026-11-19",
   "notes": [
-    "Coin hacimleri: alıma yakın coinlerde, elimdeki coinlerde ve piyasada 24 saatlik işlem hacmi",
-    "Canlı fiyatlar tek istekle tüm TL coinleri için alınır (daha hızlı, daha az veri)",
-    "Piyasa listesi hacme göre sıralı"
+    "Bütçe doluyken alım şartındaki coinler 'Şartta · bütçe dolu' olarak gösterilir"
   ]
 }
