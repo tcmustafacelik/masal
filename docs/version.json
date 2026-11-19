@@ -1,10 +1,9 @@
 {
-  "version": "1.25.2",
+  "version": "1.26.0",
   "date": "2026-11-19",
   "notes": [
-    "Ayarlara Anlık alım anahtarı eklendi",
-    "Kademe büyüklüğü kutudan taşmıyor (en fazla 2 ondalık)",
-    "İşlem geçmişi ana ekranla aynı renkli kâr/zarar düzeninde",
-    "Günlük sınır bayrağı düzeltildi"
+    "Coin hacimleri: alıma yakın coinlerde, elimdeki coinlerde ve piyasada 24 saatlik işlem hacmi",
+    "Canlı fiyatlar tek istekle tüm TL coinleri için alınır (daha hızlı, daha az veri)",
+    "Piyasa listesi hacme göre sıralı"
   ]
 }

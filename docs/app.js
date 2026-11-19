@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.25.2';
+const APP_VERSION = '1.26.0';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -355,7 +355,7 @@ function renderNow(x) {
             else
                 chip = `<span class="chip ${it.h ? 'b' : 'm'}">%${nf(it.gap, it.gap < 10 ? 1 : 0)} düşerse</span>`;
             const near = it.f || it.gap <= 0 ? '' : `<div class="near"><i style="width:${Math.max(4, Math.min(100, 100 - it.gap * 20)).toFixed(0)}%"></i></div>`;
-            return `<div class="row">${cico(it.i)}<div class="mid"><b>${sym(it.i)}</b><span>${it.h ? `Elde ${it.h} kademe · ${it.h + 1}. alım ${px(it.t)}` : `Alım ${px(it.t)} · şimdi ${px(it.cur)}`}</span></div><div class="end">${chip}${near}</div></div>`;
+            return `<div class="row">${cico(it.i)}<div class="mid"><b>${sym(it.i)}</b><span>${it.h ? `Elde ${it.h} kademe · ${it.h + 1}. alım ${px(it.t)}` : `Alım ${px(it.t)} · şimdi ${px(it.cur)}`}${volTxt(it.i) ? `<br>Hacim ${volTxt(it.i)}` : ''}</span></div><div class="end">${chip}${near}</div></div>`;
         }).join('');
         h += '</div>';
         if (items.length > 5)
@@ -379,6 +379,7 @@ function updLine() {
     }
     document.getElementById('updated').innerHTML = live + bot;
 }
+function volTxt(inst) { const v = LP[inst]?.vol; return v == null ? '' : v >= 1e6 ? nf(v / 1e6, 1) + ' Mn TL' : nf(v / 1e3, 0) + ' B TL'; }
 function livePrice(inst, fallback) { return LP[inst]?.last ?? fallback; }
 function liveEquity(x) { return x.cash + x.positions.reduce((a, p) => a + p.qty * livePrice(p.inst, p.price), 0); }
 function renderMetrics(x) {
@@ -458,7 +459,7 @@ function renderPositions(x) {
         <div class="rngl"><em class="dn">${lg ? 'Zarar' : 'Zarar durdur'} ${px(p.sl)}</em><em class="up">${lg ? 'Kâr' : 'Kâr al'} ${px(p.tp)}</em></div>`;
         }
         return `<div class="row pos">${cico(p.inst)}
-      <div class="mid"><b>${sym(p.inst)}${prot}${p.lots > 1 ? `<small> · ${p.lots} kademe</small>` : ''}</b><span>Alış ${px(p.avg)} → şimdi ${px(cur)} · ${ago(p.since).replace(' önce', '')}</span>${rng}</div>
+      <div class="mid"><b>${sym(p.inst)}${prot}${p.lots > 1 ? `<small> · ${p.lots} kademe</small>` : ''}</b><span>Alış ${px(p.avg)} → şimdi ${px(cur)}<br>${ago(p.since)} alındı${volTxt(p.inst) ? ` · hacim ${volTxt(p.inst)}` : ''}</span>${rng}</div>
       <div class="end"><b>${tl(val, 0)}</b><span class="plc ${cls(pl) || 'z'}">${sgn(pl)} TL</span><span class="plp ${cls(pl)}">${plp > 0 ? '+' : ''}${nf(plp)}%</span></div></div>`;
     }).join('')
         : `<div class="empty">${ic('i-box')}<div>Şu an açık pozisyon yok</div></div>`;
@@ -490,7 +491,7 @@ let mkTimer = null, mkBusy = false, lastTick = 0;
 function marketList() {
     const x = S?.strategies?.[sel];
     const held = x && !x.locked ? x.positions.map(p => p.inst) : [];
-    return [...new Set([...held, ...(S?.universe || [])])].slice(0, 16);
+    return [...new Set([...held, ...(S?.universe || [])])];
 }
 async function pollMarket(now) {
     clearTimeout(mkTimer);
@@ -504,20 +505,23 @@ async function pollMarket(now) {
         mkBusy = true;
         try {
             const list = marketList();
-            const res = await Promise.all(list.map(i => tfetch('https://tr.okx.com/api/v5/market/ticker?instId=' + i, { cache: 'no-store' }, 6000).then(r => r.json()).catch(() => null)));
-            okxDown = !res.some(r => r?.data?.[0]);
+            // tek istekle OKX TR'deki tüm TL paritelerinin anlık fiyatı ve 24 saatlik hacmi
+            const r = await tfetch('https://tr.okx.com/api/v5/market/tickers?instType=SPOT', { cache: 'no-store' }, 6000).then(r => r.json()).catch(() => null);
+            const rows = (r?.data || []).filter(t => String(t.instId).endsWith('-TRY'));
+            okxDown = !rows.length;
             if (okxDown && !lastTick) {
                 const tg = document.getElementById('liveTag');
                 tg.innerHTML = '<i></i>Erişilemiyor';
                 tg.classList.remove('on');
             }
-            res.forEach((r, k) => {
-                const t = r?.data?.[0];
-                if (!t)
+            rows.forEach(t => {
+                const inst = t.instId, last = +t.last;
+                if (!last)
                     return;
-                const inst = list[k], last = +t.last, prev = LP[inst]?.last;
+                const prev = LP[inst]?.last;
                 LP[inst] = { last, vol: +t.volCcy24h, ch: (last / (+t.open24h) - 1) * 100, dir: prev == null ? 0 : Math.sign(last - prev), ts: +t.ts };
-                lastTick = Math.max(lastTick, +t.ts);
+                if (list.includes(inst))
+                    lastTick = Math.max(lastTick, +t.ts);
             });
             const tag = document.getElementById('liveTag');
             if (lastTick) {
@@ -530,6 +534,7 @@ async function pollMarket(now) {
                 renderMetrics(x);
                 renderPositions(x);
                 renderCoins(x);
+                renderNow(x);
             }
             renderMarket();
             updLine();
@@ -549,12 +554,12 @@ function renderMarket() {
         box.innerHTML = `<div class="empty">${ic('i-info')}<div>OKX TR'ye ulaşılamıyor. VPN açıksa OKX TR yurt dışı bağlantıyı engelliyor olabilir; VPN'i kapatınca canlı fiyatlar gelir. Bot bundan etkilenmez.</div></div>`;
         return;
     }
-    const all = list.filter(i => LP[i]), rows = mkAll ? all : all.slice(0, 6);
+    const all = list.filter(i => LP[i]).sort((a, b) => LP[b].vol - LP[a].vol), rows = mkAll ? all : all.slice(0, 6);
     box.className = 'card list mk';
     box.innerHTML = rows.length ? rows.map(i => {
         const q = LP[i];
-        return `<div class="row">${cico(i)}<div class="mid"><b>${sym(i)}</b><span>Hacim ${q.vol >= 1e6 ? nf(q.vol / 1e6, 1) + ' Mn' : nf(q.vol / 1e3, 0) + ' B'} TL</span></div>
-      <div class="end"><b class="pxv ${q.dir > 0 ? 'flash-up' : q.dir < 0 ? 'flash-dn' : ''}">${px(q.last)}</b><span class="${cls(q.ch)}">${q.ch > 0 ? '+' : ''}${nf(q.ch)}% · 24 sa</span></div></div>`;
+        return `<div class="row">${cico(i)}<div class="mid"><b>${sym(i)}</b><span>Hacim ${volTxt(i)} · 24 sa</span></div>
+      <div class="end"><b class="pxv ${q.dir > 0 ? 'flash-up' : q.dir < 0 ? 'flash-dn' : ''}">${px(q.last)}</b><span class="${cls(q.ch)}">${q.ch > 0 ? '+' : ''}${nf(q.ch)}%</span></div></div>`;
     }).join('')
         + (all.length > 6 ? `<button class="more" id="mkMore">${mkAll ? 'Daha az göster' : `Tümünü göster (${all.length} coin)`}</button>` : '')
         : `<div class="empty">${ic('i-pnl')}<div>Fiyatlar yükleniyor…</div></div>`;
