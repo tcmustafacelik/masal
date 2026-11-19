@@ -22,7 +22,7 @@
     "lot_pct": 2.8489744,
     "lot_tp_pct": 4,
     "max_lots": 3,
-    "max_coins": 20,
+    "max_coins": 25,
     "stop_pct": 12,
     "use_pct": 75,
     "trend_filter_pct": 1,
