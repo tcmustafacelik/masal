@@ -364,6 +364,17 @@ details.setup summary::-webkit-details-marker{display:none}
 .hero .hk span{display:block;font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hero .hk b{display:block;font-size:14.5px;font-weight:650;margin-top:1px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hero .use{margin-top:13px}
+.assets{margin-top:12px;padding:13px 14px}
+.assets .ah{display:flex;align-items:center;gap:7px;font-size:13.5px}.assets .ah svg{width:16px;height:16px;color:var(--muted)}.assets .ah span{margin-left:auto;font-size:11.5px;color:var(--faint)}
+.assets .a2{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:10px}
+.assets .a2 div{padding:0 8px;border-left:1px solid var(--line2);min-width:0}.assets .a2 div:first-child{border-left:0;padding-left:0}
+.assets .a2 span{display:block;font-size:11.5px;color:var(--muted)}.assets .a2 b{display:block;font-size:15px;font-weight:650;margin-top:1px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.assets .a3{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:10px;padding-top:9px;border-top:1px solid var(--line2);font-size:11.5px;color:var(--muted)}
+.assets .a3 b{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums}
+.assets .ast{margin-top:11px}.assets .ast .ul{display:flex;font-size:12px;color:var(--muted)}.assets .ast .ul b{margin-left:auto;color:var(--text);font-variant-numeric:tabular-nums}
+.assets .ast .ub{height:7px;border-radius:4px;background:var(--line2);margin-top:5px;overflow:hidden}.assets .ast .ub i{display:block;height:100%;background:var(--green);border-radius:4px;transition:width .5s}
+.assets .ast .uh{font-size:11px;color:var(--faint);margin-top:4px}
+
 .hero .use .ul{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
 .hero .use .ul b{margin-left:auto;color:var(--text);font-weight:650;font-variant-numeric:tabular-nums}
 .hero .use .ub{height:8px;border-radius:4px;background:var(--line2);margin-top:6px;overflow:hidden;display:flex}
@@ -523,7 +534,7 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
   <div class="err" id="err"></div>
   <div class="cols">
   <div class="colA">
-  <section id="heroSec"><div class="hero" id="hero"></div><div id="alerts"></div></section>
+  <section id="heroSec"><div class="hero" id="hero"></div><div class="card assets" id="assets" hidden></div><div id="alerts"></div></section>
 
   <section id="nowSec">
     <h2><svg class="i"><use href="#i-target"/></svg>Bot şimdi ne yapıyor<button class="qm" data-q="nasil" aria-label="Açıklama">?</button></h2>
@@ -626,6 +637,6 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 <div class="toast" id="toast" hidden></div>
 <div class="qsh" id="qsh" hidden><div class="qb"><div class="gr"></div><h3><span><svg class="i" id="qIco"><use href="#i-info"/></svg></span><b id="qTitle"></b></h3><div class="qt" id="qText"></div><button class="btn primary" id="qOk">Anladım</button></div></div>
 
-<script src="app.js?v=1.38.4"></script>
+<script src="app.js?v=1.39.0"></script>
 </body>
 </html>

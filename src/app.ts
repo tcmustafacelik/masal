@@ -1,4 +1,4 @@
-const APP_VERSION='1.38.4';
+const APP_VERSION='1.39.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -418,6 +418,24 @@ function renderMetrics(x: Strategy){
       <div class="uh">${x.positions.length}/${w.max_coins} coin · ${x.trades} kapanan işlem · başlangıç ${tl(x.start_cash,0)}</div></div>`}
   else h+=`<div class="use">${live?'':`<div class="uh" style="color:var(--text);font-size:12.5px;line-height:1.45">${x.desc}</div>`}<div class="uh">${x.trades} kapanan işlem · başlangıç ${tl(x.start_cash,0)}${live?'':' (sanal para)'}</div></div>`;
   hero.innerHTML=h;
+  renderAssets(x,eq);
+}
+/** Varlık özeti: yatırdığın toplam para ile şu an elindeki her şey (bot + kasadaki yedek) yan yana. */
+function renderAssets(x: Strategy, eq: number){
+  const box=document.getElementById('assets');if(!box)return;
+  const kasa=+((x as any).kasa||S?.settings?.kasa||0);
+  if(sel!=='live'||!kasa){box.hidden=true;return}
+  const reserve=Math.max(0,kasa-x.start_cash),now=eq+reserve,net=now-kasa,inCoins=eq-x.cash;
+  const T=S?.settings?.target as any;
+  let tgt='';
+  if(T?.on&&T.amount>0){const total=T.mode==='total',cur=total?now:now-kasa,goal=+T.amount,r=Math.max(0,Math.min(100,cur/goal*100));
+    tgt=`<div class="ast"><div class="ul">${total?'Kasa dahil hedef':'Kâr hedefi'}<b>${tl(cur,0)} / ${tl(goal,0)}</b></div>
+      <div class="ub"><i class="tg" style="width:${r.toFixed(1)}%"></i></div><div class="uh">Hedefe ${tl(Math.max(0,goal-cur),0)} kaldı · %${nf(r,0)}</div></div>`}
+  box.hidden=false;
+  box.innerHTML=`<div class="ah">${ic('i-wallet')}<b>Varlık özeti</b><span>bütün paran</span></div>
+    <div class="a2"><div><span>Yatırdığın</span><b>${tl(kasa,0)}</b></div><div><span>Şu an hepsi</span><b>${tl(now,0)}</b></div>
+      <div><span>Fark</span><b class="${cls(net)}">${sgn(net)} TL</b></div></div>
+    <div class="a3"><span>Botta nakit <b>${tl(x.cash,0)}</b></span><span>Coinlerde <b>${tl(inCoins,0)}</b></span><span>Kasada yedek <b>${tl(reserve,0)}</b></span></div>${tgt}`;
 }
 
 const ICON_BAD = new Set<string>(), ICON_OK = new Set<string>();

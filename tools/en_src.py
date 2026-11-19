@@ -381,6 +381,9 @@ EN = {
     "Otomatik eşitleme": "Auto sync", "Her zaman açık · {0} sn": "Always on · {0} s", "Botun tur süresi": "Bot cycle time", "{0} sn": "{0} s",
     "'e basınca buluta yazılır.": ".", "Şimdi eşitle": "Sync now", "Eşitlenemedi, bağlantını kontrol et": "Couldn't sync, check your connection",
     "Bulut": "Cloud", "Bulut: eşitlendi": "Cloud: synced", "Bulut: bağlantı yok": "Cloud: no connection",
+    "Varlık özeti": "Asset summary", "bütün paran": "all your money", "Yatırdığın": "Invested", "Şu an hepsi": "Total now", "Fark": "Difference",
+    "Botta nakit": "Cash in bot", "Kasada yedek": "Reserve", "Kasa dahil hedef": "Target incl. treasury",
+    "Hedefe {0} {1} kaldı · {2}": "{0} {1} to target · {2}",
 }
 
 
