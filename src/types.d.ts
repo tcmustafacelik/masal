@@ -117,7 +117,7 @@ interface Settings {
   strategy: Exclude<StrategyKey, 'live'>;
   quote?: string;
   sell?: { ts: number; insts: string[] };
-  target?: { on: boolean; amount: number };
+  target?: { on: boolean; amount: number; mode?: string };
   convert?: { ts: number };
   budget: number;
   kasa: number;

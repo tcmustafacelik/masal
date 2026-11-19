@@ -91,7 +91,7 @@ def setup_live(state, S):
             L["day"]["start_equity"] = L["day"].get("start_equity", 0) + diff
         note(L, f"Bottaki başlangıç parası {tr(budget)} TL yapıldı")
     T = S.get("target") or {}
-    if L.get("target_done") and (not T.get("on") or L["target_done"] != f"{float(T.get('amount') or 0):.0f}"):
+    if L.get("target_done") and (not T.get("on") or L["target_done"] != f"{float(T.get('amount') or 0):.0f}{T.get('mode') or ''}"):
         L.pop("target_done")  # hedef kapatıldı ya da değiştirildi: bot kaldığı yerden devam eder
         note(L, "Kâr hedefi değişti; bot yeniden alım yapabilir")
     want_pause = bool(S["paused"]) or bool(L.get("target_done"))
@@ -162,8 +162,10 @@ def check_target(p, S, N):
     amount = float(T.get("amount") or 0)
     if not T.get("on") or amount <= 0 or L.get("target_done"):
         return
-    profit = p.equity() - L["start_cash"]
-    if profit < amount:
+    eq = p.equity()
+    profit = eq - L["start_cash"]
+    total = eq + max(0.0, float(L.get("kasa") or 0) - L["start_cash"])  # kasadaki yedek para dahil
+    if (total if T.get("mode") == "total" else profit) < amount:
         return
     ts = int(time.time() * 1000)
     for inst in list(L["positions"]):
@@ -171,10 +173,11 @@ def check_target(p, S, N):
     if L["positions"]:
         note(L, "Kâr hedefi tuttu ama bazı coinler satılamadı; bir sonraki turda tekrar denenecek")
         return
-    L["target_done"], L["paused"] = f"{amount:.0f}", True
-    note(L, f"Kâr hedefi tuttu: toplam kâr {tr(profit)} TL. Her şey satıldı, bot durdu.")
-    N.add("alerts", f"Kâr hedefi tuttu: +{tr(profit)} TL",
-          f"Toplam kâr {tr(amount)} TL hedefine ulaştı. Bütün coinler satıldı, bot yeni alım yapmıyor. "
+    L["target_done"], L["paused"] = f"{amount:.0f}{T.get('mode') or ''}", True
+    what = f"kasa dahil toplam para {tr(total)} TL" if T.get("mode") == "total" else f"toplam kâr {tr(profit)} TL"
+    note(L, f"Kâr hedefi tuttu: {what}. Her şey satıldı, bot durdu.")
+    N.add("alerts", f"Hedef tuttu: {what}",
+          f"{tr(amount)} TL hedefine ulaşıldı (kâr {'+' if profit >= 0 else '−'}{tr(abs(profit))} TL). Bütün coinler satıldı, bot yeni alım yapmıyor. "
           "Devam etmek için Ayarlar'dan hedefi kapat ya da yükselt.", 5, ["trophy"])
 
 

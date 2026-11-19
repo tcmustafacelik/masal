@@ -62,6 +62,7 @@
   },
   "target": {
     "on": false,
-    "amount": 20000
+    "amount": 20000,
+    "mode": "total"
   }
 }
