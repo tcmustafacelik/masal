@@ -68,7 +68,7 @@
   },
   "target": {
     "on": true,
-    "amount": 25555,
+    "amount": 30055,
     "mode": "total"
   }
 }
