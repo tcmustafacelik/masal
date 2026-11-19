@@ -175,7 +175,7 @@ def check_okx():
         api = OkxPrivate()
         bal = api.available(config.CASH)
         out = {"ok": True, "status": "Bağlantı çalışıyor", "try": round(bal, 2), "ts": int(time.time() * 1000)}
-        if config.QUOTE != config.CASH:  # USDT paritesinde işlem izni var mı (emir vermeden kontrol)
+        if config.QUOTE != config.CASH:  # seçili paritede işlem izni var mı (emir vermeden kontrol)
             try:
                 api._req("GET", f"/api/v5/account/max-avail-size?instId=BTC-{config.QUOTE}&tdMode=cash")
                 out["quote_ok"] = True
@@ -191,10 +191,10 @@ _CACHE = {"uni": (0, None), "bars": {}}
 
 
 def _universe():
-    t, u = _CACHE["uni"]
-    if u is None or time.time() - t > 600:
+    t, u, q = (_CACHE["uni"] + (None,))[:3]
+    if u is None or q != config.QUOTE or time.time() - t > 600:  # parite değişince liste hemen yenilenir
         u = okx.universe()
-        _CACHE["uni"] = (time.time(), u)
+        _CACHE["uni"] = (time.time(), u, config.QUOTE)
     return u
 
 
@@ -337,11 +337,11 @@ def main():
     prev = state.get("okx") or {}
     state["okx"] = check_okx()
     if "quote_ok" in state["okx"] and state["okx"]["quote_ok"] != prev.get("quote_ok"):
-        print(f"USDT paritesi işlem izni: {'var' if state['okx']['quote_ok'] else 'YOK - ' + state['okx'].get('quote_err', '')}"
+        print(f"{config.QUOTE} paritesi işlem izni: {'var' if state['okx']['quote_ok'] else 'YOK - ' + state['okx'].get('quote_err', '')}"
               f" · USDT bakiyesi {state['okx'].get('usdt')}")
     if L["armed"] and state["okx"].get("quote_ok") is False and live._once_per_day("quote"):
-        N.add("alerts", "USDT paritesinde işlem yapılamıyor",
-              f"OKX, USDT paritesinde emir iznini reddetti: {state['okx'].get('quote_err', '')}. Bot TL'deki coinleri yönetmeye devam eder.",
+        N.add("alerts", f"{config.QUOTE} paritesinde işlem yapılamıyor",
+              f"OKX, {config.QUOTE} paritesinde emir iznini reddetti: {state['okx'].get('quote_err', '')}. Bot TL'deki coinleri yönetmeye devam eder.",
               5, ["warning"])
     if L["armed"] and not state["okx"]["ok"] and (prev.get("ok") or live._once_per_day("okx")):
         N.add("alerts", "OKX bağlantısı çalışmıyor",

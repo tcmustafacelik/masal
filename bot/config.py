@@ -12,7 +12,8 @@ SLIPPAGE = 0.001
 # Hesap TL ile tutulur; coinler USDT paritesinden alınıp satılır (kullanıcı isteği: derin piyasa, düşük fark).
 # Bütün tutarlar ve fiyatlar uygulamada TL karşılığıyla gösterilir (USDT fiyatı x USDT-TRY kuru).
 CASH = "TRY"
-QUOTE = "USDT"
+QUOTE = "USDT"             # yeni alımların paritesi; uygulamadaki Ayarlar'dan seçilir
+QUOTES = ("TRY", "USDT", "USDC", "EUR")
 MIN_VOLUME_TRY = 100_000   # günlük en az bu kadar TL karşılığı hacim
 MAX_SYMBOLS = 40           # hacmi en yüksek 40 coin izlenir
 MAX_SPREAD = 0.008  # alış-satış farkı %0,8'den büyük (sığ) coinler alınmaz

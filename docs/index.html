@@ -196,7 +196,7 @@ footer{font-size:11.5px;color:var(--faint);text-align:center;margin-top:22px;lin
 :root{--violet:#7A5AC8;--violet-bg:#F1ECFB;--teal:#11807E;--teal-bg:#E2F4F3}
 [data-theme=dark]{--violet:#A58BE8;--violet-bg:#251E36;--teal:#3CC4BF;--teal-bg:#122A29}
 .c-green{--cc:var(--green);--cb:var(--green-bg)}.c-red{--cc:var(--red);--cb:var(--red-bg)}.c-blue{--cc:var(--blue);--cb:var(--blue-bg)}
-.c-violet{--cc:var(--violet);--cb:var(--violet-bg)}.c-teal{--cc:var(--teal);--cb:var(--teal-bg)}.c-gray{--cc:var(--muted);--cb:var(--line2)}
+.c-violet{--cc:var(--violet);--cb:var(--violet-bg)}.c-teal{--cc:var(--teal);--cb:var(--teal-bg)}.c-gray{--cc:var(--muted);--cb:var(--line2)}.c-amber{--cc:var(--amber);--cb:var(--amber-bg)}
 #setv h2 .hb{width:20px;height:20px;border-radius:6px;display:grid;place-items:center;background:var(--cb);color:var(--cc)}
 #setv h2 .hb svg{width:13px;height:13px}
 .acc{margin-top:10px}
@@ -416,6 +416,17 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 .rng .mk.up{border-color:var(--green)}.rng .mk.dn{border-color:var(--red)}
 .rngl{display:flex;justify-content:space-between;gap:6px;margin-top:6px}
 .rngl em{font-style:normal;font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+/* ---- parite etiketi ve parite seçimi ---- */
+.pq,.mid span.pq,.mid b .pq{display:inline-block!important;width:auto!important;white-space:nowrap;flex:none;vertical-align:2px;margin-left:5px;font-size:9.5px;font-weight:700;letter-spacing:.3px;padding:2px 4px;border-radius:4px;line-height:1.1!important}
+.pq{background:var(--line2);color:var(--muted)}
+.mid span.pq{font-size:9.5px!important;margin-top:0!important}
+.pq.pq.q-USDT{background:color-mix(in srgb,#26A17B 16%,transparent);color:#1f8a68}.pq.pq.q-USDC{background:var(--blue-bg);color:var(--blue)}
+.pq.pq.q-EUR{background:color-mix(in srgb,#7c5cd6 15%,transparent);color:#6b4fc4}.pq.pq.q-TRY{background:var(--amber-bg);color:var(--amber-ink)}
+[data-theme=dark] .pq.pq.q-USDT{color:#4cc79c}[data-theme=dark] .pq.pq.q-EUR{color:#a993f0}
+.tile .pq{margin:2px 0 0}
+.qtiles{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+.qtiles .tile .pc{font-size:10.5px!important;line-height:1.25;text-align:center}
+.qg{font-size:17px;font-weight:800;line-height:1;font-style:normal}
 </style>
 </head>
 <body>
@@ -585,6 +596,6 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 <div class="toast" id="toast" hidden></div>
 <div class="qsh" id="qsh" hidden><div class="qb"><div class="gr"></div><h3><span><svg class="i"><use href="#i-info"/></svg></span><b id="qTitle"></b></h3><div class="qt" id="qText"></div><button class="btn primary" id="qOk">Anladım</button></div></div>
 
-<script src="app.js?v=1.27.1"></script>
+<script src="app.js?v=1.28.0"></script>
 </body>
 </html>

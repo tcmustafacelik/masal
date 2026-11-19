@@ -201,16 +201,11 @@ class LivePortfolio(Portfolio):
             q = quote_of(inst)
             k = okx.tl_factor(inst)  # 1 TL paritesinde, USDT kuru USDT paritesinde
             spend = amount / k  # paritenin kendi para biriminde harcanacak tutar
-            if q == "USDT":
-                have_q = self.api.available("USDT")
-                if have_q < spend:  # USDT yetmiyorsa eksik kadar TL'yi USDT'ye çevir
-                    need_tl = round((spend - have_q) * k * 1.004 + 1, 2)
-                    if self.api.available(config.CASH) < need_tl:
-                        return self._no_funds(ts, inst)
-                    c = self.api.market("USDT-TRY", "buy", f"{need_tl:.2f}", quote=True)
-                    self._note(ts, f"{para(need_tl)} TL → {float(c.get('accFillSz') or 0):.2f} USDT çevrildi")
-                    have_q = self.api.available("USDT")
-                spend = min(spend, have_q)
+            if q in ("USDT", "USDC", "EUR"):
+                have_q = self.api.available(q)
+                if have_q < spend and not self._fund(ts, q, spend - have_q):
+                    return self._no_funds(ts, inst)
+                spend = min(spend, self.api.available(q))
                 if spend * k < 10:
                     return self._no_funds(ts, inst)
             elif self.api.available(q) < spend:
@@ -241,6 +236,43 @@ class LivePortfolio(Portfolio):
             if self._once_per_day("err_buy"):
                 self._emit("alerts", "Alım hatası", f"{inst}: {e}", 4, ["warning"])
             return False
+
+    def _usdt(self, ts, amount):
+        """En az `amount` USDT olsun: önce boştaki USDC, yetmezse TL çevrilir."""
+        have = self.api.available("USDT")
+        if have >= amount:
+            return True
+        usdc = self.api.available("USDC")
+        if usdc >= 1:  # parite değiştirilince kalan USDC önce kullanılır
+            c = self.api.market("USDC-USDT", "sell", f"{math.floor(min(usdc, (amount - have) * 1.003 + 0.5) * 100) / 100:.2f}")
+            self._note(ts, f"{float(c.get('accFillSz') or 0):.2f} USDC → USDT çevrildi")
+            have = self.api.available("USDT")
+            if have >= amount:
+                return True
+        need_tl = round((amount - have) * okx.rate("USDT") * 1.004 + 1, 2)
+        if self.api.available(config.CASH) < need_tl:
+            return False
+        c = self.api.market("USDT-TRY", "buy", f"{need_tl:.2f}", quote=True)
+        self._note(ts, f"{para(need_tl)} TL → {float(c.get('accFillSz') or 0):.2f} USDT çevrildi")
+        return True
+
+    def _fund(self, ts, q, short):
+        """Alım için eksik `short` kadar USDT/USDC'yi hazırlar."""
+        if q == "USDT":
+            return self._usdt(ts, self.api.available("USDT") + short)
+        if q == "EUR":  # EUR, USDT satılarak alınır
+            need_usdt = short / okx.usdt_eur() * 1.003 + 0.2
+            if not self._usdt(ts, need_usdt):
+                return False
+            c = self.api.market("USDT-EUR", "sell", f"{math.ceil(need_usdt * 100) / 100:.2f}")
+            self._note(ts, f"{need_usdt:.2f} USDT → EUR çevrildi")
+            return True
+        need_usdt = short * okx.usdc_usdt() * 1.003 + 0.2  # USDC, USDT ile alınır (fark çok düşük)
+        if not self._usdt(ts, need_usdt):
+            return False
+        c = self.api.market("USDC-USDT", "buy", f"{math.ceil(need_usdt * 100) / 100:.2f}", quote=True)
+        self._note(ts, f"{need_usdt:.2f} USDT → {float(c.get('accFillSz') or 0):.2f} USDC çevrildi")
+        return True
 
     def _no_funds(self, ts, inst):
         self._note(ts, f"Yetersiz bakiye, {inst} alınmadı")

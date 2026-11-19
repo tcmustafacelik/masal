@@ -16,6 +16,7 @@ DEFAULTS = {
     "liquidate": 0,         # zaman damgası; yeniyse gerçek hesaptaki her şey satılır
     "sell": {"ts": 0, "insts": []},  # seçili coinleri elle sat: zaman damgası yeniyse listedekiler bir kez satılır
     "strategy": "grid",
+    "quote": "USDT",        # yeni alımların paritesi: TRY, USDT ya da USDC
     "budget": 2000,         # bottaki başlangıç parası (TL)
     "kasa": 10000,          # hesaptaki toplam kasa (TL)
     "topup": {"amount": 250, "profit_pct": 5, "days": 7},
@@ -55,6 +56,11 @@ def load():
 def apply(s):
     """Yüzdeleri 10.000 TL tabanına çevirip config'e yazar; motor bunları bakiyeye göre ölçekler."""
     base = config.START_CASH
+    if s.get("quote") not in config.QUOTES:
+        s["quote"] = "USDT"
+    config.QUOTE = s["quote"]
+    from . import engine
+    engine.MARKET_REF = f"BTC-{config.QUOTE}"
     r = s["risk"]
     config.RISK.update({
         "trade_size": base * r["trade_pct"] / 100,

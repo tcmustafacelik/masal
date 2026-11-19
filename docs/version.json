@@ -1,8 +1,9 @@
 {
-  "version": "1.27.1",
+  "version": "1.28.0",
   "date": "2026-11-19",
   "notes": [
-    "Elimdeki coinlerin değeri artık 'şimdi satsam' fiyatıyla gösterilir (az işlem gören TL paritelerinde yanıltıcı rakam kalmadı)",
-    "Seçili coinleri elle satma desteği"
+    "Ayarlar'da İşlem paritesi seçimi: USDT, USDC, EUR, TRY",
+    "Her coinin yanında paritesi yazar (USDT, TRY...)",
+    "TRUMP kârla satıldı, ilk USDT alımı yapıldı"
   ]
 }

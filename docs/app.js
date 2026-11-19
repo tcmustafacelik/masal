@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.27.1';
+const APP_VERSION = '1.28.0';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -248,7 +248,7 @@ function render() {
     document.getElementById('trades').innerHTML = tr.length ? tr.map(t => {
         const sell = t.side === 'SAT';
         return `<div class="row">${cico(t.inst, t.side, t.pnl < 0)}
-      <div class="mid"><b>${sym(t.inst)} ${sell ? 'satıldı' : 'alındı'}</b><span>${dt(t.ts)} · ${t.reason} · ${px(t.price)}</span></div>
+      <div class="mid"><b>${sym(t.inst)}${pq(t.inst)} ${sell ? 'satıldı' : 'alındı'}</b><span>${dt(t.ts)} · ${t.reason} · ${px(t.price)}</span></div>
       <div class="end"><b>${tl(t.amount, 0)}</b>${sell ? `<span class="plc ${cls(t.pnl) || 'z'}">${sgn(t.pnl)} TL ${t.pnl >= 0 ? 'kâr' : 'zarar'}</span>` : `<span>harcandı</span>`}</div></div>`;
     }).join('')
         : `<div class="empty">${ic('i-list')}<div>Henüz işlem yok. Bot fırsat bekliyor.</div></div>`;
@@ -358,7 +358,7 @@ function renderNow(x) {
             else
                 chip = `<span class="chip ${it.h ? 'b' : 'm'}">%${nf(it.gap, it.gap < 10 ? 1 : 0)} düşerse</span>`;
             const near = it.f || it.gap <= 0 ? '' : `<div class="near"><i style="width:${Math.max(4, Math.min(100, 100 - it.gap * 20)).toFixed(0)}%"></i></div>`;
-            return `<div class="row">${cico(it.i)}<div class="mid"><b>${sym(it.i)}</b><span>${it.h ? `Elde ${it.h} kademe · ${it.h + 1}. alım ${px(it.t)}` : `Alım ${px(it.t)} · şimdi ${px(it.cur)}`}${volTxt(it.i) ? `<br>Hacim ${volTxt(it.i)}` : ''}</span></div><div class="end">${chip}${near}</div></div>`;
+            return `<div class="row">${cico(it.i)}<div class="mid"><b>${sym(it.i)}${pq(it.i)}</b><span>${it.h ? `Elde ${it.h} kademe · ${it.h + 1}. alım ${px(it.t)}` : `Alım ${px(it.t)} · şimdi ${px(it.cur)}`}${volTxt(it.i) ? `<br>Hacim ${volTxt(it.i)}` : ''}</span></div><div class="end">${chip}${near}</div></div>`;
         }).join('');
         h += '</div>';
         if (items.length > 5)
@@ -415,6 +415,8 @@ function renderMetrics(x) {
         bl.onclick = () => pick('live');
 }
 const ICON_BAD = new Set(), ICON_OK = new Set();
+// Coinin hangi paritede alınıp satıldığını gösteren küçük etiket (TRY, USDT, USDC, EUR)
+function pq(inst) { const q = String(inst).split('-')[1] || ''; return q ? `<span class="pq q-${q}">${q}</span>` : ''; }
 function cico(inst, side, loss) {
     const b = sym(inst), t = b.slice(0, 4), lc = b.toLowerCase();
     const img = ICON_BAD.has(lc) ? '' : `<img class="${ICON_OK.has(lc) ? 'ok' : ''}" src="https://static.okx.com/cdn/oksupport/asset/currency/icon/${lc}.png" alt="" onload="ICON_OK.add('${lc}');this.classList.add('ok')" onerror="ICON_BAD.add('${lc}');this.remove()">`;
@@ -443,7 +445,7 @@ function renderCoins(x) {
         parts.push(c.open_qty ? 'elde' : 'kapandı');
         const det = [c.sells ? `kapanan ${sgn(c.realized)}` : '', c.open_qty ? `açık ${sgn(c.op)}` : ''].filter(Boolean).join(' · ') + ' TL';
         return `<div class="row">${cico(c.inst)}
-      <div class="mid"><b>${sym(c.inst)}</b><span>${parts.join(' · ')}</span></div>
+      <div class="mid"><b>${sym(c.inst)}${pq(c.inst)}</b><span>${parts.join(' · ')}</span></div>
       <div class="end"><b class="${cls(c.tot)}">${sgn(c.tot)} TL</b><span>${det}</span></div></div>`;
     }).join('');
 }
@@ -464,7 +466,7 @@ function renderPositions(x) {
         <div class="rngl"><em class="dn">${lg ? 'Zarar' : 'Zarar durdur'} ${px(p.sl)}</em><em class="up">${lg ? 'Kâr' : 'Kâr al'} ${px(p.tp)}</em></div>`;
         }
         return `<div class="row pos">${cico(p.inst)}
-      <div class="mid"><b>${sym(p.inst)}${prot}${p.lots > 1 ? `<small> · ${p.lots} kademe</small>` : ''}</b><span>Alış ${px(p.avg)} → satış ${px(cur)}<br>${ago(p.since)} alındı${volTxt(p.inst) ? ` · hacim ${volTxt(p.inst)}` : ''}</span>${rng}</div>
+      <div class="mid"><b>${sym(p.inst)}${pq(p.inst)}${prot}${p.lots > 1 ? `<small> · ${p.lots} kademe</small>` : ''}</b><span>Alış ${px(p.avg)} → satış ${px(cur)}<br>${ago(p.since)} alındı${volTxt(p.inst) ? ` · hacim ${volTxt(p.inst)}` : ''}</span>${rng}</div>
       <div class="end"><b>${tl(val, 0)}</b><span class="plc ${cls(pl) || 'z'}">${sgn(pl)} TL</span><span class="plp ${cls(pl)}">${plp > 0 ? '+' : ''}${nf(plp)}%</span></div></div>`;
     }).join('')
         : `<div class="empty">${ic('i-box')}<div>Şu an açık pozisyon yok</div></div>`;
@@ -512,9 +514,10 @@ async function pollMarket(now) {
             const list = marketList();
             // tek istekle OKX TR'deki tüm TL paritelerinin anlık fiyatı ve 24 saatlik hacmi
             const r = await tfetch('https://tr.okx.com/api/v5/market/tickers?instType=SPOT', { cache: 'no-store' }, 6000).then(r => r.json()).catch(() => null);
-            const all = r?.data || [], usd = +(all.find(t => t.instId === 'USDT-TRY')?.last || 0);
-            // TL paritelerinin fiyatı olduğu gibi; USDT paritelerininki USDT kuruyla TL'ye çevrilir
-            const rows = all.filter(t => String(t.instId).endsWith('-TRY') || (usd && String(t.instId).endsWith('-USDT')));
+            const all = r?.data || [], L_ = i => +(all.find(t => t.instId === i)?.last || 0), usd = L_('USDT-TRY');
+            // Fiyatlar TL karşılığıyla: USDT kuru USDT-TRY'den, USDC ve EUR farkı düşük USDT pariteleri üzerinden
+            const K = { TRY: 1, USDT: usd, USDC: usd * L_('USDC-USDT'), EUR: L_('USDT-EUR') ? usd / L_('USDT-EUR') : 0 };
+            const rows = all.filter(t => K[String(t.instId).split('-')[1]]);
             okxDown = !rows.length;
             if (okxDown && !lastTick) {
                 const tg = document.getElementById('liveTag');
@@ -522,7 +525,7 @@ async function pollMarket(now) {
                 tg.classList.remove('on');
             }
             rows.forEach(t => {
-                const inst = t.instId, k = inst.endsWith('-USDT') ? usd : 1, last = +t.last * k;
+                const inst = t.instId, k = K[inst.split('-')[1]], last = +t.last * k;
                 if (!last)
                     return;
                 const prev = LP[inst]?.last;
@@ -565,7 +568,7 @@ function renderMarket() {
     box.className = 'card list mk';
     box.innerHTML = rows.length ? rows.map(i => {
         const q = LP[i];
-        return `<div class="row">${cico(i)}<div class="mid"><b>${sym(i)}</b><span>Hacim ${volTxt(i)} · 24 sa</span></div>
+        return `<div class="row">${cico(i)}<div class="mid"><b>${sym(i)}${pq(i)}</b><span>Hacim ${volTxt(i)} · 24 sa</span></div>
       <div class="end"><b class="pxv ${q.dir > 0 ? 'flash-up' : q.dir < 0 ? 'flash-dn' : ''}">${px(q.last)}</b><span class="${cls(q.ch)}">${q.ch > 0 ? '+' : ''}${nf(q.ch)}%</span></div></div>`;
     }).join('')
         + (all.length > 6 ? `<button class="more" id="mkMore">${mkAll ? 'Daha az göster' : `Tümünü göster (${all.length} coin)`}</button>` : '')
@@ -733,6 +736,8 @@ function checks(d = draft, o = orig || {}, diff = true) {
             ch.push(d.live ? '<b>Gerçek emir</b> başlar' : 'Deneme moduna geçilir; elde kalan coinler satılmaz');
         if (o.strategy !== d.strategy)
             ch.push(`Strateji ${SNAMES[o.strategy]} → <b>${SNAMES[d.strategy]}</b>${o.live ? '; eski stratejinin coinleri satılır' : ''}`);
+        if ((o.quote || 'USDT') !== (d.quote || 'USDT'))
+            ch.push(`Yeni alımlar <b>${d.quote}</b> paritesinden yapılır; eldeki coinler kendi paritesinde satılır`);
         if (!!o.grid?.instant !== !!d.grid?.instant)
             ch.push(d.grid?.instant ? '<b>Anlık alım</b> açılır: fiyat alım seviyesine değince hemen alır' : 'Anlık alım kapanır: 15 dakikalık mum kapanışı beklenir');
         if (o.paused !== d.paused)
@@ -856,6 +861,8 @@ function field([k, label, hint, u, step, min, max, dec]) {
    <input inputmode="decimal" value="${fv(v, dec)}" data-step="${step}" data-min="${min}" data-max="${max}" data-dec="${dec}">
    <span class="u">${u}</span><button data-d="1" aria-label="Artır">${ic('i-plus')}</button></div></div>`;
 }
+// En çok coin bulunan pariteler (OKX TR): USDT ~300, EUR ~270, USDC ~270, TRY ~130
+const QUOTES = [['USDT', '₮', 'Önerilen'], ['USDC', '$', 'Düşük fark'], ['EUR', '€', 'Düşük fark'], ['TRY', '₺', 'Fark yüksek']];
 function tile(on, key, icon, name, sub) { return `<button class="tile ${on ? 'on' : ''}" data-t="${key}"><span class="ic">${ic(icon)}</span><span class="nm">${name}</span>${sub ? `<span class="pc" style="color:var(--muted);font-weight:500">${sub}</span>` : ''}</button>`; }
 // ---- PIN girişi (animasyonlu) ----
 function pinPad(o) {
@@ -1073,6 +1080,8 @@ function renderForm() {
    <div class="field" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line2)"><div class="lb"><b>Hepsini sat ve dur</b><span>Gerçek hesaptaki tüm coinleri hemen satar, botu durdurur</span></div>
    <button class="btn danger ${sellArm ? 'arm' : ''}" id="sellAll">${ic('i-sell')}${sellArm ? 'Emin misin? Dokun' : 'Hepsini sat'}</button></div></div></section>
    <div class="hint" style="margin:8px 2px 4px">Bot kesintisiz çalışır: yaklaşık 10 saniyede bir piyasayı, borsadaki korumaları ve para hareketlerini kontrol eder. Uygulama kapalı olsa da çalışır.</div>
+   <section><h2><span class="hb c-amber">${ic('i-coins')}</span>İşlem paritesi</h2><div class="tiles qtiles" data-g="quote">${QUOTES.map(([q, g, sub]) => `<button class="tile ${(draft.quote || 'USDT') === q ? 'on' : ''}" data-t="${q}"><span class="ic"><b class="qg">${g}</b></span><span class="nm">${q}</span><span class="pc" style="color:var(--muted);font-weight:500">${sub}</span></button>`).join('')}</div>
+   <div class="hint" style="margin:8px 2px 0">Yeni alımlar bu paritede yapılır; gereken para TL'den otomatik çevrilir. Eldeki coinler kendi paritesinde satılır. Bütün tutarlar TL karşılığıyla görünür.</div></section>
    <section><h2><span class="hb c-blue">${ic('i-target')}</span>Strateji</h2><div class="tiles" data-g="strat">${['grid', 'dip', 'trend'].map(k => tile(draft.strategy === k, k, ICON[k], SNAMES[k])).join('')}</div>
    ${draft.strategy !== orig.strategy && orig.live ? `<div class="warn">${ic('i-info')}<div>Gerçek modda strateji değişince eski stratejinin açık coinleri satılır, yeni strateji temiz başlar.</div></div>` : ''}</section>
    <section><h2><span class="hb c-violet">${ic('i-shield')}</span>Kontrol<span class="hsum" style="font-weight:500;color:var(--faint);font-size:11px">değiştirdikçe güncellenir</span></h2><div class="card chk" id="checks"></div></section>`;
@@ -1100,6 +1109,7 @@ function renderForm() {
         }
     });
     f.querySelectorAll('[data-g=mode] .tile').forEach(b => b.onclick = () => { draft.live = b.dataset.t === 'real'; renderForm(); });
+    f.querySelectorAll('[data-g=quote] .tile').forEach(b => b.onclick = () => { draft.quote = b.dataset.t; renderForm(); });
     f.querySelectorAll('[data-g=strat] .tile').forEach(b => b.onclick = () => { draft.strategy = b.dataset.t; renderForm(); });
     document.getElementById('pauseSw').onclick = () => { draft.paused = !draft.paused; renderForm(); };
     const isw = document.getElementById('instSw');
@@ -1291,7 +1301,7 @@ function renderHist() {
     const sells = rows.filter(t => t.side === 'SAT'), pnl = sells.reduce((a, t) => a + (t.pnl || 0), 0);
     let h = `<section style="margin-top:6px"><div class="hsumk"><div><b>${rows.length}</b><span>işlem</span></div><div><b>${rows.length - sells.length}</b><span>alım</span></div><div><b>${sells.length}</b><span>satış</span></div><div><b class="${cls(pnl)}">${sgn(pnl)}</b><span>TL kâr/zarar</span></div></div></section>
   <section><h2>${ic('i-coins')}Coin</h2><div class="coins4" id="hCoins"><button class="tile ${!hCoin ? 'on' : ''}" data-c=""><span class="ic">${ic('i-layers')}</span><span class="nm">Tümü</span></button>
-    ${coins.map(c => `<button class="tile ${hCoin === c ? 'on' : ''}" data-c="${c}">${cico(c)}<span class="nm">${sym(c)}</span></button>`).join('')}</div></section>
+    ${coins.map(c => `<button class="tile ${hCoin === c ? 'on' : ''}" data-c="${c}">${cico(c)}<span class="nm">${sym(c)}</span>${pq(c)}</button>`).join('')}</div></section>
   <section><h2>${ic('i-list')}İşlemler<span class="hsum"><span class="seg" id="hSide">${[['', 'Tümü'], ['AL', 'Alım'], ['SAT', 'Satış']].map(([k, n]) => `<button class="${hSide === k ? 'on' : ''}" data-s="${k}">${n}</button>`).join('')}</span></span></h2>`;
     if (!rows.length)
         h += `<div class="card"><div class="empty">${ic('i-list')}<div>Bu süzgeçte işlem yok.</div></div></div>`;
@@ -1306,7 +1316,7 @@ function renderHist() {
             h += `<div class="dayh"><span>${d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' })}</span>${dp ? `<b class="${cls(dp)}">${sgn(dp)} TL</b>` : ''}</div><div class="card list">`;
         }
         const sell = t.side === 'SAT', hm = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
-        h += `<div class="row">${cico(t.inst, t.side, t.pnl < 0)}<div class="mid"><b>${sym(t.inst)} ${sell ? 'satıldı' : 'alındı'}</b><span>${hm} · ${t.reason} · ${px(t.price)}</span></div>
+        h += `<div class="row">${cico(t.inst, t.side, t.pnl < 0)}<div class="mid"><b>${sym(t.inst)}${pq(t.inst)} ${sell ? 'satıldı' : 'alındı'}</b><span>${hm} · ${t.reason} · ${px(t.price)}</span></div>
       <div class="end"><b>${tl(t.amount, 0)}</b>${sell ? `<span class="plc ${cls(t.pnl) || 'z'}">${sgn(t.pnl)} TL ${t.pnl >= 0 ? 'kâr' : 'zarar'}</span>` : `<span>harcandı</span>`}</div></div>`;
     }
     if (day)

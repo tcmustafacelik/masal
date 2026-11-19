@@ -43,21 +43,55 @@ def usdt_try():
     return _RATE["v"]
 
 
+_USDC = {"t": 0.0, "v": None}
+
+
+def usdc_usdt():
+    """USDC'nin USDT karşılığı (1 dk önbellek)."""
+    if _USDC["v"] is None or time.time() - _USDC["t"] > 60:
+        _USDC["v"] = float(_get("/api/v5/market/ticker", {"instId": "USDC-USDT"})[0]["last"])
+        _USDC["t"] = time.time()
+    return _USDC["v"]
+
+
+_EUR = {"t": 0.0, "v": None}
+
+
+def usdt_eur():
+    """1 USDT kaç EUR (1 dk önbellek)."""
+    if _EUR["v"] is None or time.time() - _EUR["t"] > 60:
+        _EUR["v"] = float(_get("/api/v5/market/ticker", {"instId": "USDT-EUR"})[0]["last"])
+        _EUR["t"] = time.time()
+    return _EUR["v"]
+
+
+def rate(ccy):
+    """1 birim paranın TL karşılığı. USDC, farkı düşük olan USDC-USDT ve USDT-TRY üzerinden hesaplanır."""
+    if ccy == "TRY":
+        return 1.0
+    if ccy == "USDT":
+        return usdt_try()
+    if ccy == "USDC":
+        return usdc_usdt() * usdt_try()
+    if ccy == "EUR":  # EUR-TL paritesi yok; USDT üzerinden
+        return usdt_try() / usdt_eur()
+    raise ValueError("Desteklenmeyen parite: " + ccy)
+
+
 def tl_factor(inst):
-    """Paritenin fiyatını TL'ye çeviren çarpan: TL paritesinde 1, USDT paritesinde USDT kuru."""
-    return usdt_try() if inst.endswith("-USDT") else 1.0
+    """Paritenin fiyatını TL'ye çeviren çarpan (TL paritesinde 1)."""
+    return rate(inst.split("-")[1])
 
 
 def prices_tl():
-    """Tüm TL ve USDT paritelerinin anlık fiyatı, TL karşılığı olarak."""
-    r = usdt_try()
+    """TL, USDT ve USDC paritelerinin anlık fiyatı, TL karşılığı olarak."""
+    k = {q: rate(q) for q in config.QUOTES}
     out = {}
     for t in tickers():
         inst, last = t["instId"], float(t.get("last") or 0)
-        if last and inst.endswith("-TRY"):
-            out[inst] = last
-        elif last and inst.endswith("-USDT"):
-            out[inst] = last * r
+        q = inst.rpartition("-")[2]
+        if last and q in k:
+            out[inst] = last * k[q]
     return out
 
 
@@ -82,7 +116,7 @@ def universe():
         base, _, quote = inst.partition("-")
         if quote != config.QUOTE or base in config.EXCLUDED or inst not in ok:
             continue
-        vol = float(t.get("volCcy24h") or 0) * (usdt_try() if quote == "USDT" else 1)  # TL karşılığı
+        vol = float(t.get("volCcy24h") or 0) * rate(quote)  # TL karşılığı
         try:
             bid, ask = float(t.get("bidPx") or 0), float(t.get("askPx") or 0)
             spread = (ask - bid) / ask if ask > 0 and bid > 0 else 1
