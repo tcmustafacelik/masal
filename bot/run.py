@@ -340,6 +340,7 @@ def main():
     # yeni paritesi listeye alınmaz (ör. elde SOL-TRY varken SOL-USDT alınmaz)
     held = {i.split("-")[0]: i for i in L["positions"]}
     insts = {u for u in _universe() if held.get(u.split("-")[0], u) == u}
+    live_insts = insts | set(L["positions"])  # gerçek hesap sadece güncel listedeki ve kendi elindeki coinlere bakar
     for p in ports + [live]:  # elde tutulan coinler listeden düşse bile takip edilir
         insts |= set(p.s["positions"])
 
@@ -366,7 +367,8 @@ def main():
 
     # Gerçek hesap kendi kaldığı yerden devam eder; yeni kurulduysa sadece son mumdan başlar
     live_events = []
-    for inst, bars in series.items():
+    live_series = {i: b for i, b in series.items() if i in live_insts}  # sanal stratejilerin eski TL coinleri hariç
+    for inst, bars in live_series.items():
         seen = live.s["last_bar"].get(inst)
         if seen is None:
             live_events.append((bars[-1][0], inst, len(bars) - 1)) if bars else None
@@ -374,18 +376,18 @@ def main():
             live_events += [(ts, inst, i) for i, (ts, _) in enumerate(bars) if ts > seen]
 
     run_bars(ports, events, series)
-    run_bars([live], live_events, series)
+    run_bars([live], live_events, live_series)
     liquidate(live, S)
     sell_selected(live, S)
     check_target(live, S, N)
     convert_request(live, S, N)
     topup(live, S, N if L["armed"] else None)
     try:
-        instant_buys(live, series)  # fiyat alım seviyesine değdiği an al (mum kapanışını bekleme)
+        instant_buys(live, live_series)  # fiyat alım seviyesine değdiği an al (mum kapanışını bekleme)
     except Exception as e:
         print("Anlık alım kontrolü yapılamadı:", e)
     try:
-        L["watch"] = watch(live, series)  # uygulamada "Bot ne yapıyor" kartı
+        L["watch"] = watch(live, live_series)  # uygulamada "Bot ne yapıyor" kartı
     except Exception as e:
         print("İzleme listesi hazırlanamadı:", e)
 
