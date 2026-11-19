@@ -170,6 +170,6 @@ interface VersionInfo { version: string; date?: string; notes?: string[] }
 
 interface Check { lv: 'bad' | 'warn2' | 'info' | 'ok'; t: string; dsc: string }
 
-interface Ticker { last: number; ch: number; vol: number; dir: number; ts: number }
+interface Ticker { last: number; bid?: number; ch: number; vol: number; dir: number; ts: number }
 
 interface Window { ICON_BAD: Set<string>; ICON_OK: Set<string> }

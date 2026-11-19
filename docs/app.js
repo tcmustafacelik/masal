@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.27.0';
+const APP_VERSION = '1.27.1';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -384,7 +384,9 @@ function updLine() {
 }
 function volTxt(inst) { const v = LP[inst]?.vol; return v == null ? '' : v >= 1e6 ? nf(v / 1e6, 1) + ' Mn TL' : nf(v / 1e3, 0) + ' B TL'; }
 function livePrice(inst, fallback) { return LP[inst]?.last ?? fallback; }
-function liveEquity(x) { return x.cash + x.positions.reduce((a, p) => a + p.qty * livePrice(p.inst, p.price), 0); }
+// Elde tutulan coinin değeri: şimdi satılsa alınacak fiyat (alıcıların en iyi teklifi). Az işlem gören TL paritelerinde son işlem fiyatı yanıltır.
+function sellPrice(inst, fallback) { return LP[inst]?.bid || LP[inst]?.last || fallback; }
+function liveEquity(x) { return x.cash + x.positions.reduce((a, p) => a + p.qty * sellPrice(p.inst, p.price), 0); }
 function renderMetrics(x) {
     const eq = liveEquity(x), pnl = eq - x.start_cash, pct = (eq / x.start_cash - 1) * 100, today = x.today_pnl + (eq - x.equity);
     const inCoins = eq - x.cash, live = sel === 'live';
@@ -421,7 +423,7 @@ function cico(inst, side, loss) {
 }
 function renderCoins(x) {
     const box = document.getElementById('coins'), sumEl = document.getElementById('coinSum');
-    const list = (x.coins || []).map(c => { const cur = c.open_qty ? livePrice(c.inst, c.price) : 0, op = c.open_qty ? c.open_qty * cur - c.open_cost : 0; return { ...c, op, tot: c.realized + op }; }).sort((a, b) => b.tot - a.tot);
+    const list = (x.coins || []).map(c => { const cur = c.open_qty ? sellPrice(c.inst, c.price) : 0, op = c.open_qty ? c.open_qty * cur - c.open_cost : 0; return { ...c, op, tot: c.realized + op }; }).sort((a, b) => b.tot - a.tot);
     if (!list.length) {
         box.innerHTML = `<div class="empty">${ic('i-coins')}<div>Henüz işlem yok; ilk alımdan sonra her coin burada ayrı görünür.</div></div>`;
         sumEl.textContent = '';
@@ -448,12 +450,12 @@ function renderCoins(x) {
 function renderPositions(x) {
     const pos = x.positions, ps = document.getElementById('posSum');
     {
-        const T = pos.reduce((a, p) => a + p.qty * livePrice(p.inst, p.price) - p.cost, 0);
+        const T = pos.reduce((a, p) => a + p.qty * sellPrice(p.inst, p.price) - p.cost, 0);
         ps.className = 'hsum ' + cls(T);
         ps.textContent = pos.length ? `${pos.length} coin · ${sgn(T)} TL` : '';
     }
     document.getElementById('positions').innerHTML = pos.length ? pos.map(p => {
-        const cur = livePrice(p.inst, p.price), val = p.qty * cur, pl = val - p.cost, plp = (val / p.cost - 1) * 100;
+        const cur = sellPrice(p.inst, p.price), val = p.qty * cur, pl = val - p.cost, plp = (val / p.cost - 1) * 100;
         const prot = p.protected === true ? `<span class="shd" title="Borsa korumalı">${ic('i-shield')}</span>` : p.protected === false ? `<span class="shd no" title="Koruma bekliyor">${ic('i-shield')}</span>` : '';
         let rng = '';
         if (p.tp && p.sl && p.tp > p.sl) {
@@ -462,7 +464,7 @@ function renderPositions(x) {
         <div class="rngl"><em class="dn">${lg ? 'Zarar' : 'Zarar durdur'} ${px(p.sl)}</em><em class="up">${lg ? 'Kâr' : 'Kâr al'} ${px(p.tp)}</em></div>`;
         }
         return `<div class="row pos">${cico(p.inst)}
-      <div class="mid"><b>${sym(p.inst)}${prot}${p.lots > 1 ? `<small> · ${p.lots} kademe</small>` : ''}</b><span>Alış ${px(p.avg)} → şimdi ${px(cur)}<br>${ago(p.since)} alındı${volTxt(p.inst) ? ` · hacim ${volTxt(p.inst)}` : ''}</span>${rng}</div>
+      <div class="mid"><b>${sym(p.inst)}${prot}${p.lots > 1 ? `<small> · ${p.lots} kademe</small>` : ''}</b><span>Alış ${px(p.avg)} → satış ${px(cur)}<br>${ago(p.since)} alındı${volTxt(p.inst) ? ` · hacim ${volTxt(p.inst)}` : ''}</span>${rng}</div>
       <div class="end"><b>${tl(val, 0)}</b><span class="plc ${cls(pl) || 'z'}">${sgn(pl)} TL</span><span class="plp ${cls(pl)}">${plp > 0 ? '+' : ''}${nf(plp)}%</span></div></div>`;
     }).join('')
         : `<div class="empty">${ic('i-box')}<div>Şu an açık pozisyon yok</div></div>`;
@@ -524,7 +526,7 @@ async function pollMarket(now) {
                 if (!last)
                     return;
                 const prev = LP[inst]?.last;
-                LP[inst] = { last, vol: +t.volCcy24h * k, ch: (last / (+t.open24h) - 1) * 100, dir: prev == null ? 0 : Math.sign(last - prev), ts: +t.ts };
+                LP[inst] = { last, bid: +t.bidPx * k || 0, vol: +t.volCcy24h * k, ch: (last / (+t.open24h) - 1) * 100, dir: prev == null ? 0 : Math.sign(last - prev), ts: +t.ts };
                 if (list.includes(inst))
                     lastTick = Math.max(lastTick, +t.ts);
             });

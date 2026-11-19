@@ -1,9 +1,8 @@
 {
-  "version": "1.27.0",
+  "version": "1.27.1",
   "date": "2026-11-19",
   "notes": [
-    "Yeni alımlar USDT paritesinden: alış-satış farkı çok daha düşük, 40 büyük coin",
-    "Tüm fiyat ve tutarlar TL karşılığıyla gösterilir",
-    "Elde TL paritesinde olan coinler kendi hedeflerinde satılır"
+    "Elimdeki coinlerin değeri artık 'şimdi satsam' fiyatıyla gösterilir (az işlem gören TL paritelerinde yanıltıcı rakam kalmadı)",
+    "Seçili coinleri elle satma desteği"
   ]
 }

@@ -14,6 +14,7 @@ DEFAULTS = {
     "live": False,          # True: gerçek emir gönderilir
     "paused": False,        # True: gerçek hesapta yeni alım yapılmaz (açık pozisyonlar korunur)
     "liquidate": 0,         # zaman damgası; yeniyse gerçek hesaptaki her şey satılır
+    "sell": {"ts": 0, "insts": []},  # seçili coinleri elle sat: zaman damgası yeniyse listedekiler bir kez satılır
     "strategy": "grid",
     "budget": 2000,         # bottaki başlangıç parası (TL)
     "kasa": 10000,          # hesaptaki toplam kasa (TL)

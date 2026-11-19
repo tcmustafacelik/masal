@@ -49,5 +49,11 @@
     "trades": true,
     "alerts": true,
     "daily": true
+  },
+  "sell": {
+    "ts": 1795067644512,
+    "insts": [
+      "TRUMP-TRY"
+    ]
   }
 }

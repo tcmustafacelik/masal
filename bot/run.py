@@ -134,6 +134,19 @@ def liquidate(p, S):
         note(L, "Uygulamadan istenen 'hepsini sat' tamamlandı")
 
 
+def sell_selected(p, S):
+    """Uygulamadan/ayarlardan istenen coinleri bir kez satar (zaman damgası yeniyse)."""
+    L, req = p.s, S.get("sell") or {}
+    ts_req = int(req.get("ts") or 0)
+    if not ts_req or ts_req <= L.get("sold_sel_at", 0):
+        return
+    L["sold_sel_at"] = ts_req
+    ts = int(time.time() * 1000)
+    for inst in req.get("insts") or []:
+        if inst in L["positions"]:
+            p._sell_lots(ts, inst, L["last_prices"].get(inst, 0), list(L["positions"][inst]["lots"]), "Elle satış")
+
+
 def daily_summary(L, p, N):
     """Her akşam 21:00 turunda günün özetini gönderir."""
     from datetime import datetime, timedelta, timezone
@@ -306,6 +319,7 @@ def main():
     run_bars(ports, events, series)
     run_bars([live], live_events, series)
     liquidate(live, S)
+    sell_selected(live, S)
     topup(live, S, N if L["armed"] else None)
     try:
         instant_buys(live, series)  # fiyat alım seviyesine değdiği an al (mum kapanışını bekleme)
