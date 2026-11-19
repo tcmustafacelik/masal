@@ -1,4 +1,4 @@
-const APP_VERSION='1.34.0';
+const APP_VERSION='1.35.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -828,7 +828,7 @@ async function loadSettings(){
   if(orig&&orig.grid&&orig.grid.trend_filter_pct==null)orig.grid.trend_filter_pct=1;
   if(orig&&!orig.notify)orig.notify={enabled:false,topic:'',trades:true,alerts:true,daily:true,money:true};
   topicPlain='';
-  if(pw&&typeof orig.notify?.topic==='object'){try{topicPlain=await unseal(orig.notify.topic,pw)}catch(e){}}
+  if(pw&&typeof orig.notify?.topic==='object'){try{topicPlain=await unseal(orig.notify.topic,pw)}catch(e){}}else if(typeof orig.notify?.topic==='string')topicPlain=orig.notify.topic;
   draft=JSON.parse(JSON.stringify(orig));renderConn();renderForm();
 }
 
@@ -897,19 +897,19 @@ function notifySection(){
   const nOn=[N.money!==false,N.trades,N.alerts,N.daily].filter(Boolean).length;
   let h=accOpen('bild','Bildirimler','i-bell','violet',!pw?'Kilitli: önce gerçek hesabın kilidini aç':N.enabled?`Açık · ${nOn} tür bildirim`:'Kapalı',secDirty(['notify']))+`<div class="card">`;
   if(!pw)return h+`<div style="font-size:13px;color:var(--muted)">${ic('i-lock')} Bildirimleri açmak için önce ana ekranda <b>Gerçek hesap</b> kutusuna dokunup kilidi aç.</div></div>`+ACC_END;
-  h+=swRow('nOn',N.enabled,'Telefona bildirim gönder','Gerçek hesaptaki olaylar anında telefonuna düşer');
+  h+=swRow('nOn',N.enabled,'Telefona bildirim gönder','Olaylar anında telefonuna ve uygulamadaki zile düşer');
   if(N.enabled){
-    h+=`<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line2);display:grid;gap:12px">
-      ${swRow('nMo',N.money!==false,'Para hareketleri','Yatırma, çekme, hesaplar arası aktarma')}
-      ${swRow('nTr',N.trades,'Al-sat','Alım, satım, kâr al / zarar durdur; denemede de')}
-      ${swRow('nAl',N.alerts,'Uyarılar','Hata, acil fren, anahtar sorunu, yetersiz bakiye')}
-      ${swRow('nDy',N.daily,'Günlük özet','Her akşam 21:00 civarı')}</div>
-      <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--line2);display:flex;gap:8px;align-items:center">
-      <div style="flex:1;min-width:0"><span style="font-size:11px;color:var(--muted);display:block">Konu adı (gizli tut)</span><b style="font-family:ui-monospace,monospace;font-size:12.5px;word-break:break-all">${topicPlain||'—'}</b></div>
-      <button class="btn sm" id="nCopy">${ic('i-copy')}Kopyala</button><button class="btn sm" id="nTest">${ic('i-bell')}Test</button></div>
-      <details class="setup"${N.topic?'':' open'}><summary>${ic('i-info')}ntfy kurulumu</summary>
+    const T=[['nMo',N.money!==false,'i-wallet','Para','Yatırma, çekme'],['nTr',!!N.trades,'i-coins','Al-sat','Alım, satım'],
+      ['nAl',!!N.alerts,'i-shield','Uyarılar','Hata, acil fren'],['nDy',!!N.daily,'i-day','Günlük özet','Akşam 21:00']];
+    const mask=topicPlain?topicPlain.slice(0,9)+'•'.repeat(Math.max(4,topicPlain.length-9)):'—';
+    h+=`<div class="nsub">Hangi bildirimler gelsin</div>
+      <div class="tiles ntiles">${T.map(([id,on,i,t,d])=>`<button type="button" class="tile ${on?'on':''}" id="${id}"><span class="ic">${ic(i as string)}</span><span class="nm">${t}</span><span class="pc">${d}</span><em class="ck">${ic(on?'i-check':'i-minus')}</em></button>`).join('')}</div>
+      <div class="nsub">Bildirim kanalı</div>
+      <div class="nchan"><span class="nci">${ic('i-lock')}</span><div class="nct"><b id="nTopic" data-m="1">${mask}</b><span>Gizli tut; bu adı bilen bildirimleri görür</span></div></div>
+      <div class="nbtns"><button type="button" class="btn sm" id="nShow">${ic('i-eye')}Göster</button><button type="button" class="btn sm" id="nCopy">${ic('i-copy')}Kopyala</button><button type="button" class="btn sm" id="nTest">${ic('i-bell')}Test</button></div>
+      <details class="setup"${N.topic?'':' open'}><summary>${ic('i-phone')}Telefona kurulum (ntfy)</summary>
       <ol class="steps"><li><b>ntfy</b> uygulamasını kur: <a href="https://play.google.com/store/apps/details?id=io.heckel.ntfy" target="_blank" rel="noopener">Android</a> · <a href="https://apps.apple.com/app/ntfy/id1625396347" target="_blank" rel="noopener">iPhone</a></li>
-      <li>ntfy'de <b>+</b> düğmesine dokun, konu adına aşağıdakini yapıştır, <b>Abone ol</b>.</li>
+      <li>ntfy'de <b>+</b> düğmesine dokun, <b>Kopyala</b> ile aldığın kanal adını yapıştır, <b>Abone ol</b>.</li>
       <li>Burada <b>Kaydet</b>'e bas, sonra <b>Test</b>'e dokun.</li></ol></details>`;
   }
   return h+'</div>'+ACC_END;
@@ -922,6 +922,7 @@ function bindNotify(){
       N.topic=await seal(topicPlain,pw)}
     renderForm()});
   t('nTr',()=>{N.trades=!N.trades;renderForm()});t('nAl',()=>{N.alerts=!N.alerts;renderForm()});t('nDy',()=>{N.daily=!N.daily;renderForm()});t('nMo',()=>{N.money=N.money===false;renderForm()});
+  t('nShow',()=>{const e=document.getElementById('nTopic'),b=document.getElementById('nShow');if(!e||!topicPlain)return;const m=e.dataset.m==='1';e.dataset.m=m?'0':'1';e.textContent=m?topicPlain:topicPlain.slice(0,9)+'•'.repeat(Math.max(4,topicPlain.length-9));b.lastChild.textContent=m?'Gizle':'Göster'});
   t('nCopy',()=>{navigator.clipboard?.writeText(topicPlain).then(()=>toast('Konu adı kopyalandı'),()=>toast('Kopyalanamadı, elle seç'))});
   t('nTest',async()=>{try{const r=await tfetch('https://ntfy.sh/',{method:'POST',body:JSON.stringify({topic:topicPlain,title:'Masal',message:'Test bildirimi: bağlantı çalışıyor.',tags:['white_check_mark']})});
     toast(r.ok?'Test bildirimi gönderildi':'Gönderilemedi ('+r.status+')')}catch(e){toast('Gönderilemedi, bağlantını kontrol et')}});
