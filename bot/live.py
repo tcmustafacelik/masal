@@ -318,13 +318,26 @@ class LivePortfolio(Portfolio):
         ccys = [i.split("-")[0] for i in self.s["positions"]]
         rows = self.api._req("GET", "/api/v5/account/balance?ccy=" + ",".join(ccys))
         have = {d["ccy"]: float(d.get("cashBal") or d.get("eq") or 0) for d in (rows[0].get("details", []) if rows else [])}
+        miss = self.s.setdefault("missing", {})
         for inst in list(self.s["positions"]):
-            pos = self.s["positions"][inst]
             base = inst.split("-")[0]
-            rec = sum(l["qty"] for l in pos["lots"])
             got = have.get(base, 0.0)
+            pos = self.s["positions"][inst]
+            if sum(l["qty"] for l in pos["lots"]) > got * 1.03:
+                # Coin eksik: büyük ihtimalle borsadaki kâr al / zarar durdur az önce çalıştı. Önce onu kayda geçir
+                # (satış geliri kasaya eklensin); kayıt hâlâ tutmuyorsa bir sonraki kontrolde düzelt.
+                self.reconcile(only=inst)
+                if inst not in self.s["positions"]:
+                    miss.pop(inst, None)
+                    continue
+                pos = self.s["positions"][inst]
+            rec = sum(l["qty"] for l in pos["lots"])
             if rec <= 0 or got >= rec * 0.97:
+                miss.pop(inst, None)
                 continue
+            if now - miss.setdefault(inst, now) < 50_000:
+                continue  # ilk görüşte bekle: borsadaki emir henüz sonuçlanmamış olabilir
+            miss.pop(inst, None)
             ratio = max(0.0, got / rec)
             items = [(l["algo"], inst) for l in pos["lots"] if l.get("algo")]
             try:
@@ -348,12 +361,14 @@ class LivePortfolio(Portfolio):
     def cancel_items(self, items):
         self.api.cancel_algos(items)
 
-    def reconcile(self):
+    def reconcile(self, only=None):
         """Borsada tetiklenen kâr al / zarar durdur emirlerini kayda geçirir, eksik korumaları yeniden kurar."""
         if not self.armed:
             return
         now = int(time.time() * 1000)
-        for inst in list(self.s["positions"]):
+        for inst in ([only] if only else list(self.s["positions"])):
+            if inst not in self.s["positions"]:
+                continue
             pos = self.s["positions"][inst]
             for lot in list(pos["lots"]):
                 if not lot.get("algo"):

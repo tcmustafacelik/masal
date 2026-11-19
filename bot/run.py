@@ -134,6 +134,35 @@ def liquidate(p, S):
         note(L, "Uygulamadan istenen 'hepsini sat' tamamlandı")
 
 
+def repair_lit(L, live):
+    """Tek seferlik onarım (19.11.2026): LIT-TRY borsadaki kâr al emriyle satıldı ama satış geliri kayda geçmeden
+    pozisyon kayıttan silindi. OKX'teki gerçek satışı bulup gelirini kasaya ve işlem geçmişine ekler."""
+    fixes = L.setdefault("fixes", [])
+    if not live.armed or "lit_1119" in fixes:
+        return
+    since = 1795068000000 - 3 * 3600 * 1000  # 19.11.2026 06:00 TSİ'den beri
+    rows = live.api._req("GET", "/api/v5/trade/fills-history?instType=SPOT&instId=LIT-TRY&limit=100")
+    sells = [r for r in rows if r.get("side") == "sell" and int(r.get("ts") or 0) >= since]
+    if not sells:
+        fixes.append("lit_1119")  # satış bulunamadı: yapılacak bir şey yok
+        return
+    qty = sum(float(r["fillSz"]) for r in sells)
+    proceeds = sum(float(r["fillSz"]) * float(r["fillPx"]) + (float(r.get("fee") or 0) if r.get("feeCcy") == "TRY" else 0)
+                   for r in sells)
+    cost = 444.42 * min(1.0, qty / 3.24854)  # kayıttaki LIT kademesi: 3,24854 adet, ortalama 136,81 TL
+    pnl = proceeds - cost
+    ts = max(int(r["ts"]) for r in sells)
+    L["cash"] += proceeds
+    L["trades"].append({"ts": ts, "inst": "LIT-TRY", "side": "SAT", "price": proceeds / qty if qty else 0, "qty": qty,
+                        "amount": round(proceeds, 2), "pnl": round(pnl, 2), "pnl_pct": round(pnl / cost * 100, 2),
+                        "reason": "Borsada kâr alındı (kayda sonradan geçti)", "real": True})
+    fixes.append("lit_1119")
+    note(L, f"Onarım: LIT satışı kayda geçti · {proceeds:.2f} TL · sonuç {pnl:+.2f} TL")
+    if live.notifier:
+        live.notifier.add("trades", f"Borsada kâr alındı: LIT ({pnl:+.2f} TL)",
+                          f"{proceeds:.2f} TL kasaya eklendi. Bu satış az önce kayda geçmemişti, düzeltildi.", 4, ["zap"])
+
+
 def sell_selected(p, S):
     """Uygulamadan/ayarlardan istenen coinleri bir kez satar (zaman damgası yeniyse)."""
     L, req = p.s, S.get("sell") or {}
@@ -274,6 +303,10 @@ def main():
         live.check_holdings()  # kayıttaki coin miktarı OKX'tekiyle aynı mı
     except Exception as e:
         print("Bakiye eşleştirme yapılamadı:", e)
+    try:
+        repair_lit(L, live)
+    except Exception as e:
+        print("LIT onarımı yapılamadı:", e)
     if L.get("pending_cut", 0) > 0 and L["cash"] > 0:  # bütçe düşürmesinin kalanını satıştan gelen nakitten al
         t = min(L["cash"], L["pending_cut"])
         L["cash"] -= t
