@@ -1,13 +1,11 @@
 name: Masal bot
 
 # Bot kesintisiz çalışır: her oturum ~50 dk sürer, ~5 sn'de bir tur atar ve bitince
-# bir sonraki oturumu kendisi başlatır. Zamanlayıcı ve ayar kaydı sadece yedek tetikleyicidir
-# (zincir bir sebeple koparsa yeniden başlatır).
+# bir sonraki oturumu kendisi başlatır. Zamanlayıcı sadece yedek tetikleyicidir (zincir koparsa yeniden başlatır).
+# Ayar kaydı oturum başlatmaz: çalışan bot ayarları her turda zaten okur (boşuna bekleyen/iptal oturum birikmesin).
 on:
   schedule:
     - cron: "*/5 * * * *"  # yedek: zincir koparsa en geç ~5 dk içinde yeniden başlar
-  push:
-    paths: ["docs/ayarlar.json"]
   workflow_dispatch:
 
 permissions:
