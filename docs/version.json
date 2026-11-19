@@ -1,10 +1,7 @@
 {
-  "version": "1.32.0",
+  "version": "1.32.1",
   "date": "2026-11-19",
   "notes": [
-    "Piyasa listesinde 24 saatlik değişim düzeltildi (USDT paritelerinde yanlış yüzde görünüyordu)",
-    "Kasa kartı ayarlardaki ekleme kurallarını gösterir",
-    "Coin bazında kâr/zarar satırları sadeleşti",
-    "TL tutarları satır sonunda bölünmez; kademe tutarları her yerde 444 → 444 → 222 olarak görünür"
+    "İnce ayar: yüzdeler tek biçimde (+%0,14), hacim Mr/Mn, kademe rozeti her yerde aynı, coin kâr/zarar satırları sadeleşti, saatte salise yok, açıklamalar güncel"
   ]
 }

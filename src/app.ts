@@ -1,4 +1,4 @@
-const APP_VERSION='1.32.0';
+const APP_VERSION='1.32.1';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -8,6 +8,7 @@ function localStore(k: string, v?: string): string | null {try{if(v===undefined)
 const nf=(v,d=2)=>new Intl.NumberFormat('tr-TR',{minimumFractionDigits:d,maximumFractionDigits:d}).format(v);
 const tl=(v,d=2)=>nf(v,d)+'\u00a0TL'; // bölünmez boşluk: "TL" satır sonunda tek başına kalmasın
 const sgn=v=>(v>0?'+':v<0?'−':'')+nf(Math.abs(v));
+const spc=(v,d=2)=>(v>0?'+':v<0?'−':'')+'%'+nf(Math.abs(v),d); // işaretli yüzde: +%0,14 / −%1,86
 const cls=v=>v>0?'up':v<0?'dn':'';
 function px(v){const a=Math.abs(v);return nf(v,a>=1000?0:a>=10?2:a>=1?3:5)}
 function fv(v,dec){return dec>0?String(Math.round(+v*100)/100).replace('.',','):Number(v).toLocaleString('tr-TR')} // en fazla 2 ondalık: kutudan taşmasın
@@ -92,10 +93,10 @@ function render(){
   const virt=keys.filter(k=>k!=='live');
   const tg=document.getElementById('tiles');tg.style.gridTemplateColumns=`repeat(${Math.max(1,virt.length)},minmax(0,1fr))`;
   tg.innerHTML=virt.map(k=>{const v=S.strategies[k];
-    return `<button class="tile ${k===sel?'on':''}" data-k="${k}"><span class="ic">${ic(ICON[k])}</span><span class="nm">${v.name}</span><span class="pc ${cls(v.pnl_pct)}">${v.pnl_pct>0?'+':''}${nf(v.pnl_pct)}%</span></button>`}).join('');
+    return `<button class="tile ${k===sel?'on':''}" data-k="${k}"><span class="ic">${ic(ICON[k])}</span><span class="nm">${v.name}</span><span class="pc ${cls(v.pnl_pct)}">${spc(v.pnl_pct)}</span></button>`}).join('');
   tg.querySelectorAll<HTMLElement>('.tile').forEach(el=>el.onclick=()=>pick(el.dataset.k as StrategyKey));
   {const best=virt.slice().sort((a,b)=>S.strategies[b].pnl_pct-S.strategies[a].pnl_pct)[0];
-   document.getElementById('cmpSum').textContent=virt.length?`Her biri ${tl(S.strategies[virt[0]].start_cash||10000,0)} sanal parayla · önde: ${S.strategies[best].name} ${S.strategies[best].pnl_pct>0?'+':''}${nf(S.strategies[best].pnl_pct)}%`:'—'}
+   document.getElementById('cmpSum').textContent=virt.length?`Her biri ${tl(S.strategies[virt[0]].start_cash||10000,0)} sanal parayla · önde: ${S.strategies[best].name} ${spc(S.strategies[best].pnl_pct)}`:'—'}
   const x=S.strategies[sel];
   const locked=!!x.locked;
   document.getElementById('chartSec').hidden=locked;
@@ -140,7 +141,7 @@ function pick(k: StrategyKey){sel=k;selPicked=true;localStore('masal_sel',sel);r
 const pp=(v,d=1)=>'%'+nf(v*100,Math.round(v*1000)%10?d:0);
 function gloss(k: string): [string, string] {
   const L=S?.strategies?.live,c=(L&&!L.locked&&L.cfg)||null;
-  const step=c?pp(c.step):'%1,5',tp=c?pp(c.lot_tp):'%4',stop=c?pp(c.stop):'%12',ml=c?c.max_lots:4,mc=c?c.max_coins:20,lot=c?tl(c.lot,0):'bir kademe',use=c?pp(c.max_use,0):'%40',cf=c?.coin_filter?pp(c.coin_filter):'%1';
+  const step=c?pp(c.step):'%1,5',tp=c?pp(c.lot_tp):'%4',stop=c?pp(c.stop):'%12',ml=c?c.max_lots:4,mc=c?c.max_coins:20,lot=c?tl(c.lot,0):'bir kademe',use=c?pp(c.max_use,0):'%40',cf=c?.coin_filter?pp(c.coin_filter):'%1',qt=S?.settings?.quote||S?.okx?.quote||'USDT';
   const G={
     nasil:['Bot nasıl alıp satar?',`${c?.instant?'<p>Bot <b>10 saniyede bir</b> fiyatlara bakar; fiyat alım seviyesine değdiği an alır. Alım seviyesi son kapanan 15 dakikalık mumlara göre hesaplanır.</p>':'<p>Bot <b>10 saniyede bir</b> piyasaya bakar, kararını <b>15 dakikalık mum</b> kapanınca verir.</p>'}
       <ul><li><b>Alım:</b> Bir coin son ${c?.sma_h||20} saatin ortalamasından <b>${step}</b> aşağı inince ${lot}'lik bir parça (kademe) alır.</li>
@@ -148,14 +149,14 @@ function gloss(k: string): [string, string] {
       <li><b>Satış:</b> Her kademe kendi alış fiyatının <b>${tp}</b> üstüne çıkınca ayrı satılır.</li>
       <li><b>Zarar kesme:</b> Ortalama maliyetin <b>${stop}</b> altına inerse o coindeki her şey satılır.</li>
       <li><b>Düşüş filtresi:</b> Coin bir günde ${cf}'den fazla geriliyorsa "düşen bıçak" sayılır, yeni alım bekletilir.</li></ul>
-      <p>Coinler alış-satış farkı çok düşük olan <b>USDT paritesinden</b> alınır; TL gerekirse otomatik USDT'ye çevrilir. Uygulamadaki bütün fiyat ve tutarlar <b>TL karşılığıdır</b>.</p>
+      <p>${qt==='TRY'?'Coinler <b>TRY paritesinden</b> alınır.':`Coinler <b>${qt} paritesinden</b> alınır; TL gerekirse otomatik ${qt}'ye çevrilir.`} Uygulamadaki bütün fiyat ve tutarlar <b>TL karşılığıdır</b>.</p>
       <p>Aynı anda en fazla <b>${mc}</b> coin tutulur ve bütçenin en fazla <b>${use}</b>'ı coine yatırılır; kalanı güvenlik payıdır.</p>`],
     yakin:['Alıma yakın coinler',`<p>Her satır bir coinin <b>alım fiyatına ne kadar uzak</b> olduğunu gösterir.</p>
       <ul><li><span class="chip m">%0,8 düşerse</span> fiyat bu kadar daha inerse bot alır.</li>
       <li><span class="chip g">Alım şartında</span> fiyat alım seviyesinde; ${c?.instant?'bot birkaç saniye içinde alır':'15 dakikalık mum bu seviyede kapanırsa bot alır'}.</li>
       <li><span class="chip a">Düşüş filtresi</span> coin hızlı düşüyor; düşüş yavaşlayana kadar alım bekletiliyor.</li>
       <li><span class="chip a">Şartta · bütçe dolu</span> fiyat uygun ama coinlere ayrılan para dolu; bir kademe satılınca alır.</li>
-      <li><span class="chip b">2. kademe</span> zaten elde olan coin; bu kadar daha düşerse bir kademe daha eklenir.</li></ul>
+      <li><i class="kd">1 kademe</i> coin zaten elde; mavi yüzde kadar daha düşerse bir sonraki kademe alınır (<b>2. alım</b> fiyatı).</li></ul>
       <p>Şartta görünüp alınmıyorsa: ${c?.instant?'':'mum henüz kapanmamıştır, ya da '}bütçe sınırı / coin sayısı dolmuştur.</p>`],
     pozisyon:['Elimdeki coinler',`<ul><li><b>Alış → şimdi:</b> ortalama alış fiyatın ve şu anki fiyat.</li>
       <li><b>Çubuk:</b> solda kırmızı <b>zarar durdur</b>, sağda yeşil <b>kâr al</b> fiyatı. Yuvarlak, fiyatın şu an nerede olduğunu gösterir; ince çizgi alış fiyatın. Yuvarlak sağa gittikçe kâra yaklaşırsın.</li>
@@ -163,8 +164,9 @@ function gloss(k: string): [string, string] {
       <li><b>Sağdaki renkli kutu:</b> şimdi satılsa ne kadar kâr (yeşil) ya da zarar (kırmızı) edeceğin.</li>
       <li><b>Elle satmak için</b> satırı sola kaydır ve kırmızı <b>Sat</b> düğmesine dokun; bot birkaç saniye içinde piyasa fiyatından satar.</li></ul>`],
     coinkz:['Coin bazında kâr/zarar',`<p>Her coin için şimdiye kadar elde edilen sonuç:</p>
-      <ul><li><b>Kapanan:</b> satılmış kademelerden kesinleşmiş kâr/zarar.</li><li><b>Açık:</b> elde duran kısmın şu anki, henüz kesinleşmemiş kâr/zararı.</li></ul>
-      <p>Başlıktaki toplam ikisinin toplamıdır.</p>`],
+      <ul><li><b>Büyük rakam:</b> satılan kademelerin kesinleşmiş sonucu + elde duran kısmın şu anki sonucu.</li>
+      <li><b>Kapandı:</b> coin tamamen satıldı, sonuç kesin. <b>Elde:</b> henüz hiç satılmadı. <b>Açıkta:</b> elde kalan kısmın henüz kesinleşmemiş kâr/zararı.</li></ul>
+      <p>Başlıktaki rakam bütün coinlerin toplamıdır.</p>`],
     use:['Coinlere ayrılan sınır',`<p>Bot bütçenin en fazla <b>${use}</b>'ını aynı anda coine yatırır. Çubuk bunun ne kadarının dolu olduğunu gösterir.</p>
       <p>Çubuk dolunca bot yeni coin almaz; bir kademe kârla satılınca yer açılır ve yeniden alım yapar. Bu sınır sert düşüşte paranın tamamının coinde kalmasını engeller.</p>`],
     kasa:['Kasa',`<p><b>Kasa</b>, bu iş için ayırdığın toplam para. <b>Botta aktif</b> kısmı bot kullanır, <b>yedek</b> kısmı bekler.</p><p>Bot kâr ettikçe kasadan kademeli ekleme yapar; zarardayken ekleme yapmaz.</p>`]
@@ -220,14 +222,14 @@ function renderNow(x: Strategy){
 
 function updLine(){
   const p=(n,l=2)=>String(n).padStart(l,'0');
-  const live=lastTick?(()=>{const d=new Date(lastTick);return `<b class="up">● Canlı ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}.${p(d.getMilliseconds(),3)}</b> · `})():'';
+  const live=lastTick?(()=>{const d=new Date(lastTick);return `<b class="up">● Canlı ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}</b> · `})():'';
   let bot='Bot henüz çalışmadı';
   if(S?.updated){const sec=Math.max(0,Math.round((Date.now()-S.updated)/1000));
     bot=sec<=180?`Bot çalışıyor · son tur ${sec<60?sec+' sn':Math.round(sec/60)+' dk'} önce`
       :`<b class="dn">Bot sessiz · ${ago(S.updated)}</b>`}
   document.getElementById('updated').innerHTML=live+bot;
 }
-function volTxt(inst){const v=LP[inst]?.vol;return v==null?'':v>=1e6?nf(v/1e6,1)+' Mn TL':nf(v/1e3,0)+' B TL'}
+function volTxt(inst){const v=LP[inst]?.vol;return v==null?'':v>=1e9?nf(v/1e9,1)+'\u00a0Mr\u00a0TL':v>=1e6?nf(v/1e6,1)+'\u00a0Mn\u00a0TL':nf(v/1e3,0)+'\u00a0B\u00a0TL'}
 function livePrice(inst,fallback){return LP[inst]?.last??fallback}
 // Elde tutulan coinin değeri: şimdi satılsa alınacak fiyat (alıcıların en iyi teklifi). Az işlem gören TL paritelerinde son işlem fiyatı yanıltır.
 function sellPrice(inst,fallback){return LP[inst]?.bid||LP[inst]?.last||fallback}
@@ -242,7 +244,7 @@ function renderMetrics(x: Strategy){
   let h=`<div class="hh"><span class="hn">${ic(live?'i-wallet':ICON[sel])}${live?'Gerçek hesap':x.name}</span>${tag}
     ${live?'':`<button class="back" id="backLive">${ic('i-back')}Gerçek hesap</button>`}</div>
     <div class="big">${big[0]}<small>,${big[1]} TL</small></div>
-    <div class="chg"><span class="${cls(pnl)}"><em>Toplam</em>${sgn(pnl)} TL · ${pct>0?'+':''}${nf(pct)}%</span><span class="${cls(today)}"><em>Bugün</em>${sgn(today)} TL</span></div>
+    <div class="chg"><span class="${cls(pnl)}"><em>Toplam</em>${sgn(pnl)} TL · ${spc(pct)}</span><span class="${cls(today)}"><em>Bugün</em>${sgn(today)} TL</span></div>
     <div class="hk"><div><span>Boşta nakit</span><b>${tl(x.cash,0)}</b></div><div><span>Coinlerde</span><b>${tl(inCoins,0)}</b></div>
       <div><span>Kazanma</span><b>${x.win_rate==null?'—':'%'+nf(x.win_rate,0)}</b></div></div>`;
   const w=x.watch;
@@ -270,8 +272,8 @@ function renderCoins(x){
   box.innerHTML=list.map(c=>{const parts=[];
     if(c.sells)parts.push(`${c.sells} satış`);else parts.push(`${c.buys} alım`);
     if(c.bought)parts.push(tl(c.bought,0)+' alındı');
-    // sağ alt: hem kesinleşen hem açık kâr/zarar varsa ayrıntı; coin elde ise "elde" etiketi
-    const det=c.open_qty?(c.sells?`kapanan ${sgn(c.realized)} · açık ${sgn(c.op)}`:'elde, satılmadı'):'kapandı';
+    // sağ alt kısa: kapandı / elde / açıktaki kâr-zarar (sağ sütun dar kalsın, sol satır bölünmesin)
+    const det=c.open_qty?(c.sells?`açıkta ${sgn(c.op)}`:'elde'):'kapandı';
     return `<div class="row">${cico(c.inst)}
       <div class="mid"><b>${sym(c.inst)}${pq(c.inst)}</b><span>${parts.join(' · ')}</span></div>
       <div class="end"><b class="${cls(c.tot)}">${sgn(c.tot)} TL</b><span>${det}</span></div></div>`}).join('');
@@ -289,8 +291,8 @@ function renderPositions(x){
       rng=`<div class="rng"><i class="av" style="left:${k(p.avg).toFixed(1)}%"></i><i class="mk ${cls(pl)}" style="left:${k(cur).toFixed(1)}%"></i></div>
         <div class="rngl"><em class="dn">${lg?'Zarar':'Zarar durdur'} ${px(p.sl)}</em><em class="up">${lg?'Kâr':'Kâr al'} ${px(p.tp)}</em></div>`}
     const row=`<div class="row pos${canSell?' swc':''}">${cico(p.inst)}
-      <div class="mid"><b>${sym(p.inst)}${pq(p.inst)}${prot}${p.lots>1?`<small> · ${p.lots} kademe</small>`:''}</b><span>Alış ${px(p.avg)} → satış ${px(cur)}<br>${ago(p.since)} alındı${volTxt(p.inst)?` · hacim ${volTxt(p.inst)}`:''}</span>${rng}</div>
-      <div class="end"><b>${tl(val,0)}</b><span class="plc ${cls(pl)||'z'}">${sgn(pl)} TL</span><span class="plp ${cls(pl)}">${plp>0?'+':''}${nf(plp)}%</span></div></div>`;
+      <div class="mid"><b>${sym(p.inst)}${pq(p.inst)}${prot}${p.lots>1?`<i class="kd">${p.lots} kademe</i>`:''}</b><span>Alış ${px(p.avg)} → satış ${px(cur)}<br>${ago(p.since)} alındı${volTxt(p.inst)?` · hacim ${volTxt(p.inst)}`:''}</span>${rng}</div>
+      <div class="end"><b>${tl(val,0)}</b><span class="plc ${cls(pl)||'z'}">${sgn(pl)} TL</span><span class="plp ${cls(pl)}">${spc(plp)}</span></div></div>`;
     return canSell?`<div class="swr${swOpen===p.inst?' open':''}${SELLING[p.inst]?' busy':''}" data-i="${p.inst}"><button class="swb" data-sell="${p.inst}">${ic('i-sell')}${SELLING[p.inst]?'Satılıyor':'Sat'}</button>${row}</div>`:row}).join('')
     :`<div class="empty">${ic('i-box')}<div>Şu an açık pozisyon yok</div></div>`;
 }
@@ -331,7 +333,7 @@ async function sellCoin(inst: string){
 
 function renderRules(R: Risk, c?: GridCfg | null){
   const rows=c?[
-    ['i-coins',(c.lot2??1)===1&&(c.lot3??1)===1?tl(c.lot,0):`${nf(c.lot,0)} → ${nf(c.lot*(c.lot2??1),0)} → ${tl(c.lot*(c.lot3??1),0)}`,'Kademe tutarları (1. → 2. → 3.)'],
+    ['i-coins',(c.lot2??1)===1&&(c.lot3??1)===1?tl(c.lot,0):`${nf(c.lot,0)}·${nf(c.lot*(c.lot2??1),0)}·${tl(c.lot*(c.lot3??1),0)}`,'1., 2. ve 3. kademe tutarı'],
     ['i-layers',c.max_coins+' coin','Aynı anda en fazla'],
     ['i-grid',c.max_lots+' kademe','Bir coinde en fazla'],
     ['i-pnl',pp(c.lot_tp)+' kâr','Her kademe ayrı satılır'],
@@ -375,7 +377,7 @@ async function pollMarket(now){
         if(list.includes(inst))lastTick=Math.max(lastTick,+t.ts)});
       const tag=document.getElementById('liveTag');
       if(lastTick){const d=new Date(lastTick),p=(n,l=2)=>String(n).padStart(l,'0');
-        tag.innerHTML=`<i></i>Canlı · ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}.${p(d.getMilliseconds(),3)}`;tag.classList.add('on')}
+        tag.innerHTML=`<i></i>Canlı · ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;tag.classList.add('on')}
       const x=S.strategies[sel];
       if(x&&!x.locked){renderMetrics(x);renderPositions(x);renderCoins(x);renderNow(x)}
       renderMarket();updLine();
@@ -391,7 +393,7 @@ function renderMarket(){
   box.className='card list mk';
   box.innerHTML=rows.length?rows.map(i=>{const q=LP[i];
     return `<div class="row">${cico(i)}<div class="mid"><b>${sym(i)}${pq(i)}</b><span>Hacim ${volTxt(i)} · 24 sa</span></div>
-      <div class="end"><b class="pxv ${q.dir>0?'flash-up':q.dir<0?'flash-dn':''}">${px(q.last)}</b><span class="${cls(q.ch)}">${q.ch>0?'+':''}${nf(q.ch)}%</span></div></div>`}).join('')
+      <div class="end"><b class="pxv ${q.dir>0?'flash-up':q.dir<0?'flash-dn':''}">${px(q.last)}</b><span class="${cls(q.ch)}">${spc(q.ch)}</span></div></div>`}).join('')
     +(all.length>6?`<button class="more" id="mkMore">${mkAll?'Daha az göster':`Tümünü göster (${all.length} coin)`}</button>`:'')
     :`<div class="empty">${ic('i-pnl')}<div>Fiyatlar yükleniyor…</div></div>`;
   const mb=document.getElementById('mkMore');if(mb)mb.onclick=()=>{mkAll=!mkAll;renderMarket()};
@@ -435,8 +437,8 @@ function renderBacktest(){
   const rows=Object.entries(B.results).sort((a,b)=>b[1].pnl_pct-a[1].pnl_pct);
   box.innerHTML=rows.map(([k,r],i)=>`<div class="row ${i===0?'best':''}"><div class="rank">${i+1}</div>
       <div class="mid"><b>${r.name}${k===sel?' · seçili':''}</b><span>${r.trades} işlem · kazanma %${nf(r.win_rate,0)} · en büyük düşüş %${nf(r.max_drawdown,1)}</span></div>
-      <div class="end"><b class="${cls(r.pnl_pct)}">${r.pnl_pct>0?'+':''}${nf(r.pnl_pct)}%</b><span>${tl(r.final,0)}</span></div></div>`).join('')
-    +`<div class="note">${B.custom?`<b>Senin istediğin ayarlarla</b> (${dt(B.generated)}). `:''}Son ${B.days} gün, ${B.symbols.length} coin, gerçek OKX TR fiyatları, komisyon dahil. Aynı coinleri alıp hiç dokunmamak (al-tut): <b class="${cls(B.hold_pct)}">${B.hold_pct>0?'+':''}${nf(B.hold_pct)}%</b>. Geçmiş sonuç geleceği garanti etmez.</div>`;
+      <div class="end"><b class="${cls(r.pnl_pct)}">${spc(r.pnl_pct)}</b><span>${tl(r.final,0)}</span></div></div>`).join('')
+    +`<div class="note">${B.custom?`<b>Senin istediğin ayarlarla</b> (${dt(B.generated)}). `:''}Son ${B.days} gün, ${B.symbols.length} coin, gerçek OKX TR fiyatları, komisyon dahil. Aynı coinleri alıp hiç dokunmamak (al-tut): <b class="${cls(B.hold_pct)}">${spc(B.hold_pct)}</b>. Geçmiş sonuç geleceği garanti etmez.</div>`;
 }
 
 function renderChart(){
@@ -454,7 +456,7 @@ function renderChart(){
   const X=t=>pl+(t-x0)/(x1-x0||1)*(W-pl-pr),Y=v=>pt+(1-(v-y0)/(y1-y0))*(H-pt-pb);
   const path=s=>s.map((p,i)=>(i?'L':'M')+X(p[0]).toFixed(1)+' '+Y(p[1]).toFixed(1)).join(' ');
   let g=`<line x1="0" x2="${W}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--zero)" stroke-dasharray="4 4" stroke-width="1"/>`;
-  g+=`<text x="2" y="${Y(0)+12}" font-size="10" fill="var(--faint)">Başlangıç %0</text><text x="2" y="${pt+8}" font-size="10" fill="var(--faint)">${y1>0?"+":""}${nf(y1,1)}%</text><text x="2" y="${H-pb-3}" font-size="10" fill="var(--faint)">${nf(y0,1)}%</text>`;
+  g+=`<text x="2" y="${Y(0)+12}" font-size="10" fill="var(--faint)">Başlangıç %0</text><text x="2" y="${pt+8}" font-size="10" fill="var(--faint)">${spc(y1,1)}</text><text x="2" y="${H-pb-3}" font-size="10" fill="var(--faint)">${spc(y0,1)}</text>`;
   const order=Object.keys(src).filter(k=>k!==sel).concat(src[sel]?[sel]:[]);
   for(const k of order){const s=src[k];if(s.length<2)continue;const on=k===sel;
     g+=`<path d="${path(s)}" fill="none" stroke="${on?AMBER:COLORS[k]}" stroke-width="${on?2.4:1.3}" stroke-opacity="${on?1:.45}" stroke-linejoin="round"/>`;
@@ -522,7 +524,7 @@ function homeChecks(){const el=document.getElementById('homeChk');if(!el)return;
 function testInfo(){const req=orig?.test_req,cu=B?.custom;
   if(req&&(!cu||cu.ts!==req.ts))return `<div class="ck info"><span class="ci">${ic('i-refresh')}</span><div><b class="t">Test çalışıyor…</b><span class="d">Son 30 günün 15 dakikalık fiyatlarıyla deneniyor; 3–4 dakika sürer. Bot bu sırada çalışmaya devam eder.</span></div></div>`;
   if(cu&&B?.results){const r=B.results[cu.strategy]||Object.values(B.results)[0];
-    return `<div class="ck ${r.pnl_pct>=0?'ok':'warn2'}"><span class="ci">${ic('i-flag')}</span><div><b class="t">Test sonucu: ${r.name} ${r.pnl_pct>0?'+':''}${nf(r.pnl_pct)}%</b><span class="d">${dt(B.generated)} · istediğin ayarlarla son ${B.days} gün · ${r.trades} satış · kazanma %${nf(r.win_rate,0)} · en büyük düşüş %${nf(r.max_drawdown,1)} · hiç dokunmasan %${nf(B.hold_pct)}</span></div></div>`}
+    return `<div class="ck ${r.pnl_pct>=0?'ok':'warn2'}"><span class="ci">${ic('i-flag')}</span><div><b class="t">Test sonucu: ${r.name} ${spc(r.pnl_pct)}</b><span class="d">${dt(B.generated)} · istediğin ayarlarla son ${B.days} gün · ${r.trades} satış · kazanma %${nf(r.win_rate,0)} · en büyük düşüş %${nf(r.max_drawdown,1)} · hiç dokunmasan %${nf(B.hold_pct)}</span></div></div>`}
   return ''}
 function updateChecks(){const el=document.getElementById('checks');if(!el||!draft)return;
   const IC={bad:'i-stop',warn2:'i-info',info:'i-refresh',ok:'i-check'};
