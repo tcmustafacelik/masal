@@ -10,6 +10,7 @@ import json
 import os
 import shutil
 import subprocess
+import threading
 import time
 import traceback
 
@@ -77,25 +78,47 @@ def recovery_note():
         n.flush()
 
 
-def push_data():
-    token, repo = os.environ.get("GH_TOKEN"), os.environ.get("GITHUB_REPOSITORY")
-    if not token or not repo:
-        return False
-    d = "/tmp/masal-data"
-    shutil.rmtree(d, ignore_errors=True)
-    os.makedirs(d + "/docs")
-    shutil.copytree("docs/data", d + "/docs/data", ignore=shutil.ignore_patterns("*.tmp"))
+_PUSH = {"t": None, "ok": True}
+
+
+def _push_dir(d, token, repo):
     sh("git", "init", "-q", "-b", "data", cwd=d)
     sh("git", "add", "-A", cwd=d)
     sh("git", "-c", "user.name=masal-bot", "-c", "user.email=masal-bot@users.noreply.github.com",
        "commit", "-qm", "Bot turu " + time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), cwd=d)
+    ok = False
     for _ in range(3):
         r = sh("git", "push", "-q", "-f", f"https://x-access-token:{token}@github.com/{repo}.git", "data", cwd=d)
         if r.returncode == 0:
-            return True
+            ok = True
+            break
         time.sleep(3)
-    print("Kayıt gönderilemedi:", r.stderr[-300:])
-    return False
+    if not ok:
+        print("Kayıt gönderilemedi:", r.stderr[-300:])
+    shutil.rmtree(d, ignore_errors=True)
+    _PUSH["ok"] = ok
+
+
+def push_data(wait=False):
+    """Kayıtların o anki kopyası alınır, gönderim arka planda yapılır (tur 1-2 sn beklemesin).
+    Önceki gönderim sürüyorsa bu tur atlanır, bir sonraki turda yeniden denenir."""
+    token, repo = os.environ.get("GH_TOKEN"), os.environ.get("GITHUB_REPOSITORY")
+    if not token or not repo:
+        return False
+    th = _PUSH["t"]
+    if th is not None and th.is_alive():
+        if not wait:
+            return False
+        th.join()
+    d = f"/tmp/masal-data-{time.time_ns()}"
+    os.makedirs(d + "/docs")
+    shutil.copytree("docs/data", d + "/docs/data", ignore=shutil.ignore_patterns("*.tmp"))
+    if wait:
+        _push_dir(d, token, repo)
+        return _PUSH["ok"]
+    _PUSH["t"] = threading.Thread(target=_push_dir, args=(d, token, repo), daemon=True)
+    _PUSH["t"].start()
+    return True
 
 
 BT = None  # arka planda çalışan geçmiş test (bot turlarını bekletmesin)
@@ -156,6 +179,8 @@ def main():
                 last_sig = None  # test sonucunu hemen kaydet
             sig = run.main()
             errors = 0
+            if not _PUSH["ok"]:  # arka plandaki son gönderim başarısızsa yeniden gönder
+                last_sig, _PUSH["ok"] = None, True
             if sig != last_sig or time.time() - last_push >= HEARTBEAT:
                 if push_data():
                     last_sig, last_push = sig, time.time()
@@ -164,8 +189,11 @@ def main():
             traceback.print_exc()
             if errors >= 5:
                 raise  # üst üste hata: oturum biter, bir dakika sonra yenisi başlar
-        time.sleep(max(1, STEP - (time.time() - t0)))
-    push_data()
+        took = time.time() - t0
+        if took > STEP:
+            print(f"Uzun tur: {took:.1f} sn")
+        time.sleep(max(1, STEP - took))
+    push_data(wait=True)
     print(f"Oturum bitti: {n} tur.")
 
 

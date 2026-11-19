@@ -1,5 +1,6 @@
 """OKX TR herkese açık piyasa verisi. Anahtar gerektirmez."""
 import json
+import threading
 import time
 import urllib.parse
 import urllib.request
@@ -9,6 +10,19 @@ from . import config
 BAR_MS = config.BAR_MIN * 60_000  # mum süresi
 
 
+_GATE = threading.Lock()
+_LAST = [0.0]
+MIN_GAP = 0.07  # istekler arası en az ~70 ms: paralel çekimde OKX'in herkese açık sınırının (20 istek/2 sn) altında kalır
+
+
+def _throttle():
+    with _GATE:
+        wait = _LAST[0] + MIN_GAP - time.monotonic()
+        if wait > 0:
+            time.sleep(wait)
+        _LAST[0] = time.monotonic()
+
+
 def _get(path, params=None, retries=3):
     url = config.BASE_URL + path
     if params:
@@ -16,6 +30,7 @@ def _get(path, params=None, retries=3):
     last = None
     for attempt in range(retries):
         try:
+            _throttle()
             req = urllib.request.Request(url, headers={"User-Agent": "masal/1.0"})
             with urllib.request.urlopen(req, timeout=15) as r:
                 body = json.load(r)

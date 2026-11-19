@@ -154,7 +154,6 @@ h2 svg.i{width:15px;height:15px}
 .nbtns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:8px}.nbtns .btn{justify-content:center;width:100%;padding-left:4px;padding-right:4px}
 
 .desc{font-size:12.5px;color:var(--muted);margin:10px 2px 0}
-.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .m{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px}
 .m .k{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
 .m .k svg.i{width:14px;height:14px}
@@ -291,15 +290,8 @@ details.setup summary::-webkit-details-marker{display:none}
 .chk .ok .ci{background:var(--green-bg);color:var(--green)}.chk .ok b.t{color:var(--green)}
 .chk b.t{display:block;font-size:12.5px}
 .chk .ck span.d{color:var(--muted)}
-.tile.livet{grid-column:1/-1;flex-direction:row;justify-content:flex-start;text-align:left;gap:12px;min-height:72px;padding:12px 14px}
-.tile.livet .lt{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:2px}
-.tile.livet .lt .nm{font-size:14px}.tile.livet .tag{margin:0;justify-content:flex-start}
-.tile.livet .lr{display:flex;flex-direction:column;align-items:flex-end;gap:2px}.tile.livet .lr b{font-size:15px;font-variant-numeric:tabular-nums}
-.vcap{grid-column:1/-1;display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted);font-weight:600;margin:6px 2px -2px}
-.vcap svg{width:14px;height:14px}
-#tiles{grid-auto-rows:auto}#tiles .tile:not(.livet){min-height:84px;padding:10px 4px 9px}
-.tiles.two{grid-template-columns:repeat(2,minmax(0,1fr))}.tiles.four{grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}.tiles.four .tile{padding:10px 2px 9px}
-.tile .ic.num{font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums}
+#tiles{grid-auto-rows:auto}#tiles .tile{min-height:84px;padding:10px 4px 9px}
+.tiles.two{grid-template-columns:repeat(2,minmax(0,1fr))}
 .warn{font-size:12px;color:var(--amber-ink);background:var(--amber-bg);border-radius:var(--r-sm);padding:9px 11px;margin-top:8px;display:flex;gap:8px;align-items:flex-start}
 .warn svg.i{width:16px;height:16px;margin-top:1px}
 .inp{width:100%;height:40px;border:1px solid var(--line);border-radius:var(--r-sm);padding:0 12px;font:inherit;font-size:14px;margin:10px 0 8px;background:var(--surface)}
@@ -323,17 +315,14 @@ details.setup summary::-webkit-details-marker{display:none}
 .lock p{font-size:12.5px;color:var(--muted);margin-top:4px}
 .prot{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 5px;border-radius:4px;background:var(--green-bg);color:var(--green);margin-left:4px;vertical-align:1px}
 .prot.no{background:var(--amber-bg);color:var(--amber-ink)}
-.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media (min-width:600px){
   .wrap{max-width:780px;padding:0 20px}
-  .metrics{grid-template-columns:repeat(4,minmax(0,1fr))}
   .rules{grid-template-columns:repeat(3,minmax(0,1fr))}
   #setv .tiles.two.links{grid-template-columns:repeat(4,minmax(0,1fr))}
 }
 @media (min-width:980px){
   .wrap{max-width:1200px;padding:0 28px}
   .cols{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,1fr);gap:0 26px;align-items:start}
-  .metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
   .rules{grid-template-columns:repeat(2,minmax(0,1fr))}
   #chart{height:220px}
   #setForm{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 26px;align-items:start}
@@ -634,6 +623,6 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 <div class="toast" id="toast" hidden></div>
 <div class="qsh" id="qsh" hidden><div class="qb"><div class="gr"></div><h3><span><svg class="i" id="qIco"><use href="#i-info"/></svg></span><b id="qTitle"></b></h3><div class="qt" id="qText"></div><button class="btn primary" id="qOk">Anladım</button></div></div>
 
-<script src="app.js?v=1.35.2"></script>
+<script src="app.js?v=1.35.3"></script>
 </body>
 </html>

@@ -24,11 +24,6 @@ def quote_of(inst):
     return inst.split("-")[1]
 
 
-def to_tl(inst, amount):
-    """Paritenin kendi para birimindeki tutarı (TL ya da USDT) TL'ye çevirir."""
-    return amount * okx.tl_factor(inst)
-
-
 class OkxPrivate:
     def __init__(self):
         self.key = os.environ.get("OKX_API_KEY", "")
@@ -51,8 +46,9 @@ class OkxPrivate:
         with urllib.request.urlopen(req, timeout=15) as r:
             res = json.load(r)
         if res.get("code") != "0":
-            detail = res.get("data", [{}])[0].get("sMsg", "") if res.get("data") else ""
-            raise RuntimeError(f"OKX {res.get('code')}: {res.get('msg')} {detail}".strip())
+            d0 = res.get("data", [{}])[0] if res.get("data") else {}
+            sc = f"/{d0.get('sCode')}" if d0.get("sCode") else ""
+            raise RuntimeError(f"OKX {res.get('code')}{sc}: {res.get('msg')} {d0.get('sMsg', '')}".strip())
         return res["data"]
 
     def available(self, ccy):
@@ -104,6 +100,27 @@ class OkxPrivate:
             if o["state"] in ("filled", "canceled", "mmp_canceled"):
                 break
         return o
+
+
+def tr_err(e):
+    """Borsanın İngilizce hata mesajını kullanıcıya gösterilecek Türkçe açıklamaya çevirir
+    (asıl metin sadece çalışma kaydına yazılır)."""
+    t = str(e)
+    low = t.lower()
+    code = t.split(":")[0].replace("OKX", "").strip() if t.startswith("OKX") else ""
+    rules = [
+        (("compliance", "51155", "51087"), "OKX TR bu coinde bu hesaba işlem izni vermiyor (yerel düzenleme kısıtı)"),
+        (("insufficient", "51008", "51131"), "hesapta yeterli bakiye yok"),
+        (("minimum", "51020", "order amount", "order size"), "emir tutarı borsanın alt sınırının altında"),
+        (("too many", "50011", "rate limit"), "borsa çok sık istek uyarısı verdi, biraz sonra yeniden denenecek"),
+        (("timed out", "timeout", "veri alınamadı", "urlopen", "connection"), "borsaya bağlanılamadı"),
+        (("50113", "50111", "50110", "api key", "passphrase", "sign"), "API anahtarı kabul edilmedi"),
+        (("suspend", "51001", "51015", "instrument"), "bu coin borsada şu an işleme kapalı"),
+    ]
+    for keys, msg in rules:
+        if any(k in low for k in keys):
+            return msg
+    return f"borsa isteği reddetti (kod {code or '?'})"
 
 
 def para(v):
@@ -177,6 +194,8 @@ class LivePortfolio(Portfolio):
         print(text)
 
     def _buy(self, ts, inst, price, amount, reason):
+        if inst in self.s.get("blocked", {}):
+            return False
         amount = round(min(amount, self.s["cash"]), 2)
         if amount < 10:
             return False
@@ -237,9 +256,18 @@ class LivePortfolio(Portfolio):
             self._emit("trades", f"Alındı: {inst.split('-')[0]}", f"{para(spent)} TL · fiyat {fiyat(avg)} · {reason}", 3, ["shopping_cart"])
             return True
         except Exception as e:
-            self._note(ts, f"HATA alım {inst}: {e}")
+            print("Alım hatası:", inst, e)
+            why = tr_err(e)
+            sym = inst.split("-")[0]
+            if "yerel düzenleme" in why or "işleme kapalı" in why:
+                # bu coin bu hesapta alınamıyor: listeden çıkarılır, bir daha denenmez
+                self.s.setdefault("blocked", {})[inst] = ts
+                self._note(ts, f"{sym} alınamıyor: {why}. Listeden çıkarıldı.")
+                self._emit("alerts", f"{sym} listeden çıkarıldı", f"{why}. Bot bu coini bir daha denemez.", 3, ["warning"])
+                return False
+            self._note(ts, f"HATA alım {sym}: {why}")
             if self._once_per_day("err_buy"):
-                self._emit("alerts", "Alım hatası", f"{inst}: {e}", 4, ["warning"])
+                self._emit("alerts", "Alım yapılamadı", f"{sym}: {why}", 4, ["warning"])
             return False
 
     def _usdt(self, ts, amount):
@@ -322,8 +350,8 @@ class LivePortfolio(Portfolio):
                                + (f"kâr al {fiyat(lot['tp'])} TL · " if tp else "") + f"zarar durdur {fiyat(lot['sl'])} TL")
         except Exception as e:
             lot["algo"] = None
-            self._note(ts, f"HATA borsa koruması {inst}: {e}")
-            self._emit("alerts", "Borsa koruması kurulamadı", f"{inst}: {e}. Bot saatlik kontrolle korumaya devam eder.",
+            self._note(ts, f"HATA borsa koruması {inst}: {tr_err(e)}")
+            self._emit("alerts", "Borsa koruması kurulamadı", f"{inst}: {tr_err(e)}. Bot saatlik kontrolle korumaya devam eder.",
                        4, ["warning"])
 
     def check_holdings(self, every=60):
@@ -364,7 +392,7 @@ class LivePortfolio(Portfolio):
                 if items:
                     self.cancel_items(items)
             except Exception as e:
-                self._note(now, f"Koruma iptali uyarısı {inst}: {e}")
+                self._note(now, f"Koruma iptali uyarısı {inst}: {tr_err(e)}")
             if ratio < 0.05:
                 del self.s["positions"][inst]
                 msg = f"OKX'te {base} kalmamış (kayıtta {rec:.6g}); pozisyon kayıttan çıkarıldı."
@@ -397,7 +425,7 @@ class LivePortfolio(Portfolio):
                 try:
                     a = self.api.algo(lot["algo"])
                 except Exception as e:
-                    self._note(now, f"Koruma durumu okunamadı {inst}: {e}")
+                    self._note(now, f"Koruma durumu okunamadı {inst}: {tr_err(e)}")
                     continue
                 st = a.get("state")
                 if st in ("effective", "partially_effective"):
@@ -437,7 +465,7 @@ class LivePortfolio(Portfolio):
                     self.api.cancel_algos(items)
                     time.sleep(0.5)
             except Exception as e:
-                self._note(ts, f"Koruma iptali uyarısı {inst}: {e}")
+                self._note(ts, f"Koruma iptali uyarısı {inst}: {tr_err(e)}")
         if not self.armed:
             self._note(ts, f"[deneme] SAT {inst.split('-')[0]} · {reason}")
             n0 = len(self.s["trades"])
@@ -487,5 +515,5 @@ class LivePortfolio(Portfolio):
                        f"{para(proceeds)} TL · fiyat {fiyat(avg)} · {reason}", 4 if reason == "Acil fren" else 3,
                        ["chart_with_upwards_trend" if pnl >= 0 else "chart_with_downwards_trend"])
         except Exception as e:
-            self._note(ts, f"HATA satış {inst}: {e}")
-            self._emit("alerts", "Satış hatası", f"{inst}: {e}", 5, ["rotating_light"])
+            self._note(ts, f"HATA satış {inst}: {tr_err(e)}")
+            self._emit("alerts", "Satış hatası", f"{inst}: {tr_err(e)}", 5, ["rotating_light"])

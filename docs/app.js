@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.35.2';
+const APP_VERSION = '1.35.3';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -156,7 +156,7 @@ async function load(quiet) {
         if (!S.strategies[sel])
             sel = Object.keys(S.strategies)[0];
         render();
-        pollMarket(true);
+        pollMarket();
         startNotes();
     }
     catch (e) {
@@ -274,7 +274,7 @@ function pick(k) {
     selPicked = true;
     localStore('masal_sel', sel);
     render();
-    pollMarket(true);
+    pollMarket();
     if (k !== 'live')
         window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -710,7 +710,7 @@ function marketList() {
     const held = x && !x.locked ? x.positions.map(p => p.inst) : [];
     return [...new Set([...held, ...(S?.universe || [])])];
 }
-async function pollMarket(now) {
+async function pollMarket() {
     clearTimeout(mkTimer);
     if (!S)
         return;
@@ -721,10 +721,10 @@ async function pollMarket(now) {
     if (!mkBusy) {
         mkBusy = true;
         try {
-            const list = marketList();
+            const list = new Set(marketList());
             // tek istekle OKX TR'deki tüm TL paritelerinin anlık fiyatı ve 24 saatlik hacmi
             const r = await tfetch('https://tr.okx.com/api/v5/market/tickers?instType=SPOT', { cache: 'no-store' }, 6000).then(r => r.json()).catch(() => null);
-            const all = r?.data || [], L_ = i => +(all.find(t => t.instId === i)?.last || 0), usd = L_('USDT-TRY');
+            const all = r?.data || [], byId = new Map(all.map(t => [t.instId, t])), L_ = i => +(byId.get(i)?.last || 0), usd = L_('USDT-TRY');
             // Fiyatlar TL karşılığıyla: USDT kuru USDT-TRY'den, USDC ve EUR farkı düşük USDT pariteleri üzerinden
             const K = { TRY: 1, USDT: usd, USDC: usd * L_('USDC-USDT'), EUR: L_('USDT-EUR') ? usd / L_('USDT-EUR') : 0 };
             const rows = all.filter(t => K[String(t.instId).split('-')[1]]);
@@ -740,7 +740,7 @@ async function pollMarket(now) {
                     return;
                 const prev = LP[inst]?.last;
                 LP[inst] = { last, bid: +t.bidPx * k || 0, vol: +t.volCcy24h * k, ch: (+t.last / (+t.open24h) - 1) * 100, dir: prev == null ? 0 : Math.sign(last - prev), ts: +t.ts };
-                if (list.includes(inst))
+                if (list.has(inst))
                     lastTick = Math.max(lastTick, +t.ts);
             });
             const tag = document.getElementById('liveTag');
@@ -789,7 +789,7 @@ function renderMarket() {
 }
 let mkAll = false;
 document.addEventListener('visibilitychange', () => { if (!document.hidden)
-    pollMarket(true); });
+    pollMarket(); });
 function okxLine() {
     const o = S.okx;
     if (!o)
@@ -1305,7 +1305,7 @@ function renderConn() {
         };
 }
 function renderForm() {
-    const live = draft.live, ch = JSON.stringify(orig) !== JSON.stringify(draft);
+    const live = draft.live;
     let h = `<section><h2><span class="hb c-green">${ic('i-power')}</span>Çalışma</h2>
    <div class="tiles two" data-g="mode">${tile(!live, 'demo', 'i-flask', 'Deneme', 'Emir gönderilmez')}${tile(live, 'real', 'i-coins', 'Gerçek', 'OKX TR hesabında')}</div>
    ${live && !orig.live ? `<div class="warn">${ic('i-info')}<div>Kaydedince bot OKX TR hesabında <b>gerçek emir</b> vermeye başlar. API anahtarı GitHub Secrets'ta olmalı.</div></div>` : ''}
@@ -1374,7 +1374,7 @@ function renderForm() {
     f.querySelectorAll('.field[data-k]').forEach(el => {
         const k = el.dataset.k, inp = el.querySelector('input');
         const set = (raw, fromBtn) => {
-            const st = +inp.dataset.step, mn = +inp.dataset.min, mx = +inp.dataset.max, dc = +inp.dataset.dec;
+            const mn = +inp.dataset.min, mx = +inp.dataset.max, dc = +inp.dataset.dec;
             const r0 = String(raw).trim();
             let v = dc > 0 ? parseFloat(r0.replace(',', '.')) : parseFloat(r0.replace(/[.,\s]/g, ''));
             const em = el.querySelector('em');

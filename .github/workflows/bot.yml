@@ -27,12 +27,12 @@ jobs:
         with:
           ref: main
       - name: Son kayıtları al
+        # Kayıtlar sadece "data" dalında; alınamazsa bot eski/boş kayıtla başlamaz, oturum bir dakika sonra yeniden denenir
         run: |
-          if git ls-remote --exit-code --heads origin data >/dev/null; then
-            git fetch -q --depth 1 origin data
-            git checkout FETCH_HEAD -- docs/data
-            git reset -q docs/data
-          fi
+          for i in 1 2 3; do git fetch -q --depth 1 origin data && break; sleep 5; done
+          git checkout FETCH_HEAD -- docs/data
+          git reset -q docs/data
+          test -s docs/data/state.json
       - uses: actions/setup-python@v7
         with:
           python-version: "3.15"

@@ -5,8 +5,10 @@ Kullanım:  python -m bot.run
 import json
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 from . import config, okx, report, settings, vault
+from .live import tr_err
 from .notify import Notifier
 from .engine import Portfolio, new_state, run_bars, watch, step_for, lot_for
 
@@ -153,7 +155,7 @@ def convert_request(p, S, N):
         else:
             note(L, "Çevrilecek boş TL yok (Fonlama'dan Alım-satım hesabına aktarıldı mı?)")
     except Exception as e:
-        note(L, f"HATA TL çevirme: {e}")
+        note(L, f"HATA TL çevirme: {tr_err(e)}")
 
 
 def check_target(p, S, N):
@@ -241,7 +243,7 @@ def check_okx():
             out["quote"] = config.QUOTE
         return out
     except Exception as e:
-        return {"ok": False, "status": f"Bağlantı hatası: {e}"[:200], "ts": int(time.time() * 1000)}
+        return {"ok": False, "status": f"Bağlantı hatası: {tr_err(e)}"[:200], "ts": int(time.time() * 1000)}
 
 
 _CACHE = {"uni": (0, None), "bars": {}}
@@ -255,16 +257,34 @@ def _universe():
     return u
 
 
+def _bar_no():
+    return int(time.time() // (config.BAR_MIN * 60))
+
+
 def _candles(inst):
-    """Kapanmış saatlik mumlar sadece saat başında değişir; arada önbellekten verilir."""
-    hour = int(time.time() // (config.BAR_MIN * 60))
+    """Kapanmış mumlar sadece mum kapanışında değişir; arada önbellekten verilir."""
     hit = _CACHE["bars"].get(inst)
-    if hit and hit[0] == hour and time.time() - hit[1] < 600:
+    if hit and hit[0] == _bar_no() and time.time() - hit[1] < 600:
         return hit[2]
     bars = okx.candles(inst, limit=300)
-    _CACHE["bars"][inst] = (hour, time.time(), bars)
-    time.sleep(0.1)
+    _CACHE["bars"][inst] = (_bar_no(), time.time(), bars)
     return bars
+
+
+def _prefetch(insts):
+    """Mum kapanışında yenilenmesi gereken coinlerin mumlarını aynı anda çeker (60 coin ~5 sn yerine ~20 sn).
+    Hız sınırı okx._get içinde; hata veren coin sırayla çekilirken yeniden denenir."""
+    need = [i for i in insts if not ((h := _CACHE["bars"].get(i)) and h[0] == _bar_no() and time.time() - h[1] < 600)]
+    if len(need) < 2:
+        return
+
+    def one(i):
+        try:
+            _candles(i)
+        except Exception:
+            pass
+    with ThreadPoolExecutor(max_workers=6) as ex:
+        list(ex.map(one, need))
 
 
 def instant_buys(live, series):
@@ -326,7 +346,7 @@ def main():
     try:
         live.reconcile()  # borsada tetiklenen korumaları önce kayda geçir
     except Exception as e:
-        note(L, f"Borsa kontrolü yapılamadı: {e}")
+        note(L, f"Borsa kontrolü yapılamadı: {tr_err(e)}")
     try:
         live.check_holdings()  # kayıttaki coin miktarı OKX'tekiyle aynı mı
     except Exception as e:
@@ -339,12 +359,14 @@ def main():
     # Aynı coin hem TL hem USDT paritesinden alınmasın: gerçek hesapta başka paritede tutulan coinin
     # yeni paritesi listeye alınmaz (ör. elde SOL-TRY varken SOL-USDT alınmaz)
     held = {i.split("-")[0]: i for i in L["positions"]}
-    insts = {u for u in _universe() if held.get(u.split("-")[0], u) == u}
+    blocked = L.get("blocked", {})  # borsanın bu hesapta işleme izin vermediği coinler
+    insts = {u for u in _universe() if held.get(u.split("-")[0], u) == u and u not in blocked}
     live_insts = insts | set(L["positions"])  # gerçek hesap sadece güncel listedeki ve kendi elindeki coinlere bakar
     for p in ports + [live]:  # elde tutulan coinler listeden düşse bile takip edilir
         insts |= set(p.s["positions"])
 
     series, events = {}, []
+    _prefetch(insts)
     for inst in sorted(insts):
         try:
             bars = _candles(inst)
