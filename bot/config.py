@@ -15,6 +15,7 @@ CASH = "TRY"
 QUOTE = "USDT"             # yeni alımların paritesi; uygulamadaki Ayarlar'dan seçilir
 QUOTES = ("TRY", "USDT", "USDC", "EUR")
 MIN_VOLUME_TRY = 100_000   # günlük en az bu kadar TL karşılığı hacim
+VIRTUAL = False  # sanal karşılaştırma stratejileri kapalı (uygulamada gizli; veri ve tur süresi küçülür)
 MAX_SYMBOLS = 60           # hacmi en yüksek 60 coin izlenir (kullanıcı seçimi)
 MAX_SPREAD = 0.008  # alış-satış farkı %0,8'den büyük (sığ) coinler alınmaz
 EXCLUDED = {"USDT", "USDC", "XAUT", "PAXG", "EURT", "DAI", "FDUSD", "TUSD", "PYUSD", "USDG", "RLUSD", "USDE",

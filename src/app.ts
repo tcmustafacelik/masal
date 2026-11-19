@@ -1,4 +1,4 @@
-const APP_VERSION='1.38.0';
+const APP_VERSION='1.38.1';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -167,7 +167,7 @@ function render(){
     return `<button class="tile ${k===sel?'on':''}" data-k="${k}"><span class="ic">${ic(ICON[k])}</span><span class="nm">${v.name}</span><span class="pc ${cls(v.pnl_pct)}">${spc(v.pnl_pct)}</span></button>`}).join('');
   tg.querySelectorAll<HTMLElement>('.tile').forEach(el=>el.onclick=()=>pick(el.dataset.k as StrategyKey));
   // gerçek hesap açıkken sanal karşılaştırma gizli (kullanıcı isteği: ekran sade kalsın)
-  {const cmp=document.querySelector<HTMLElement>('[data-adv=cmp]');const hideV=!!(S.strategies.live&&!S.strategies.live.locked);if(cmp)cmp.hidden=hideV;if(hideV&&sel!=='live'){sel='live'}}
+  {const cmp=document.querySelector<HTMLElement>('[data-adv=cmp]');const hideV=!!(S.strategies.live&&!S.strategies.live.locked)||!virt.length;if(cmp)cmp.hidden=hideV;if(hideV&&sel!=='live'){sel='live'}}
   {const best=virt.slice().sort((a,b)=>S.strategies[b].pnl_pct-S.strategies[a].pnl_pct)[0];
    document.getElementById('cmpSum').textContent=virt.length?`Her biri ${tl(S.strategies[virt[0]].start_cash||10000,0)} sanal parayla · önde: ${S.strategies[best].name} ${spc(S.strategies[best].pnl_pct)}`:'—'}
   const x=S.strategies[sel];

@@ -22,7 +22,7 @@ def tr(v):
 def load_state():
     if not os.path.exists(STATE_FILE):
         return {"created": int(time.time() * 1000),
-                "portfolios": {k: new_state(k) for k in config.STRATEGIES}}
+                "portfolios": {k: new_state(k) for k in config.STRATEGIES} if config.VIRTUAL else {}}
     with open(STATE_FILE, encoding="utf-8") as f:
         state = json.load(f)
     for k in ("live", "okx"):
@@ -338,6 +338,8 @@ def main():
         N.add("alerts", "Eski gerçek hesap kaydı açılamadı",
               "OKX şifresi değişmiş görünüyor. Bot gerçek hesabı sıfırdan başlattı; hesapta coin kaldıysa OKX'ten kontrol et. "
               "Anahtarı yenilerken aynı şifreyi kullan.", 5, ["warning"])
+    if not config.VIRTUAL:
+        state["portfolios"] = {}  # sadece gerçek hesap çalışır (sanal stratejiler kayıt ve süre harcamasın)
     ports = [Portfolio(s) for s in state["portfolios"].values()]
 
     from .live import LivePortfolio
@@ -383,7 +385,7 @@ def main():
         events += [(ts, inst, idx) for idx, (ts, _) in enumerate(bars) if ts > last_seen]
 
     # İlk çalıştırmada geçmiş mumlar sadece göstergeleri ısıtır; yalnızca en son mum işlenir
-    if not any(p.s["last_bar"] for p in ports):
+    if ports and not any(p.s["last_bar"] for p in ports):
         latest = {}
         for ts, inst, idx in events:
             latest[inst] = max(latest.get(inst, (0, 0)), (ts, idx))
