@@ -3,7 +3,7 @@
   "paused": false,
   "liquidate": 0,
   "strategy": "grid",
-  "budget": 8500,
+  "budget": 9100,
   "kasa": 10000,
   "topup": {
     "amount": 600,
@@ -19,7 +19,7 @@
   },
   "grid": {
     "step_pct": 1.5,
-    "lot_pct": 5.2287059,
+    "lot_pct": 4.883956,
     "lot_tp_pct": 4,
     "max_lots": 3,
     "max_coins": 20,
