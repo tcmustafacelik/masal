@@ -53,7 +53,7 @@
     "trades": true,
     "alerts": true,
     "daily": true,
-    "daily_hour": 13,
+    "daily_hour": 20,
     "cleared": 1795105756
   },
   "sell": {
