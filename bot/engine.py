@@ -244,7 +244,7 @@ class Portfolio:
 
 
 MARKET = {"down": False}  # piyasa geneli (BTC) sert düşüşte mi; run_bars her mumda günceller
-MARKET_REF = "BTC-TRY"
+MARKET_REF = f"BTC-{config.QUOTE}"
 
 
 def _market_down(series, group, th):

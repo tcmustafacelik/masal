@@ -20,7 +20,7 @@ def _amt(x):
 
 
 def _fmt(ccy, amt):
-    return f"{para(amt)} TL" if ccy == config.QUOTE else f"{amt:.8f}".rstrip("0").rstrip(".") + f" {ccy}"
+    return f"{para(amt)} TL" if ccy == config.CASH else f"{amt:.8f}".rstrip("0").rstrip(".") + f" {ccy}"
 
 
 def fetch_events(api):
@@ -58,12 +58,12 @@ def balances(api):
     """TL bakiyesi: fonlama ve alım-satım hesapları."""
     fund = trade = None
     try:
-        rows = api._req("GET", f"/api/v5/asset/balances?ccy={config.QUOTE}")
+        rows = api._req("GET", f"/api/v5/asset/balances?ccy={config.CASH}")
         fund = sum(_amt(r.get("bal")) for r in rows)
     except Exception as e:
         print("Fonlama bakiyesi okunamadı:", e)
     try:
-        trade = api.available(config.QUOTE)
+        trade = api.available(config.CASH)
     except Exception as e:
         print("Alım-satım bakiyesi okunamadı:", e)
     return fund, trade

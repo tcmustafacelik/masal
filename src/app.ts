@@ -1,4 +1,4 @@
-const APP_VERSION='1.26.1';
+const APP_VERSION='1.27.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -148,6 +148,7 @@ function gloss(k: string): [string, string] {
       <li><b>Satış:</b> Her kademe kendi alış fiyatının <b>${tp}</b> üstüne çıkınca ayrı satılır.</li>
       <li><b>Zarar kesme:</b> Ortalama maliyetin <b>${stop}</b> altına inerse o coindeki her şey satılır.</li>
       <li><b>Düşüş filtresi:</b> Coin bir günde ${cf}'den fazla geriliyorsa "düşen bıçak" sayılır, yeni alım bekletilir.</li></ul>
+      <p>Coinler alış-satış farkı çok düşük olan <b>USDT paritesinden</b> alınır; TL gerekirse otomatik USDT'ye çevrilir. Uygulamadaki bütün fiyat ve tutarlar <b>TL karşılığıdır</b>.</p>
       <p>Aynı anda en fazla <b>${mc}</b> coin tutulur ve bütçenin en fazla <b>${use}</b>'ı coine yatırılır; kalanı güvenlik payıdır.</p>`],
     yakin:['Alıma yakın coinler',`<p>Her satır bir coinin <b>alım fiyatına ne kadar uzak</b> olduğunu gösterir.</p>
       <ul><li><span class="chip m">%0,8 düşerse</span> fiyat bu kadar daha inerse bot alır.</li>
@@ -317,11 +318,13 @@ async function pollMarket(now){
       const list=marketList();
       // tek istekle OKX TR'deki tüm TL paritelerinin anlık fiyatı ve 24 saatlik hacmi
       const r=await tfetch('https://tr.okx.com/api/v5/market/tickers?instType=SPOT',{cache:'no-store'},6000).then(r=>r.json()).catch(()=>null);
-      const rows=(r?.data||[]).filter(t=>String(t.instId).endsWith('-TRY'));
+      const all=r?.data||[],usd=+(all.find(t=>t.instId==='USDT-TRY')?.last||0);
+      // TL paritelerinin fiyatı olduğu gibi; USDT paritelerininki USDT kuruyla TL'ye çevrilir
+      const rows=all.filter(t=>String(t.instId).endsWith('-TRY')||(usd&&String(t.instId).endsWith('-USDT')));
       okxDown=!rows.length;
       if(okxDown&&!lastTick){const tg=document.getElementById('liveTag');tg.innerHTML='<i></i>Erişilemiyor';tg.classList.remove('on')}
-      rows.forEach(t=>{const inst=t.instId,last=+t.last;if(!last)return;const prev=LP[inst]?.last;
-        LP[inst]={last,vol:+t.volCcy24h,ch:(last/(+t.open24h)-1)*100,dir:prev==null?0:Math.sign(last-prev),ts:+t.ts};
+      rows.forEach(t=>{const inst=t.instId,k=inst.endsWith('-USDT')?usd:1,last=+t.last*k;if(!last)return;const prev=LP[inst]?.last;
+        LP[inst]={last,vol:+t.volCcy24h*k,ch:(last/(+t.open24h)-1)*100,dir:prev==null?0:Math.sign(last-prev),ts:+t.ts};
         if(list.includes(inst))lastTick=Math.max(lastTick,+t.ts)});
       const tag=document.getElementById('liveTag');
       if(lastTick){const d=new Date(lastTick),p=(n,l=2)=>String(n).padStart(l,'0');

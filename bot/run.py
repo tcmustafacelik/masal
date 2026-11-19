@@ -159,8 +159,17 @@ def check_okx():
         return {"ok": False, "status": "Anahtar tanımlı değil"}
     try:
         from .live import OkxPrivate
-        bal = OkxPrivate().available(config.QUOTE)
-        return {"ok": True, "status": "Bağlantı çalışıyor", "try": round(bal, 2), "ts": int(time.time() * 1000)}
+        api = OkxPrivate()
+        bal = api.available(config.CASH)
+        out = {"ok": True, "status": "Bağlantı çalışıyor", "try": round(bal, 2), "ts": int(time.time() * 1000)}
+        if config.QUOTE != config.CASH:  # USDT paritesinde işlem izni var mı (emir vermeden kontrol)
+            try:
+                api._req("GET", f"/api/v5/account/max-avail-size?instId=BTC-{config.QUOTE}&tdMode=cash")
+                out["quote_ok"] = True
+            except Exception as e:
+                out["quote_ok"], out["quote_err"] = False, str(e)[:160]
+            out["usdt"] = round(api.available(config.QUOTE), 2)
+        return out
     except Exception as e:
         return {"ok": False, "status": f"Bağlantı hatası: {e}"[:200], "ts": int(time.time() * 1000)}
 
@@ -197,7 +206,7 @@ def instant_buys(live, series):
     w = watch(live, series)
     if not w or not w["items"]:
         return
-    prices = {t["instId"]: float(t["last"]) for t in okx.tickers() if t.get("last")}
+    prices = okx.prices_tl()  # TL karşılığı anlık fiyatlar
     ts = int(time.time() * 1000)
     s = live.s
     for it in sorted(w["items"], key=lambda x: (prices.get(x["i"], x["p"]) / x["t"])):
@@ -257,7 +266,10 @@ def main():
         L["cash"] -= t
         L["pending_cut"] = round(L["pending_cut"] - t, 2)
 
-    insts = set(_universe())
+    # Aynı coin hem TL hem USDT paritesinden alınmasın: gerçek hesapta başka paritede tutulan coinin
+    # yeni paritesi listeye alınmaz (ör. elde SOL-TRY varken SOL-USDT alınmaz)
+    held = {i.split("-")[0]: i for i in L["positions"]}
+    insts = {u for u in _universe() if held.get(u.split("-")[0], u) == u}
     for p in ports + [live]:  # elde tutulan coinler listeden düşse bile takip edilir
         insts |= set(p.s["positions"])
 
@@ -270,6 +282,9 @@ def main():
             continue
         series[inst] = bars
         last_seen = max((p.s["last_bar"].get(inst, 0) for p in ports), default=0)
+        if not last_seen and bars:  # listeye yeni giren coin: geçmiş mumlar sadece göstergeyi ısıtır, geçmişte işlem yapılmaz
+            events.append((bars[-1][0], inst, len(bars) - 1))
+            continue
         events += [(ts, inst, idx) for idx, (ts, _) in enumerate(bars) if ts > last_seen]
 
     # İlk çalıştırmada geçmiş mumlar sadece göstergeleri ısıtır; yalnızca en son mum işlenir
@@ -307,6 +322,13 @@ def main():
 
     prev = state.get("okx") or {}
     state["okx"] = check_okx()
+    if "quote_ok" in state["okx"] and state["okx"]["quote_ok"] != prev.get("quote_ok"):
+        print(f"USDT paritesi işlem izni: {'var' if state['okx']['quote_ok'] else 'YOK - ' + state['okx'].get('quote_err', '')}"
+              f" · USDT bakiyesi {state['okx'].get('usdt')}")
+    if L["armed"] and state["okx"].get("quote_ok") is False and live._once_per_day("quote"):
+        N.add("alerts", "USDT paritesinde işlem yapılamıyor",
+              f"OKX, USDT paritesinde emir iznini reddetti: {state['okx'].get('quote_err', '')}. Bot TL'deki coinleri yönetmeye devam eder.",
+              5, ["warning"])
     if L["armed"] and not state["okx"]["ok"] and (prev.get("ok") or live._once_per_day("okx")):
         N.add("alerts", "OKX bağlantısı çalışmıyor",
               state["okx"]["status"] + ". Anahtarın süresi dolmuş olabilir; uygulamadan yenileyebilirsin.", 5,

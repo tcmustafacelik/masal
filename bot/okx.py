@@ -32,15 +32,57 @@ def tickers():
     return _get("/api/v5/market/tickers", {"instType": "SPOT"})
 
 
+_RATE = {"t": 0.0, "v": None}
+
+
+def usdt_try():
+    """USDT'nin TL kuru (1 dk önbellek)."""
+    if _RATE["v"] is None or time.time() - _RATE["t"] > 60:
+        _RATE["v"] = float(_get("/api/v5/market/ticker", {"instId": "USDT-TRY"})[0]["last"])
+        _RATE["t"] = time.time()
+    return _RATE["v"]
+
+
+def tl_factor(inst):
+    """Paritenin fiyatını TL'ye çeviren çarpan: TL paritesinde 1, USDT paritesinde USDT kuru."""
+    return usdt_try() if inst.endswith("-USDT") else 1.0
+
+
+def prices_tl():
+    """Tüm TL ve USDT paritelerinin anlık fiyatı, TL karşılığı olarak."""
+    r = usdt_try()
+    out = {}
+    for t in tickers():
+        inst, last = t["instId"], float(t.get("last") or 0)
+        if last and inst.endswith("-TRY"):
+            out[inst] = last
+        elif last and inst.endswith("-USDT"):
+            out[inst] = last * r
+    return out
+
+
+_CRYPTO = {"t": 0.0, "v": set()}
+
+
+def crypto_ids():
+    """İşleme açık kripto pariteleri (tokenize hisse, emtia vb. hariç; 1 sa önbellek)."""
+    if not _CRYPTO["v"] or time.time() - _CRYPTO["t"] > 3600:
+        rows = _get("/api/v5/public/instruments", {"instType": "SPOT"})
+        _CRYPTO["v"] = {r["instId"] for r in rows if r.get("instCategory") == "1" and r.get("state") == "live"}
+        _CRYPTO["t"] = time.time()
+    return _CRYPTO["v"]
+
+
 def universe():
-    """Hacmi yeterli TL paritelerini hacme göre sıralı döndürür."""
+    """Hacmi yeterli pariteleri (config.QUOTE) hacme göre sıralı döndürür."""
     rows = []
+    ok = crypto_ids()
     for t in tickers():
         inst = t["instId"]
         base, _, quote = inst.partition("-")
-        if quote != config.QUOTE or base in config.EXCLUDED:
+        if quote != config.QUOTE or base in config.EXCLUDED or inst not in ok:
             continue
-        vol = float(t.get("volCcy24h") or 0)
+        vol = float(t.get("volCcy24h") or 0) * (usdt_try() if quote == "USDT" else 1)  # TL karşılığı
         try:
             bid, ask = float(t.get("bidPx") or 0), float(t.get("askPx") or 0)
             spread = (ask - bid) / ask if ask > 0 and bid > 0 else 1
@@ -55,13 +97,15 @@ def universe():
 def candles(inst, limit=100):
     """Son kapanmış mumlar, eskiden yeniye. Her öğe: (ts_ms, close)."""
     data = _get("/api/v5/market/candles", {"instId": inst, "bar": config.BAR, "limit": limit})
-    out = [(int(r[0]) + BAR_MS, float(r[4])) for r in data if r[8] == "1"]  # sadece kapanmış mumlar; zaman = kapanış
+    k = tl_factor(inst)  # fiyatlar TL karşılığıyla tutulur
+    out = [(int(r[0]) + BAR_MS, float(r[4]) * k) for r in data if r[8] == "1"]  # sadece kapanmış mumlar; zaman = kapanış
     return sorted(out)
 
 
 def history(inst, bars=720):
     """Geçmiş mumlar (sayfalı), eskiden yeniye."""
     out, after = [], None
+    k = tl_factor(inst)
     while len(out) < bars:
         params = {"instId": inst, "bar": config.BAR, "limit": 100}
         if after:
@@ -69,7 +113,7 @@ def history(inst, bars=720):
         data = _get("/api/v5/market/history-candles", params)
         if not data:
             break
-        out.extend((int(r[0]) + BAR_MS, float(r[4])) for r in data if r[8] == "1")
+        out.extend((int(r[0]) + BAR_MS, float(r[4]) * k) for r in data if r[8] == "1")
         after = data[-1][0]
         time.sleep(0.12)
     return sorted(set(out))[-bars:]

@@ -16,8 +16,17 @@ import time
 import urllib.request
 from datetime import datetime, timezone
 
-from . import config
+from . import config, okx
 from .engine import Portfolio
+
+
+def quote_of(inst):
+    return inst.split("-")[1]
+
+
+def to_tl(inst, amount):
+    """Paritenin kendi para birimindeki tutarı (TL ya da USDT) TL'ye çevirir."""
+    return amount * okx.tl_factor(inst)
 
 
 class OkxPrivate:
@@ -189,14 +198,24 @@ class LivePortfolio(Portfolio):
                 self._emit("trades", f"Alındı: {inst.split('-')[0]}", f"{para(amount)} TL · fiyat {fiyat(price)} · {reason}", 3, ["shopping_cart"])
             return ok
         try:
-            if self.api.available(config.QUOTE) < amount:
-                self._note(ts, f"Yetersiz TL bakiyesi, {inst} alınmadı")
-                if self._once_per_day("funds"):
-                    self._emit("alerts", "Hesapta yeterli TL yok",
-                               "Bot alım yapmak istedi ama alım-satım hesabında yeterli TL görünmüyor. "
-                               "Fonlama hesabından transfer gerekebilir.", 4, ["warning"])
-                return False
-            o = self.api.market(inst, "buy", f"{amount:.2f}", quote=True)
+            q = quote_of(inst)
+            k = okx.tl_factor(inst)  # 1 TL paritesinde, USDT kuru USDT paritesinde
+            spend = amount / k  # paritenin kendi para biriminde harcanacak tutar
+            if q == "USDT":
+                have_q = self.api.available("USDT")
+                if have_q < spend:  # USDT yetmiyorsa eksik kadar TL'yi USDT'ye çevir
+                    need_tl = round((spend - have_q) * k * 1.004 + 1, 2)
+                    if self.api.available(config.CASH) < need_tl:
+                        return self._no_funds(ts, inst)
+                    c = self.api.market("USDT-TRY", "buy", f"{need_tl:.2f}", quote=True)
+                    self._note(ts, f"{para(need_tl)} TL → {float(c.get('accFillSz') or 0):.2f} USDT çevrildi")
+                    have_q = self.api.available("USDT")
+                spend = min(spend, have_q)
+                if spend * k < 10:
+                    return self._no_funds(ts, inst)
+            elif self.api.available(q) < spend:
+                return self._no_funds(ts, inst)
+            o = self.api.market(inst, "buy", f"{math.floor(spend * 100) / 100:.2f}", quote=True)
             filled = float(o.get("accFillSz") or 0)
             if filled <= 0:
                 self._note(ts, f"{inst} alım emri dolmadı ({o['state']})")
@@ -204,11 +223,12 @@ class LivePortfolio(Portfolio):
             base = inst.split("-")[0]
             fee = float(o.get("fee") or 0)
             qty = filled + (fee if o.get("feeCcy") == base else 0)  # alım komisyonu coin cinsinden düşülür
-            avg = float(o["avgPx"])
+            avg_q = float(o["avgPx"])  # paritenin kendi fiyatı (USDT ya da TL)
+            avg = avg_q * k  # TL karşılığı
             spent = filled * avg
             self.s["cash"] -= spent
             pos = self.s["positions"].setdefault(inst, {"lots": [], "peak": avg, "bars": 0})
-            lot = {"qty": qty, "entry": avg, "cost": spent, "ts": ts, "ordId": o["ordId"]}
+            lot = {"qty": qty, "entry": avg, "entry_q": avg_q, "cost": spent, "ts": ts, "ordId": o["ordId"]}
             pos["lots"].append(lot)
             self.s["trades"].append({"ts": ts, "inst": inst, "side": "AL", "price": avg, "qty": qty,
                                      "amount": round(spent, 2), "reason": reason, "real": True})
@@ -222,6 +242,14 @@ class LivePortfolio(Portfolio):
                 self._emit("alerts", "Alım hatası", f"{inst}: {e}", 4, ["warning"])
             return False
 
+    def _no_funds(self, ts, inst):
+        self._note(ts, f"Yetersiz bakiye, {inst} alınmadı")
+        if self._once_per_day("funds"):
+            self._emit("alerts", "Hesapta yeterli TL yok",
+                       "Bot alım yapmak istedi ama alım-satım hesabında yeterli TL/USDT görünmüyor. "
+                       "Fonlama hesabından transfer gerekebilir.", 4, ["warning"])
+        return False
+
     def _targets(self, entry):
         k, c, r = self.s["key"], self.cfg, self.risk
         if k == "grid":
@@ -232,12 +260,14 @@ class LivePortfolio(Portfolio):
 
     def _protect(self, ts, inst, lot):
         try:
-            tp, sl = self._targets(lot["entry"])
+            eq_ = lot.get("entry_q") or lot["entry"]  # borsa emri paritenin kendi fiyatıyla kurulur
+            tp, sl = self._targets(eq_)
             lot["algo"] = self.api.protect(inst, lot["qty"], tp, sl)
-            lot["tp"], lot["sl"] = tp, sl
+            k = lot["entry"] / eq_ if eq_ else 1  # gösterim için TL karşılığı
+            lot["tp"], lot["sl"] = (tp * k if tp else None), (sl * k if sl else None)
             if lot["algo"]:
                 self._note(ts, f"Borsa koruması kuruldu: {inst.split('-')[0]} · "
-                               + (f"kâr al {fiyat(tp)} · " if tp else "") + f"zarar durdur {fiyat(sl)}")
+                               + (f"kâr al {fiyat(lot['tp'])} TL · " if tp else "") + f"zarar durdur {fiyat(lot['sl'])} TL")
         except Exception as e:
             lot["algo"] = None
             self._note(ts, f"HATA borsa koruması {inst}: {e}")
@@ -307,13 +337,15 @@ class LivePortfolio(Portfolio):
                     oid = a.get("ordId") or (a.get("ordIdList") or [""])[0]
                     o = self.api.order(inst, oid) if oid else {}
                     filled = float(o.get("accFillSz") or a.get("actualSz") or 0)
-                    avg = float(o.get("avgPx") or a.get("actualPx") or 0)
+                    avg_q = float(o.get("avgPx") or a.get("actualPx") or 0)
                     fee = float(o.get("fee") or 0)
-                    proceeds = filled * avg + (fee if o.get("feeCcy") == config.QUOTE else 0)
+                    k = okx.tl_factor(inst)
+                    proceeds = (filled * avg_q + (fee if o.get("feeCcy") == quote_of(inst) else 0)) * k
+                    avg = avg_q * k
                     share = min(1.0, filled / lot["qty"]) if lot["qty"] else 1.0
                     cost = lot["cost"] * share
                     pnl = proceeds - cost
-                    reason = "Borsada kâr alındı" if avg >= lot["entry"] else "Borsada zarar durduruldu"
+                    reason = "Borsada kâr alındı" if avg_q >= (lot.get("entry_q") or lot["entry"]) else "Borsada zarar durduruldu"
                     self.s["cash"] += proceeds
                     self.s["trades"].append({"ts": now, "inst": inst, "side": "SAT", "price": avg, "qty": filled,
                                              "amount": round(proceeds, 2), "pnl": round(pnl, 2),
@@ -368,9 +400,10 @@ class LivePortfolio(Portfolio):
             if filled <= 0:
                 self._note(ts, f"{inst} satış emri dolmadı ({o['state']})")
                 return
-            avg = float(o["avgPx"])
+            k = okx.tl_factor(inst)
+            avg = float(o["avgPx"]) * k
             fee = float(o.get("fee") or 0)
-            proceeds = filled * avg + (fee if o.get("feeCcy") == config.QUOTE else 0)
+            proceeds = (filled * float(o["avgPx"]) + (fee if o.get("feeCcy") == quote_of(inst) else 0)) * k
             cost = sum(l["cost"] for l in lots) * (filled / want if want else 1)
             self.s["cash"] += proceeds
             pnl = proceeds - cost

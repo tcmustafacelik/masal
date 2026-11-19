@@ -9,12 +9,15 @@ START_CASH = 10_000.0
 FEE_RATE = 0.0025
 SLIPPAGE = 0.001
 
-# Hangi coinler: TL paritesinde, 24 saatlik hacmi yeterli olanlar
-QUOTE = "TRY"
-MIN_VOLUME_TRY = 100_000   # günlük en az bu kadar TL hacim (kullanıcı isteği: daha çok coin)
-MAX_SYMBOLS = 40
+# Hesap TL ile tutulur; coinler USDT paritesinden alınıp satılır (kullanıcı isteği: derin piyasa, düşük fark).
+# Bütün tutarlar ve fiyatlar uygulamada TL karşılığıyla gösterilir (USDT fiyatı x USDT-TRY kuru).
+CASH = "TRY"
+QUOTE = "USDT"
+MIN_VOLUME_TRY = 100_000   # günlük en az bu kadar TL karşılığı hacim
+MAX_SYMBOLS = 40           # hacmi en yüksek 40 coin izlenir
 MAX_SPREAD = 0.008  # alış-satış farkı %0,8'den büyük (sığ) coinler alınmaz
-EXCLUDED = {"USDT", "USDC", "XAUT", "PAXG", "EURT", "DAI", "FDUSD", "TUSD"}
+EXCLUDED = {"USDT", "USDC", "XAUT", "PAXG", "EURT", "DAI", "FDUSD", "TUSD", "PYUSD", "USDG", "RLUSD", "USDE",
+            "EURC", "EUROC", "USD1", "BUSD", "USDP", "USDD", "TRY", "EUR", "WBTC", "STETH", "WETH", "BETH", "OKSOL"}
 
 import os as _os
 BAR_MIN = int(_os.environ.get("MASAL_BAR_MIN", "15"))  # mum süresi (dakika): kararlar bu aralıkla verilir
