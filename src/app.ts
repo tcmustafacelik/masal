@@ -1,4 +1,4 @@
-const APP_VERSION='1.31.2';
+const APP_VERSION='1.31.3';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -207,7 +207,8 @@ function renderNow(x: Strategy){
       else if(it.gap<=0)chip=full?`<span class="chip a">${ic('i-layers')}Şartta · bütçe dolu</span>`:`<span class="chip g">${ic('i-check')}Alım şartında</span>`;
       else chip=`<span class="chip ${it.h?'b':'m'}">%${nf(it.gap,it.gap<10?1:0)} düşerse</span>`;
       const near=it.f||it.gap<=0?'':`<div class="near"><i style="width:${Math.max(4,Math.min(100,100-it.gap*20)).toFixed(0)}%"></i></div>`;
-      return `<div class="row">${cico(it.i)}<div class="mid"><b>${sym(it.i)}${pq(it.i)}</b><span>${it.h?`Elde ${it.h} kademe · `:''}Şimdi ${px(it.cur)} → ${it.h?`${it.h+1}. alım`:'alım'} ${px(it.t)}${volTxt(it.i)?`<br>Hacim ${volTxt(it.i)}`:''}</span></div><div class="end">${chip}${near}</div></div>`}).join('');
+      return `<div class="row wrow">${cico(it.i)}<div class="mid"><b>${sym(it.i)}${pq(it.i)}${it.h?`<i class="kd">${it.h} kademe</i>`:''}</b>
+        <div class="pv"><span><em>Şimdi</em>${px(it.cur)}</span><span><em>${it.h?`${it.h+1}. alım`:'Alım'}</em>${px(it.t)}</span></div></div><div class="end">${chip}${near}</div></div>`}).join('');
     h+='</div>';
     if(items.length>5)h+=`<button class="more" id="nowMore">${nowAll?'Daha az göster':`Tümünü göster (${items.length} coin)`}</button>`;
   }

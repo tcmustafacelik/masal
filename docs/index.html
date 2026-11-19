@@ -435,6 +435,12 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 .swb{position:absolute;right:0;top:0;bottom:0;width:88px;border:0;background:var(--red);color:#fff;font:700 13px/1.2 inherit;font-family:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;cursor:pointer}
 .swb svg{width:18px;height:18px}
 .swr.busy .swb{background:var(--amber)}.swr.busy .swc{opacity:.75}
+/* ---- alıma yakın coinler: sade satır ---- */
+.wrow .mid b{display:flex;align-items:center;gap:0}
+.kd{font-style:normal;font-size:10.5px;font-weight:600;color:var(--blue);background:var(--blue-bg);padding:2px 5px;border-radius:4px;margin-left:5px;white-space:nowrap}
+.pv{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:3px;font-size:12.5px;font-variant-numeric:tabular-nums}
+.pv span{display:inline-flex!important;align-items:baseline;gap:4px;color:var(--text)!important;font-weight:600;white-space:nowrap;margin:0!important}
+.pv em{font-style:normal;font-weight:500;color:var(--muted);font-size:11.5px}
 </style>
 </head>
 <body>
@@ -604,6 +610,6 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 <div class="toast" id="toast" hidden></div>
 <div class="qsh" id="qsh" hidden><div class="qb"><div class="gr"></div><h3><span><svg class="i"><use href="#i-info"/></svg></span><b id="qTitle"></b></h3><div class="qt" id="qText"></div><button class="btn primary" id="qOk">Anladım</button></div></div>
 
-<script src="app.js?v=1.31.2"></script>
+<script src="app.js?v=1.31.3"></script>
 </body>
 </html>
