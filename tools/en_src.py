@@ -373,6 +373,13 @@ EN = {
     "{0} satış isteği gönderildi; bot birkaç saniye içinde satar.": "{0} sell request sent; the bot sells within seconds.",
     "Hepsini sat isteği gönderildi; bot birkaç saniye içinde satar ve durur.": "Sell-all request sent; the bot sells and stops within seconds.",
     "Kaydedildi. Bot birkaç saniye içinde yeni ayarlarla çalışır.": "Saved. The bot runs with the new settings within seconds.",
+    "Saat {0}": "At {0}", "Özet saati": "Summary time", "Günlük özet bu saatte gelir": "The daily summary arrives at this hour",
+    "Bulut eşitleme": "Cloud sync", "Eşitlendi": "Synced", "Bağlantı yok, son veri gösteriliyor": "No connection, showing last data",
+    "Son eşitleme": "Last sync", "Botun son kaydı": "Bot's last save", "Otomatik yedek": "Auto backup",
+    "Bot her işlemde ve en geç {0} saniyede bir bütün kayıtları buluta ({1}) yedekler. Uygulama birkaç saniyede bir bakar, değişiklik varsa hemen yeniler. Ayarlar":
+        "The bot backs up all records to the cloud ({1}) on every action and at least every {0} seconds. The app checks every few seconds and refreshes right away on changes. Settings are written to the cloud when you tap",
+    "'e basınca buluta yazılır.": ".", "Şimdi eşitle": "Sync now", "Eşitlenemedi, bağlantını kontrol et": "Couldn't sync, check your connection",
+    "Bulut": "Cloud", "Bulut: eşitlendi": "Cloud: synced", "Bulut: bağlantı yok": "Cloud: no connection",
 }
 
 

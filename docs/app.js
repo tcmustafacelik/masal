@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.36.2';
+const APP_VERSION = '1.37.0';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -229,12 +229,17 @@ async function watchData() {
             const r = await tfetch(`https://api.github.com/repos/${REPO.o}/${REPO.r}/commits/data?t=${Date.now()}`, { headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github.sha' }, cache: 'no-store' });
             if (r.ok) {
                 const sha = (await r.text()).trim();
+                syncMark(true);
                 if (dataSha && sha !== dataSha)
                     load(true);
                 dataSha = sha;
             }
+            else
+                syncMark(false);
         }
-        catch (e) { }
+        catch (e) {
+            syncMark(false);
+        }
         return;
     }
     if (Date.now() - lastLoad > 6e4)
@@ -281,6 +286,20 @@ async function load(quiet) {
         S = s;
         B = b;
         await openLive();
+        syncMark(!offlineData);
+        // dil ve tema buluttan: başka cihazda değiştirildiyse bu cihaz da uyar (az önce burada değiştirildiyse bekler)
+        {
+            const st = S.settings, recent = Date.now() - +(localStore('masal_pref_ts') || 0) < 180000;
+            if (st && !recent) {
+                if (st.theme && st.theme !== themeMode())
+                    setTheme(st.theme);
+                if (st.lang && st.lang !== LANG) {
+                    setLang(st.lang);
+                    return;
+                }
+            }
+        }
+        nMerge();
         if (offlineData) {
             err.innerHTML = `Bağlantı kurulamadı; <b>${dt(S.updated)}</b> tarihli son veri gösteriliyor. Kendiliğinden yeniden deneniyor…`;
             err.style.display = 'block';
@@ -295,6 +314,7 @@ async function load(quiet) {
         startNotes();
     }
     catch (e) {
+        syncMark(false);
         console.error(e);
         err.textContent = 'Veriler alınamadı (bağlantı ya da VPN). Kendiliğinden yeniden deneniyor…';
         err.style.display = 'block';
@@ -303,6 +323,7 @@ async function load(quiet) {
     finally {
         btn.classList.remove('spin');
         hideSplash();
+        cloudUI();
     }
 }
 function render() {
@@ -449,16 +470,64 @@ function gloss(k) {
     };
     return G[k] || ['', ''];
 }
-/* Bildirimler bu cihazda saklanır (ntfy sunucusu en fazla ~12 saat tutar); süre seçimi 1/6/12/24 saat. */
-const NOTES = (() => { try {
-    return JSON.parse(localStore('masal_notes') || '[]');
+/* ---------- bulut: verilerin GitHub'la eşitlenme durumu (üst çubuktaki bulut simgesi) ----------
+   Bot her değişiklikte (en geç 30 sn'de bir) kayıtları buluta yedekler; uygulama birkaç saniyede bir kontrol eder. */
+let syncOk = 0, syncBad = false;
+function syncMark(ok) { if (ok) {
+    syncOk = Date.now();
+    syncBad = false;
 }
-catch (e) {
-    return [];
-} })();
+else
+    syncBad = true; cloudUI(); }
+function cloudUI() {
+    const b = document.getElementById('reload');
+    if (!b)
+        return;
+    const off = syncBad || !syncOk || Date.now() - syncOk > 90000;
+    b.classList.toggle('cok', !off);
+    b.classList.toggle('coff', off);
+    b.querySelector('use').setAttribute('href', off ? '#i-cloud-off' : '#i-cloud');
+    b.setAttribute('aria-label', off ? 'Bulut: bağlantı yok' : 'Bulut: eşitlendi');
+}
+setInterval(cloudUI, 5000);
+function openCloud() {
+    const q = document.getElementById('qsh');
+    q.dataset.n = '';
+    qHead('i-cloud', 'Kapat');
+    const off = syncBad || !syncOk || Date.now() - syncOk > 90000, p = (n) => String(n).padStart(2, '0');
+    const tm = (t) => { if (!t)
+        return '—'; const d = new Date(t); return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`; };
+    document.getElementById('qTitle').textContent = 'Bulut eşitleme';
+    document.getElementById('qText').innerHTML = `<div class="cld ${off ? 'off' : 'ok'}">${ic(off ? 'i-cloud-off' : 'i-cloud')}<b>${off ? 'Bağlantı yok, son veri gösteriliyor' : 'Eşitlendi'}</b></div>
+    <div class="kvl"><span>Son eşitleme</span><b>${tm(syncOk)}</b></div>
+    <div class="kvl"><span>Botun son kaydı</span><b>${tm(S?.updated || 0)}</b></div>
+    <div class="kvl"><span>Otomatik yedek</span><b class="up">Açık</b></div>
+    <p class="cldn">Bot her işlemde ve en geç 30 saniyede bir bütün kayıtları buluta (GitHub) yedekler. Uygulama birkaç saniyede bir bakar, değişiklik varsa hemen yeniler. Ayarlar <b>Kaydet</b>'e basınca buluta yazılır.</p>
+    <button class="btn" id="syncNow" style="width:100%;margin-bottom:10px">${ic('i-refresh')}Şimdi eşitle</button>`;
+    q.hidden = false;
+    document.getElementById('syncNow').onclick = async () => { q.hidden = true; await load(); toast(syncBad ? 'Eşitlenemedi, bağlantını kontrol et' : 'Eşitlendi'); };
+}
+/* Bildirimler buluttan gelir: bot gönderdiği her bildirimi gerçek hesabın şifreli kaydına yazar (her cihaz aynı listeyi görür).
+   Uygulama açıkken ntfy canlı akışından gelenler de anında eklenir. Süre seçimi 1/6/12/24 saat. */
+const NOTES = [];
 let nES = null, nTopic = '', nHours = +(localStore('masal_nh') || 24);
-const nSeen = () => +(localStore('masal_nseen') || 0), nClr = () => +(localStore('masal_nclr') || 0);
-const nSave = () => localStore('masal_notes', JSON.stringify(NOTES.slice(0, 200)));
+const nSeen = () => +(localStore('masal_nseen') || 0);
+const nClr = () => Math.max(+(S?.settings?.notify?.cleared || 0), +(localStore('masal_nclr') || 0)); // temizleme zamanı bulutta (ayarlarda)
+const nKey = (m) => m.title + '|' + m.message;
+/** Buluttaki listeyi (bot kaydı) canlı akıştan gelenlerle birleştirir; aynı bildirim iki kez görünmez. */
+function nMerge() {
+    const cloud = (S?.strategies?.live?.notifs || []);
+    for (const c of cloud) {
+        const time = Math.round(c.t / 1000);
+        if (NOTES.some(x => nKey(x) === nKey(c) && Math.abs(x.time - time) < 120))
+            continue;
+        NOTES.push({ id: 'c' + c.t + c.title, time, title: c.title, message: c.message, tags: c.tags });
+    }
+    NOTES.sort((a, b) => b.time - a.time);
+    if (NOTES.length > 200)
+        NOTES.length = 200;
+    nBadge();
+}
 const nVisible = () => NOTES.filter(m => m.time > nClr() && m.time > Date.now() / 1000 - 86400);
 function nKind(t) {
     const g = t || [];
@@ -502,13 +571,12 @@ async function startNotes() {
         catch (e) {
             return;
         }
-        if (m.event !== 'message' || NOTES.some(x => x.id === m.id))
+        if (m.event !== 'message' || NOTES.some(x => x.id === m.id || (nKey(x) === nKey({ title: m.title || 'Masal', message: m.message || '' }) && Math.abs(x.time - m.time) < 120)))
             return;
         NOTES.push({ id: m.id, time: m.time, title: m.title || 'Masal', message: m.message || '', tags: m.tags });
         NOTES.sort((a, b) => b.time - a.time);
         if (NOTES.length > 200)
             NOTES.length = 200;
-        nSave();
         if (m.time >= t0 - 5) {
             toast(`${m.title || 'Masal'} · ${(m.message || '').split('\n')[0]}`);
             setTimeout(() => load(true), 1500);
@@ -535,7 +603,15 @@ function openNotes() {
         : `<div class="empty">${ic('i-bell')}<div>Son ${nHours} saatte bildirim yok</div></div>`);
     q.hidden = false;
     document.querySelectorAll('#nRange button').forEach(b => b.onclick = () => { nHours = +b.dataset.h; localStore('masal_nh', String(nHours)); openNotes(); });
-    document.getElementById('nClear').onclick = () => { const top = NOTES[0]?.time || Date.now() / 1000; localStore('masal_nclr', String(top)); NOTES.length = 0; nSave(); openNotes(); toast('Bildirim geçmişi temizlendi'); };
+    document.getElementById('nClear').onclick = async () => {
+        const top = Math.ceil(Date.now() / 1000);
+        localStore('masal_nclr', String(top));
+        NOTES.length = 0;
+        openNotes();
+        // temizleme bütün cihazlarda geçerli olsun: zaman ayarlara (buluta) yazılır
+        await cloudPatch(o => { o.notify = { ...(o.notify || {}), cleared: top }; }, 'Bildirim geçmişi temizlendi');
+        toast('Bildirim geçmişi temizlendi');
+    };
     const v = nVisible();
     if (v.length)
         localStore('masal_nseen', String(v[0].time));
@@ -1034,7 +1110,7 @@ document.getElementById('seg').onclick = e => {
     document.querySelectorAll('#seg button').forEach(x => x.classList.toggle('on', x === b));
     renderChart();
 };
-document.getElementById('reload').onclick = () => load();
+document.getElementById('reload').onclick = openCloud;
 /* ---------------- Ayarlar ---------------- */
 const REPO = (() => {
     const h = location.hostname, m = h.match(/^([^.]+)\.github\.io$/);
@@ -1588,6 +1664,8 @@ async function loadSettings() {
         orig.grid.trend_filter_pct = 1;
     if (orig && !orig.notify)
         orig.notify = { enabled: false, topic: '', trades: true, alerts: true, daily: true, money: true };
+    if (orig?.notify && orig.notify.daily_hour == null)
+        orig.notify.daily_hour = 21;
     topicPlain = '';
     if (pw && typeof orig.notify?.topic === 'object') {
         try {
@@ -1600,6 +1678,32 @@ async function loadSettings() {
     draft = JSON.parse(JSON.stringify(orig));
     renderConn();
     renderForm();
+}
+/** Ayarlardaki tek bir şeyi buluta yazar (bekleyen başka değişikliklere dokunmadan): dil, tema, bildirim temizleme. */
+async function cloudPatch(fn, msg) {
+    if (!token)
+        return false;
+    try {
+        const cur = await tfetch(API + '?t=' + Date.now(), { headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' }, cache: 'no-store' }).then(r => { if (!r.ok)
+            throw r.status; return r.json(); });
+        const o = JSON.parse(decodeURIComponent(escape(atob(cur.content.replace(/\n/g, '')))));
+        fn(o);
+        const body = { message: msg, content: btoa(unescape(encodeURIComponent(JSON.stringify(o, null, 2) + '\n'))), sha: cur.sha, branch: 'main' };
+        const r = await tfetch(API, { method: 'PUT', headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        if (!r.ok)
+            throw r.status;
+        sha = (await r.json()).content.sha;
+        if (orig)
+            fn(orig);
+        if (draft)
+            fn(draft);
+        if (S?.settings)
+            fn(S.settings);
+        return true;
+    }
+    catch (e) {
+        return false;
+    }
 }
 async function save(obj, msg, keepDraft) {
     if (!token) {
@@ -1738,10 +1842,11 @@ function notifySection() {
     h += swRow('nOn', N.enabled, 'Telefona bildirim gönder', 'Olaylar anında telefonuna ve uygulamadaki zile düşer');
     if (N.enabled) {
         const T = [['nMo', N.money !== false, 'i-wallet', 'Para', 'Yatırma, çekme'], ['nTr', !!N.trades, 'i-coins', 'Al-sat', 'Alım, satım'],
-            ['nAl', !!N.alerts, 'i-shield', 'Uyarılar', 'Hata, acil fren'], ['nDy', !!N.daily, 'i-day', 'Günlük özet', 'Akşam 21:00']];
+            ['nAl', !!N.alerts, 'i-shield', 'Uyarılar', 'Hata, acil fren'], ['nDy', !!N.daily, 'i-day', 'Günlük özet', `Saat ${String(N.daily_hour ?? 21).padStart(2, '0')}:00`]];
         const mask = topicPlain ? topicPlain.slice(0, 9) + '•'.repeat(Math.max(4, topicPlain.length - 9)) : '—';
         h += `<div class="nsub">Hangi bildirimler gelsin</div>
       <div class="tiles ntiles">${T.map(([id, on, i, t, d]) => `<button type="button" class="tile ${on ? 'on' : ''}" id="${id}"><span class="ic">${ic(i)}</span><span class="nm">${t}</span><span class="pc">${d}</span><em class="ck">${ic(on ? 'i-check' : 'i-minus')}</em></button>`).join('')}</div>
+      ${N.daily ? `<div class="nhour">${field(['notify.daily_hour', 'Özet saati', 'Günlük özet bu saatte gelir', ':00', 1, 0, 23, 0])}</div>` : ''}
       <div class="nsub">Bildirim kanalı</div>
       <div class="nchan"><span class="nci">${ic('i-lock')}</span><div class="nct"><b id="nTopic" data-m="1">${mask}</b><span>Gizli tut; bu adı bilen bildirimleri görür</span></div></div>
       <div class="nbtns"><button type="button" class="btn sm" id="nShow">${ic('i-eye')}Göster</button><button type="button" class="btn sm" id="nCopy">${ic('i-copy')}Kopyala</button><button type="button" class="btn sm" id="nTest">${ic('i-bell')}Test</button></div>
@@ -1830,15 +1935,12 @@ function bindInstall() {
         const l = t.dataset.lg;
         if (l === LANG)
             return;
-        // bildirimler de aynı dilde gelsin: GitHub bağlıysa dil ayarlara da yazılır (bot okur)
-        if (token && orig && (orig.lang || 'tr') !== l) {
-            const keep = JSON.parse(JSON.stringify(orig));
-            keep.lang = l;
-            await save(keep, 'Dil kaydedildi', true);
-        }
+        // dil bulutta tutulur: bütün cihazlar ve bildirimler aynı dilde
+        localStore('masal_pref_ts', String(Date.now()));
+        await cloudPatch(o => { o.lang = l; }, 'Dil değişti');
         setLang(l);
     });
-    document.querySelectorAll('#themeTiles button').forEach(t => t.onclick = () => { setTheme(t.dataset.th); document.querySelectorAll('#themeTiles button').forEach(x => x.classList.toggle('on', x === t)); });
+    document.querySelectorAll('#themeTiles button').forEach(t => t.onclick = () => { setTheme(t.dataset.th); localStore('masal_pref_ts', String(Date.now())); cloudPatch(o => { o.theme = t.dataset.th; }, 'Tema değişti'); document.querySelectorAll('#themeTiles button').forEach(x => x.classList.toggle('on', x === t)); });
     const v = document.getElementById('verBtn');
     if (v)
         v.onclick = () => { if (remoteVer && vcmp(remoteVer.version, APP_VERSION) > 0)

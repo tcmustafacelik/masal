@@ -12,7 +12,8 @@ PATH = os.path.join(os.path.dirname(__file__), "..", "docs", "ayarlar.json")
 
 DEFAULTS = {
     "live": False,          # True: gerçek emir gönderilir
-    "lang": "tr",           # bildirim dili (uygulamadaki Dil seçimiyle yazılır)
+    "lang": "tr",           # uygulama ve bildirim dili (bulutta; her cihaz aynı)
+    "theme": "auto",        # uygulama teması (bulutta; her cihaz aynı)
     "paused": False,        # True: gerçek hesapta yeni alım yapılmaz (açık pozisyonlar korunur)
     "liquidate": 0,         # zaman damgası; yeniyse gerçek hesaptaki her şey satılır
     "sell": {"ts": 0, "insts": []},
@@ -28,7 +29,7 @@ DEFAULTS = {
     "grid": {"step_pct": 2, "lot_pct": 4, "lot_tp_pct": 2.5, "max_lots": 3, "max_coins": 3, "stop_pct": 7, "use_pct": 40, "trend_filter_pct": 1, "instant": True, "step3_pct": 3, "lot2_pct": 100, "lot3_pct": 100, "sma_hours": 20},
     "dip": {"dip_pct": 3, "rsi_max": 35, "take_profit_pct": 4, "max_hold_hours": 48},
     "trend": {"trailing_pct": 4},
-    "notify": {"enabled": False, "topic": "", "trades": True, "alerts": True, "daily": True, "money": True},
+    "notify": {"enabled": False, "topic": "", "trades": True, "alerts": True, "daily": True, "money": True, "daily_hour": 21, "cleared": 0},
 }
 
 

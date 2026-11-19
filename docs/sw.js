@@ -1,5 +1,5 @@
 // Masal: çevrimdışıyken son görüntülenen sayfa ve veriler gösterilir. Her zaman önce ağ denenir.
-const CACHE = 'masal-1.36.2';
+const CACHE = 'masal-1.37.0';
 const SHELL = ['./', 'index.html', 'app.js', 'manifest.webmanifest', 'favicon.svg', 'logo-192.png', 'logo-512.png'];
 
 self.addEventListener('install', e => {

@@ -197,11 +197,11 @@ def sell_selected(p, S):
 
 
 def daily_summary(L, p, N):
-    """Her akşam 21:00 turunda günün özetini gönderir."""
+    """Her gün ayarlanan saatte (varsayılan 21:00) günün özetini gönderir."""
     from datetime import datetime, timedelta, timezone
     now = datetime.now(timezone(timedelta(hours=config.TZ_OFFSET_HOURS)))
     today = now.strftime("%Y-%m-%d")
-    if now.hour < 21 or L.get("daily_sent") == today or not N.on:
+    if now.hour < getattr(N, "daily_hour", 21) or L.get("daily_sent") == today or not N.on:
         return
     L["daily_sent"] = today
     eq = p.equity()
@@ -443,6 +443,11 @@ def main():
         print("Para hareketleri kontrol edilemedi:", e)
 
     daily_summary(L, live, N)
+    # Gönderilen bildirimler buluta da yazılır (gerçek hesabın şifreli kaydında): uygulama her cihazda aynı listeyi görür
+    if N.queue:
+        now_ms = int(time.time() * 1000)
+        L["notifs"] = [m for m in L.get("notifs", []) if now_ms - m["t"] < 86400_000][-150:] + [
+            {"t": now_ms, "title": m["title"], "message": m["message"], "tags": m.get("tags", [])} for m in N.queue]
     state["updated"] = int(time.time() * 1000)
     state["universe"] = sorted(series)
     save_state(state)

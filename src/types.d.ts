@@ -117,6 +117,7 @@ interface Settings {
   strategy: Exclude<StrategyKey, 'live'>;
   quote?: string;
   lang?: string;
+  theme?: string;
   sell?: { ts: number; insts: string[] };
   target?: { on: boolean; amount: number; mode?: string };
   convert?: { ts: number };
@@ -127,7 +128,7 @@ interface Settings {
   grid: { step_pct: number; lot_pct: number; lot_tp_pct: number; max_lots: number; max_coins: number; stop_pct: number; use_pct?: number; trend_filter_pct?: number; instant?: boolean; step3_pct?: number; lot2_pct?: number; lot3_pct?: number; sma_hours?: number };
   dip: { dip_pct: number; rsi_max: number; take_profit_pct: number; max_hold_hours: number };
   trend: { trailing_pct: number };
-  notify: { enabled: boolean; topic: string | Sealed; trades: boolean; alerts: boolean; daily: boolean; money?: boolean };
+  notify: { enabled: boolean; topic: string | Sealed; trades: boolean; alerts: boolean; daily: boolean; money?: boolean; daily_hour?: number; cleared?: number };
   test_req?: { ts: number; s: Partial<Settings> };
   _bad?: Set<string>;
 }

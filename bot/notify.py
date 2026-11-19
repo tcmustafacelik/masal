@@ -58,6 +58,10 @@ class Notifier:
                 print("Bildirim konusu çözülemedi:", e)
         self.queue = []
         self.en = S.get("lang") == "en"
+        try:
+            self.daily_hour = min(23, max(0, int(n.get("daily_hour", 21))))
+        except (TypeError, ValueError):
+            self.daily_hour = 21
 
     def add(self, cat, title, message, priority=3, tags=None):
         if self.on and self.topic and self.cats.get(cat, True):

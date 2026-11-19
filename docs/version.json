@@ -1,7 +1,7 @@
 {
-  "version": "1.36.2",
+  "version": "1.37.0",
   "date": "2026-11-19",
   "notes": [
-    "Bot 5 saniyede bir kontrol eder"
+    "Bulut: eşitleme simgesi, bildirim geçmişi ve dil/tema bulutta; günlük özet saati ayarlanır"
   ]
 }
