@@ -87,7 +87,7 @@ def build(state, S=None):
             "equity_series": s["equity"][-24 * 30 * config.BPH:][::config.BPH],
             "halted": s["halted"], "halt_reason": s["halt_reason"], "blocked_today": s["blocked_today"],
             "watch": s.get("watch") if live else None,
-            "cfg": {k: p.cfg.get(k) for k in ("step", "lot", "lot_tp", "max_lots", "max_coins", "stop", "max_use", "coin_filter", "instant", "step3", "lot_decay")}
+            "cfg": {k: p.cfg.get(k) for k in ("step", "lot", "lot_tp", "max_lots", "max_coins", "stop", "max_use", "coin_filter", "instant", "step3", "lot2", "lot3")}
             if s["key"] == "grid" else None,
         }
     out = {

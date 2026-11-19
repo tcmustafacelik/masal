@@ -1,8 +1,7 @@
 {
-  "version": "1.31.0",
+  "version": "1.31.1",
   "date": "2026-11-19",
   "notes": [
-    "Kademeler küçülür: 444 → 222 → 111 TL (ayarlanabilir)",
-    "3. kademe %3 daha düşüşte alınır"
+    "Kademe tutarları ayrı ayrı: 2. kademe 444 TL, 3. kademe 222 TL"
   ]
 }

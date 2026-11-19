@@ -284,9 +284,11 @@ def run_bars(portfolios, events, series):
 
 
 def lot_for(c, n):
-    """Elde n kademe varken bir sonraki kademenin tutarı: her kademe bir öncekinin lot_decay katı
-    (kullanıcı tercihi: 444 → 222 → 111; düşüşte bir coine giren para azalır)."""
-    return c["lot"] * (c.get("lot_decay") or 1.0) ** n
+    """Elde n kademe varken bir sonraki kademenin tutarı. 2. ve 3. kademe, 1. kademenin ayarlanan yüzdesi
+    kadardır (kullanıcı tercihi: 444 → 444 → 222)."""
+    if n <= 0:
+        return c["lot"]
+    return c["lot"] * (c.get("lot2", 1.0) if n == 1 else c.get("lot3", 1.0))
 
 
 def step_for(c, n):

@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.31.0';
+const APP_VERSION = '1.31.1';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -274,7 +274,7 @@ function gloss(k) {
     const G = {
         nasil: ['Bot nasıl alıp satar?', `${c?.instant ? '<p>Bot <b>10 saniyede bir</b> fiyatlara bakar; fiyat alım seviyesine değdiği an alır. Alım seviyesi son kapanan 15 dakikalık mumlara göre hesaplanır.</p>' : '<p>Bot <b>10 saniyede bir</b> piyasaya bakar, kararını <b>15 dakikalık mum</b> kapanınca verir.</p>'}
       <ul><li><b>Alım:</b> Bir coin son 20 saatin ortalamasından <b>${step}</b> aşağı inince ${lot}'lik bir parça (kademe) alır.</li>
-      <li><b>Düşerse:</b> ${step} düşüşte 2. kademeyi${c?.step3 && c.step3 > c.step ? `, ${pp(c.step3)} daha düşüşte 3. kademeyi` : ''} alır; bir coinde en fazla <b>${ml}</b> kademe.${c?.lot_decay && c.lot_decay < 1 ? ` Her yeni kademe bir öncekinin ${pp(c.lot_decay, 0)}'ı kadardır.` : ''}</li>
+      <li><b>Düşerse:</b> ${step} düşüşte 2. kademeyi${c?.step3 && c.step3 > c.step ? `, ${pp(c.step3)} daha düşüşte 3. kademeyi` : ''} alır; bir coinde en fazla <b>${ml}</b> kademe.${c && ((c.lot2 ?? 1) < 1 || (c.lot3 ?? 1) < 1) ? ` Kademe tutarları: ${tl(c.lot, 0)} → ${tl(c.lot * (c.lot2 ?? 1), 0)} → ${tl(c.lot * (c.lot3 ?? 1), 0)}.` : ''}</li>
       <li><b>Satış:</b> Her kademe kendi alış fiyatının <b>${tp}</b> üstüne çıkınca ayrı satılır.</li>
       <li><b>Zarar kesme:</b> Ortalama maliyetin <b>${stop}</b> altına inerse o coindeki her şey satılır.</li>
       <li><b>Düşüş filtresi:</b> Coin bir günde ${cf}'den fazla geriliyorsa "düşen bıçak" sayılır, yeni alım bekletilir.</li></ul>
@@ -938,7 +938,8 @@ const STRAT_F = {
     grid: [['grid.step_pct', 'Kademe aralığı', 'Fiyat bu kadar düşünce bir kademe daha alınır', '%', .5, .5, 20, 1],
         ['grid.lot_pct', 'Kademe büyüklüğü', () => `Bottaki paranın; şu an ${sizeTL(draft.grid.lot_pct)}`, '%', .5, .5, 50, 1],
         ['grid.step3_pct', '3. kademe aralığı', '2. kademeden sonra fiyat bu kadar daha düşünce 3. kademe alınır; hızlı düşüşte kademeler bir anda dolmaz', '%', .5, .5, 30, 1],
-        ['grid.lot_decay_pct', 'Sonraki kademe tutarı', () => { const l = draft.budget * draft.grid.lot_pct / 100, k = (draft.grid.lot_decay_pct ?? 100) / 100; return `Her yeni kademe bir öncekinin bu kadarı (100 = hepsi eşit); şu an ${tl(l, 0)} → ${tl(l * k, 0)} → ${tl(l * k * k, 0)}`; }, '%', 5, 10, 100, 0],
+        ['grid.lot2_pct', '2. kademe tutarı', () => `1. kademenin yüzdesi; şu an ${tl(draft.budget * draft.grid.lot_pct / 100 * (draft.grid.lot2_pct ?? 100) / 100, 0)}`, '%', 5, 10, 100, 0],
+        ['grid.lot3_pct', '3. kademe tutarı', () => `1. kademenin yüzdesi; şu an ${tl(draft.budget * draft.grid.lot_pct / 100 * (draft.grid.lot3_pct ?? 100) / 100, 0)}`, '%', 5, 10, 100, 0],
         ['grid.lot_tp_pct', 'Kademe kârı', 'Her kademe bu kârla ayrı satılır', '%', .5, .5, 50, 1],
         ['grid.max_lots', 'En fazla kademe', 'Bir coinde', 'adet', 1, 1, 10, 0],
         ['grid.max_coins', 'En fazla coin', 'Aynı anda kademeli alınan; fırsatlar en derin düşüşten başlayarak sıralanır', 'adet', 1, 1, 20, 0],

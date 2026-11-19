@@ -28,7 +28,8 @@
     "trend_filter_pct": 1,
     "instant": true,
     "step3_pct": 3,
-    "lot_decay_pct": 50
+    "lot2_pct": 100,
+    "lot3_pct": 50
   },
   "dip": {
     "dip_pct": 3,
