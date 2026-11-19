@@ -53,7 +53,7 @@
     "trades": true,
     "alerts": true,
     "daily": true,
-    "daily_hour": 12
+    "daily_hour": 13
   },
   "sell": {
     "ts": 1795067644512,
