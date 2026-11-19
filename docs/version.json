@@ -1,7 +1,7 @@
 {
-  "version": "1.35.0",
+  "version": "1.35.1",
   "date": "2026-11-19",
   "notes": [
-    "Bildirim ayarları yeniden tasarlandı: 2x2 seçim kutuları, gizli kanal adı (Göster/Gizle), eşit düğmeler"
+    "En fazla coin ayarı 40'a kadar çıkabilir"
   ]
 }
