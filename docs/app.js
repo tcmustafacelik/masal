@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.33.0';
+const APP_VERSION = '1.34.0';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -186,7 +186,7 @@ function render() {
                     : `<span class="mi">${ic('i-flask')}</span><span><b>Deneme</b><small>Emir gitmez</small></span>`;
         m.onclick = () => document.getElementById('openSet').click();
     }
-    document.getElementById('foot').innerHTML = 'Fiyatlar uygulama açıkken OKX TR\'den anlık güncellenir; bot kesintisiz çalışır, yaklaşık 10 saniyede bir kontrol eder.<br>' + (L && L.armed ? 'Gerçek hesap kartı OKX TR hesabındaki gerçek işlemleri gösterir; diğerleri sanal karşılaştırmadır.' : 'Gerçek para kullanılmıyor; tüm işlemler sanal.');
+    document.getElementById('foot').innerHTML = 'Fiyatlar uygulama açıkken OKX TR\'den anlık güncellenir; bot kesintisiz çalışır, yaklaşık 10 saniyede bir kontrol eder.<br>' + (L && L.armed ? 'Ekrandaki rakamlar OKX TR hesabındaki gerçek işlemlerdir.' : 'Gerçek para kullanılmıyor; tüm işlemler sanal.');
     const keys = Object.keys(S.strategies).sort((a, b) => Number(b === 'live') - Number(a === 'live'));
     const virt = keys.filter(k => k !== 'live');
     const tg = document.getElementById('tiles');
@@ -196,6 +196,16 @@ function render() {
         return `<button class="tile ${k === sel ? 'on' : ''}" data-k="${k}"><span class="ic">${ic(ICON[k])}</span><span class="nm">${v.name}</span><span class="pc ${cls(v.pnl_pct)}">${spc(v.pnl_pct)}</span></button>`;
     }).join('');
     tg.querySelectorAll('.tile').forEach(el => el.onclick = () => pick(el.dataset.k));
+    // gerçek hesap açıkken sanal karşılaştırma gizli (kullanıcı isteği: ekran sade kalsın)
+    {
+        const cmp = document.querySelector('[data-adv=cmp]');
+        const hideV = !!(S.strategies.live && !S.strategies.live.locked);
+        if (cmp)
+            cmp.hidden = hideV;
+        if (hideV && sel !== 'live') {
+            sel = 'live';
+        }
+    }
     {
         const best = virt.slice().sort((a, b) => S.strategies[b].pnl_pct - S.strategies[a].pnl_pct)[0];
         document.getElementById('cmpSum').textContent = virt.length ? `Her biri ${tl(S.strategies[virt[0]].start_cash || 10000, 0)} sanal parayla · önde: ${S.strategies[best].name} ${spc(S.strategies[best].pnl_pct)}` : '—';
@@ -304,9 +314,17 @@ function gloss(k) {
     };
     return G[k] || ['', ''];
 }
-const NOTES = [];
-let nES = null, nTopic = '';
-const nSeen = () => +(localStore('masal_nseen') || 0);
+/* Bildirimler bu cihazda saklanır (ntfy sunucusu en fazla ~12 saat tutar); süre seçimi 1/6/12/24 saat. */
+const NOTES = (() => { try {
+    return JSON.parse(localStore('masal_notes') || '[]');
+}
+catch (e) {
+    return [];
+} })();
+let nES = null, nTopic = '', nHours = +(localStore('masal_nh') || 24);
+const nSeen = () => +(localStore('masal_nseen') || 0), nClr = () => +(localStore('masal_nclr') || 0);
+const nSave = () => localStore('masal_notes', JSON.stringify(NOTES.slice(0, 200)));
+const nVisible = () => NOTES.filter(m => m.time > nClr() && m.time > Date.now() / 1000 - 86400);
 function nKind(t) {
     const g = t || [];
     if (g.includes('rotating_light') || g.includes('warning'))
@@ -322,7 +340,7 @@ function nBadge() {
     if (!b)
         return;
     b.hidden = !nTopic;
-    const k = NOTES.filter(m => m.time > nSeen()).length;
+    const k = nVisible().filter(m => m.time > nSeen()).length;
     n.hidden = !k;
     n.textContent = k > 9 ? '9+' : String(k);
 }
@@ -353,8 +371,9 @@ async function startNotes() {
             return;
         NOTES.push({ id: m.id, time: m.time, title: m.title || 'Masal', message: m.message || '', tags: m.tags });
         NOTES.sort((a, b) => b.time - a.time);
-        if (NOTES.length > 100)
-            NOTES.length = 100;
+        if (NOTES.length > 200)
+            NOTES.length = 200;
+        nSave();
         if (m.time >= t0 - 5) {
             toast(`${m.title || 'Masal'} · ${(m.message || '').split('\n')[0]}`);
             setTimeout(() => load(true), 1500);
@@ -370,15 +389,21 @@ function openNotes() {
     const q = document.getElementById('qsh');
     q.dataset.n = '1';
     qHead('i-bell', 'Kapat');
-    document.getElementById('qTitle').textContent = 'Bildirimler · son 24 saat';
-    document.getElementById('qText').innerHTML = NOTES.length ? `<div class="nlist">${NOTES.map(m => {
-        const [i, c] = nKind(m.tags), d = new Date(m.time * 1000), p = n => String(n).padStart(2, '0');
+    document.getElementById('qTitle').textContent = 'Bildirimler';
+    const from = Date.now() / 1000 - nHours * 3600, list = nVisible().filter(m => m.time > from), p = n => String(n).padStart(2, '0');
+    const bar = `<div class="nbar"><div class="seg" id="nRange">${[1, 6, 12, 24].map(h => `<button type="button" data-h="${h}" class="${h === nHours ? 'on' : ''}">${h} sa</button>`).join('')}</div>
+    <button type="button" class="nclr" id="nClear"${list.length ? '' : ' disabled'}>${ic('i-trash')}Temizle</button></div>`;
+    document.getElementById('qText').innerHTML = bar + (list.length ? `<div class="nlist">${list.map(m => {
+        const [i, c] = nKind(m.tags), d = new Date(m.time * 1000);
         return `<div class="nrow${m.time > nSeen() ? ' new' : ''}"><span class="ni ${c}">${ic(i)}</span><div><b>${m.title}</b><p>${m.message.replace(/</g, '&lt;')}</p></div><time>${p(d.getHours())}:${p(d.getMinutes())}</time></div>`;
     }).join('')}</div>`
-        : `<div class="empty">${ic('i-bell')}<div>Son 24 saatte bildirim yok</div></div>`;
+        : `<div class="empty">${ic('i-bell')}<div>Son ${nHours} saatte bildirim yok</div></div>`);
     q.hidden = false;
-    if (NOTES.length)
-        localStore('masal_nseen', String(NOTES[0].time));
+    document.querySelectorAll('#nRange button').forEach(b => b.onclick = () => { nHours = +b.dataset.h; localStore('masal_nh', String(nHours)); openNotes(); });
+    document.getElementById('nClear').onclick = () => { const top = NOTES[0]?.time || Date.now() / 1000; localStore('masal_nclr', String(top)); NOTES.length = 0; nSave(); openNotes(); toast('Bildirim geçmişi temizlendi'); };
+    const v = nVisible();
+    if (v.length)
+        localStore('masal_nseen', String(v[0].time));
     nBadge();
 }
 document.getElementById('bellBtn').onclick = openNotes;
@@ -818,7 +843,7 @@ function renderBacktest() {
 }
 function renderChart() {
     const box = document.getElementById('chartBox'), leg = document.getElementById('legend'), note = document.getElementById('chartNote');
-    const src = view === 'live' ? Object.fromEntries(Object.entries(S.strategies).filter(([k, v]) => v.equity_series).map(([k, v]) => [k, v.equity_series]))
+    const src = view === 'live' ? Object.fromEntries(Object.entries(S.strategies).filter(([k, v]) => v.equity_series && (k === 'live' || !S.strategies.live || S.strategies.live.locked)).map(([k, v]) => [k, v.equity_series]))
         : (B ? Object.fromEntries(Object.entries(B.results).map(([k, v]) => [k, v.equity])) : {});
     note.textContent = view === 'live' ? (S.created ? 'Başlangıç ' + dt(S.created).split(' ')[0] : '') : (B ? 'Son ' + B.days + ' gün' : '');
     for (const k in src) {
@@ -841,7 +866,14 @@ function renderChart() {
     const X = t => pl + (t - x0) / (x1 - x0 || 1) * (W - pl - pr), Y = v => pt + (1 - (v - y0) / (y1 - y0)) * (H - pt - pb);
     const path = s => s.map((p, i) => (i ? 'L' : 'M') + X(p[0]).toFixed(1) + ' ' + Y(p[1]).toFixed(1)).join(' ');
     let g = `<line x1="0" x2="${W}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--zero)" stroke-dasharray="4 4" stroke-width="1"/>`;
-    g += `<text x="2" y="${Y(0) + 12}" font-size="10" fill="var(--faint)">Başlangıç %0</text><text x="2" y="${pt + 8}" font-size="10" fill="var(--faint)">${spc(y1, 1)}</text><text x="2" y="${H - pb - 3}" font-size="10" fill="var(--faint)">${spc(y0, 1)}</text>`;
+    {
+        const z = Y(0), zl = z + 12 > H - pb - 16 ? z - 5 : z + 12; // sıfır etiketi alttaki etiketle çakışmasın
+        g += `<text x="2" y="${zl}" font-size="10" fill="var(--faint)">Başlangıç %0</text>`;
+        if (pt + 8 < zl - 14)
+            g += `<text x="2" y="${pt + 8}" font-size="10" fill="var(--faint)">${spc(y1, 1)}</text>`;
+        if (H - pb - 3 > zl + 14)
+            g += `<text x="2" y="${H - pb - 3}" font-size="10" fill="var(--faint)">${spc(y0, 1)}</text>`;
+    }
     const order = Object.keys(src).filter(k => k !== sel).concat(src[sel] ? [sel] : []);
     for (const k of order) {
         const s = src[k];
