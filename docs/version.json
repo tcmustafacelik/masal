@@ -1,7 +1,7 @@
 {
-  "version": "1.32.1",
+  "version": "1.33.0",
   "date": "2026-11-19",
   "notes": [
-    "İnce ayar: yüzdeler tek biçimde (+%0,14), hacim Mr/Mn, kademe rozeti her yerde aynı, coin kâr/zarar satırları sadeleşti, saatte salise yok, açıklamalar güncel"
+    "Bildirimler uygulamada da anlık: zil düğmesi, son 24 saat listesi, yeni bildirim ekranda belirir"
   ]
 }

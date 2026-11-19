@@ -1,4 +1,4 @@
-const APP_VERSION='1.32.1';
+const APP_VERSION='1.33.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -71,7 +71,7 @@ async function load(quiet?: boolean) {lastLoad=Date.now();offlineData=false;clea
   try{
     const [s,b]=await Promise.all([getData('summary.json'),getData('backtest.json').catch(()=>null)]);
     S=s;B=b;await openLive();
-    if(offlineData){err.innerHTML=`Bağlantı kurulamadı; <b>${dt(S.updated)}</b> tarihli son veri gösteriliyor. Kendiliğinden yeniden deneniyor…`;err.style.display='block';retryTimer=setTimeout(()=>load(true),15000)}if(!selPicked&&S.strategies.live)sel='live';if(!S.strategies[sel])sel = Object.keys(S.strategies)[0] as StrategyKey;render();pollMarket(true);
+    if(offlineData){err.innerHTML=`Bağlantı kurulamadı; <b>${dt(S.updated)}</b> tarihli son veri gösteriliyor. Kendiliğinden yeniden deneniyor…`;err.style.display='block';retryTimer=setTimeout(()=>load(true),15000)}if(!selPicked&&S.strategies.live)sel='live';if(!S.strategies[sel])sel = Object.keys(S.strategies)[0] as StrategyKey;render();pollMarket(true);startNotes();
   }catch(e){console.error(e);err.textContent='Veriler alınamadı (bağlantı ya da VPN). Kendiliğinden yeniden deneniyor…';err.style.display='block';retryTimer=setTimeout(()=>load(true),10000)}
   finally{btn.classList.remove('spin');hideSplash()}
 }
@@ -173,8 +173,56 @@ function gloss(k: string): [string, string] {
   };
   return G[k]||['',''];
 }
+/* ---------- bildirimler: telefona giden ntfy mesajları uygulama içinde de anlık görünür ----------
+   Konu adı ayarlarda şifreli durur; gerçek hesabın kilidi açıksa (şifre bu cihazdaysa) çözülür ve
+   ntfy'ın canlı akışına (SSE) bağlanılır. Son 24 saat listelenir, yeni gelen mesaj ekranda da belirir. */
+type NMsg = {id: string; time: number; title: string; message: string; tags?: string[]};
+const NOTES: NMsg[] = []; let nES: EventSource | null = null, nTopic = '';
+const nSeen = () => +(localStore('masal_nseen') || 0);
+function nKind(t?: string[]): [string, string] {
+  const g = t || [];
+  if (g.includes('rotating_light') || g.includes('warning')) return ['i-info', 'r'];
+  if (g.includes('shopping_cart')) return ['i-coins', 'b'];
+  if (g.includes('moneybag') || g.includes('trophy') || g.includes('white_check_mark')) return ['i-check', 'g'];
+  return ['i-bell', 'm'];
+}
+function nBadge() {
+  const b = document.getElementById('bellBtn'), n = document.getElementById('bellN'); if (!b) return;
+  b.hidden = !nTopic; const k = NOTES.filter(m => m.time > nSeen()).length;
+  n.hidden = !k; n.textContent = k > 9 ? '9+' : String(k);
+}
+async function startNotes() {
+  if (nES || !pw) return;
+  try {
+    const st = (await tfetch('ayarlar.json?t=' + Date.now()).then(r => r.json())) as Settings;
+    const tp = st?.notify?.topic; if (!st?.notify?.enabled || !tp) return;
+    nTopic = typeof tp === 'object' ? await unseal(tp as any, pw) : String(tp);
+  } catch (e) { return; }
+  const t0 = Date.now() / 1000;
+  nES = new EventSource(`https://ntfy.sh/${encodeURIComponent(nTopic)}/sse?since=24h`);
+  nES.onmessage = ev => {
+    let m: any; try { m = JSON.parse(ev.data); } catch (e) { return; }
+    if (m.event !== 'message' || NOTES.some(x => x.id === m.id)) return;
+    NOTES.push({id: m.id, time: m.time, title: m.title || 'Masal', message: m.message || '', tags: m.tags});
+    NOTES.sort((a, b) => b.time - a.time); if (NOTES.length > 100) NOTES.length = 100;
+    if (m.time >= t0 - 5) { toast(`${m.title || 'Masal'} · ${(m.message || '').split('\n')[0]}`); setTimeout(() => load(true), 1500); }
+    nBadge(); if (!document.getElementById('qsh').hidden && document.getElementById('qsh').dataset.n) openNotes();
+  };
+  nBadge();
+}
+function qHead(i: string, b: string) {document.querySelector('#qIco use').setAttribute('href', '#' + i); document.getElementById('qOk').textContent = b;}
+function openNotes() {
+  const q = document.getElementById('qsh'); q.dataset.n = '1'; qHead('i-bell', 'Kapat');
+  document.getElementById('qTitle').textContent = 'Bildirimler · son 24 saat';
+  document.getElementById('qText').innerHTML = NOTES.length ? `<div class="nlist">${NOTES.map(m => {const [i, c] = nKind(m.tags), d = new Date(m.time * 1000), p = n => String(n).padStart(2, '0');
+    return `<div class="nrow${m.time > nSeen() ? ' new' : ''}"><span class="ni ${c}">${ic(i)}</span><div><b>${m.title}</b><p>${m.message.replace(/</g, '&lt;')}</p></div><time>${p(d.getHours())}:${p(d.getMinutes())}</time></div>`}).join('')}</div>`
+    : `<div class="empty">${ic('i-bell')}<div>Son 24 saatte bildirim yok</div></div>`;
+  q.hidden = false;
+  if (NOTES.length) localStore('masal_nseen', String(NOTES[0].time)); nBadge();
+}
+document.getElementById('bellBtn').onclick = openNotes;
 function openGloss(k: string){const [t,h]=gloss(k);if(!t)return;
-  document.getElementById('qTitle').textContent=t;document.getElementById('qText').innerHTML=h;document.getElementById('qsh').hidden=false}
+  document.getElementById('qsh').dataset.n='';qHead('i-info','Anladım');document.getElementById('qTitle').textContent=t;document.getElementById('qText').innerHTML=h;document.getElementById('qsh').hidden=false}
 document.addEventListener('click',e=>{const q=(e.target as HTMLElement).closest<HTMLElement>('.qm');if(q){e.preventDefault();e.stopPropagation();openGloss(q.dataset.q)}});
 document.getElementById('qOk').onclick=()=>document.getElementById('qsh').hidden=true;
 document.getElementById('qsh').onclick=e=>{if(e.target===e.currentTarget)(e.currentTarget as HTMLElement).hidden=true};

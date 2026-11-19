@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.32.1';
+const APP_VERSION = '1.33.0';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -157,6 +157,7 @@ async function load(quiet) {
             sel = Object.keys(S.strategies)[0];
         render();
         pollMarket(true);
+        startNotes();
     }
     catch (e) {
         console.error(e);
@@ -303,10 +304,90 @@ function gloss(k) {
     };
     return G[k] || ['', ''];
 }
+const NOTES = [];
+let nES = null, nTopic = '';
+const nSeen = () => +(localStore('masal_nseen') || 0);
+function nKind(t) {
+    const g = t || [];
+    if (g.includes('rotating_light') || g.includes('warning'))
+        return ['i-info', 'r'];
+    if (g.includes('shopping_cart'))
+        return ['i-coins', 'b'];
+    if (g.includes('moneybag') || g.includes('trophy') || g.includes('white_check_mark'))
+        return ['i-check', 'g'];
+    return ['i-bell', 'm'];
+}
+function nBadge() {
+    const b = document.getElementById('bellBtn'), n = document.getElementById('bellN');
+    if (!b)
+        return;
+    b.hidden = !nTopic;
+    const k = NOTES.filter(m => m.time > nSeen()).length;
+    n.hidden = !k;
+    n.textContent = k > 9 ? '9+' : String(k);
+}
+async function startNotes() {
+    if (nES || !pw)
+        return;
+    try {
+        const st = (await tfetch('ayarlar.json?t=' + Date.now()).then(r => r.json()));
+        const tp = st?.notify?.topic;
+        if (!st?.notify?.enabled || !tp)
+            return;
+        nTopic = typeof tp === 'object' ? await unseal(tp, pw) : String(tp);
+    }
+    catch (e) {
+        return;
+    }
+    const t0 = Date.now() / 1000;
+    nES = new EventSource(`https://ntfy.sh/${encodeURIComponent(nTopic)}/sse?since=24h`);
+    nES.onmessage = ev => {
+        let m;
+        try {
+            m = JSON.parse(ev.data);
+        }
+        catch (e) {
+            return;
+        }
+        if (m.event !== 'message' || NOTES.some(x => x.id === m.id))
+            return;
+        NOTES.push({ id: m.id, time: m.time, title: m.title || 'Masal', message: m.message || '', tags: m.tags });
+        NOTES.sort((a, b) => b.time - a.time);
+        if (NOTES.length > 100)
+            NOTES.length = 100;
+        if (m.time >= t0 - 5) {
+            toast(`${m.title || 'Masal'} · ${(m.message || '').split('\n')[0]}`);
+            setTimeout(() => load(true), 1500);
+        }
+        nBadge();
+        if (!document.getElementById('qsh').hidden && document.getElementById('qsh').dataset.n)
+            openNotes();
+    };
+    nBadge();
+}
+function qHead(i, b) { document.querySelector('#qIco use').setAttribute('href', '#' + i); document.getElementById('qOk').textContent = b; }
+function openNotes() {
+    const q = document.getElementById('qsh');
+    q.dataset.n = '1';
+    qHead('i-bell', 'Kapat');
+    document.getElementById('qTitle').textContent = 'Bildirimler · son 24 saat';
+    document.getElementById('qText').innerHTML = NOTES.length ? `<div class="nlist">${NOTES.map(m => {
+        const [i, c] = nKind(m.tags), d = new Date(m.time * 1000), p = n => String(n).padStart(2, '0');
+        return `<div class="nrow${m.time > nSeen() ? ' new' : ''}"><span class="ni ${c}">${ic(i)}</span><div><b>${m.title}</b><p>${m.message.replace(/</g, '&lt;')}</p></div><time>${p(d.getHours())}:${p(d.getMinutes())}</time></div>`;
+    }).join('')}</div>`
+        : `<div class="empty">${ic('i-bell')}<div>Son 24 saatte bildirim yok</div></div>`;
+    q.hidden = false;
+    if (NOTES.length)
+        localStore('masal_nseen', String(NOTES[0].time));
+    nBadge();
+}
+document.getElementById('bellBtn').onclick = openNotes;
 function openGloss(k) {
     const [t, h] = gloss(k);
     if (!t)
         return;
+    document.getElementById('qsh').dataset.n = '';
+    qHead('i-info', 'Anladım');
     document.getElementById('qTitle').textContent = t;
     document.getElementById('qText').innerHTML = h;
     document.getElementById('qsh').hidden = false;
