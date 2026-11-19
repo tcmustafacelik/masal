@@ -192,6 +192,14 @@ def check_okx():
         api = OkxPrivate()
         bal = api.available(config.CASH)
         out = {"ok": True, "status": "Bağlantı çalışıyor", "try": round(bal, 2), "ts": int(time.time() * 1000)}
+        try:  # hesap türü ve borç kontrolü: bot sadece spot ("cash") işlem yapar, borç hiç olmamalı
+            cfg = api._req("GET", "/api/v5/account/config")[0]
+            out["acct"] = {"1": "Spot", "2": "Spot ve vadeli", "3": "Çoklu para marjin", "4": "Portföy marjin"}.get(
+                str(cfg.get("acctLv")), str(cfg.get("acctLv")))
+            rows = api._req("GET", "/api/v5/account/balance")
+            out["debt"] = round(sum(float(d.get("liab") or 0) for d in (rows[0].get("details", []) if rows else [])), 6)
+        except Exception as e:
+            print("Hesap türü okunamadı:", e)
         if config.QUOTE != config.CASH:  # seçili paritede işlem izni var mı (emir vermeden kontrol)
             try:
                 api._req("GET", f"/api/v5/account/max-avail-size?instId=BTC-{config.QUOTE}&tdMode=cash")
@@ -359,6 +367,11 @@ def main():
     if "quote_ok" in state["okx"] and state["okx"]["quote_ok"] != prev.get("quote_ok"):
         print(f"{config.QUOTE} paritesi işlem izni: {'var' if state['okx']['quote_ok'] else 'YOK - ' + state['okx'].get('quote_err', '')}"
               f" · USDT bakiyesi {state['okx'].get('usdt')}")
+    if state["okx"].get("acct") != prev.get("acct"):
+        print(f"OKX hesap türü: {state['okx'].get('acct')} · borç: {state['okx'].get('debt')}")
+    if L["armed"] and (state["okx"].get("debt") or 0) > 0 and live._once_per_day("debt"):
+        N.add("alerts", "OKX hesabında borç görünüyor",
+              "Bot sadece spot (nakit) işlem yapar ama hesapta borç kaydı var. OKX'te Varlıklar bölümünü kontrol et.", 5, ["warning"])
     if L["armed"] and state["okx"].get("quote_ok") is False and live._once_per_day("quote"):
         N.add("alerts", f"{config.QUOTE} paritesinde işlem yapılamıyor",
               f"OKX, {config.QUOTE} paritesinde emir iznini reddetti: {state['okx'].get('quote_err', '')}. Bot TL'deki coinleri yönetmeye devam eder.",
