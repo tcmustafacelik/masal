@@ -90,9 +90,14 @@ def setup_live(state, S):
         if L.get("day"):  # "Bugün" kâr/zararı para eklenip çıkarılınca bozulmasın
             L["day"]["start_equity"] = L["day"].get("start_equity", 0) + diff
         note(L, f"Bottaki başlangıç parası {tr(budget)} TL yapıldı")
-    if L.get("paused", False) != bool(S["paused"]):
-        note(L, "Bot durduruldu: yeni alım yapılmayacak" if S["paused"] else "Bot yeniden başlatıldı")
-    L["paused"] = bool(S["paused"])
+    T = S.get("target") or {}
+    if L.get("target_done") and (not T.get("on") or L["target_done"] != f"{float(T.get('amount') or 0):.0f}"):
+        L.pop("target_done")  # hedef kapatıldı ya da değiştirildi: bot kaldığı yerden devam eder
+        note(L, "Kâr hedefi değişti; bot yeniden alım yapabilir")
+    want_pause = bool(S["paused"]) or bool(L.get("target_done"))
+    if L.get("paused", False) != want_pause:
+        note(L, "Bot durduruldu: yeni alım yapılmayacak" if want_pause else "Bot yeniden başlatıldı")
+    L["paused"] = want_pause
     L["kasa"], L["armed"] = float(S["kasa"]), armed
     if not L.get("eq_v2"):  # eski grafik noktaları başlangıç parası bilgisi olmadan tutuluyordu; temiz başla
         L["equity"], L["eq_v2"] = [], True
@@ -149,6 +154,28 @@ def convert_request(p, S, N):
             note(L, "Çevrilecek boş TL yok (Fonlama'dan Alım-satım hesabına aktarıldı mı?)")
     except Exception as e:
         note(L, f"HATA TL çevirme: {e}")
+
+
+def check_target(p, S, N):
+    """Kâr hedefi: açıksa ve toplam kâr hedefe ulaştıysa her şey satılır, bot yeni alım yapmaz."""
+    L, T = p.s, S.get("target") or {}
+    amount = float(T.get("amount") or 0)
+    if not T.get("on") or amount <= 0 or L.get("target_done"):
+        return
+    profit = p.equity() - L["start_cash"]
+    if profit < amount:
+        return
+    ts = int(time.time() * 1000)
+    for inst in list(L["positions"]):
+        p._sell_lots(ts, inst, L["last_prices"].get(inst, 0), list(L["positions"][inst]["lots"]), "Kâr hedefi")
+    if L["positions"]:
+        note(L, "Kâr hedefi tuttu ama bazı coinler satılamadı; bir sonraki turda tekrar denenecek")
+        return
+    L["target_done"], L["paused"] = f"{amount:.0f}", True
+    note(L, f"Kâr hedefi tuttu: toplam kâr {tr(profit)} TL. Her şey satıldı, bot durdu.")
+    N.add("alerts", f"Kâr hedefi tuttu: +{tr(profit)} TL",
+          f"Toplam kâr {tr(amount)} TL hedefine ulaştı. Bütün coinler satıldı, bot yeni alım yapmıyor. "
+          "Devam etmek için Ayarlar'dan hedefi kapat ya da yükselt.", 5, ["trophy"])
 
 
 def sell_selected(p, S):
@@ -347,6 +374,7 @@ def main():
     run_bars([live], live_events, series)
     liquidate(live, S)
     sell_selected(live, S)
+    check_target(live, S, N)
     convert_request(live, S, N)
     topup(live, S, N if L["armed"] else None)
     try:

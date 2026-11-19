@@ -1,9 +1,7 @@
 {
-  "version": "1.29.0",
+  "version": "1.30.0",
   "date": "2026-11-19",
   "notes": [
-    "Elimdeki coinlerde satırı sola kaydırıp Sat ile tek coin satılabilir",
-    "Ayarlar kontrolü ve OKX bilgisi boştaki USDT'yi de sayar",
-    "Tek seferlik LIT onarım kodu kaldırıldı"
+    "Kâr hedefinde dur: toplam kâr hedefe (20.000 TL) ulaşınca her şey satılır ve bot durur; Ayarlar'dan açılıp kapanır, tutar değiştirilebilir"
   ]
 }

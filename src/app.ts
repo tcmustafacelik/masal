@@ -1,4 +1,4 @@
-const APP_VERSION='1.29.0';
+const APP_VERSION='1.30.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -188,6 +188,7 @@ function renderNow(x: Strategy){
   const w=x.watch,c=x.cfg,used=w?w.used:x.positions.reduce((a,p)=>a+p.cost,0);
   let st:[string,string,string,string];
   if(x.halted)st=['red','i-power','Durdu: acil fren devrede',`${x.halt_reason||''}. Yeni işlem açılmıyor.`];
+  else if(x.target_done)st=['','i-flag','Kâr hedefi tuttu',`Toplam kâr ${tl(+x.target_done,0)} hedefine ulaştı; bütün coinler satıldı, bot durdu. Devam etmek için Ayarlar'dan hedefi kapat ya da yükselt.`];
   else if(x.paused)st=['amb','i-pause','Beklemede: yeni alım yapmıyor','Ayarlardan durdurdun. Elindeki coinlerin kâr al / zarar durdur koruması sürüyor.'];
   else if(x.blocked_today)st=['amb','i-stop','Bugünlük durdu','Günlük zarar sınırına ulaşıldı; yarın yeniden alım yapar. Satışlar sürüyor.'];
   else if(w&&!w.room)st=['amb','i-layers','Bütçe sınırı dolu',`Coinlere ayrılan ${tl(w.cap,0)}'nin ${tl(used,0)}'si kullanımda. Bir kademe kârla satılınca yeniden alır.`];
@@ -501,6 +502,7 @@ function checks(d: Settings = draft, o: Settings = orig || ({} as Settings), dif
     if(o.live!==d.live)ch.push(d.live?'<b>Gerçek emir</b> başlar':'Deneme moduna geçilir; elde kalan coinler satılmaz');
     if(o.strategy!==d.strategy)ch.push(`Strateji ${SNAMES[o.strategy]} → <b>${SNAMES[d.strategy]}</b>${o.live?'; eski stratejinin coinleri satılır':''}`);
     if((o.quote||'USDT')!==(d.quote||'USDT'))ch.push(`Yeni alımlar <b>${d.quote}</b> paritesinden yapılır; eldeki coinler kendi paritesinde satılır`);
+    if(!!o.target?.on!==!!d.target?.on||(d.target?.on&&o.target?.amount!==d.target?.amount))ch.push(d.target?.on?`Toplam kâr <b>${T(d.target.amount)}</b> olunca bütün coinler satılır ve bot durur`:'Kâr hedefi kapanır; bot olduğu gibi devam eder');
     if(!!o.grid?.instant!==!!d.grid?.instant)ch.push(d.grid?.instant?'<b>Anlık alım</b> açılır: fiyat alım seviyesine değince hemen alır':'Anlık alım kapanır: 15 dakikalık mum kapanışı beklenir');
     if(o.paused!==d.paused)ch.push(d.paused?'Yeni alım <b>durur</b>; korumalar çalışmaya devam eder':'Bot yeniden alım yapmaya başlar');
     if(ch.length)add('info','Kaydedince ne olacak',ch.join('<br>'));
@@ -542,6 +544,8 @@ const SECTIONS=[
   ['risk.kill_pct','Acil fren',()=>`Bottaki para bu kadar eriyince her şey satılır ve bot durur (${tl(draft.budget*(1-draft.risk.kill_pct/100),0)} altı)`,'%',1,1,90,0],
   ['risk.max_positions','En fazla pozisyon','Aynı anda açık tutulacak coin sayısı','adet',1,1,30,0],
   ['risk.trade_pct','İşlem büyüklüğü',()=>`Düşüşte al ve Trend için bottaki paranın; şu an ${sizeTL(draft.risk.trade_pct)}`,'%',1,1,100,0]]},
+ {t:'Kâr hedefi',i:'i-flag',f:[
+  ['target.amount','Hedef kâr',()=>`Toplam kâr bu tutara ulaşınca bütün coinler satılır ve bot durur (bottaki para ${tl(draft.budget+(draft.target?.amount||0),0)} olunca)`,'TL',500,100,1e8,0]]},
 ];
 // Kademeli stratejide zarar sınırı, coin sayısı ve alım tutarı kendi ayarlarından gelir; genel alanlar gizlenir
 const GRID_HIDE=new Set(['risk.stop_pct','risk.max_positions','risk.trade_pct']);
@@ -570,11 +574,12 @@ const pc=v=>'%'+String(v).replace('.',',');
 const SUMS={
  'Kasa':()=>`${tl(draft.budget,0)} botta · kasa ${tl(draft.kasa,0)}`,
  'Kasadan ekleme':()=>`+${tl(draft.topup.amount,0)} · ${pc(draft.topup.profit_pct)} kârda · ${draft.topup.days} gün arayla`,
+ 'Kâr hedefi':()=>draft.target?.on?`Açık · +${tl(draft.target.amount,0)} kârda her şey satılır`:`Kapalı · hedef ${tl(draft.target?.amount||20000,0)}`,
  'Koruma':()=>draft.strategy==='grid'?`Günlük ${pc(draft.risk.daily_loss_pct)} · acil fren ${pc(draft.risk.kill_pct)}`:`Zarar ${pc(draft.risk.stop_pct)} · günlük ${pc(draft.risk.daily_loss_pct)} · acil fren ${pc(draft.risk.kill_pct)}`,
  grid:()=>`${tl(draft.budget*draft.grid.lot_pct/100,0)} kademe · ${draft.grid.max_coins} coine kadar · en çok ${tl(draft.budget*(draft.grid.use_pct??40)/100,0)}${draft.grid.instant?' · anlık alım':''}`,
  dip:()=>`Düşüş ${pc(draft.dip.dip_pct)} · kâr ${pc(draft.dip.take_profit_pct)} · en çok ${draft.dip.max_hold_hours} saat`,
  trend:()=>`İz süren stop ${pc(draft.trend.trailing_pct)}`};
-const SEC_C={'Kasa':'teal','Kasadan ekleme':'teal','Koruma':'red'};
+const SEC_C={'Kasa':'teal','Kasadan ekleme':'teal','Koruma':'red','Kâr hedefi':'green'};
 function field([k,label,hint,u,step,min,max,dec]){
   const v=P(draft,k),h=typeof hint==='function'?hint():hint;
   return `<div class="field" data-k="${k}"><div class="lb"><b>${label}</b><span class="h">${h}</span><em></em></div>
@@ -689,7 +694,11 @@ function renderForm(){
    <section><h2><span class="hb c-violet">${ic('i-shield')}</span>Kontrol<span class="hsum" style="font-weight:500;color:var(--faint);font-size:11px">değiştirdikçe güncellenir</span></h2><div class="card chk" id="checks"></div></section>`;
   h+='<section style="margin-bottom:-2px"><h2><span class="hb c-gray">'+ic('i-layers')+'</span>Ayrıntılı ayarlar<span class="hsum" style="font-weight:500;color:var(--faint);font-size:11px">dokununca açılır</span></h2></section>';
   h+=notifySection();
-  for(const sec of SECTIONS){const ff=secFields(sec);h+=accOpen(sec.t,sec.t,sec.i,SEC_C[sec.t],SUMS[sec.t](),secDirty(ff.map(x=>x[0])))+`<div class="card">${ff.map(field).join('')}</div>`+ACC_END}
+  if(!draft.target)draft.target={on:false,amount:20000};
+  for(const sec of SECTIONS){const ff=secFields(sec),tg=sec.t==='Kâr hedefi';
+    h+=accOpen(sec.t,sec.t,sec.i,SEC_C[sec.t],SUMS[sec.t](),secDirty([...ff.map(x=>x[0]),...(tg?['target.on']:[])]))+`<div class="card">`
+      +(tg?`<div style="margin-bottom:4px">${swRow('tgtSw',!!draft.target.on,'Hedefte dur','Açıkken toplam kâr hedefe ulaşınca bütün coinler satılır ve yeni alım durur. Kapalıyken bot olduğu gibi devam eder.')}</div>`:'')
+      +`${ff.map(field).join('')}</div>`+ACC_END}
   const sf=STRAT_F[draft.strategy];
   const grid=draft.strategy==='grid';
   h+=accOpen('strat',SNAMES[draft.strategy]+' ayarları',ICON[draft.strategy],'blue',SUMS[draft.strategy](),secDirty([...sf.map(x=>x[0]),...(grid?['grid.instant']:[])]))+`<div class="card">${sf.map(field).join('')}`
@@ -702,6 +711,7 @@ function renderForm(){
   f.querySelectorAll<HTMLElement>('[data-g=quote] .tile').forEach(b=>b.onclick=()=>{draft.quote=b.dataset.t;renderForm()});
   f.querySelectorAll<HTMLElement>('[data-g=strat] .tile').forEach(b=>b.onclick=()=>{draft.strategy = b.dataset.t as Settings['strategy'];renderForm()});
   document.getElementById('pauseSw').onclick=()=>{draft.paused=!draft.paused;renderForm()};
+  document.getElementById('tgtSw').onclick=()=>{draft.target.on=!draft.target.on;renderForm()};
   const isw=document.getElementById('instSw');if(isw)isw.onclick=()=>{draft.grid.instant=!draft.grid.instant;renderForm()};
   bindNotify();bindInstall();
   document.getElementById('sellAll').onclick=()=>{if(!sellArm){sellArm=setTimeout(()=>{sellArm=0;renderForm()},4000);return renderForm()}

@@ -59,5 +59,9 @@
   "quote": "USDT",
   "convert": {
     "ts": 1795069848278
+  },
+  "target": {
+    "on": true,
+    "amount": 20000
   }
 }

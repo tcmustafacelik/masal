@@ -90,6 +90,7 @@ interface Strategy {
   halt_reason?: string | null;
   blocked_today?: boolean;
   watch?: Watch | null;
+  target_done?: string | null;
   cfg?: GridCfg | null;
 }
 
@@ -116,6 +117,8 @@ interface Settings {
   strategy: Exclude<StrategyKey, 'live'>;
   quote?: string;
   sell?: { ts: number; insts: string[] };
+  target?: { on: boolean; amount: number };
+  convert?: { ts: number };
   budget: number;
   kasa: number;
   topup: { amount: number; profit_pct: number; days: number };
