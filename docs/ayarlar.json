@@ -24,7 +24,7 @@
     "max_lots": 3,
     "max_coins": 77,
     "stop_pct": 50,
-    "use_pct": 100,
+    "use_pct": 99,
     "trend_filter_pct": 0.5,
     "instant": true,
     "step3_pct": 3.5,
