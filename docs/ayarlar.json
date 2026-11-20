@@ -68,7 +68,7 @@
   },
   "target": {
     "on": true,
-    "amount": 33333,
+    "amount": 44444,
     "mode": "total"
   },
   "test_req": {
