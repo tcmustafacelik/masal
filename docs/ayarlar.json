@@ -6,7 +6,7 @@
   "budget": 19600,
   "kasa": 19600,
   "topup": {
-    "amount": 200,
+    "amount": 100,
     "profit_pct": 5,
     "days": 1
   },
