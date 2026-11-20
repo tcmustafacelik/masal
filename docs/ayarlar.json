@@ -14,8 +14,8 @@
     "trade_pct": 10,
     "max_positions": 7,
     "stop_pct": 5,
-    "daily_loss_pct": 15,
-    "kill_pct": 30
+    "daily_loss_pct": 17.5,
+    "kill_pct": 40
   },
   "grid": {
     "step_pct": 1.5,
