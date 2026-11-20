@@ -18,7 +18,7 @@
     "kill_pct": 50
   },
   "grid": {
-    "step_pct": 1.5,
+    "step_pct": 2,
     "lot_pct": 3.3,
     "lot_tp_pct": 5,
     "max_lots": 3,
