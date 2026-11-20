@@ -30,7 +30,7 @@
     "step3_pct": 3.5,
     "lot2_pct": 45,
     "lot3_pct": 77,
-    "sma_hours": 12
+    "sma_hours": 24
   },
   "dip": {
     "dip_pct": 3,
