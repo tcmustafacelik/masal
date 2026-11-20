@@ -70,5 +70,82 @@
     "on": true,
     "amount": 33333,
     "mode": "total"
+  },
+  "test_req": {
+    "ts": 1795162760424,
+    "s": {
+      "live": true,
+      "paused": false,
+      "liquidate": 0,
+      "strategy": "grid",
+      "budget": 19600,
+      "kasa": 19600,
+      "topup": {
+        "amount": 1000,
+        "profit_pct": 5,
+        "days": 1
+      },
+      "risk": {
+        "trade_pct": 10,
+        "max_positions": 7,
+        "stop_pct": 5,
+        "daily_loss_pct": 50,
+        "kill_pct": 50
+      },
+      "grid": {
+        "step_pct": 2.5,
+        "lot_pct": 3.3,
+        "lot_tp_pct": 5,
+        "max_lots": 3,
+        "max_coins": 88,
+        "stop_pct": 22,
+        "use_pct": 100,
+        "trend_filter_pct": 0,
+        "instant": true,
+        "step3_pct": 3.5,
+        "lot2_pct": 55,
+        "lot3_pct": 33,
+        "sma_hours": 8
+      },
+      "dip": {
+        "dip_pct": 3,
+        "rsi_max": 35,
+        "take_profit_pct": 4,
+        "max_hold_hours": 48
+      },
+      "trend": {
+        "trailing_pct": 4
+      },
+      "notify": {
+        "enabled": true,
+        "topic": {
+          "enc": 1,
+          "iter": 150000,
+          "salt": "uAfahXrWZcQrc/7IvX9XBQ==",
+          "iv": "1PYkTRjbeZipq9UN",
+          "ct": "I6SVs2qGD/ZDeptmmiASEA34VBqcTIqEK/iyu1YBTzVoxHrZ"
+        },
+        "trades": true,
+        "alerts": true,
+        "daily": true,
+        "daily_hour": 20,
+        "cleared": 1795162671
+      },
+      "sell": {
+        "ts": 1795067644512,
+        "insts": [
+          "TRUMP-TRY"
+        ]
+      },
+      "quote": "USDT",
+      "convert": {
+        "ts": 1795069848278
+      },
+      "target": {
+        "on": true,
+        "amount": 33333,
+        "mode": "total"
+      }
+    }
   }
 }
