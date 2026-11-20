@@ -2,7 +2,7 @@
   "live": true,
   "paused": false,
   "liquidate": 0,
-  "strategy": "dip",
+  "strategy": "grid",
   "budget": 19600,
   "kasa": 19600,
   "topup": {
