@@ -69,7 +69,7 @@
   "target": {
     "on": true,
     "amount": 44444,
-    "mode": "total"
+    "mode": "profit"
   },
   "test_req": {
     "ts": 1795162760424,
