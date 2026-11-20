@@ -15,7 +15,7 @@
     "max_positions": 7,
     "stop_pct": 5,
     "daily_loss_pct": 50,
-    "kill_pct": 77
+    "kill_pct": 70
   },
   "grid": {
     "step_pct": 2.5,
