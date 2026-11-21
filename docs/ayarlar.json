@@ -57,9 +57,9 @@
     "cleared": 1795236057
   },
   "sell": {
-    "ts": 1795211702828,
+    "ts": 1795237203883,
     "insts": [
-      "VINE-USDT"
+      "DOS-USDT"
     ]
   },
   "quote": "USDT",
