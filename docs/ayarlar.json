@@ -19,7 +19,7 @@
   },
   "grid": {
     "step_pct": 3.3,
-    "lot_pct": 2.7,
+    "lot_pct": 2.6,
     "lot_tp_pct": 3.3,
     "max_lots": 3,
     "max_coins": 66,
@@ -29,7 +29,7 @@
     "instant": true,
     "step3_pct": 4.4,
     "lot2_pct": 45,
-    "lot3_pct": 80,
+    "lot3_pct": 77,
     "sma_hours": 36
   },
   "dip": {
