@@ -7,7 +7,7 @@
   "kasa": 19840,
   "topup": {
     "amount": 100,
-    "profit_pct": 1,
+    "profit_pct": 5,
     "days": 1
   },
   "risk": {
