@@ -21,7 +21,7 @@
     "step_pct": 3.3,
     "lot_pct": 3.1,
     "lot_tp_pct": 5,
-    "max_lots": 6,
+    "max_lots": 8,
     "max_coins": 5,
     "stop_pct": 15,
     "use_pct": 85,
@@ -30,7 +30,8 @@
     "step3_pct": 6.6,
     "lot2_pct": 45,
     "lot3_pct": 77,
-    "sma_hours": 16
+    "sma_hours": 16,
+    "vol_filter": 2
   },
   "dip": {
     "dip_pct": 3,
