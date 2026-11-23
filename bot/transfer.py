@@ -12,6 +12,7 @@ Akış (uygulamadaki istekler `xfer_req` listesinde gelir; her biri bir kez işl
 Kâr süpürme: Global'deki değer, Global'e giren net paranın üstüne çıkınca, belirlenen aralıkla kârın bir kısmı KASA'ya gider.
 """
 import base64
+import copy
 import hashlib
 import hmac
 import json
@@ -386,6 +387,120 @@ def _sweep_meme(X, cfg, state):
     X["mswept"] = round(float(X.get("mswept", 0)) + profit, 4)
 
 
+_JOBS = {}
+
+
+class _NoteQ:
+    """Arka plandaki iş bildirimleri: ana turda gerçek bildirim kuyruğuna aktarılır."""
+    def __init__(self):
+        self.items = []
+
+    def add(self, *a, **k):
+        self.items.append((a, k))
+
+
+def _jobs_thread(Xc, C, cfg, state, now):
+    q = _NoteQ()
+    try:
+        _run_jobs(Xc, C, cfg, state, q, now)
+    except Exception as e:
+        print("Aktarım işleri:", e)
+    _JOBS["out"] = (Xc, q.items)
+
+
+def _merge_jobs(X, N):
+    out = _JOBS.pop("out", None)
+    if not out:
+        return
+    Xc, notes = out
+    base = _JOBS.get("base") or {}
+    cur = {j["id"]: j for j in X["jobs"]}
+    for j in Xc["jobs"]:
+        old = cur.get(j["id"])
+        if old is None:
+            X["jobs"].append(j)  # ör. kâr süpürmenin KASA adımı
+        elif not (old["stage"] == "failed" and j["stage"] == "new"):  # bu arada iptal edildiyse iptal geçerli
+            old.clear()
+            old.update(j)
+    seen = {tuple(x) for x in X.get("log", [])}
+    new = [x for x in Xc.get("log", []) if tuple(x) not in seen]
+    X["log"] = (new + X.get("log", []))[:60]
+    for k in ("day_sum", "g_base"):
+        X[k] = round(float(X.get(k, 0)) + float(Xc.get(k, 0)) - float(base.get(k, 0)), 2)
+    for a, k in notes:
+        N.add(*a, **k)
+
+
+def _run_jobs(X, C, cfg, state, N, now):
+    """Aktarım işleri (arka planda, durumun kopyası üzerinde çalışır; sonuç ana turda birleştirilir)."""
+    for job in X["jobs"]:
+        if job["stage"] in ("done", "failed"):
+            continue
+        if job["dir"] in MEME_DIRS:
+            try:
+                from . import meme_aktar
+                if job["stage"] == "new" and X.get("day_sum", 0) + job["amt"] > float(cfg["daily_max"]):
+                    job["msg"] = f"günlük sınır ({cfg['daily_max']} $) dolu; yarın gönderilecek"
+                    continue
+                meme_aktar.run(job, X, C, N, _note)
+            except Exception as e:
+                if job["stage"] == "sent" and "reddetti" not in str(e) and "ulaşmadı" not in str(e):
+                    job["msg"] = f"kontrol edilemedi, tekrar denenecek: {str(e)[:120]}"
+                else:
+                    job.update(stage="failed", msg=str(e)[:300])
+                    _note(X, f"Aktarım başarısız: {job['msg']}")
+                    N.add("money", "Aktarım başarısız", job["msg"][:200], 4, ["warning"])
+            continue
+        src, addr, dest = ROUTES[job["dir"]]
+        ex = C[src]
+        try:
+            if not ex.ok:
+                raise RuntimeError(f"{NAMES[src]} anahtarı tanımlı değil")
+            if job["stage"] == "new":
+                if job["amt"] < 1:
+                    raise RuntimeError("tutar çok küçük")
+                if X.get("day_sum", 0) + job["amt"] > float(cfg["daily_max"]):
+                    job["msg"] = f"günlük sınır ({cfg['daily_max']} $) dolu; yarın gönderilecek"
+                    if now * 1000 - job["ts"] > 3 * 86400_000:
+                        raise RuntimeError("3 gün içinde günlük sınır açılmadı")
+                    continue
+                if (src == "tr" and job["src"] != "bot" and ex.funding("USDT", total=True) < job["amt"] - 0.01
+                        and _free_tr(ex, state) < job["amt"] * _rate() * 0.97):
+                    job["msg"] = "TR'de boşta yeterli para yok (botun parasına dokunulmaz); bekleniyor"
+                    if now * 1000 - job["ts"] > 86400_000:
+                        raise RuntimeError("24 saat içinde boş para oluşmadı")
+                    continue
+                done = _already(ex, job, X)
+                if done is None:
+                    job["msg"] = "gönderim kontrolü yapılamadı; tekrar denenecek"
+                    continue
+                if done:
+                    continue
+                need = job["amt"] + (ex.chain()[1] if dest is None else 0)
+                if not _prepare(ex, src, need, job):
+                    if now * 1000 - job["ts"] > (7 if job.get("locked") else 1) * 86400_000:
+                        raise RuntimeError(job["msg"])
+                    continue
+                _send(ex, src, addr, dest, job["amt"], job, X)
+            else:
+                _poll(C, job, X, N)
+        except Exception as e:
+            if job["stage"] in ("sent", "arriving") and "reddetti" not in str(e):
+                job["msg"] = f"kontrol edilemedi, tekrar denenecek: {str(e)[:120]}"  # para yolda; iş bırakılmaz
+                continue
+            job.update(stage="failed", msg=str(e)[:300])
+            if job["stage"] == "failed" and src == "tr" and ex.ok:  # hazırlanan para fon hesabında kalmasın
+                try:
+                    back = min(job["amt"], ex.funding("USDT", total=True))
+                    if back > 0.01:
+                        ex.move("USDT", back, FUNDING, TRADING)
+                        job["msg"] += f" · {back:.2f} USDT alım-satım hesabına geri kondu"
+                except Exception:
+                    pass
+            _note(X, f"HATA {NAMES[src]} → {NAMES[dest]} {job['amt']} USDT: {job['msg']}")
+            N.add("alerts", "Aktarım yapılamadı", f"{NAMES[src]} → {NAMES[dest]} {job['amt']} USDT: {job['msg']}", 5, ["warning"])
+
+
 def step(state, S, N):
     cfg = {**DEFAULT, **(S.get("xfer") or {})}
     X = state.setdefault("xfer", {"jobs": [], "seen": [], "log": [], "g_base": 0})
@@ -438,75 +553,15 @@ def step(state, S, N):
         _sweep_meme(X, cfg, state)
     except Exception as e:
         print("Kâr süpürme hatası:", e)
-    # işler (en fazla 15 sn'de bir dokunulur)
-    if now - X.get("tick", 0) >= 15:
+    # işler (en fazla 15 sn'de bir; arka planda: borsa istekleri ana turu bekletmez)
+    _merge_jobs(X, N)
+    th = _JOBS.get("t")
+    if now - X.get("tick", 0) >= 15 and not (th and th.is_alive()) and any(j["stage"] not in ("done", "failed") for j in X["jobs"]):
         X["tick"] = now
-        for job in X["jobs"]:
-            if job["stage"] in ("done", "failed"):
-                continue
-            if job["dir"] in MEME_DIRS:
-                try:
-                    from . import meme_aktar
-                    if job["stage"] == "new" and X.get("day_sum", 0) + job["amt"] > float(cfg["daily_max"]):
-                        job["msg"] = f"günlük sınır ({cfg['daily_max']} $) dolu; yarın gönderilecek"
-                        continue
-                    meme_aktar.run(job, X, C, N, _note)
-                except Exception as e:
-                    if job["stage"] == "sent" and "reddetti" not in str(e) and "ulaşmadı" not in str(e):
-                        job["msg"] = f"kontrol edilemedi, tekrar denenecek: {str(e)[:120]}"
-                    else:
-                        job.update(stage="failed", msg=str(e)[:300])
-                        _note(X, f"Aktarım başarısız: {job['msg']}")
-                        N.add("money", "Aktarım başarısız", job["msg"][:200], 4, ["warning"])
-                continue
-            src, addr, dest = ROUTES[job["dir"]]
-            ex = C[src]
-            try:
-                if not ex.ok:
-                    raise RuntimeError(f"{NAMES[src]} anahtarı tanımlı değil")
-                if job["stage"] == "new":
-                    if job["amt"] < 1:
-                        raise RuntimeError("tutar çok küçük")
-                    if X.get("day_sum", 0) + job["amt"] > float(cfg["daily_max"]):
-                        job["msg"] = f"günlük sınır ({cfg['daily_max']} $) dolu; yarın gönderilecek"
-                        if now * 1000 - job["ts"] > 3 * 86400_000:
-                            raise RuntimeError("3 gün içinde günlük sınır açılmadı")
-                        continue
-                    if (src == "tr" and job["src"] != "bot" and ex.funding("USDT", total=True) < job["amt"] - 0.01
-                            and _free_tr(ex, state) < job["amt"] * _rate() * 0.97):
-                        job["msg"] = "TR'de boşta yeterli para yok (botun parasına dokunulmaz); bekleniyor"
-                        if now * 1000 - job["ts"] > 86400_000:
-                            raise RuntimeError("24 saat içinde boş para oluşmadı")
-                        continue
-                    done = _already(ex, job, X)
-                    if done is None:
-                        job["msg"] = "gönderim kontrolü yapılamadı; tekrar denenecek"
-                        continue
-                    if done:
-                        continue
-                    need = job["amt"] + (ex.chain()[1] if dest is None else 0)
-                    if not _prepare(ex, src, need, job):
-                        if now * 1000 - job["ts"] > (7 if job.get("locked") else 1) * 86400_000:
-                            raise RuntimeError(job["msg"])
-                        continue
-                    _send(ex, src, addr, dest, job["amt"], job, X)
-                else:
-                    _poll(C, job, X, N)
-            except Exception as e:
-                if job["stage"] in ("sent", "arriving") and "reddetti" not in str(e):
-                    job["msg"] = f"kontrol edilemedi, tekrar denenecek: {str(e)[:120]}"  # para yolda; iş bırakılmaz
-                    continue
-                job.update(stage="failed", msg=str(e)[:300])
-                if job["stage"] == "failed" and src == "tr" and ex.ok:  # hazırlanan para fon hesabında kalmasın
-                    try:
-                        back = min(job["amt"], ex.funding("USDT", total=True))
-                        if back > 0.01:
-                            ex.move("USDT", back, FUNDING, TRADING)
-                            job["msg"] += f" · {back:.2f} USDT alım-satım hesabına geri kondu"
-                    except Exception:
-                        pass
-                _note(X, f"HATA {NAMES[src]} → {NAMES[dest]} {job['amt']} USDT: {job['msg']}")
-                N.add("alerts", "Aktarım yapılamadı", f"{NAMES[src]} → {NAMES[dest]} {job['amt']} USDT: {job['msg']}", 5, ["warning"])
+        snap = copy.deepcopy(X)
+        _JOBS["base"] = {k: snap.get(k, 0) for k in ("day_sum", "g_base")}
+        _JOBS["t"] = threading.Thread(target=_jobs_thread, args=(snap, C, cfg, state, now), daemon=True)
+        _JOBS["t"].start()
         X["jobs"] = [j for j in X["jobs"] if j["stage"] not in ("done", "failed") or now * 1000 - j["ts"] < 7 * 86400_000][-30:]
     # uygulama için bakiye özeti (dakikada bir, arka planda: ana turu bekletmez)
     if now - X.get("bal_at", 0) >= (60 if X.get("dust_at", 1) else 5) and not (_BAL.get("t") and _BAL["t"].is_alive()):

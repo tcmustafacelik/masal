@@ -1,4 +1,4 @@
-const APP_VERSION='1.66.2';
+const APP_VERSION='1.67.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -717,18 +717,14 @@ function openXfer(dir: string){
     document.getElementById('qText').innerHTML=`<div class="xfs"><p class="xnote">OKX TR, Türkiye kuralı gereği API'den (bottan) yapılan para çıkışlarını kabul etmiyor (hata 58380). Bu yönü <b>OKX TR uygulamasından</b> yap; ücretsiz ve anında:</p>
       <div class="xinfo"><div>${ic('i-bank')}<span>1</span><b>OKX TR → Varlıklar → Çek → USDT</b></div><div>${ic(dir==='tr2g'?'i-globe':'i-vault')}<span>2</span><b>${dir==='tr2g'?'OKX kullanıcıları → OKX Global hesabın':'Adres defterinden KASA (Arbitrum)'}</b></div><div>${ic('i-check')}<span>3</span><b>Gelince bot kasalarda gösterir</b></div></div>
       <a class="btn primary xgo" href="https://tr.okx.com/balance/withdrawal" target="_blank" rel="noopener">${ic('i-out')}OKX TR'yi aç</a></div>`;q.hidden=false;return}
-  const X: any=(S as any)?.xfer||{},[f,t]=XDIR[dir],q=document.getElementById('qsh'),fromTr=f==='tr',r=+(X.usdtry||USDTTRY||0);
+  const X: any=(S as any)?.xfer||{},[f,t]=XDIR[dir],q=document.getElementById('qsh'),r=+(X.usdtry||USDTTRY||0);
   q.dataset.n='';qHead(XEND[t][1],'Vazgeç');document.getElementById('qTitle').textContent='Para gönder';
-  const freeUsd=X.free_tl!=null&&r?Math.max(0,X.free_tl)/r:0,botTl=+(S?.strategies?.live?.cash||0);
-  xfSrc=fromTr&&freeUsd<1?'bot':'bos';xfId='x'+Date.now().toString(36);
+  xfSrc='bos';xfId='x'+Date.now().toString(36);
   const bal=(k: string)=>{const o: any=S?.okx||{};const u=k==='tr'?(X.tr_total??(o.total_tl&&r?o.total_tl/r:null)):k==='g'?X.g_val:k==='m'?(S as any)?.memer?.value:X.kasa?.usd;return u==null?'—':'$'+nf(u,2)};
   const mm=f==='m'||t==='m',fee=mm?'~0,02 $ ağ ücreti + alım-satım ücreti':t==='k'?'~0,003 $ ağ ücreti':'Ücretsiz (yedek yol ~0,003 $)',time_=mm||t==='k'?'Birkaç dakika':'Birkaç saniye – birkaç dakika';
   const draw=()=>{const tx=document.getElementById('qText'),cur=(document.getElementById('xfAmt') as HTMLInputElement)?.value||'';
     tx.innerHTML=`<div class="xfs">
       <div class="xroute"><div>${xEnd(f)}<b>${XEND[f][0]}</b><small>${bal(f)}</small></div><span class="xar">${ic('i-chev')}</span><div>${xEnd(t)}<b>${XEND[t][0]}</b><small>${bal(t)}</small></div></div>
-      ${fromTr?`<div class="xlab">Kaynak</div><div class="seg">
-        <button data-s="bos" class="${xfSrc==='bos'?'on':''}">${ic('i-wallet')}<b>Boştaki para</b><small>~${nf(freeUsd,2)} USDT</small></button>
-        <button data-s="bot" class="${xfSrc==='bot'?'on':''}">${ic('i-coins')}<b>Bottan al</b><small>botta nakit ${tl(botTl,0)}</small></button></div>`:''}
       <div class="xlab">Tutar</div>
       <div class="xamt"><input id="xfAmt" type="number" inputmode="decimal" min="1" step="1" placeholder="0" value="${cur}"><span>USDT</span></div>
       <div class="xeq" id="xfEq">${r&&+cur?'≈ '+tl(+cur*r,0):'&nbsp;'}</div>
@@ -737,14 +733,12 @@ function openXfer(dir: string){
         <div>${ic('i-shield')}<span>Ücret</span><b>${fee}</b></div>
         <div>${ic('i-clock')}<span>Süre</span><b>${time_}</b></div>
         <div>${ic('i-flag')}<span>Günlük sınır</span><b>$${nf(X.day_sum||0,0)} / ${nf(X.daily_max||1000,0)}</b></div>
-        ${fromTr&&xfSrc==='bot'?`<div>${ic('i-info')}<span>Bütçe</span><b>Bu tutar kadar düşer</b></div>`:''}
         ${dir==='g2tr'?`<div>${ic('i-info')}<span>Varınca</span><b>TL'ye çevrilip Nakit'e konur</b></div>`:''}
         ${t==='k'?`<div>${ic('i-lock')}<span>Adres</span><b>0x0113…7db7 (sabit)</b></div>`:''}
         ${dir==='g2m'?`<div>${ic('i-info')}<span>Nasıl</span><b>Global fonundaki USDT ile SOL alınır, MEME'ye gider</b></div><div>${ic('i-lock')}<span>Adres</span><b>7Ymj…EKwN (sabit)</b></div>`:''}
         ${dir==='m2g'?`<div>${ic('i-info')}<span>Nasıl</span><b>SOL Global'e gider, satılıp USDT olur</b></div>`:''}
       </div>
       <button class="btn primary xgo" id="xfGo">${ic('i-out')}Gönder</button></div>`;
-    tx.querySelectorAll<HTMLElement>('[data-s]').forEach(b=>b.onclick=()=>{xfSrc=b.dataset.s;draw()});
     tx.querySelectorAll<HTMLElement>('[data-q]').forEach(b=>b.onclick=()=>{(document.getElementById('xfAmt') as HTMLInputElement).value=b.dataset.q;upd()});
     const inp=document.getElementById('xfAmt') as HTMLInputElement,upd=()=>{document.getElementById('xfEq').innerHTML=r&&+inp.value?'≈ '+tl(+inp.value*r,0):'&nbsp;'};
     inp.oninput=upd;

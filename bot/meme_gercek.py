@@ -206,6 +206,17 @@ def _solpx():
     return float(d["data"][0]["last"])
 
 
+def _jup_prices(mints):
+    """DexScreener'da olmayan tokenler için yedek fiyat (Jupiter)."""
+    if not mints:
+        return {}
+    try:
+        d = _get("https://lite-api.jup.ag/price/v3?ids=" + ",".join(mints))
+        return {m: float(v.get("usdPrice") or 0) for m, v in (d or {}).items() if v}
+    except Exception:
+        return {}
+
+
 def _new(cfg):
     return {"addr": "", "how": "", "sol": 0.0, "solpx": 0.0, "value": 0.0, "start": 0.0, "pos": {}, "trades": [], "log": [],
             "equity": [], "dead": "", "err": "", "sync": 0, "reset": cfg.get("real_reset", 0), "on": False}
@@ -304,7 +315,17 @@ def _sync(R, cfg, prices, held_paper, key):
         if time.time() * 1000 - p["ts"] > cfg.get("max_hold_h", 4) * 3600_000 + 600_000:
             p["closing"] = "süre doldu (yedek)"
             held_paper = set(held_paper) - {m}
+    miss = [m for m in R["pos"] if not prices.get(m)]
+    if miss:
+        prices = {**prices, **_jup_prices(miss)}
     v = _value(R, prices)
+    # yedek çıkış: deneme masası ya da DexScreener çalışmasa da zarar kes / kâr al kendi fiyatıyla uygulanır
+    for m, p in list(R["pos"].items()):
+        if p.get("ui") and p.get("val") and p.get("cost") and time.time() * 1000 - p["ts"] > 60000:
+            g = (p["val"] / p["cost"] - 1) * 100
+            if g <= -(cfg.get("sl_pct", 15) + 5) or g >= cfg.get("tp_pct", 100) + 20:
+                p["closing"] = f"{'zarar kes' if g < 0 else 'kâr al'} (yedek, %{g:+.0f})"
+                held_paper = set(held_paper) - {m}
     R["value"] = round(v, 2)
     if not R["start"] and v > 0:
         R["start"] = round(v, 2)

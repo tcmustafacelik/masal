@@ -116,6 +116,23 @@ class _Desk:
                     return True
         return False
 
+    def has_stop(self, c):
+        inst = f"{c}-USDT-SWAP"
+        for typ in ("oco", "conditional"):
+            for a in self.ex.req("GET", f"/api/v5/trade/orders-algo-pending?instType=SWAP&instId={inst}&ordType={typ}"):
+                if a.get("slTriggerPx"):
+                    return True
+        return False
+
+    def place_stop(self, c, side, stop):
+        """Borsada zarar durdur yoksa ekler (pozisyonun tamamını kapatır)."""
+        inst = f"{c}-USDT-SWAP"
+        sp = self.specs()[inst]
+        self.ex.req("POST", "/api/v5/trade/order-algo", {
+            "instId": inst, "tdMode": "isolated", "side": "sell" if side > 0 else "buy", "ordType": "conditional",
+            "closeFraction": "1", "reduceOnly": "true", "slTriggerPx": _fmt(stop, sp["tickSz"]), "slOrdPx": "-1",
+            "slTriggerPxType": "last", **self._ps(side)})
+
     def last_closed(self, c):
         d = self.ex.req("GET", f"/api/v5/account/positions-history?instType=SWAP&instId={c}-USDT-SWAP&limit=1")
         return d[0] if d else None
@@ -150,6 +167,22 @@ def _sync(D, R, cfg):
     for c, p in list(R["pos"].items()):
         if c in live:
             x = live[c]
+            if time.time() - p.get("stop_chk", 0) > 60 and not p.get("closing"):
+                p["stop_chk"] = time.time()
+                try:
+                    if not D.has_stop(c):
+                        avg = float(x.get("avgPx") or p["entry"])
+                        st = cfg.get("_stops", {}).get(c) or (p["stop"] if p.get("stop") and p["stop"] != avg else avg * (1 - p["side"] * 0.03))
+                        mark = float(x.get("markPx") or avg)
+                        if p["side"] * (mark - st) <= 0:  # fiyat stopu zaten geçmiş: hemen kapat
+                            D.close(c, p["side"])
+                            p["closing"] = "borsada stop yoktu ve fiyat stopu geçti"
+                        else:
+                            D.place_stop(c, p["side"], st)
+                            p["stop"] = st
+                            _note(R, "risk", f"{c}: borsada zarar durdur yoktu; {st:.6g} seviyesine eklendi")
+                except Exception as e:
+                    R["err"] = f"{c} stop kontrolü: {e}"[:200]
             gone = c not in cfg.get("_held", [c]) and time.time() * 1000 - p["ts"] > 60000
             if (gone or R["halt"] or R["dead"]) and time.time() - p.get("close_try", 0) > 30:
                 p["close_try"] = time.time()
@@ -321,6 +354,7 @@ def step(state, S, paper_cfg, N=None):
         finally:
             _LOCK.release()
     cfg["_held"] = list(L.get("positions") or {})
+    cfg["_stops"] = {c: p.get("stop") for c, p in (L.get("positions") or {}).items()}
     _W["cfg"] = cfg
     if _W["t"] is None or not _W["t"].is_alive():
         _W["t"] = threading.Thread(target=_loop, daemon=True)
