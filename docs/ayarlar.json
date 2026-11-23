@@ -243,6 +243,24 @@
         "AI"
       ],
       "to": "USDT"
+    },
+    {
+      "id": "dmwtm5hob",
+      "ts": 1795459371707,
+      "ex": "tr",
+      "ccys": [
+        "CT",
+        "PUMP",
+        "TAO",
+        "GRVT",
+        "ZRO",
+        "DOS",
+        "AI",
+        "HUMA",
+        "NES",
+        "INJ"
+      ],
+      "to": "USDT"
     }
   ]
 }
