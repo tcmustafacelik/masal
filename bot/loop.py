@@ -17,7 +17,7 @@ import traceback
 from . import run
 
 DURATION = int(os.environ.get("LOOP_MIN", "50")) * 60
-STEP = int(os.environ.get("LOOP_STEP", "3"))  # tur aralığı (sn)
+STEP = int(os.environ.get("LOOP_STEP", "2"))  # tur aralığı (sn)
 HEARTBEAT = 30
 
 

@@ -1,4 +1,4 @@
-const APP_VERSION='1.60.1';
+const APP_VERSION='1.60.2';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -126,7 +126,9 @@ async function watchData(){if(document.hidden||!S)return;
     if(r.status===304){syncMark(true);return}
     if(r.ok){dataTag=r.headers.get('ETag')||'';const sha=(await r.text()).trim();syncMark(true);if(dataSha&&sha!==dataSha)load(true);dataSha=sha}else syncMark(false)}catch(e){syncMark(false)}return}
   if(Date.now()-lastLoad>15000)load(true)}
-setInterval(watchData,2000); // otomatik eşitleme her zaman açık: 2 sn'de bir buluta bakılır
+// otomatik eşitleme her zaman açık: 2 sn'de bir buluta bakılır; bir istek gönderildikten sonraki 40 sn boyunca saniyede bir
+let fastUntil=0;const fastWatch=()=>{fastUntil=Date.now()+40000};
+(function tick(){watchData();setTimeout(tick,Date.now()<fastUntil?1000:2000)})();
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&S)load(true)});
 async function load(quiet?: boolean) {lastLoad=Date.now();offlineData=false;clearTimeout(retryTimer);
   const btn=document.getElementById('reload');if(!quiet)btn.classList.add('spin');
@@ -724,7 +726,7 @@ async function cancelXfer(id: string, btn?: HTMLButtonElement, retry = true){
     toast('İptal isteği gönderildi; para alım-satım hesabına geri konacak.');
   }catch(e){toast('İptal gönderilemedi ('+e+')');if(btn){btn.disabled=false;btn.textContent='İptal'}}
 }
-async function sendXfer(dir: string, retry = true){
+async function sendXfer(dir: string, retry = true){fastWatch();
   const amt=Math.round((+(document.getElementById('xfAmt') as HTMLInputElement)?.value||0)*100)/100;
   if(!(amt>=1)){toast('Tutarı yaz (en az 1 USDT)');return}
   {const X: any=(S as any)?.xfer||{},freeUsd=X.free_tl!=null&&USDTTRY?Math.max(0,X.free_tl)/USDTTRY:null;
@@ -895,7 +897,7 @@ function renderPositions(x){
 }
 // Tek coini sat: ayarlar.json'a satış isteği yazılır, bot ~5 sn içinde piyasa fiyatından satar
 async function sellCoin(inst: string, retry = true){
-  if(SELLING[inst]&&retry)return;
+  if(SELLING[inst]&&retry)return;fastWatch();
   if(!token){toast('Satmak için önce Ayarlar\'dan GitHub bağlantısını kur');return}
   SELLING[inst]=Date.now();swOpen='';if(S)render();
   try{
@@ -1423,7 +1425,7 @@ async function loadSettings(){
 
 /** Ayarlardaki tek bir şeyi buluta yazar (bekleyen başka değişikliklere dokunmadan): dil, tema, bildirim temizleme. */
 async function cloudPatch(fn: (o: Settings) => void, msg: string, retry = true): Promise<boolean> {
-  if (!token) return false;
+  if (!token) return false;fastWatch();
   try {
     const cur = await tfetch(API + '?t=' + Date.now(), {headers: {Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json'}, cache: 'no-store'}).then(r => { if (!r.ok) throw r.status; return r.json(); });
     const o = JSON.parse(decodeURIComponent(escape(atob(cur.content.replace(/\n/g, ''))))); fn(o);
@@ -1435,7 +1437,7 @@ async function cloudPatch(fn: (o: Settings) => void, msg: string, retry = true):
     return true;
   } catch (e) { return false; }
 }
-async function save(obj?: Settings, msg?: string, keepDraft?: boolean, retry = true) {
+async function save(obj?: Settings, msg?: string, keepDraft?: boolean, retry = true) {fastWatch();
   if(!token){toast('Kaydetmek için önce GitHub bağlantısını kur');document.getElementById('connSec').scrollIntoView({behavior:'smooth'});return}
   if(draft._bad&&draft._bad.size&&obj===undefined){toast('Kırmızı alanları düzelt');return}
   const data=obj||clean(draft),btn=document.getElementById('save');btn.textContent='Kaydediliyor…';

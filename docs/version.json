@@ -1,11 +1,19 @@
 {
-  "version": "1.60.1",
+  "version": "1.60.2",
   "date": "2026-11-23",
   "notes": [
-    "Küçük bakiyeler: seçtiğin coinlerin hepsi tek seferde çevrilir (10 sınırı kalktı)",
-    "Düzeltme: çevirme sonucu Kasalar'da ve bildirimde görünmüyordu"
+    "Bot turu 2 saniyeye indi",
+    "Uygulama bir istek gönderince sonraki 40 saniye boyunca saniyede bir yenilenir; sonuç daha çabuk görünür"
   ],
   "history": [
+    {
+      "version": "1.60.2",
+      "date": "2026-11-23",
+      "notes": [
+        "Bot turu 2 saniyeye indi",
+        "Uygulama bir istek gönderince sonraki 40 saniye boyunca saniyede bir yenilenir; sonuç daha çabuk görünür"
+      ]
+    },
     {
       "version": "1.60.1",
       "date": "2026-11-23",

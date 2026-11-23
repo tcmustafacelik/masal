@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.60.1';
+const APP_VERSION = '1.60.2';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -257,7 +257,10 @@ async function watchData() {
     if (Date.now() - lastLoad > 15000)
         load(true);
 }
-setInterval(watchData, 2000); // otomatik eşitleme her zaman açık: 2 sn'de bir buluta bakılır
+// otomatik eşitleme her zaman açık: 2 sn'de bir buluta bakılır; bir istek gönderildikten sonraki 40 sn boyunca saniyede bir
+let fastUntil = 0;
+const fastWatch = () => { fastUntil = Date.now() + 40000; };
+(function tick() { watchData(); setTimeout(tick, Date.now() < fastUntil ? 1000 : 2000); })();
 document.addEventListener('visibilitychange', () => { if (!document.hidden && S)
     load(true); });
 async function load(quiet) {
@@ -1179,6 +1182,7 @@ async function cancelXfer(id, btn, retry = true) {
     }
 }
 async function sendXfer(dir, retry = true) {
+    fastWatch();
     const amt = Math.round((+document.getElementById('xfAmt')?.value || 0) * 100) / 100;
     if (!(amt >= 1)) {
         toast('Tutarı yaz (en az 1 USDT)');
@@ -1561,6 +1565,7 @@ function renderPositions(x) {
 async function sellCoin(inst, retry = true) {
     if (SELLING[inst] && retry)
         return;
+    fastWatch();
     if (!token) {
         toast('Satmak için önce Ayarlar\'dan GitHub bağlantısını kur');
         return;
@@ -2513,6 +2518,7 @@ async function loadSettings() {
 async function cloudPatch(fn, msg, retry = true) {
     if (!token)
         return false;
+    fastWatch();
     try {
         const cur = await tfetch(API + '?t=' + Date.now(), { headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' }, cache: 'no-store' }).then(r => { if (!r.ok)
             throw r.status; return r.json(); });
@@ -2538,6 +2544,7 @@ async function cloudPatch(fn, msg, retry = true) {
     }
 }
 async function save(obj, msg, keepDraft, retry = true) {
+    fastWatch();
     if (!token) {
         toast('Kaydetmek için önce GitHub bağlantısını kur');
         document.getElementById('connSec').scrollIntoView({ behavior: 'smooth' });
