@@ -93,6 +93,11 @@ def dust_check():
         try:
             lst = [(c, a, u) for c, (a, u) in dust._assets(ex).items() if c not in dust.CASH and 0 <= u < dust.SMALL]
             print(f"{k} küçük bakiye: {len(lst)} coin")
+            try:
+                r = ex.req("GET", "/api/v5/trade/easy-convert-currency-list")
+                print("  kolay çevir listesi:", str(r)[:200])
+            except Exception as err:
+                print("  kolay çevir:", str(err)[:160])
             for c, a, u in lst[:3]:
                 try:
                     e = ex.req("POST", "/api/v5/asset/convert/estimate-quote",
