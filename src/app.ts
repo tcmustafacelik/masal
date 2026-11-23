@@ -1,4 +1,4 @@
-const APP_VERSION='1.41.0';
+const APP_VERSION='1.42.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -218,7 +218,7 @@ function gloss(k: string): [string, string] {
     yakin:['Alıma yakın coinler',`<p>Her satır bir coinin <b>alım fiyatına ne kadar uzak</b> olduğunu gösterir.</p>
       <ul><li><span class="chip m">%0,8 düşerse</span> fiyat bu kadar daha inerse bot alır.</li>
       <li><span class="chip g">Alım şartında</span> fiyat alım seviyesinde; ${c?.instant?'bot birkaç saniye içinde alır':'15 dakikalık mum bu seviyede kapanırsa bot alır'}.</li>
-      <li><span class="chip a">Düşüş filtresi</span> coin hızlı düşüyor; düşüş yavaşlayana kadar alım bekletiliyor.</li>
+      <li><span class="chip a">Düşüş filtresi</span> coin hızlı düşüyor ya da hacmi aniden patladı (panik satışı); sakinleşene kadar alım bekletiliyor.</li>
       <li><span class="chip a">Şartta · bütçe dolu</span> fiyat uygun ama coinlere ayrılan para dolu; bir kademe satılınca alır.</li>
       <li><span class="chip a">Şartta · coin sınırı dolu</span> fiyat uygun ama aynı anda tutulabilecek coin sayısı dolu; elindeki bir coin satılınca alır.</li>
       <li><b>Alım</b> fiyatı bir eşiktir: fiyat bunun altına inince bot <b>o anki (daha düşük) fiyattan</b> alır.</li>
@@ -269,7 +269,7 @@ function renderMasa() {
       ln('İzlenen', `${items.length} coin`) + ln('Şartta', `${inCond} coin`) +
       (near.length ? `<div class="ach">${near.map(i => `<span>${sym(i.i)} <b class="${i.gap <= 0 ? 'up' : ''}">${i.gap <= 0 ? 'şartta' : '%' + nf(i.gap, 1)}</b></span>`).join('')}</div>` : '')],
     ['risk', 'i-shield', 'Bekçi', 'Riskli alımı durdurur', st(!blocks.length, 'GEÇİRİYOR', 'ENGELLİYOR'),
-      ln('Düşüş filtresinde', `${filtered} coin`) + ln('Engel', blocks.length ? blocks.join(', ') : 'yok') +
+      ln('Filtrede (düşüş/hacim)', `${filtered} coin`) + ln('Engel', blocks.length ? blocks.join(', ') : 'yok') +
       ln('Acil fren', kill ? `${tl(kill, 0)} altı` : '—')],
     ['buy', 'i-coins', 'Alıcı', 'Şart oluşunca anında alır', st(!blocks.length && !!x.armed, 'HAZIR', x.armed ? 'BEKLİYOR' : 'DENEME'),
       ln('Alım tutarı', c ? tl(c.lot, 0) : '—') + ln('Son alım', buys[0] ? `${sym(buys[0].inst)} · ${ago(buys[0].ts)}` : '—') +
@@ -818,6 +818,7 @@ const STRAT_F={
   ['grid.max_coins','En fazla coin','Aynı anda tutulan coin','adet',1,1,100,0],
   ['grid.use_pct','Toplam kullanım sınırı',()=>`Coinlere en fazla; şu an ${pctTL(draft.grid.use_pct??40)}`,'%',1,5,100,2],
   ['grid.trend_filter_pct','Düşüş filtresi','Günde bu kadar düşen beklenir; 0 kapalı','%',.5,0,10,1],
+  ['grid.vol_filter','Hacim patlaması filtresi','Hacim ortalamanın bu katını aşarsa alım beklenir; 0 kapalı','kat',.5,0,10,1],
   ['grid.stop_pct','Toplu zarar sınırı','Ortalamanın altında hepsi satılır','%',.5,1,50,1]],
  dip:[['dip.dip_pct','Düşüş eşiği','Ortalamanın bu kadar altında alır','%',.5,.5,30,1],
   ['dip.rsi_max','Aşırı satım eşiği','RSI bu değerin altındayken alınır','',1,5,60,0],
@@ -1012,6 +1013,7 @@ async function loadSettings(){
   }catch(e){orig=S?.settings||null;if(e===401){token='';localStorage.removeItem('masal_token');toast('GitHub anahtarının süresi dolmuş, yeniden bağlan')}}
   if(!orig){document.getElementById('setForm').innerHTML=`<div class="empty">${ic('i-info')}<div>Ayarlar yüklenemedi</div></div>`;return}
   if(orig&&orig.grid&&orig.grid.use_pct==null)orig.grid.use_pct=40;
+  if(orig&&orig.grid&&(orig.grid as any).vol_filter==null)(orig.grid as any).vol_filter=2;
   if(orig&&orig.grid&&orig.grid.trend_filter_pct==null)orig.grid.trend_filter_pct=1;
   if(orig&&!orig.notify)orig.notify={enabled:false,topic:'',trades:true,alerts:true,daily:true,money:true};
   if(orig?.notify&&orig.notify.daily_hour==null)orig.notify.daily_hour=21;

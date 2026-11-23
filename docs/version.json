@@ -1,7 +1,7 @@
 {
-  "version": "1.41.0",
+  "version": "1.42.0",
   "date": "2026-11-23",
   "notes": [
-    "Ajan masası: botun her parçası canlı kartta, her işlem sebebiyle"
+    "Bekçi: hacim patlaması filtresi ve alış-satış farkı kontrolü; her alımda ayrıntılı sebep"
   ]
 }

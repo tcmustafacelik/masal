@@ -307,19 +307,38 @@ def instant_buys(live, series):
     ts = int(time.time() * 1000)
     s = live.s
     for it in sorted(w["items"], key=lambda x: (prices.get(x["i"], x["p"]) / x["t"])):
-        inst, price = it["i"], prices.get(it["i"])
+        inst = it["i"]
+        # Alım şartı satış (ask) fiyatıyla kontrol edilir: gerçekte ödenecek fiyat budur
+        price = okx.ASK.get(inst) or prices.get(inst)
         if not price or it["f"] or price > it["t"]:
+            if prices.get(inst):
+                s["last_prices"][inst] = prices[inst]
             continue
         if s["halted"] or s["blocked_today"] or s.get("paused") or not live._room(lot_for(c, c["max_lots"] - 1)):
             break  # en küçük kademeye bile yer yok
+        # Bekçi: alış-satış farkı yüksekse (sığ tahta) alım yapılmaz; kayma zarara çevirir
+        spread = okx.SPREAD.get(inst, 0)
+        if spread > config.MAX_BUY_SPREAD:
+            key = f"spr_{inst}"
+            sl = s.setdefault("skip_log", {})
+            if ts - sl.get(key, 0) > 3_600_000:  # aynı coin için saatte bir not
+                for k_ in [k_ for k_, v_ in sl.items() if ts - v_ > 3_600_000]:
+                    del sl[k_]  # eski kayıtlar silinir, liste büyümez
+                sl[key] = ts
+                live._note(ts, f"Bekçi: {inst.split('-')[0]} alınmadı, alış-satış farkı %{spread * 100:.2f} (sınır %{config.MAX_BUY_SPREAD * 100:.1f})")
+            continue
+        avg = it["t"] / (1 - c["step"]) if c["step"] < 1 else it["t"]
+        why = f"{c.get('sma_h', 20):g} sa ortalamanın %{(1 - price / avg) * 100:.1f} altında · fark %{spread * 100:.2f}"
         pos = s["positions"].get(inst)
         if pos:
             n = len(pos["lots"])
-            if n < c["max_lots"] and price <= pos["lots"][-1]["entry"] * (1 - step_for(c, n)) and live._room(lot_for(c, n)):
-                live._buy(ts, inst, price, lot_for(c, n), f"{n + 1}. kademe · anlık")
+            last_e = pos["lots"][-1]["entry"]
+            if n < c["max_lots"] and price <= last_e * (1 - step_for(c, n)) and live._room(lot_for(c, n)):
+                live._buy(ts, inst, price, lot_for(c, n),
+                          f"{n + 1}. kademe · anlık · son alımın %{(1 - price / last_e) * 100:.1f} altında · fark %{spread * 100:.2f}")
         elif live._can_open() and len(s["positions"]) < c["max_coins"] and live._room(c["lot"]):
-            live._buy(ts, inst, price, c["lot"], "1. kademe · anlık")
-        s["last_prices"][inst] = price
+            live._buy(ts, inst, price, c["lot"], f"1. kademe · anlık · {why}")
+        s["last_prices"][inst] = prices.get(inst, price)
 
 
 def signature(state, S):

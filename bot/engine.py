@@ -201,9 +201,16 @@ class Portfolio:
         if self._can_open() and pf <= ps and f > s and price > b:
             self._buy(ts, inst, price, self.risk["trade_size"], "Yükseliş kesişimi")
 
-    def _entry_ok(self, closes, price, extra=False):
+    def _entry_ok(self, closes, price, extra=False, inst=None):
         """Düşüş filtresi: düşen bıçağı tutmamak için yeni alımı erteler (ayarlardan açılır)."""
         c = self.cfg
+        # Bekçi / hacim patlaması: son mumun hacmi son 24 saatin ortalamasının k katından fazlaysa (panik satışı,
+        # düşen bıçak) alım ertelenir. 30 günlük testte zararı yarıya, en büyük düşüşü %9,4 → %6,4'e indirdi.
+        k = c.get("vol_k")
+        if k and inst:
+            v = vol_ratio(inst)
+            if v and v > k:
+                return False
         if extra and not c.get("filter_all"):
             return True
         if c.get("mkt_filter") and MARKET["down"]:
@@ -234,13 +241,24 @@ class Portfolio:
                 self._sell_lots(ts, inst, price, list(pos["lots"]), "Zarar sınırı")
             elif (len(pos["lots"]) < c["max_lots"] and not self.s["halted"] and not self.s["blocked_today"]
                   and not self.s.get("paused") and self._room(lot_for(c, len(pos["lots"])))
-                  and price <= pos["lots"][-1]["entry"] * (1 - step_for(c, len(pos["lots"]))) and self._entry_ok(closes, price, True)):
+                  and price <= pos["lots"][-1]["entry"] * (1 - step_for(c, len(pos["lots"]))) and self._entry_ok(closes, price, True, inst)):
                 self._buy(ts, inst, price, lot_for(c, len(pos["lots"])), f"{len(pos['lots']) + 1}. kademe")
             return
         m = sma(closes, int(c.get("sma_h", 20)) * config.BPH)  # son N saatin ortalaması (ayarlardan)
         if (self._can_open() and len(self.s["positions"]) < c["max_coins"] and self._room(c["lot"])
-                and m and price <= m * (1 - c["step"]) and self._entry_ok(closes, price)):
+                and m and price <= m * (1 - c["step"]) and self._entry_ok(closes, price, False, inst)):
             self._buy(ts, inst, price, c["lot"], "1. kademe")
+
+
+def vol_ratio(inst):
+    """Son kapanmış mumun hacmi / önceki 96 mumun (24 saat) ortalaması. Veri yoksa None."""
+    from . import okx
+    v = okx.VOL.get(inst) or []
+    if len(v) < 25:
+        return None
+    prev = v[-97:-1]
+    avg = sum(prev) / len(prev)
+    return v[-1] / avg if avg > 0 else None
 
 
 MARKET = {"down": False}  # piyasa geneli (BTC) sert düşüşte mi; run_bars her mumda günceller
@@ -315,13 +333,13 @@ def watch(p, series):
             if len(lots) >= c["max_lots"]:
                 continue
             target = lots[-1]["entry"] * (1 - step_for(c, len(lots)))
-            filt = False
+            filt = not p._entry_ok(closes, price, True, inst)  # kademe eklemede de hacim patlaması kontrolü
         else:
             m = sma(closes, int(c.get("sma_h", 20)) * config.BPH)
             if not m:
                 continue
             target = m * (1 - c["step"])
-            filt = not p._entry_ok(closes, price)
+            filt = not p._entry_ok(closes, price, bool(pos), inst)
         out.append({"i": inst, "p": price, "t": target, "g": round((price / target - 1) * 100, 2),
                     "f": filt, "h": len(pos["lots"]) if pos else 0})
     out.sort(key=lambda x: x["g"])

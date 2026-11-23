@@ -17,6 +17,7 @@ QUOTES = ("TRY", "USDT", "USDC", "EUR")
 MIN_VOLUME_TRY = 100_000   # günlük en az bu kadar TL karşılığı hacim
 VIRTUAL = False  # sanal karşılaştırma stratejileri kapalı (uygulamada gizli; veri ve tur süresi küçülür)
 MAX_SYMBOLS = 60           # hacmi en yüksek 60 coin izlenir (kullanıcı seçimi)
+MAX_BUY_SPREAD = 0.005  # Bekçi: alım anında alış-satış farkı %0,5'ten büyükse alınmaz (kayma koruması)
 MAX_SPREAD = 0.008  # alış-satış farkı %0,8'den büyük (sığ) coinler alınmaz
 EXCLUDED = {"USDT", "USDC", "XAUT", "PAXG", "EURT", "DAI", "FDUSD", "TUSD", "PYUSD", "USDG", "RLUSD", "USDE",
             "EURC", "EUROC", "USD1", "BUSD", "USDP", "USDD", "TRY", "EUR", "WBTC", "STETH", "WETH", "BETH", "OKSOL"}

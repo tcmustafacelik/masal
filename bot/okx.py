@@ -102,8 +102,13 @@ def tl_factor(inst):
     return rate(inst.split("-")[1])
 
 
+VOL = {}  # coin başına kapanmış mumların hacmi (Bekçi'nin hacim patlaması kontrolü)
+SPREAD = {}  # son fiyat çekiminde her paritenin alış-satış farkı (oran); Bekçi kayma kontrolünde kullanır
+ASK = {}     # anlık en iyi satış fiyatı (TL karşılığı): alım bu fiyattan olur
+
+
 def prices_tl():
-    """TL, USDT ve USDC paritelerinin anlık fiyatı, TL karşılığı olarak."""
+    """TL, USDT ve USDC paritelerinin anlık fiyatı, TL karşılığı olarak (alış-satış farkı ve satış fiyatı da saklanır)."""
     k = {q: rate(q) for q in config.QUOTES}
     out = {}
     for t in tickers():
@@ -111,6 +116,10 @@ def prices_tl():
         q = inst.rpartition("-")[2]
         if last and q in k:
             out[inst] = last * k[q]
+            bid, ask = float(t.get("bidPx") or 0), float(t.get("askPx") or 0)
+            if bid > 0 and ask > 0:
+                SPREAD[inst] = (ask - bid) / ask
+                ASK[inst] = ask * k[q]
     return out
 
 
@@ -152,6 +161,7 @@ def candles(inst, limit=100):
     data = _get("/api/v5/market/candles", {"instId": inst, "bar": config.BAR, "limit": limit})
     k = tl_factor(inst)  # fiyatlar TL karşılığıyla tutulur
     out = [(int(r[0]) + BAR_MS, float(r[4]) * k) for r in data if r[8] == "1"]  # sadece kapanmış mumlar; zaman = kapanış
+    VOL[inst] = [float(r[5]) for r in sorted(data, key=lambda r: int(r[0])) if r[8] == "1"]  # hacim (eskiden yeniye)
     return sorted(out)
 
 

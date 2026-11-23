@@ -405,6 +405,9 @@ EN = {
     "sebep: Elle satış": "reason: Manual sell", "sebep: {0} kademe · anlık": "reason: step {0} · instant", "{0} altı": "below {0}",
     "Gerçek hesabın kilidi açık olmalı": "The real account must be unlocked", "Henüz kayıt yok": "No records yet", "şartta": "met",
     "{0} · {1} dk önce": "{0} · {1} min ago", "{0} · {1} sa önce": "{0} · {1} h ago", "{0} · az önce": "{0} · just now",
+    "Hacim patlaması filtresi": "Volume spike filter", "Hacim ortalamanın bu katını aşarsa alım beklenir; {0} kapalı": "Buys wait if volume exceeds this multiple of the average; {0} off",
+    "kat": "x", "Filtrede (düşüş/hacim)": "Filtered (drop/volume)",
+    "coin hızlı düşüyor ya da hacmi aniden patladı (panik satışı); sakinleşene kadar alım bekletiliyor.": "the coin is falling fast or its volume suddenly spiked (panic selling); buying waits until it calms down.",
 }
 
 
