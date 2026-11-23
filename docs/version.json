@@ -1,12 +1,17 @@
 {
-  "version": "1.70.1",
+  "version": "1.70.2",
   "date": "2026-11-23",
   "notes": [
-    "Toplam varlıkta USDT / BTC / TRY seçimi ve tutarları gizle-göster",
-    "Para gönderme sayfalarında 'Tümü' kısayolu; bakiye değiştikçe kendiliğinden güncellenir",
-    "Fable 3. tur: değişen/hatalı ayar kutusu belirgin, kesilen açıklamalar, Ajan masası hizası, renk ayrımı"
+    "Varlık özeti ayrı kart olmaktan çıktı, Gerçek hesap kartına katıldı (aynı rakamlar iki kez gösterilmiyor)"
   ],
   "history": [
+    {
+      "version": "1.70.2",
+      "date": "2026-11-23",
+      "notes": [
+        "Varlık özeti ayrı kart olmaktan çıktı, Gerçek hesap kartına katıldı (aynı rakamlar iki kez gösterilmiyor)"
+      ]
+    },
     {
       "version": "1.70.1",
       "date": "2026-11-23",
@@ -116,13 +121,6 @@
         "5 renk seçeneği: Kehribar, Okyanus, Zümrüt, Ametist, Grafit (Ayarlar → Uygulama → Renk); seçili öğeler, sekmeler ve anahtarlar seçtiğin renkte",
         "Ayar sekmeleri artık kaymıyor; üstte kesik ya da arkada kutu görünmüyor",
         "Küçük bakiye sonuçları Türkçe ve hangi coinin neden çevrilmediği yazıyor"
-      ]
-    },
-    {
-      "version": "1.65.0",
-      "date": "2026-11-23",
-      "notes": [
-        "Memecoin kâr süpürme: MEME cüzdanı başlangıç tutarının üstüne çıkınca kârın %50'si haftada bir MEME → Global → KASA yolunu otomatik izler (açık token varken yapılmaz); oran ve aralık Ayarlar → Kasalar'da futures ile ortak"
       ]
     }
   ]

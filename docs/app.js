@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.70.1';
+const APP_VERSION = '1.70.2';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -934,41 +934,37 @@ function renderMetrics(x) {
     }
     else
         h += `<div class="use">${live ? '' : `<div class="uh" style="color:var(--text);font-size:12.5px;line-height:1.45">${x.desc}</div>`}<div class="uh">${x.trades} kapanan işlem · başlangıç ${tl(x.start_cash, 0)}${live ? '' : ' (sanal para)'}</div></div>`;
-    setH(hero, h);
-    renderAssets(x, eq);
+    h += assetsExtra(x, eq);
+    if (setH(hero, h)) {
+        const sb = document.getElementById('syncBtn');
+        if (sb)
+            sb.onclick = () => syncReal();
+    }
+    {
+        const ab = document.getElementById('assets');
+        if (ab)
+            ab.hidden = true;
+    }
     renderXfer();
 }
-/** Varlık özeti: büyük toplam + yatırdığına göre fark, renkli dağılım çubuğu, borsa eşleşmesi ve hedef. */
-function renderAssets(x, eq) {
-    const box = document.getElementById('assets');
-    if (!box)
-        return;
+/** Gerçek hesap kartının alt kısmı (eski ayrı "Varlık özeti" kartı birleştirildi; aynı rakamlar iki kez gösterilmez):
+ *  kasada yedek varsa kasa dahil toplam, OKX TR'deki gerçek toplamla eşleşme ve hedef çubuğu. */
+function assetsExtra(x, eq) {
     const kasa = +(x.kasa || S?.settings?.kasa || 0);
-    if (sel !== 'live' || !kasa) {
-        box.hidden = true;
-        return;
-    }
-    const reserve = Math.max(0, kasa - x.start_cash), now = eq + reserve, net = now - kasa, inCoins = Math.max(0, eq - x.cash), cash = Math.max(0, x.cash);
-    const pc = kasa ? net / kasa * 100 : 0, tot = Math.max(1, cash + inCoins + reserve);
-    const parts = [['c', 'Botta nakit', cash, 'i-wallet'], ['k', 'Coinlerde', inCoins, 'i-coins'], ['r', 'Kasada yedek', reserve, 'i-vault']];
-    const bar = parts.filter(p => p[2] > 0).map(p => `<i class="s${p[0]}" style="width:${(p[2] / tot * 100).toFixed(2)}%"></i>`).join('');
-    const leg = parts.map(p => `<div class="vl-${p[0]}"><em></em><span>${ic(p[3])}${p[1]}</span><b>${tl(p[2], 0)}</b><small>payı %${nf(p[2] / tot * 100, 0)}</small></div>`).join('');
+    if (sel !== 'live' || !kasa)
+        return '';
+    const reserve = Math.max(0, kasa - x.start_cash), now = eq + reserve;
     const T = S?.settings?.target;
-    let tgt = '';
+    let h = '<div class="hx">';
+    if (reserve >= 1)
+        h += `<div class="hres">${ic('i-vault')}<span>Kasada yedek <b>${tl(reserve, 0)}</b></span><span>Kasa dahil toplam <b>${tl(now, 0)}</b></span></div>`;
+    h += realLine(x, now);
     if (T?.on && T.amount > 0) {
         const total = T.mode === 'total', cur = total ? now : now - kasa, goal = +T.amount, r = Math.max(0, Math.min(100, cur / goal * 100));
-        tgt = `<div class="atg"><div class="tl">${ic('i-target')}<span>${total ? 'Hedef (kasa dahil)' : 'Kâr hedefi'}</span><b>%${nf(r, 0)}</b></div>
+        h += `<div class="atg"><div class="tl">${ic('i-target')}<span>${total ? 'Hedef (kasa dahil)' : 'Kâr hedefi'}</span><b>%${nf(r, 0)}</b></div>
       <div class="tb"><i style="width:${r.toFixed(1)}%"></i></div><div class="th"><span>${tl(cur, 0)}</span><span>${r >= 100 ? 'Hedefe ulaşıldı' : tl(Math.max(0, goal - cur), 0) + ' kaldı'}</span><span>${tl(goal, 0)}</span></div></div>`;
     }
-    box.hidden = false;
-    const changed = setH(box, `<div class="ah">${ic('i-wallet')}<b>Varlık özeti</b><span>bütün paran</span></div>
-    <div class="abig"><div><small>Şu an hepsi</small><strong>${tl(now, 0)}</strong></div>
-      <div class="adf ${cls(net)}">${net >= 0 ? '▲' : '▼'} %${nf(Math.abs(pc), 1)}<small>${(net > 0 ? "+" : net < 0 ? "−" : "") + nf(Math.abs(net), 0)} TL</small></div></div>
-    <div class="ainv">Yatırdığın <b>${tl(kasa, 0)}</b></div>
-    <div class="abar">${bar}</div><div class="aleg">${leg}</div>${realLine(x, now)}${tgt}`);
-    const sb = document.getElementById('syncBtn');
-    if (changed && sb)
-        sb.onclick = () => syncReal();
+    return h + '</div>';
 }
 /** Borsadaki gerçek toplam: uygulamadaki kayıtla tutmuyorsa açıkça gösterilir (bot fazlasını kullanmaz). */
 function realLine(x, now) {
