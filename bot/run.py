@@ -623,9 +623,21 @@ def main():
 
     try:
         from . import money
-        if time.time() - _CACHE.get("money", 0) >= 30:  # para hareketleri 30 sn'de bir (her biri 4-5 istek)
+        # para hareketleri 30 sn'de bir; 4-5 istek arka planda okunur, sonuç bir sonraki turda işlenir
+        md = _CACHE.pop("money_out", None)
+        if md is not None:
+            money.scan(state, L, N, note, md)  # para yatırma / çekme / aktarma bildirimleri
+        th = _CACHE.get("money_t")
+        if time.time() - _CACHE.get("money", 0) >= 30 and not (th and th.is_alive()):
             _CACHE["money"] = time.time()
-            money.scan(state, L, N, note)  # para yatırma / çekme / aktarma bildirimleri
+
+            def _mbg():
+                try:
+                    _CACHE["money_out"] = money.fetch()
+                except Exception as e:
+                    print("Para hareketleri okunamadı:", e)
+            _CACHE["money_t"] = threading.Thread(target=_mbg, daemon=True)
+            _CACHE["money_t"].start()
     except Exception as e:
         print("Para hareketleri kontrol edilemedi:", e)
 

@@ -78,17 +78,27 @@ MSG = {
 SIGN = {"yatirma": "+", "cekme": "−", "alimsatima": "", "fonlamaya": ""}
 
 
-def scan(state, L, N, note):
-    """Yeni hareketleri bulur, bildirir ve kaydeder. Anahtar yoksa hiçbir şey yapmaz."""
+def fetch():
+    """Ağ kısmı (arka planda çalışabilir): hareketler ve TL bakiyeleri. Anahtar yoksa None."""
     import os
     if not os.environ.get("OKX_API_KEY"):
-        return
+        return None
     from .live import OkxPrivate
     api = OkxPrivate()
+    events = sorted(fetch_events(api), key=lambda e: e[4])
+    fund, trade = balances(api)
+    return events, fund, trade
+
+
+def scan(state, L, N, note, data=None):
+    """Yeni hareketleri bulur, bildirir ve kaydeder. data verilmezse ağdan hemen okunur."""
+    data = data if data is not None else fetch()
+    if not data:
+        return
+    events, fund, trade = data
     mem = state.setdefault("money", {"seen": [], "init": False})
     seen = set(mem.get("seen", []))
     now = int(time.time() * 1000)
-    events = sorted(fetch_events(api), key=lambda e: e[4])
     fresh = [e for e in events if e[0] not in seen]
     found = False
     for key, kind, ccy, amt, ts in fresh:
@@ -102,7 +112,6 @@ def scan(state, L, N, note):
         note(L, f"{title}: {SIGN[kind]}{x}")
         N.add("money", f"{title}: {SIGN[kind]}{x}", body.format(x=x), 4, tags)
     # Kaynaklardan biri TL hareketini göstermezse bakiye farkından yakalanır
-    fund, trade = balances(api)
     prev = mem.get("bal") or {}
     if mem.get("init") and not found:
         for name, cur, label in (("fund", fund, "Fonlama"), ("trade", trade, "Alım-satım")):

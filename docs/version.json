@@ -1,10 +1,19 @@
 {
-  "version": "1.69.5",
+  "version": "1.69.6",
   "date": "2026-11-23",
   "notes": [
-    "Varlık özetinde 'Kasada yedek' kutusunun bozulması düzeltildi"
+    "Para hareketi kontrolü arka planda; bot turu daha kısa",
+    "İngilizce modda Futures, Memecoin ve Aktarım ayar açıklamaları çevrildi"
   ],
   "history": [
+    {
+      "version": "1.69.6",
+      "date": "2026-11-23",
+      "notes": [
+        "Para hareketi kontrolü arka planda; bot turu daha kısa",
+        "İngilizce modda Futures, Memecoin ve Aktarım ayar açıklamaları çevrildi"
+      ]
+    },
     {
       "version": "1.69.5",
       "date": "2026-11-23",
@@ -112,16 +121,6 @@
         "Küçük bakiyeler: OKX'in 'küçük varlıkları dönüştür' sistemi kullanılıyor; en küçük tutar sınırı olmadan çevrilir, olmayanlar fiyat teklifiyle denenir",
         "Fable denetimi düzeltmeleri: gerçek masaların ana turu bekletmesi, alımdan hemen sonra yanlış zarar sınırı, para aktarımında kâr/zarar karışması, kapanmayan pozisyonların yeniden denenmesi, yeniden başlarken emir kaybı, yarım kayıt dosyası, çift küçük bakiye isteği, kilitlenen Kaydet, Trust Wallet bağlantısı ve daha fazlası",
         "Uygulama daha az çalışıyor: listeler yalnız değişince yeniden çiziliyor, yavaş bağlantıda istekler üst üste binmiyor"
-      ]
-    },
-    {
-      "version": "1.62.0",
-      "date": "2026-11-23",
-      "notes": [
-        "Futures: açık pozisyonda 'Kapat' düğmesi; izlenen coinler ve sinyale ne kadar uzak oldukları; son kararlar (sinyal, çıkış, engel)",
-        "Memecoin: açık tokende 'Sat' düğmesi; tarama özeti ve hangi tokenin neden alındığı/engellendiği",
-        "Futures kâr/zarar, ilk işlemden önce hesaptaki gerçek tutardan başlar (kâr gibi görünen artık sayılmaz)",
-        "KASA → Global/TR: Trust Wallet uygulaması doğrudan açılır"
       ]
     }
   ]
