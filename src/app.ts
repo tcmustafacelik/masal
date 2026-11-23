@@ -1,4 +1,4 @@
-const APP_VERSION='1.48.0';
+const APP_VERSION='1.49.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -533,11 +533,11 @@ function renderAssets(x: Strategy, eq: number){
     tgt=`<div class="ast"><div class="ul">${total?'Kasa dahil hedef':'Kâr hedefi'}<b>${tl(cur,0)} / ${tl(goal,0)}</b></div>
       <div class="ub"><i class="tg" style="width:${r.toFixed(1)}%"></i></div><div class="uh">Hedefe ${tl(Math.max(0,goal-cur),0)} kaldı · %${nf(r,0)}</div></div>`}
   box.hidden=false;
-  box.innerHTML=`<div class="ah">${ic('i-wallet')}<b>Varlık özeti</b><span>bütün paran</span></div>
+  const changed=setH(box,`<div class="ah">${ic('i-wallet')}<b>Varlık özeti</b><span>bütün paran</span></div>
     <div class="a2"><div><span>Yatırdığın</span><b>${tl(kasa,0)}</b></div><div><span>Şu an hepsi</span><b>${tl(now,0)}</b></div>
       <div><span>Fark</span><b class="${cls(net)}">${sgn(net)} TL</b></div></div>
-    <div class="a3"><span>Botta nakit <b>${tl(x.cash,0)}</b></span><span>Coinlerde <b>${tl(inCoins,0)}</b></span><span>Kasada yedek <b>${tl(reserve,0)}</b></span></div>${realLine(x,now)}${tgt}`;
-  const sb=document.getElementById('syncBtn');if(sb)sb.onclick=()=>syncReal();
+    <div class="a3"><span>Botta nakit <b>${tl(x.cash,0)}</b></span><span>Coinlerde <b>${tl(inCoins,0)}</b></span><span>Kasada yedek <b>${tl(reserve,0)}</b></span></div>${realLine(x,now)}${tgt}`);
+  const sb=document.getElementById('syncBtn');if(changed&&sb)sb.onclick=()=>syncReal();
 }
 
 /** Borsadaki gerçek toplam: uygulamadaki kayıtla tutmuyorsa açıkça gösterilir (bot fazlasını kullanmaz). */
@@ -555,7 +555,8 @@ async function syncReal(retry = true){
   const x: any=S?.strategies?.live,o: any=S?.okx;
   if(!x||!o||o.try==null){toast('Borsa bilgisi henüz gelmedi, biraz sonra dene');return}
   if(!token){toast('Önce Ayarlar\'dan GitHub bağlantısını kur');return}
-  const free=(+o.try||0)+(+o.usdt_tl||0),base=+(x.base??x.start_cash)||0,b=Math.max(0,Math.round(base+free-(+x.cash||0))),k=Math.round(b+(+o.fund_tl||0));
+  if((x.recent||[]).some((t: any)=>t.ts>(o.ts||0)-5000)){toast('Az önce işlem oldu; borsa bilgisi yenilensin, 1 dk sonra dene');return}
+  const free=o.cash_tl!=null?+o.cash_tl:(+o.try||0)+(+o.usdt_tl||0),base=+(x.base??x.start_cash)||0,b=Math.max(0,Math.round(base+free-(+x.cash||0)-(+x.cash_gap||0))),k=Math.round(b+(+o.fund_tl||0));
   const btn=document.getElementById('syncBtn') as HTMLButtonElement;if(btn)btn.disabled=true;
   try{
     const cur=await tfetch(API+'?t='+Date.now(),{headers:{Authorization:'Bearer '+token,Accept:'application/vnd.github+json'},cache:'no-store'}).then(r=>{if(!r.ok)throw r.status;return r.json()});
@@ -577,6 +578,8 @@ const XDIR: Record<string, [string, string, string]> = {tr2g:['tr','g','Bota yen
 const xName=(d: string)=>`${XEND[XDIR[d][0]][0]} → ${XEND[XDIR[d][1]][0]}`;
 const XST: Record<string, [string, string, string]> = {new:['Sırada','i-clock','w'],sent:['Yolda','i-out','w'],arriving:['Ulaşıyor','i-in','w'],done:['Tamam','i-check','ok'],failed:['Olmadı','i-stop','bad']};
 function xEnd(k: string){const e=XEND[k];return `<span class="xe ${e[2]}">${ic(e[1])}</span>`}
+/** innerHTML sadece içerik değiştiyse yazılır (2 sn'lik yenilemede düğmeler sıfırlanmasın, dokunuş kaybolmasın) */
+function setH(el: HTMLElement, h: string): boolean {if((el as any)._h===h)return false;el.innerHTML=h;(el as any)._h=h;return true}
 function renderXfer(){
   const box=document.getElementById('xfer');if(!box)return;
   const X: any=(S as any)?.xfer;
@@ -585,15 +588,15 @@ function renderXfer(){
   const jobs=(X?.jobs||[]).slice(0,4).map((j: any)=>{const st=XST[j.stage]||[j.stage,'i-info','w'];
     return `<div class="xr"><span class="xs ${st[2]}">${ic(st[1])}</span><div class="xm"><b>${XDIR[j.dir]?xName(j.dir):j.dir}<i>${nf(j.amt,2)} $</i></b>
       <small>${masaClock(j.ts)} · ${st[0]}${j.stage!=='done'&&j.msg&&j.msg!=='sırada'?' · '+j.msg:''}</small></div>${j.stage==='new'?`<button class="xc" data-xc="${j.id}">İptal</button>`:''}</div>`}).join('');
-  box.innerHTML=`<div class="ah">${ic('i-wallet')}<b>Kasalar ve aktarım</b><span>dakikada bir</span></div>
+  if(!setH(box,`<div class="ah">${ic('i-wallet')}<b>Kasalar ve aktarım</b><span>dakikada bir</span></div>
     ${xKasalar(X)}
     <div class="xt">${Object.keys(XDIR).map(k=>{const [f,t,sub]=XDIR[k];return `<button data-x="${k}"><span class="xrt">${xEnd(f)}${ic('i-chev')}${xEnd(t)}</span><b>${xName(k)}</b><small>${sub}</small></button>`}).join('')}</div>
     <div class="xb"><span>TR'de boşta <b>${X?.free_tl!=null?tl(Math.max(0,X.free_tl),0):'—'}</b></span><span>Bugün gönderilen <b>$${nf(X?.day_sum||0,0)} / ${nf(X?.daily_max||1000,0)}</b></span></div>
-    ${jobs?`<div class="xj">${jobs}</div>`:''}`;
+    ${jobs?`<div class="xj">${jobs}</div>`:''}`))return;
   box.querySelectorAll<HTMLElement>('[data-x]').forEach(b=>b.onclick=()=>openXfer(b.dataset.x));
   box.querySelectorAll<HTMLElement>('[data-xc]').forEach(b=>b.onclick=()=>cancelXfer(b.dataset.xc,b as HTMLButtonElement));
 }
-let xfSrc='bos',USDTTRY=0;
+let xfSrc='bos',USDTTRY=0,xfId='';
 /** Üç kasa yan yana: OKX TR, OKX Global, KASA (soğuk cüzdan); dolar ve TL karşılığı, dakikada bir borsadan/zincirden. */
 function xKasalar(X: any): string {
   const r=+(X?.usdtry||USDTTRY||0),o: any=S?.okx||{};
@@ -607,7 +610,7 @@ function openXfer(dir: string){
   const X: any=(S as any)?.xfer||{},[f,t]=XDIR[dir],q=document.getElementById('qsh'),fromTr=f==='tr',r=+(X.usdtry||USDTTRY||0);
   q.dataset.n='';qHead(XEND[t][1],'Vazgeç');document.getElementById('qOk').hidden=true;document.getElementById('qTitle').textContent='Para gönder';
   const freeUsd=X.free_tl!=null&&r?Math.max(0,X.free_tl)/r:0,botTl=+(S?.strategies?.live?.cash||0);
-  xfSrc=fromTr&&freeUsd<1?'bot':'bos';
+  xfSrc=fromTr&&freeUsd<1?'bot':'bos';xfId='x'+Date.now().toString(36);
   const bal=(k: string)=>{const o: any=S?.okx||{};const u=k==='tr'?(X.tr_total??(o.total_tl&&r?o.total_tl/r:null)):k==='g'?X.g_val:X.kasa?.usd;return u==null?'—':'$'+nf(u,2)};
   const fee=t==='k'?'~0,003 $ ağ ücreti':'Ücretsiz (yedek yol ~0,003 $)',time_=t==='k'?'Birkaç dakika':'Birkaç saniye – birkaç dakika';
   const draw=()=>{const tx=document.getElementById('qText'),cur=(document.getElementById('xfAmt') as HTMLInputElement)?.value||'';
@@ -655,6 +658,7 @@ async function sendXfer(dir: string, retry = true){
   const amt=Math.round((+(document.getElementById('xfAmt') as HTMLInputElement)?.value||0)*100)/100;
   if(!(amt>=1)){toast('Tutarı yaz (en az 1 USDT)');return}
   {const X: any=(S as any)?.xfer||{},freeUsd=X.free_tl!=null&&USDTTRY?Math.max(0,X.free_tl)/USDTTRY:null;
+   if(dir.startsWith('tr')&&xfSrc==='bot'&&USDTTRY&&amt*USDTTRY*1.01>+(S?.strategies?.live?.cash||0)){toast('Botta bu kadar boş nakit yok; önce bazı coinler satılmalı');return}
    if(dir.startsWith('tr')&&xfSrc==='bos'&&freeUsd!=null&&freeUsd<amt){toast(`TR'de boşta sadece ~${nf(freeUsd,2)} USDT var. "Bottan al"ı seç ya da önce bankadan TL yatır.`);return}}
   if(!token){toast('Önce Ayarlar\'dan GitHub bağlantısını kur');return}
   const btn=document.getElementById('xfGo') as HTMLButtonElement;if(btn){btn.disabled=true;btn.lastChild.textContent='Gönderiliyor…'}
@@ -662,9 +666,10 @@ async function sendXfer(dir: string, retry = true){
     const cur=await tfetch(API+'?t='+Date.now(),{headers:{Authorization:'Bearer '+token,Accept:'application/vnd.github+json'},cache:'no-store'}).then(r=>{if(!r.ok)throw r.status;return r.json()});
     const data=JSON.parse(decodeURIComponent(escape(atob(cur.content.replace(/\n/g,'')))));
     const src=dir.startsWith('tr')?xfSrc:'bos';
-    data.xfer_req=[...(data.xfer_req||[]).filter((r: any)=>Date.now()-(r.ts||0)<3600000),{id:'x'+Date.now().toString(36),ts:Date.now(),dir,amt,src}];
-    if(src==='bot'){const tlv=Math.ceil(amt*(USDTTRY||0)*1.01);if(!tlv)throw 'kur yok';
-      data.budget=Math.max(0,(+data.budget||0)-tlv);data.kasa=Math.max(0,(+data.kasa||0)-tlv)}
+    const dup=(data.xfer_req||[]).some((r: any)=>r.id===xfId); // önceki deneme aslında kaydedildiyse ikinci kez eklenmez
+    if(!dup){data.xfer_req=[...(data.xfer_req||[]).filter((r: any)=>Date.now()-(r.ts||0)<3600000),{id:xfId,ts:Date.now(),dir,amt,src}];
+      if(src==='bot'){const tlv=Math.ceil(amt*(USDTTRY||0)*1.01);if(!tlv)throw 'kur yok';
+        data.budget=Math.max(0,(+data.budget||0)-tlv);data.kasa=Math.max(0,(+data.kasa||0)-tlv)}}
     const body={message:'Uygulamadan aktarım: '+dir+' '+amt+' USDT',content:btoa(unescape(encodeURIComponent(JSON.stringify(data,null,2)+'\n'))),sha:cur.sha,branch:'main'};
     const r=await tfetch(API,{method:'PUT',headers:{Authorization:'Bearer '+token,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify(body)});
     if(r.status===409&&retry)return sendXfer(dir,false);
@@ -678,23 +683,23 @@ async function sendXfer(dir: string, retry = true){
 let CD: {base:string,q:string,bar:string,t:any}|null=null;
 const CQ=['TRY','USDT','USDC','EUR'],CBAR=[['15m','15 dk'],['1H','1 sa'],['4H','4 sa'],['1D','1 gün']];
 function openCoin(inst: string){
+  if(CD)clearTimeout(CD.t);
   const [base,q0]=String(inst).split('-');CD={base,q:q0||'USDT',bar:'1H',t:null};
   const q=document.getElementById('qsh');q.dataset.n='';qHead('i-chart','Kapat');document.getElementById('qTitle').textContent=base;
   document.getElementById('qText').innerHTML=`<div class="cdv" id="cdv"><div class="empty">${ic('i-refresh')}<div>Yükleniyor…</div></div></div>`;q.hidden=false;
   drawCoin();
-  const tick=()=>{if(!CD||q.hidden){CD=null;return}drawCoin(true);CD.t=setTimeout(tick,5000)};CD.t=setTimeout(tick,5000);
+  const me=CD,tick=()=>{if(CD!==me)return;if(q.hidden){CD=null;return}if(!document.hidden)drawCoin(true);me.t=setTimeout(tick,5000)};me.t=setTimeout(tick,5000);
 }
 async function drawCoin(live=false){
   if(!CD)return;const {base,q,bar}=CD,inst=`${base}-${q}`,box=document.getElementById('cdv');if(!box)return;
   try{
-    const [tk,cd,pairs]=await Promise.all([
+    const [tk,cd]=await Promise.all([
       tfetch(`https://tr.okx.com/api/v5/market/ticker?instId=${inst}`,{cache:'no-store'},6000).then(r=>r.json()),
-      live?Promise.resolve(null):tfetch(`https://tr.okx.com/api/v5/market/candles?instId=${inst}&bar=${bar}&limit=120`,{cache:'no-store'},6000).then(r=>r.json()),
-      live?Promise.resolve(null):tfetch(`https://tr.okx.com/api/v5/market/tickers?instType=SPOT`,{cache:'force-cache'},6000).then(r=>r.json()).catch(()=>null)]);
-    if(!CD||CD.base!==base)return;
+      live?Promise.resolve(null):tfetch(`https://tr.okx.com/api/v5/market/candles?instId=${inst}&bar=${bar}&limit=120`,{cache:'no-store'},6000).then(r=>r.json())]);
+    if(!CD||CD.base!==base||CD.q!==q||CD.bar!==bar)return;
     const t=tk?.data?.[0];
     if(!live){(CD as any).rows=(cd?.data||[]).map((r: any)=>[+r[0],+r[4],+r[2],+r[3]]).reverse();
-      (CD as any).has=pairs?.data?new Set(pairs.data.filter((x: any)=>x.instId.startsWith(base+'-')).map((x: any)=>x.instId.split('-')[1])):new Set(CQ)}
+      {const h=CQ.filter(x=>LP[base+'-'+x]);(CD as any).has=new Set(h.length?h:CQ)}}
     const rows=(CD as any).rows||[],has=(CD as any).has||new Set(CQ);
     if(t&&rows.length){rows[rows.length-1][1]=+t.last}
     if(!t){box.innerHTML=`<div class="qpair">${CQ.map(x=>`<button data-cq="${x}" class="${x===q?'on':''}" ${has.has(x)?'':'disabled'}>${x}</button>`).join('')}</div><div class="empty">${ic('i-info')}<div>${inst} paritesi OKX TR'de yok</div></div>`;bindCoin();return}
@@ -1284,7 +1289,8 @@ async function save(obj?: Settings, msg?: string, keepDraft?: boolean, retry = t
     try{const fr=JSON.parse(decodeURIComponent(escape(atob(cur.content.replace(/\n/g,'')))));const d:any=data;
       for(const k of ['sell','convert'])if((fr[k]?.ts||0)>(d[k]?.ts||0))d[k]=fr[k];
       if((+fr.liquidate||0)>(+d.liquidate||0))d.liquidate=fr.liquidate;
-      if(fr.notify&&d.notify&&(fr.notify.cleared||0)>(d.notify.cleared||0))d.notify.cleared=fr.notify.cleared}catch(e){}
+      if(fr.notify&&d.notify&&(fr.notify.cleared||0)>(d.notify.cleared||0))d.notify.cleared=fr.notify.cleared;
+      d.xfer_req=fr.xfer_req||[];d.xfer_cancel=fr.xfer_cancel||[]}catch(e){}
     const body={message:'Ayarlar uygulamadan güncellendi',content:btoa(unescape(encodeURIComponent(JSON.stringify(data,null,2)+'\n'))),sha:cur.sha,branch:'main'};
     const r=await tfetch(API,{method:'PUT',headers:{Authorization:'Bearer '+token,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify(body)});
     if(r.status===409&&retry){btn.innerHTML=ic('i-check')+'Kaydet';return save(obj||data,msg,keepDraft,false)} // çakışma: güncel sürümle bir kez daha

@@ -17,6 +17,7 @@ import hmac
 import json
 import math
 import os
+import threading
 import time
 import urllib.request
 from datetime import datetime, timezone, timedelta
@@ -179,6 +180,20 @@ def _uid(cl):
     return str(cl.req("GET", "/api/v5/account/config")[0].get("uid") or "")
 
 
+def _already(ex, job, X):
+    """Aynı istek daha önce gönderilmiş mi (bot yeniden başladıysa iki kez gönderilmesin)."""
+    try:
+        rows = ex.req("GET", f"/api/v5/asset/withdrawal-history?clientId={job['id'][:32]}")
+    except Exception:
+        return False
+    rows = [r for r in rows if r.get("clientId") == job["id"][:32]]
+    if not rows:
+        return False
+    job.update(stage="sent", wdId=rows[0].get("wdId"), sent_ts=int(rows[0].get("ts") or time.time() * 1000))
+    X["day_sum"] = round(X.get("day_sum", 0) + job["amt"], 2)
+    return True
+
+
 def _send(ex, side, addr, dest, amt, job, X):
     """Borsalar arası (TR ↔ Global): OKX iç transferi, ücretsiz ve anında; alıcı UID'si karşı hesabın kendi anahtarıyla okunur.
     KASA: Arbitrum One ağıyla, sabit adrese."""
@@ -277,9 +292,7 @@ def _poll(C, job, X, N):
         job["msg"] = WD_STATE.get(st, f"durum {st}")
         job["txId"] = w.get("txId") or job.get("txId")
         if st in ("-1", "-2"):
-            job["stage"] = "failed"
-            N.add("alerts", "Aktarım yapılamadı", f"{NAMES[src]} → {NAMES[dest]} {job['amt']} USDT: {job['msg']}", 5, ["warning"])
-            return
+            raise RuntimeError(f"OKX çekimi reddetti ({job['msg']})")
         if st == "2":
             job["stage"] = "done" if dest is None else "arriving"
             if dest is None:
@@ -333,8 +346,8 @@ def _sweep(C, X, cfg, N):
     now = time.time()
     if now - X.get("sweep_at", 0) < cfg["sweep_days"] * 86400:
         return
-    X["sweep_at"] = now
     val = float(C["g"].req("GET", "/api/v5/asset/asset-valuation?ccy=USDT")[0].get("totalBal") or 0)
+    X["sweep_at"] = now
     base = X.get("g_base", 0)
     profit = val - base
     X["g_val"] = round(val, 2)
@@ -363,7 +376,12 @@ def step(state, S, N):
         X["seen"] = (X["seen"] + [rid])[-100:]
         if now * 1000 - float(r.get("ts") or 0) > 3600_000:
             continue  # bir saatten eski istek (bot kapalıyken kalmış) işlenmez
-        amt = round(float(r.get("amt") or 0), 2)
+        try:
+            amt = round(float(r.get("amt") or 0), 2)
+        except (TypeError, ValueError):
+            continue
+        if not (1 <= amt <= 1e6):
+            continue
         X["jobs"].append({"id": rid, "dir": r["dir"], "amt": amt, "src": r.get("src") or "bos", "ts": int(r.get("ts") or now * 1000),
                           "stage": "new", "msg": "sırada"})
         _note(X, f"İstek: {NAMES[ROUTES[r['dir']][0]]} → {NAMES[ROUTES[r['dir']][2]]} {amt:.2f} USDT")
@@ -403,6 +421,8 @@ def step(state, S, N):
                         raise RuntimeError("tutar çok küçük")
                     if X.get("day_sum", 0) + job["amt"] > float(cfg["daily_max"]):
                         job["msg"] = f"günlük sınır ({cfg['daily_max']} $) dolu; yarın gönderilecek"
+                        if now * 1000 - job["ts"] > 3 * 86400_000:
+                            raise RuntimeError("3 gün içinde günlük sınır açılmadı")
                         continue
                     if (src == "tr" and job["src"] != "bot" and ex.funding("USDT", total=True) < job["amt"] - 0.01
                             and _free_tr(ex, state) < job["amt"] * _rate() * 0.97):
@@ -410,14 +430,19 @@ def step(state, S, N):
                         if now * 1000 - job["ts"] > 86400_000:
                             raise RuntimeError("24 saat içinde boş para oluşmadı")
                         continue
-                    if not _prepare(ex, src, job["amt"], job):
+                    need = job["amt"] + (ex.chain()[1] if dest is None else 0)
+                    if not _prepare(ex, src, need, job):
                         if now * 1000 - job["ts"] > (7 if job.get("locked") else 1) * 86400_000:
                             raise RuntimeError(job["msg"])
                         continue
-                    _send(ex, src, addr, dest, job["amt"], job, X)
+                    if not _already(ex, job, X):
+                        _send(ex, src, addr, dest, job["amt"], job, X)
                 else:
                     _poll(C, job, X, N)
             except Exception as e:
+                if job["stage"] in ("sent", "arriving") and "reddetti" not in str(e):
+                    job["msg"] = f"kontrol edilemedi, tekrar denenecek: {str(e)[:120]}"  # para yolda; iş bırakılmaz
+                    continue
                 job.update(stage="failed", msg=str(e)[:300])
                 if job["stage"] == "failed" and src == "tr" and ex.ok:  # hazırlanan para fon hesabında kalmasın
                     try:
@@ -430,28 +455,42 @@ def step(state, S, N):
                 _note(X, f"HATA {NAMES[src]} → {NAMES[dest]} {job['amt']} USDT: {job['msg']}")
                 N.add("alerts", "Aktarım yapılamadı", f"{NAMES[src]} → {NAMES[dest]} {job['amt']} USDT: {job['msg']}", 5, ["warning"])
         X["jobs"] = [j for j in X["jobs"] if j["stage"] not in ("done", "failed") or now * 1000 - j["ts"] < 7 * 86400_000][-30:]
-    # uygulama için bakiye özeti (dakikada bir)
-    if now - X.get("bal_at", 0) >= 60:
+    # uygulama için bakiye özeti (dakikada bir, arka planda: ana turu bekletmez)
+    if now - X.get("bal_at", 0) >= 60 and not (_BAL.get("t") and _BAL["t"].is_alive()):
         X["bal_at"] = now
+        o = state.get("okx") or {}
+        bot_cash = float((state.get("live") or {}).get("cash") or 0)
+        _BAL["t"] = threading.Thread(target=_balances, args=(C, o, bot_cash), daemon=True)
+        _BAL["t"].start()
+    if _BAL.get("out"):
+        X.update(_BAL.pop("out"))
+
+
+_BAL = {}
+
+
+def _balances(C, o, bot_cash):
+    out = {}
+    try:
+        r = _rate()
+        out["usdtry"] = round(r, 4)
+        # botun okuduğu hesap bilgisi tekrar istenmez: işlem hesabı boş TL+USDT (check_okx) + fon hesabı
+        cash = float(o.get("try") or 0) + float(o.get("usdt_tl") or 0) + float(o.get("fund_tl") or 0)
+        out["free_tl"] = round(cash - bot_cash, 2) if o.get("ok") else None
+        if o.get("total_tl") and r:
+            out["tr_total"] = round(float(o["total_tl"]) / r, 2)
+    except Exception as e:
+        print("TR bakiye özeti:", e)
+    if C["g"].ok:
         try:
-            X["free_tl"] = round(_free_tr(C["tr"], state), 2)
+            out["g_val"] = round(float(C["g"].req("GET", "/api/v5/asset/asset-valuation?ccy=USDT")[0].get("totalBal") or 0), 2)
         except Exception as e:
-            X["free_tl"] = None
-            print("TR boş bakiye okunamadı:", e)
-        if C["g"].ok:
-            try:
-                X["g_val"] = round(float(C["g"].req("GET", "/api/v5/asset/asset-valuation?ccy=USDT")[0].get("totalBal") or 0), 2)
-            except Exception as e:
-                print("Global bakiye okunamadı:", e)
-        try:
-            X["kasa"] = kasa_balance()
-        except Exception as e:
-            print("KASA bakiyesi okunamadı:", e)
-        try:
-            X["tr_total"] = round(float(C["tr"].req("GET", "/api/v5/asset/asset-valuation?ccy=USDT")[0].get("totalBal") or 0), 2)
-        except Exception as e:
-            print("TR toplamı okunamadı:", e)
-        X["usdtry"] = round(_rate(), 4)
+            print("Global bakiye okunamadı:", e)
+    try:
+        out["kasa"] = kasa_balance()
+    except Exception as e:
+        print("KASA bakiyesi okunamadı:", e)
+    _BAL["out"] = out
 
 
 def public(state, S=None):

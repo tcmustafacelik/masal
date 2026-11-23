@@ -1,7 +1,7 @@
 {
-  "version": "1.48.0",
+  "version": "1.49.0",
   "date": "2026-11-23",
   "notes": [
-    "Coine dokununca canlı grafik ve parite seçimi; Ayarlar'da Hesaplar ve anahtarlar düzenlendi; Aktarım ve KASA ayarları"
+    "Fable denetimi: aktarım güvenliği (çift gönderim, takılan para, ücret), nakit eşitleme tüm para birimleri, daha az OKX isteği, ekran yenilemesi hafifledi"
   ]
 }

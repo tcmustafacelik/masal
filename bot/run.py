@@ -58,7 +58,7 @@ def sync_cash(state, L):
     o = state.get("okx") or {}
     if not L.get("armed") or not o.get("ok") or o.get("try") is None or time.time() * 1000 - (o.get("ts") or 0) > 300_000:
         return
-    real = float(o.get("try") or 0) + float(o.get("usdt_tl") or 0)  # alım-satım hesabındaki boş TL + USDT karşılığı
+    real = float(o.get("cash_tl") if o.get("cash_tl") is not None else (o.get("try") or 0) + (o.get("usdt_tl") or 0))
     over = L["cash"] - real
     if over <= max(20.0, real * 0.01):
         L.pop("over_ts", None)
@@ -103,6 +103,7 @@ def setup_live(state, S):
                 f"({config.STRATEGIES[key]['name']})")
         state["live"] = L
     elif budget != L.get("base", budget):  # bütçe değiştirildiyse aktif paraya yansıt
+        L["cash"] += L.pop("cash_gap", 0.0)  # eşitlemede düşülen fark: yeni bütçe gerçek bakiyeye göre girildi
         diff = budget - L["base"]
         take = diff
         if diff < 0 and L["cash"] + diff < 0:
@@ -253,14 +254,21 @@ def check_okx():
     try:
         from .live import OkxPrivate
         api = OkxPrivate()
-        bal = api.available(config.CASH)
+        rows = api._req("GET", "/api/v5/account/balance")  # tek istekle bütün para birimleri (ayrıca borç kontrolü)
+        det = {d["ccy"]: d for d in (rows[0].get("details", []) if rows else [])}
+        av = lambda c: float((det.get(c) or {}).get("availBal") or 0)
+        bal = av(config.CASH)
         out = {"ok": True, "status": "Bağlantı çalışıyor", "try": round(bal, 2), "ts": int(time.time() * 1000)}
-        try:  # hesap türü ve borç kontrolü: bot sadece spot ("cash") işlem yapar, borç hiç olmamalı
-            cfg = api._req("GET", "/api/v5/account/config")[0]
-            out["acct"] = {"1": "Spot", "2": "Spot ve vadeli", "3": "Çoklu para marjin", "4": "Portföy marjin"}.get(
-                str(cfg.get("acctLv")), str(cfg.get("acctLv")))
-            rows = api._req("GET", "/api/v5/account/balance")
-            out["debt"] = round(sum(float(d.get("liab") or 0) for d in (rows[0].get("details", []) if rows else [])), 6)
+        out["debt"] = round(sum(float(d.get("liab") or 0) for d in det.values()), 6)
+        # botun nakdi TL dışında USDT/USDC/EUR olarak da durabilir: hepsi TL karşılığıyla
+        out["cash_tl"] = round(bal + sum(av(c) * okx.rate(c) for c in ("USDT", "USDC", "EUR") if av(c) > 0), 2)
+        try:  # hesap türü (10 dakikada bir yeter): bot sadece spot ("cash") işlem yapar
+            if time.time() - _CACHE.get("acct_t", 0) > 600:
+                cfg = api._req("GET", "/api/v5/account/config")[0]
+                _CACHE["acct"] = {"1": "Spot", "2": "Spot ve vadeli", "3": "Çoklu para marjin", "4": "Portföy marjin"}.get(
+                    str(cfg.get("acctLv")), str(cfg.get("acctLv")))
+                _CACHE["acct_t"] = time.time()
+            out["acct"] = _CACHE.get("acct")
         except Exception as e:
             print("Hesap türü okunamadı:", e)
         if config.QUOTE != config.CASH:  # seçili paritede işlem izni var mı (emir vermeden kontrol)
@@ -269,7 +277,7 @@ def check_okx():
                 out["quote_ok"] = True
             except Exception as e:
                 out["quote_ok"], out["quote_err"] = False, str(e)[:160]
-            out["usdt"] = round(api.available(config.QUOTE), 2)
+            out["usdt"] = round(av(config.QUOTE), 2)
             out["usdt_tl"] = round(out["usdt"] * okx.rate(config.QUOTE), 2)  # boştaki USDT/USDC/EUR'nun TL karşılığı
             out["quote"] = config.QUOTE
         try:  # borsadaki gerçek toplam (işlem + fon hesabı, coinler dahil) ve fon hesabındaki boş TL
