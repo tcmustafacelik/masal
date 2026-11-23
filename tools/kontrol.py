@@ -37,7 +37,8 @@ def check(name, base, pre):
             d = req(base, key, sec, pas, p)
             rows = d[0].get("details", []) if p.endswith("account/balance") else d
             n = [x["ccy"] for x in rows if float(x.get("bal") or x.get("eq") or 0) > 0]
-            print(f"{lbl}: okunuyor · {len(n)} varlık var")
+            usdt = sum(float(x.get("availBal") or 0) for x in rows if x["ccy"] == "USDT")
+            print(f"{lbl}: okunuyor · {len(n)} varlık var · boş USDT {usdt:.2f}")
         except Exception as e:
             print(f"{lbl}: HATA {e}")
     try:
