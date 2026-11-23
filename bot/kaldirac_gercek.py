@@ -30,6 +30,7 @@ def _new(cfg):
 
 
 def _note(R, kind, text):
+    print("[" + __name__.split(".")[-1] + "]", text)  # günlükte izlemek için (anahtar/tutar dışı bilgi)
     R["log"].append([int(time.time() * 1000), kind, text])
     R["log"] = R["log"][-80:]
 
