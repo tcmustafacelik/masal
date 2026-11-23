@@ -326,6 +326,7 @@ def step(state, S, paper_cfg):
         R["addr"], R["how"] = (a, how) if k else ("", "")
         if not k:
             R["err"] = how
+        print("MEME cüzdanı:", f"eşleşti ({how})" if k else how)
     R = _W["R"]
     if not _W["key"]:
         state["memer"] = {**R, "on": False}
