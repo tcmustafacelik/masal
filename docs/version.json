@@ -1,13 +1,17 @@
 {
-  "version": "1.67.0",
+  "version": "1.68.0",
   "date": "2026-11-23",
   "notes": [
-    "Futures: her pozisyonun borsada zarar durdurması dakikada bir kontrol edilir; yoksa eklenir, fiyat stopu geçmişse pozisyon hemen kapatılır",
-    "Memecoin: DexScreener fiyat vermezse Jupiter fiyatı kullanılır; deneme masası çalışmasa da yedek zarar kes / kâr al devrede",
-    "Aktarım işleri arka planda: borsa beklerken bot turu durmuyor",
-    "İngilizce çeviriler tamamlandı; kullanılmayan eski aktarım kodu temizlendi"
+    "Varlık özeti yenilendi: büyük toplam, kâr/zarar rozeti, renkli dağılım çubuğu, borsa eşleşme durumu ve hedef çubuğu"
   ],
   "history": [
+    {
+      "version": "1.68.0",
+      "date": "2026-11-23",
+      "notes": [
+        "Varlık özeti yenilendi: büyük toplam, kâr/zarar rozeti, renkli dağılım çubuğu, borsa eşleşme durumu ve hedef çubuğu"
+      ]
+    },
     {
       "version": "1.67.0",
       "date": "2026-11-23",
@@ -128,14 +132,6 @@
         "Futures ve Memecoin gerçek işlemleri telefona bildirim olarak geliyor",
         "Memecoin: satıştan sonra boşalan token hesapları kapatılıp kirası (~0,15 $) geri alınıyor",
         "Kâr süpürme yalnızca futures kârını sayıyor; dışarıdan yatırılan para kâr sayılıp KASA'ya geri gönderilmiyor"
-      ]
-    },
-    {
-      "version": "1.57.1",
-      "date": "2026-11-23",
-      "notes": [
-        "Küçük bakiyelerde hedef seçimi: OKX TR'de TL ya da USDT, Global'de USDT ya da USDC",
-        "Çok küçük tutarlar '<$0,01' olarak görünür"
       ]
     }
   ]

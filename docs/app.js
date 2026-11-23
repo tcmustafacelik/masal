@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.67.0';
+const APP_VERSION = '1.68.0';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -928,7 +928,7 @@ function renderMetrics(x) {
     renderAssets(x, eq);
     renderXfer();
 }
-/** Varlık özeti: yatırdığın toplam para ile şu an elindeki her şey (bot + kasadaki yedek) yan yana. */
+/** Varlık özeti: büyük toplam + yatırdığına göre fark, renkli dağılım çubuğu, borsa eşleşmesi ve hedef. */
 function renderAssets(x, eq) {
     const box = document.getElementById('assets');
     if (!box)
@@ -938,19 +938,24 @@ function renderAssets(x, eq) {
         box.hidden = true;
         return;
     }
-    const reserve = Math.max(0, kasa - x.start_cash), now = eq + reserve, net = now - kasa, inCoins = eq - x.cash;
+    const reserve = Math.max(0, kasa - x.start_cash), now = eq + reserve, net = now - kasa, inCoins = Math.max(0, eq - x.cash), cash = Math.max(0, x.cash);
+    const pc = kasa ? net / kasa * 100 : 0, tot = Math.max(1, cash + inCoins + reserve);
+    const parts = [['c', 'Botta nakit', cash, 'i-wallet'], ['k', 'Coinlerde', inCoins, 'i-coins'], ['r', 'Kasada yedek', reserve, 'i-vault']];
+    const bar = parts.filter(p => p[2] > 0).map(p => `<i class="s${p[0]}" style="width:${(p[2] / tot * 100).toFixed(2)}%"></i>`).join('');
+    const leg = parts.map(p => `<div class="l${p[0]}"><em></em><span>${ic(p[3])}${p[1]}</span><b>${tl(p[2], 0)}</b><small>payı %${nf(p[2] / tot * 100, 0)}</small></div>`).join('');
     const T = S?.settings?.target;
     let tgt = '';
     if (T?.on && T.amount > 0) {
         const total = T.mode === 'total', cur = total ? now : now - kasa, goal = +T.amount, r = Math.max(0, Math.min(100, cur / goal * 100));
-        tgt = `<div class="ast"><div class="ul">${total ? 'Kasa dahil hedef' : 'Kâr hedefi'}<b>${tl(cur, 0)} / ${tl(goal, 0)}</b></div>
-      <div class="ub"><i class="tg" style="width:${r.toFixed(1)}%"></i></div><div class="uh">Hedefe ${tl(Math.max(0, goal - cur), 0)} kaldı · %${nf(r, 0)}</div></div>`;
+        tgt = `<div class="atg"><div class="tl">${ic('i-target')}<span>${total ? 'Hedef (kasa dahil)' : 'Kâr hedefi'}</span><b>%${nf(r, 0)}</b></div>
+      <div class="tb"><i style="width:${r.toFixed(1)}%"></i></div><div class="th"><span>${tl(cur, 0)}</span><span>${r >= 100 ? 'Hedefe ulaşıldı' : tl(Math.max(0, goal - cur), 0) + ' kaldı'}</span><span>${tl(goal, 0)}</span></div></div>`;
     }
     box.hidden = false;
     const changed = setH(box, `<div class="ah">${ic('i-wallet')}<b>Varlık özeti</b><span>bütün paran</span></div>
-    <div class="a2"><div><span>Yatırdığın</span><b>${tl(kasa, 0)}</b></div><div><span>Şu an hepsi</span><b>${tl(now, 0)}</b></div>
-      <div><span>Fark</span><b class="${cls(net)}">${sgn(net)} TL</b></div></div>
-    <div class="a3"><span>Botta nakit <b>${tl(x.cash, 0)}</b></span><span>Coinlerde <b>${tl(inCoins, 0)}</b></span><span>Kasada yedek <b>${tl(reserve, 0)}</b></span></div>${realLine(x, now)}${tgt}`);
+    <div class="abig"><div><small>Şu an hepsi</small><strong>${tl(now, 0)}</strong></div>
+      <div class="adf ${cls(net)}">${net >= 0 ? '▲' : '▼'} %${nf(Math.abs(pc), 1)}<small>${(net > 0 ? "+" : net < 0 ? "−" : "") + nf(Math.abs(net), 0)} TL</small></div></div>
+    <div class="ainv">Yatırdığın <b>${tl(kasa, 0)}</b></div>
+    <div class="abar">${bar}</div><div class="aleg">${leg}</div>${realLine(x, now)}${tgt}`);
     const sb = document.getElementById('syncBtn');
     if (changed && sb)
         sb.onclick = () => syncReal();
@@ -960,10 +965,10 @@ function realLine(x, now) {
     const o = S?.okx || {}, real = +(o.total_tl || x.real_total || 0);
     if (!real)
         return '';
-    const gap = now - real, f = +(o.fund_tl || 0);
-    const warn = Math.abs(gap) > Math.max(50, real * .01) ? `<div class="xw dn">Uygulamadaki hesap borsadan ${tl(Math.abs(gap), 0)} ${gap > 0 ? 'fazla' : 'az'}. ${gap > 0 ? 'Kasa/bütçe borsadakinden yüksek girilmiş olabilir; bot olmayan parayı kullanmaz.' : 'Borsaya eklenen para henüz bota verilmemiş.'}</div>` : '';
-    return `<div class="a3"><span>OKX TR'de gerçek toplam <b>${tl(real, 0)}</b></span>${f >= 1 ? `<span>Nakit (fon hesabı) <b>${tl(f, 0)}</b></span>` : ''}</div>${warn}
-    <button class="btn xsync" id="syncBtn">${ic('i-refresh')}Borsayla eşleştir</button>`;
+    const gap = now - real, f = +(o.fund_tl || 0), bad = Math.abs(gap) > Math.max(50, real * .01);
+    const warn = bad ? `<div class="xw dn">Uygulamadaki hesap borsadan ${tl(Math.abs(gap), 0)} ${gap > 0 ? 'fazla' : 'az'}. ${gap > 0 ? 'Kasa/bütçe borsadakinden yüksek girilmiş olabilir; bot olmayan parayı kullanmaz.' : 'Borsaya eklenen para henüz bota verilmemiş.'}</div>` : '';
+    return `<div class="areal${bad ? ' bad' : ''}">${ic('i-bank')}<div><span>OKX TR'de gerçek</span><b>${tl(real, 0)}</b>${f >= 1 ? `<small>fon hesabında ${tl(f, 0)}</small>` : ''}</div>
+    <em>${bad ? 'Tutmuyor' : ic('i-check') + 'Eşleşik'}</em><button class="btn xsync" id="syncBtn" aria-label="Borsayla eşleştir">${ic('i-refresh')}Eşleştir</button></div>${warn}`;
 }
 /** "Borsayla eşleştir": bütçe ve kasa borsadaki gerçek paraya göre ayarlanır.
  *  Bütçe öyle seçilir ki bottaki nakit = alım-satım hesabındaki gerçek boş para olur (kâr/zarar geçmişi bozulmaz);
