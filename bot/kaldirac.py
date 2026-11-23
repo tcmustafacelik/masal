@@ -155,6 +155,7 @@ def step(state, S):
             ns = x - s * cfg["sl_atr"] * p["atr"]
             if s * (ns - p["stop"]) > 0:
                 p["stop"], p["trailed"] = ns, True
+                L.setdefault("ev", []).append(["trail", c, ns])  # gerçek masa borsadaki stopu da taşır
 
     # günlük zarar sınırı
     eq = L["bank"] + sum(_upnl(p, p["now"]) for p in L["positions"].values())

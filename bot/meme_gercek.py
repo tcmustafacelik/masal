@@ -30,6 +30,7 @@ SOL = "So11111111111111111111111111111111111111112"
 TOKEN_PROGS = ("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb")
 RESERVE = 0.02  # SOL; işlem ücreti ve token hesabı kirası için hep kalır
 DEFAULT = {"real": False, "wallet": "", "max_loss": 10.0, "max_slip": 2.0, "real_reset": 0}
+TITLE = "Memecoin"
 SYNC = 30
 _A = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 _Q = queue.Queue()
@@ -163,6 +164,39 @@ def _holdings(addr):
     return out
 
 
+def _cu16e(n):
+    out = b""
+    while True:
+        b = n & 0x7F
+        n >>= 7
+        out += bytes([b | (0x80 if n else 0)])
+        if not n:
+            return out
+
+
+def close_empty(key, addr):
+    """Boşalan token hesaplarını kapatır; her birinin kirası (~0.002 SOL) cüzdana geri döner."""
+    me = _pub(key)
+    got = 0
+    for prog in TOKEN_PROGS:
+        accs = [a["pubkey"] for a in _rpc("getTokenAccountsByOwner", [addr, {"programId": prog}, {"encoding": "jsonParsed"}])["value"]
+                if int(a["account"]["data"]["parsed"]["info"]["tokenAmount"]["amount"]) == 0]
+        for i in range(0, len(accs), 8):
+            part = accs[i:i + 8]
+            keys = [me] + [b58d(a) for a in part] + [b58d(prog)]
+            bh = b58d(_rpc("getLatestBlockhash", [{"commitment": "finalized"}])["value"]["blockhash"])
+            pi = len(keys) - 1
+            ins = b"".join(bytes([pi]) + _cu16e(3) + bytes([j + 1, 0, 0]) + _cu16e(1) + bytes([9]) for j in range(len(part)))
+            msg = bytes([1, 0, 1]) + _cu16e(len(keys)) + b"".join(keys) + bh + _cu16e(len(part)) + ins
+            tx = _cu16e(1) + Ed25519PrivateKey.from_private_bytes(key).sign(msg) + msg
+            try:
+                _rpc("sendTransaction", [base64.b64encode(tx).decode(), {"encoding": "base64"}])
+                got += len(part)
+            except Exception as e:
+                print("Token hesabı kapatılamadı:", str(e)[:120])
+    return got
+
+
 def _sol(addr):
     return _rpc("getBalance", [addr])["value"] / 1e9
 
@@ -180,6 +214,8 @@ def _new(cfg):
 def _note(R, kind, text):
     print("[" + __name__.split(".")[-1] + "]", text)  # günlükte izlemek için (anahtar/tutar dışı bilgi)
     R["log"].append([int(time.time() * 1000), kind, text])
+    if kind in ("buy", "exit") or text.startswith(("MASA DURDU", "Günlük zarar")):
+        R.setdefault("out", []).append([kind, text])  # telefona bildirim (ana turda gönderilir)
     R["log"] = R["log"][-80:]
 
 
@@ -209,6 +245,11 @@ def _sell(key, R, m, reason, cfg):
                         "pnl": round(pnl, 2), "pct": round(pnl / p["cost"] * 100, 1) if p["cost"] else 0, "reason": reason,
                         "sig": r.get("signature"), "real": True})
     R["trades"] = R["trades"][-300:]
+    try:
+        time.sleep(2)
+        close_empty(key, R["addr"])  # boşalan token hesabının kirası geri alınır
+    except Exception:
+        pass
     _note(R, "exit", f"GERÇEK SAT {p['sym']} {got:.4f} SOL (${usd:.2f}) · {'+' if pnl >= 0 else ''}{pnl:.2f}$ · {reason}")
     del R["pos"][m]
 
@@ -283,7 +324,12 @@ def _dust(key, R, only=None):
             n += 1
         except Exception as e:
             _note(R, "info", f"Artık {m[:4]}… satılamadı: {str(e)[:60]}")
-    _note(R, "info", f"Küçük token artıkları: {n} tanesi SOL'a çevrildi")
+    try:
+        time.sleep(2)
+        k = close_empty(key, R["addr"])
+    except Exception:
+        k = 0
+    _note(R, "info", f"Küçük token artıkları: {n} tanesi SOL'a çevrildi" + (f"; {k} boş hesap kapatılıp kirası geri alındı" if k else ""))
 
 
 def _loop():
@@ -328,7 +374,7 @@ def _loop():
                     _note(R, "risk", f"GERÇEK {R['pos'][ev[1]]['sym']} satılamadı, yeniden denenecek: {str(e)[:100]}")
 
 
-def step(state, S, paper_cfg):
+def step(state, S, paper_cfg, N=None):
     sm = S.get("meme") or {}
     cfg = {**paper_cfg, **DEFAULT, **{k: v for k, v in sm.items() if k in DEFAULT}}
     M = state.get("meme") or {}
@@ -364,6 +410,11 @@ def step(state, S, paper_cfg):
             _Q.put(e)
     with _LOCK:
         R["on"] = bool(cfg["real"])
+        for kind, text in R.pop("out", []):
+            if N:
+                t = text.replace("GERÇEK ", "")
+                N.add("trades" if kind != "risk" else "alerts", f"{TITLE} · {t.split(' ')[0].capitalize()}", t, 4,
+                      ["chart_with_upwards_trend" if kind == "buy" else "moneybag" if "+" in t else "warning"])
         state["memer"] = json.loads(json.dumps(R))
 
 

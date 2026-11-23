@@ -563,7 +563,7 @@ def main():
         print("Memecoin masası hatası:", e)
     try:
         from . import meme, meme_gercek
-        meme_gercek.step(state, S, {**meme.DEFAULT, **(S.get("meme") or {})})  # aynı kararlar MEME cüzdanında
+        meme_gercek.step(state, S, {**meme.DEFAULT, **(S.get("meme") or {})}, N)  # aynı kararlar MEME cüzdanında
     except Exception as e:
         print("Gerçek memecoin masası hatası:", e)
     try:
@@ -581,7 +581,7 @@ def main():
         print("Kaldıraç masası hatası:", e)
     try:
         from . import kaldirac, kaldirac_gercek
-        kaldirac_gercek.step(state, S, {**kaldirac.DEFAULT, **(S.get("lev") or {})})  # aynı kararlar gerçek parayla (OKX Global)
+        kaldirac_gercek.step(state, S, {**kaldirac.DEFAULT, **(S.get("lev") or {})}, N)  # aynı kararlar gerçek parayla (OKX Global)
     except Exception as e:
         print("Gerçek kaldıraç masası hatası:", e)
     PERF["main"] = round(time.time() - t_start, 2)

@@ -1,11 +1,25 @@
 {
-  "version": "1.57.1",
+  "version": "1.58.0",
   "date": "2026-11-23",
   "notes": [
-    "Küçük bakiyelerde hedef seçimi: OKX TR'de TL ya da USDT, Global'de USDT ya da USDC",
-    "Çok küçük tutarlar '<$0,01' olarak görünür"
+    "Bot güncellemelerinde artık yaklaşık 1 dakikalık kesinti yok; aynı oturumda birkaç saniyede yeniden başlıyor",
+    "Futures: iz süren stop borsadaki zarar durdurmaya da taşınıyor; bot yeniden başlarken açılan pozisyon kaybolmuyor, masa sahipleniyor",
+    "Futures ve Memecoin gerçek işlemleri telefona bildirim olarak geliyor",
+    "Memecoin: satıştan sonra boşalan token hesapları kapatılıp kirası (~0,15 $) geri alınıyor",
+    "Kâr süpürme yalnızca futures kârını sayıyor; dışarıdan yatırılan para kâr sayılıp KASA'ya geri gönderilmiyor"
   ],
   "history": [
+    {
+      "version": "1.58.0",
+      "date": "2026-11-23",
+      "notes": [
+        "Bot güncellemelerinde artık yaklaşık 1 dakikalık kesinti yok; aynı oturumda birkaç saniyede yeniden başlıyor",
+        "Futures: iz süren stop borsadaki zarar durdurmaya da taşınıyor; bot yeniden başlarken açılan pozisyon kaybolmuyor, masa sahipleniyor",
+        "Futures ve Memecoin gerçek işlemleri telefona bildirim olarak geliyor",
+        "Memecoin: satıştan sonra boşalan token hesapları kapatılıp kirası (~0,15 $) geri alınıyor",
+        "Kâr süpürme yalnızca futures kârını sayıyor; dışarıdan yatırılan para kâr sayılıp KASA'ya geri gönderilmiyor"
+      ]
+    },
     {
       "version": "1.57.1",
       "date": "2026-11-23",

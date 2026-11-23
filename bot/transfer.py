@@ -345,24 +345,23 @@ def _poll(C, job, X, N):
         _note(X, f"{NAMES[dest]}'e ulaştı: {got:.2f} USDT")
 
 
-def _sweep(C, X, cfg, N):
-    """Global kârının bir kısmını KASA'ya gönderir (aralık dolunca)."""
+def _sweep(C, X, cfg, N, state):
+    """Gerçek futures masasının fon hesabına aldığı kârın bir kısmını aralık dolunca KASA'ya gönderir.
+    Kâr = futures masasının fona aldığı kâr − daha önce süpürülen; dışarıdan yatırılan para kâr sayılmaz."""
     if not cfg.get("sweep_on") or float(cfg.get("sweep_pct") or 0) <= 0 or not C["g"].ok:
         return
     now = time.time()
     if now - X.get("sweep_at", 0) < cfg["sweep_days"] * 86400:
         return
-    val = float(C["g"].req("GET", "/api/v5/asset/asset-valuation?ccy=USDT")[0].get("totalBal") or 0)
     X["sweep_at"] = now
-    base = X.get("g_base", 0)
-    profit = val - base
-    X["g_val"] = round(val, 2)
-    if base <= 0 or profit < cfg["sweep_min"]:
-        _note(X, f"Kâr süpürme: Global {val:.2f} $ · giren {base:.2f} $ · gönderilecek kâr yok")
+    harvest = float((state.get("levr") or {}).get("harvest") or 0)
+    profit = harvest - float(X.get("swept", 0))
+    if profit < cfg["sweep_min"]:
+        _note(X, f"Kâr süpürme: futures'tan fona alınan yeni kâr {max(0, profit):.2f} $; gönderilecek kâr yok")
         return
     amt = math.floor(profit * cfg["sweep_pct"] / 100 * 100) / 100
     X["jobs"].append({"id": f"sweep{int(now)}", "dir": "g2k", "amt": amt, "src": "kar", "ts": int(now * 1000), "stage": "new", "msg": "kâr süpürme"})
-    X["g_base"] = round(val - amt, 2)  # kalan kâr yeni taban olur (aynı kâr iki kez süpürülmez)
+    X["swept"] = round(float(X.get("swept", 0)) + profit, 4)  # kârın tamamı sayılır, yüzdesi gönderilir (aynı kâr iki kez süpürülmez)
 
 
 def step(state, S, N):
@@ -413,7 +412,7 @@ def step(state, S, N):
         _note(X, f"İptal: {NAMES[src]} {job['amt']} USDT · {job['msg']}")
         N.add("money", "Aktarım iptal edildi", job["msg"], 3, ["x"])
     try:
-        _sweep(C, X, cfg, N)
+        _sweep(C, X, cfg, N, state)
     except Exception as e:
         print("Kâr süpürme hatası:", e)
     # işler (en fazla 15 sn'de bir dokunulur)

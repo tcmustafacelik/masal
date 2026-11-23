@@ -167,8 +167,8 @@ def weekly_backtest():
 
 def main():
     from .notify import heartbeat
-    start, last_sig, last_push, n, errors, last_hb = time.time(), None, 0, 0, 0, 0
-    start_rev = code_rev("HEAD")
+    start, last_sig, last_push, n, errors, last_hb = float(os.environ.get("MASAL_T0") or time.time()), None, 0, 0, 0, 0
+    start_rev = os.environ.get("MASAL_REV") or code_rev("HEAD")
     try:
         recovery_note()
     except Exception as e:
@@ -180,8 +180,18 @@ def main():
         try:
             rev = refresh_settings()
             if rev and start_rev and rev != start_rev:
-                print("Bot kodu güncellendi; oturum yenisiyle değiştiriliyor.")
-                break
+                wf = lambda r: sh("git", "rev-parse", f"{r}:.github/workflows/bot.yml").stdout.strip()
+                if wf("FETCH_HEAD") != wf("HEAD"):
+                    print("İş akışı güncellendi; oturum yenisiyle değiştiriliyor.")
+                    break
+                # yalnız bot kodu değişti: aynı oturumda birkaç saniyede yeniden başla (yeni oturumu 1 dk beklemeden)
+                push_data(wait=True)
+                sh("git", "checkout", "FETCH_HEAD", "--", "bot")
+                sh("git", "reset", "-q", "bot")
+                os.environ["MASAL_T0"], os.environ["MASAL_REV"] = str(start), rev
+                print("Bot kodu güncellendi; aynı oturumda yeniden başlatılıyor.", flush=True)
+                import sys
+                os.execv(sys.executable, [sys.executable, "-m", "bot.loop"])
             if time.time() - last_hb > 3 * 60:  # nabız 3 dk'da bir; bot 10 dk susarsa telefona uyarı düşer
                 try:
                     heartbeat(notifier())

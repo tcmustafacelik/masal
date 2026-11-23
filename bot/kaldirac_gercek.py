@@ -18,6 +18,7 @@ import time
 from . import transfer
 
 DEFAULT = {"real": False, "real_budget": 30.0, "real_lev": 2, "max_loss": 10.0, "real_reset": 0}
+TITLE = "Futures"
 SYNC = 20
 _Q = queue.Queue()
 _LOCK = threading.Lock()
@@ -32,6 +33,8 @@ def _new(cfg):
 def _note(R, kind, text):
     print("[" + __name__.split(".")[-1] + "]", text)  # günlükte izlemek için (anahtar/tutar dışı bilgi)
     R["log"].append([int(time.time() * 1000), kind, text])
+    if kind in ("buy", "exit") or text.startswith(("MASA DURDU", "Günlük zarar")):
+        R.setdefault("out", []).append([kind, text])  # telefona bildirim (ana turda gönderilir)
     R["log"] = R["log"][-80:]
 
 
@@ -99,6 +102,18 @@ class _Desk:
         self.ex.req("POST", "/api/v5/trade/close-position",
                     {"instId": f"{c}-USDT-SWAP", "mgnMode": "isolated", "autoCxl": True, **self._ps(side)})
 
+    def move_stop(self, c, stop):
+        """Borsadaki bağlı zarar durdurmayı yeni seviyeye taşır (iz süren stop)."""
+        inst = f"{c}-USDT-SWAP"
+        sp = self.specs()[inst]
+        for typ in ("oco", "conditional"):
+            for a in self.ex.req("GET", f"/api/v5/trade/orders-algo-pending?instType=SWAP&instId={inst}&ordType={typ}"):
+                if a.get("slTriggerPx"):
+                    self.ex.req("POST", "/api/v5/trade/amend-algos",
+                                {"instId": inst, "algoId": a["algoId"], "newSlTriggerPx": _fmt(stop, sp["tickSz"]), "newSlOrdPx": "-1"})
+                    return True
+        return False
+
     def last_closed(self, c):
         d = self.ex.req("GET", f"/api/v5/account/positions-history?instType=SWAP&instId={c}-USDT-SWAP&limit=1")
         return d[0] if d else None
@@ -146,10 +161,17 @@ def _sync(D, R, cfg):
         reason = p.get("closing") or ("borsadaki zarar durdur / kâr al" if h else "borsada kapanmış")
         _record(R, c, p, pnl, float(h.get("closeAvgPx") or 0) if h else 0, reason)
         del R["pos"][c]
-    # botun bilmediği pozisyon (ör. kapatma emri yarıda kaldı): masa yalnız kendi coinlerini yönetir, dokunmaz, bildirir
-    for c in live:
+    # kayıtta olmayan pozisyon (ör. bot emir verdikten hemen sonra yeniden başladı): masa sahiplenir, yönetmeye devam eder
+    for c, x in live.items():
         if c not in R["pos"] and c in cfg.get("coins", []):
-            R["err"] = f"{c}: borsada masanın kaydında olmayan pozisyon var"
+            pos = float(x.get("pos") or 0)
+            side = (1 if x.get("posSide") == "long" else -1) if x.get("posSide") in ("long", "short") else (1 if pos > 0 else -1)
+            avg = float(x.get("avgPx") or 0)
+            R["pos"][c] = {"side": side, "ts": int(float(x.get("cTime") or time.time() * 1000)), "entry": avg, "now": avg,
+                           "qty": abs(pos), "contracts": abs(pos), "margin": float(x.get("margin") or x.get("imr") or 0),
+                           "stop": avg, "tp": avg, "liq": float(x.get("liqPx") or 0), "upl": float(x.get("upl") or 0),
+                           "why": "borsada bulundu, sahiplenildi", "lev": int(float(x.get("lever") or 2))}
+            _note(R, "info", f"{c} pozisyonu borsada bulundu; masa yönetimine alındı")
     # gün başı ve zarar sınırları
     total = eq + R["harvest"]
     if R["day"] != _day():
@@ -241,6 +263,12 @@ def _loop():
                     D.close(ev[1], p["side"])
                     p["closing"] = ev[2]
                     _note(R, "info", f"GERÇEK kapatma emri {ev[1]} · {ev[2]}")
+                elif ev and ev[0] == "trail" and ev[1] in R["pos"]:
+                    p = R["pos"][ev[1]]
+                    if p["side"] * (ev[2] - p["stop"]) > abs(p["stop"]) * 0.002:  # anlamlı ilerleme varsa
+                        if D.move_stop(ev[1], ev[2]):
+                            p["stop"], p["trailed"] = ev[2], True
+                            _note(R, "info", f"{ev[1]} borsadaki stop {ev[2]:.6g} seviyesine taşındı (iz süren)")
                 elif ev and ev[0] == "kill":
                     _close_all(D, R, "masa kapatıldı")
                 if time.time() - last >= SYNC or (ev and ev[0] in ("close", "kill")):
@@ -255,7 +283,7 @@ def _loop():
                     _note(R, "risk", f"GERÇEK {ev[1]} açılamadı: {e}")
 
 
-def step(state, S, paper_cfg):
+def step(state, S, paper_cfg, N=None):
     cfg = {**paper_cfg, **DEFAULT, **{k: v for k, v in (S.get("lev") or {}).items() if k in DEFAULT}}
     L = state.get("lev") or {}
     evs = L.pop("ev", [])
@@ -279,10 +307,15 @@ def step(state, S, paper_cfg):
     if was and not cfg["real"] and R["pos"]:
         _Q.put(["kill"])
     for e in evs:
-        if cfg["real"] or e[0] == "close":
+        if cfg["real"] or e[0] in ("close", "trail"):
             _Q.put(e)
     with _LOCK:
         R["on"] = bool(cfg["real"])
+        for kind, text in R.pop("out", []):
+            if N:
+                t = text.replace("GERÇEK ", "")
+                N.add("trades" if kind != "risk" else "alerts", f"{TITLE} · {t.split(' ')[0].capitalize()}", t, 4,
+                      ["chart_with_upwards_trend" if kind == "buy" else "moneybag" if "+" in t else "warning"])
         state["levr"] = {k: (dict(v) if isinstance(v, dict) else list(v) if isinstance(v, list) else v) for k, v in R.items()}
 
 
