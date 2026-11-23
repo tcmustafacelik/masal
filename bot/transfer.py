@@ -64,9 +64,9 @@ class Ex:
                 return float(x.get("availBal") or 0)
         return 0.0
 
-    def funding(self, ccy):
+    def funding(self, ccy, total=False):
         d = self.req("GET", f"/api/v5/asset/balances?ccy={ccy}")
-        return float(d[0].get("availBal") or 0) if d else 0.0
+        return float(d[0].get("bal" if total else "availBal") or 0) if d else 0.0
 
     def move(self, ccy, amt, frm, to):
         if amt > 0:
@@ -146,6 +146,11 @@ def _prepare(ex, side, amt, job):
     f = ex.funding("USDT")
     if f >= need:
         return True
+    if ex.funding("USDT", total=True) >= need:
+        # Para fon hesabında ama borsa henüz çekime açmamış (OKX TR'de yeni yatırılan TL ile alınanlarda bekleme süresi olur)
+        job["msg"] = f"para {NAMES[side]} fon hesabında hazır; borsa çekim kilidi kalkınca otomatik gönderilecek"
+        job["locked"] = True
+        return False
     t = ex.trading("USDT")
     if f + t < need and side == "tr":
         short = need - f - t
@@ -337,14 +342,14 @@ def step(state, S, N):
                     if X.get("day_sum", 0) + job["amt"] > float(cfg["daily_max"]):
                         job["msg"] = f"günlük sınır ({cfg['daily_max']} $) dolu; yarın gönderilecek"
                         continue
-                    if (src == "tr" and job["src"] != "bot" and ex.funding("USDT") < job["amt"] - 0.01
+                    if (src == "tr" and job["src"] != "bot" and ex.funding("USDT", total=True) < job["amt"] - 0.01
                             and _free_tr(ex, state) < job["amt"] * _rate() * 0.97):
                         job["msg"] = "TR'de boşta yeterli para yok (botun parasına dokunulmaz); bekleniyor"
                         if now * 1000 - job["ts"] > 86400_000:
                             raise RuntimeError("24 saat içinde boş para oluşmadı")
                         continue
                     if not _prepare(ex, src, job["amt"], job):
-                        if now * 1000 - job["ts"] > 86400_000:
+                        if now * 1000 - job["ts"] > (7 if job.get("locked") else 1) * 86400_000:
                             raise RuntimeError(job["msg"])
                         continue
                     _send(ex, src, addr, dest, job["amt"], job, X)
