@@ -1,4 +1,4 @@
-"""Para aktarımı (alıcı adı OKX_ALICI gizli ayarından): OKX TR ↔ OKX Global ↔ KASA (soğuk cüzdan), USDT, Arbitrum One ağı.
+"""Para aktarımı (alıcı adı ve adresi OKX_ALICI / OKX_ALICI_ADRES gizli ayarlarından): OKX TR ↔ OKX Global ↔ KASA (soğuk cüzdan), USDT, Arbitrum One ağı.
 
 Güvenlik:
   * Para yalnızca aşağıdaki üç adrese gidebilir. Adresler kodda sabittir; uygulamadan ya da ayardan değiştirilemez.
