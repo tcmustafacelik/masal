@@ -51,6 +51,16 @@ def _g_sol_chain(g):
     raise RuntimeError("OKX Global'de SOL Solana ağı bulunamadı")
 
 
+def _adj_start(usd):
+    R = G._W.get("R")
+    if R and R.get("start"):
+        if G._LOCK.acquire(timeout=5):
+            try:
+                R["start"] = round(max(0.0, R["start"] + usd), 2)
+            finally:
+                G._LOCK.release()
+
+
 def run(job, X, C, N, note):
     g = C["g"]
     if not g.ok:
@@ -79,10 +89,16 @@ def _g2m(g, job, X, N, note):
             usd = job["amt"]
             if g.funding("USDT") < usd - 0.01:
                 raise RuntimeError(f"Global fon hesabında {usd:.2f} USDT yok (futures teminatına dokunulmaz)")
-            g.move("USDT", usd, transfer.FUNDING, transfer.TRADING)
-            o = g.market("SOL-USDT", "buy", f"{usd:.2f}", quote=True)
-            time.sleep(2)
-            d = g.req("GET", f"/api/v5/trade/order?instId=SOL-USDT&ordId={o['ordId']}")[0]
+            if not job.get("ordId"):
+                g.move("USDT", usd, transfer.FUNDING, transfer.TRADING)
+                try:
+                    o = g.market("SOL-USDT", "buy", f"{usd:.2f}", quote=True)
+                except Exception:
+                    g.move("USDT", usd, transfer.TRADING, transfer.FUNDING)  # alım olmadı: para fona geri
+                    raise
+                job["ordId"] = o["ordId"]
+                time.sleep(2)
+            d = g.req("GET", f"/api/v5/trade/order?instId=SOL-USDT&ordId={job['ordId']}")[0]
             got = float(d.get("accFillSz") or 0) - abs(float(d.get("fee") or 0) if d.get("feeCcy") == "SOL" else 0)
             if got <= 0:
                 raise RuntimeError("SOL alınamadı")
@@ -110,6 +126,7 @@ def _g2m(g, job, X, N, note):
                 st = str(w.get("state"))
                 if st == "2":
                     job.update(stage="done", msg="MEME cüzdanına ulaştı")
+                    _adj_start(job["amt"])  # yatırılan para masanın kârı sayılmasın
                     note(X, f"MEME'ye ulaştı: {job.get('sol', '')} SOL")
                     N.add("money", "MEME cüzdanına SOL ulaştı", f"~{job['amt']:.2f} $ değerinde SOL", 3, ["x"])
                 elif st in ("-1", "-2", "-3"):
@@ -138,6 +155,7 @@ def _m2g(g, job, X, N, note):
         if not dep:
             raise RuntimeError("Global SOL yatırma adresi alınamadı")
         sig = _sol_transfer(key, dep, round(sol * 1e9))
+        _adj_start(-job["amt"])  # çıkan para masanın zararı sayılmasın
         job.update(stage="sent", txId=sig, sol=round(sol, 6), sent_ts=int(time.time() * 1000), msg=f"{sol:.4f} SOL gönderildi; ağda")
         X["day_sum"] = round(X.get("day_sum", 0) + job["amt"], 2)
         note(X, f"MEME → OKX Global: {sol:.4f} SOL (~{job['amt']:.2f} $) gönderildi")
@@ -146,11 +164,17 @@ def _m2g(g, job, X, N, note):
             if d.get("txId") == job["txId"]:
                 if str(d.get("state")) in ("1", "2"):  # 1: hesaba geçti (işlemde kullanılabilir), 2: tamam
                     amt = float(d.get("amt") or 0)
-                    g.move("SOL", amt, transfer.FUNDING, transfer.TRADING)
-                    o = g.market("SOL-USDT", "sell", f"{math.floor(amt * 1e6) / 1e6:f}")
-                    time.sleep(2)
-                    od = g.req("GET", f"/api/v5/trade/order?instId=SOL-USDT&ordId={o['ordId']}")[0]
-                    usd = float(od.get("accFillSz") or 0) * float(od.get("avgPx") or 0) - abs(float(od.get("fee") or 0))
+                    if not job.get("sold"):
+                        if not job.get("in_trading"):
+                            g.move("SOL", amt, transfer.FUNDING, transfer.TRADING)
+                            job["in_trading"] = True
+                        o = g.market("SOL-USDT", "sell", f"{math.floor(amt * 1e6) / 1e6:f}")
+                        job["sold"] = o["ordId"]
+                        time.sleep(2)
+                    if not job.get("usd"):
+                        od = g.req("GET", f"/api/v5/trade/order?instId=SOL-USDT&ordId={job['sold']}")[0]
+                        job["usd"] = float(od.get("accFillSz") or 0) * float(od.get("avgPx") or 0) - abs(float(od.get("fee") or 0))
+                    usd = job["usd"]
                     g.move("USDT", math.floor(usd * 100) / 100, transfer.TRADING, transfer.FUNDING)
                     job.update(stage="done", msg=f"Global'e ulaştı; {usd:.2f} USDT olarak fon hesabında")
                     X["g_base"] = round(X.get("g_base", 0) + usd, 2)

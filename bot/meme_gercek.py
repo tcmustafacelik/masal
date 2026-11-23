@@ -156,7 +156,7 @@ def _execute(key, o):
 def _holdings(addr):
     out = {}
     for prog in TOKEN_PROGS:
-        for a in _rpc("getTokenAccountsByOwner", [addr, {"programId": prog}, {"encoding": "jsonParsed"}])["value"]:
+        for a in _rpc("getTokenAccountsByOwner", [addr, {"programId": prog}, {"encoding": "jsonParsed", "commitment": "confirmed"}])["value"]:
             info = a["account"]["data"]["parsed"]["info"]
             t = info["tokenAmount"]
             if int(t["amount"]) > 0:
@@ -179,7 +179,7 @@ def close_empty(key, addr):
     me = _pub(key)
     got = 0
     for prog in TOKEN_PROGS:
-        accs = [a["pubkey"] for a in _rpc("getTokenAccountsByOwner", [addr, {"programId": prog}, {"encoding": "jsonParsed"}])["value"]
+        accs = [a["pubkey"] for a in _rpc("getTokenAccountsByOwner", [addr, {"programId": prog}, {"encoding": "jsonParsed", "commitment": "confirmed"}])["value"]
                 if int(a["account"]["data"]["parsed"]["info"]["tokenAmount"]["amount"]) == 0]
         for i in range(0, len(accs), 8):
             part = accs[i:i + 8]
@@ -198,7 +198,7 @@ def close_empty(key, addr):
 
 
 def _sol(addr):
-    return _rpc("getBalance", [addr])["value"] / 1e9
+    return _rpc("getBalance", [addr, {"commitment": "confirmed"}])["value"] / 1e9
 
 
 def _solpx():
@@ -224,15 +224,20 @@ def _value(R, prices):
     for m, p in R["pos"].items():
         px = prices.get(m) or p.get("px") or 0
         p["px"] = px
-        p["val"] = round(p.get("ui", 0) * px, 4)
+        p["val"] = round(p["ui"] * px, 4) if p.get("ui") and px else round(p.get("cost", 0), 4)
         v += p["val"]
     return v
 
 
 def _sell(key, R, m, reason, cfg):
     p = R["pos"][m]
-    h = _holdings(R["addr"]).get(m)
+    try:
+        h = _holdings(R["addr"]).get(m)
+    except Exception:
+        h = {"raw": p["raw"]} if p.get("raw") else None
     if not h:
+        if time.time() * 1000 - p["ts"] < 120000 or p.get("raw"):
+            raise RuntimeError("token cüzdanda henüz görünmüyor; yeniden denenecek")
         del R["pos"][m]
         _note(R, "info", f"{p['sym']} cüzdanda yok; kayıttan çıkarıldı")
         return
@@ -286,8 +291,19 @@ def _sync(R, cfg, prices, held_paper, key):
     for m, p in list(R["pos"].items()):
         if m in h:
             p["ui"], p["raw"] = h[m]["ui"], h[m]["raw"]
-        elif time.time() * 1000 - p["ts"] > 120000:
-            del R["pos"][m]
+        elif p.get("ui") or time.time() * 1000 - p["ts"] > 600000:
+            _note(R, "info", f"{p['sym']} artık cüzdanda yok; kayıttan çıkarıldı")
+            del R["pos"][m]  # görülmüştü ve artık yok ya da 10 dk'dır hiç görünmedi
+    for m in held_paper:  # cüzdanda olup kayıtta olmayan (ör. yanıt gelmeden yeniden başladı): sahiplen
+        if m in h and m not in R["pos"]:
+            px = prices.get(m, 0)
+            R["pos"][m] = {"sym": m[:4] + "…", "ts": int(time.time() * 1000), "sol_in": 0, "cost": h[m]["ui"] * px,
+                           "raw": h[m]["raw"], "ui": h[m]["ui"], "px": px, "val": 0.0, "why": "cüzdanda bulundu"}
+            _note(R, "info", f"{m[:6]}… tokeni cüzdanda bulundu; masa yönetimine alındı")
+    for m, p in list(R["pos"].items()):  # deneme masası çalışmasa bile en uzun tutma süresi aşılırsa satılır
+        if time.time() * 1000 - p["ts"] > cfg.get("max_hold_h", 4) * 3600_000 + 600_000:
+            p["closing"] = "süre doldu (yedek)"
+            held_paper = set(held_paper) - {m}
     v = _value(R, prices)
     R["value"] = round(v, 2)
     if not R["start"] and v > 0:
@@ -396,10 +412,12 @@ def step(state, S, paper_cfg, N=None):
     if not _W["key"]:
         state["memer"] = {**R, "on": False}
         return
-    if cfg.get("real_reset", 0) != R.get("reset", 0):
-        with _LOCK:
+    if cfg.get("real_reset", 0) != R.get("reset", 0) and _LOCK.acquire(timeout=0.05):
+        try:
             R["reset"], R["dead"], R["start"] = cfg.get("real_reset", 0), "", R["value"]
             _note(R, "info", "Masa ayarlardan yeniden başlatıldı")
+        finally:
+            _LOCK.release()
     cfg["_held"] = list(M.get("positions") or {})
     _W["cfg"] = cfg
     if _W["t"] is None or not _W["t"].is_alive():
@@ -410,7 +428,9 @@ def step(state, S, paper_cfg, N=None):
     for e in evs:
         if cfg["real"] or e[0] == "sell":
             _Q.put(e)
-    with _LOCK:
+    if not _LOCK.acquire(timeout=0.05):
+        return  # işçi borsayla konuşuyor: bu tur bir önceki kayıt geçerli
+    try:
         R["on"] = bool(cfg["real"])
         for kind, text in R.pop("out", []):
             if N:
@@ -419,12 +439,28 @@ def step(state, S, paper_cfg, N=None):
                       f"{TITLE} · küçük bakiyeler" if kind == "dust" else f"{TITLE} · {t.split(' ')[0].capitalize()}", t, 4,
                       ["chart_with_upwards_trend" if kind == "buy" else "moneybag" if "+" in t else "warning"])
         state["memer"] = json.loads(json.dumps(R))
+    finally:
+        _LOCK.release()
 
 
 def trim_log():
-    with _LOCK:
-        if _W["R"]:
-            del _W["R"]["log"][:-5]
+    if _LOCK.acquire(timeout=1):
+        try:
+            if _W["R"]:
+                del _W["R"]["log"][:-5]
+        finally:
+            _LOCK.release()
+
+
+def quiesce(timeout=20):
+    """Yeniden başlamadan önce: sıradaki emirler bitsin, işçi yeni emir başlatmasın; son kayıt döner."""
+    t = time.time()
+    while not _Q.empty() and time.time() - t < timeout:
+        time.sleep(0.2)
+    if _W["R"] is None:
+        return None
+    _LOCK.acquire(timeout=timeout)  # bırakılmaz: süreç birazdan yeniden başlıyor
+    return json.loads(json.dumps(_W["R"]))
 
 
 def public(state):

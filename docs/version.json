@@ -1,13 +1,23 @@
 {
-  "version": "1.62.0",
+  "version": "1.63.0",
   "date": "2026-11-23",
   "notes": [
-    "Futures: açık pozisyonda 'Kapat' düğmesi; izlenen coinler ve sinyale ne kadar uzak oldukları; son kararlar (sinyal, çıkış, engel)",
-    "Memecoin: açık tokende 'Sat' düğmesi; tarama özeti ve hangi tokenin neden alındığı/engellendiği",
-    "Futures kâr/zarar, ilk işlemden önce hesaptaki gerçek tutardan başlar (kâr gibi görünen artık sayılmaz)",
-    "KASA → Global/TR: Trust Wallet uygulaması doğrudan açılır"
+    "Ana sayfa: bütün kasaların toplamı ve Spot, Futures, Memecoin kâr/zararı ayrı ayrı; hepsinin toplam kâr/zararı TL olarak",
+    "Küçük bakiyeler: OKX'in 'küçük varlıkları dönüştür' sistemi kullanılıyor; en küçük tutar sınırı olmadan çevrilir, olmayanlar fiyat teklifiyle denenir",
+    "Fable denetimi düzeltmeleri: gerçek masaların ana turu bekletmesi, alımdan hemen sonra yanlış zarar sınırı, para aktarımında kâr/zarar karışması, kapanmayan pozisyonların yeniden denenmesi, yeniden başlarken emir kaybı, yarım kayıt dosyası, çift küçük bakiye isteği, kilitlenen Kaydet, Trust Wallet bağlantısı ve daha fazlası",
+    "Uygulama daha az çalışıyor: listeler yalnız değişince yeniden çiziliyor, yavaş bağlantıda istekler üst üste binmiyor"
   ],
   "history": [
+    {
+      "version": "1.63.0",
+      "date": "2026-11-23",
+      "notes": [
+        "Ana sayfa: bütün kasaların toplamı ve Spot, Futures, Memecoin kâr/zararı ayrı ayrı; hepsinin toplam kâr/zararı TL olarak",
+        "Küçük bakiyeler: OKX'in 'küçük varlıkları dönüştür' sistemi kullanılıyor; en küçük tutar sınırı olmadan çevrilir, olmayanlar fiyat teklifiyle denenir",
+        "Fable denetimi düzeltmeleri: gerçek masaların ana turu bekletmesi, alımdan hemen sonra yanlış zarar sınırı, para aktarımında kâr/zarar karışması, kapanmayan pozisyonların yeniden denenmesi, yeniden başlarken emir kaybı, yarım kayıt dosyası, çift küçük bakiye isteği, kilitlenen Kaydet, Trust Wallet bağlantısı ve daha fazlası",
+        "Uygulama daha az çalışıyor: listeler yalnız değişince yeniden çiziliyor, yavaş bağlantıda istekler üst üste binmiyor"
+      ]
+    },
     {
       "version": "1.62.0",
       "date": "2026-11-23",

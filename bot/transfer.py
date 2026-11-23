@@ -403,7 +403,7 @@ def step(state, S, N):
         src = ROUTES[job["dir"]][0]
         try:
             ex = C[src]
-            back = min(job["amt"], ex.funding("USDT", total=True))
+            back = min(job["amt"], ex.funding("USDT", total=True)) if src == "tr" else 0.0
             if back > 0 and ex.ok:
                 ex.move("USDT", back, FUNDING, TRADING)
             job.update(stage="failed", msg=f"iptal edildi; {back:.2f} USDT alım-satım hesabına geri kondu")
@@ -429,7 +429,7 @@ def step(state, S, N):
                         continue
                     meme_aktar.run(job, X, C, N, _note)
                 except Exception as e:
-                    if job["stage"] == "sent":
+                    if job["stage"] == "sent" and "reddetti" not in str(e) and "ulaşmadı" not in str(e):
                         job["msg"] = f"kontrol edilemedi, tekrar denenecek: {str(e)[:120]}"
                     else:
                         job.update(stage="failed", msg=str(e)[:300])

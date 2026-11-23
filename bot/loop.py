@@ -165,6 +165,23 @@ def weekly_backtest():
         start_bt()
 
 
+def flush_desks():
+    """Yeniden başlamadan / oturum bitmeden önce: gerçek masaların son hâli kayda yazılır (arada açılan emir kaybolmasın)."""
+    try:
+        from . import kaldirac_gercek, meme_gercek
+        a, b = kaldirac_gercek.quiesce(), meme_gercek.quiesce()
+        if a is None and b is None:
+            return
+        st = run.load_state()
+        if a is not None:
+            st["levr"] = a
+        if b is not None:
+            st["memer"] = b
+        run.save_state(st)
+    except Exception as e:
+        print("Masalar kaydedilemedi:", e)
+
+
 def main():
     from .notify import heartbeat
     start, last_sig, last_push, n, errors, last_hb = float(os.environ.get("MASAL_T0") or time.time()), None, 0, 0, 0, 0
@@ -185,6 +202,7 @@ def main():
                     print("İş akışı güncellendi; oturum yenisiyle değiştiriliyor.")
                     break
                 # yalnız bot kodu değişti: aynı oturumda birkaç saniyede yeniden başla (yeni oturumu 1 dk beklemeden)
+                flush_desks()
                 push_data(wait=True)
                 sh("git", "checkout", "FETCH_HEAD", "--", "bot")
                 sh("git", "reset", "-q", "bot")
@@ -219,6 +237,7 @@ def main():
         if took > STEP:
             print(f"Uzun tur: {took:.1f} sn")
         time.sleep(max(1, STEP - took))
+    flush_desks()
     push_data(wait=True)
     print(f"Oturum bitti: {n} tur.")
 

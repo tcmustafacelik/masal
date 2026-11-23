@@ -42,8 +42,10 @@ def save_state(state):
     for k in ("live", "okx"):
         if out.get(k) is not None:
             out[k] = vault.seal(out[k])
-    with open(STATE_FILE, "w", encoding="utf-8") as f:
+    tmp = STATE_FILE + ".tmp"  # yarım yazılmış dosya kalmasın: önce geçici dosya, sonra tek adımda yer değiştir
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
+    os.replace(tmp, STATE_FILE)
 
 
 def note(L, text):
@@ -228,7 +230,7 @@ def clear_old(state, S):
     X = state.get("xfer") or {}
     X["jobs"] = [j for j in X.get("jobs", []) if j.get("stage") not in ("done", "failed")]
     X["log"] = []
-    for k in ("meme", "lev"):
+    for k in ("meme", "lev", "levr", "memer"):
         d = state.get(k) or {}
         if d:
             d["log"] = d.get("log", [])[-5:]
@@ -444,10 +446,10 @@ def signature(state, S):
                   [round(v.get("stop", 0), 8) for v in (lv.get("positions") or {}).values()]])
     lr = state.get("levr") or {}
     parts.append([len(lr.get("trades", [])), sorted(lr.get("pos", {})), len(lr.get("log", [])), lr.get("err"),
-                  round(lr.get("eq", 0), 2), lr.get("halt"), lr.get("dead"), lr.get("on")])
+                  round(lr.get("eq", 0) * 2) / 2, lr.get("halt"), lr.get("dead"), lr.get("on")])
     mr = state.get("memer") or {}
     parts.append([len(mr.get("trades", [])), sorted(mr.get("pos", {})), len(mr.get("log", [])), mr.get("err"),
-                  round(mr.get("value", 0), 2), mr.get("dead"), mr.get("on")])
+                  round(mr.get("value", 0) * 2) / 2, mr.get("dead"), mr.get("on")])
     parts.append(json.dumps(S, sort_keys=True, default=str))
     return json.dumps(parts, default=str)
 

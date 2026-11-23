@@ -10,6 +10,7 @@ Güvenlik kuralları (ayarla gevşetilemez):
   - Pozisyon yokken işlem hesabında bütçenin üstünde kalan kâr fon hesabına geri alınır (oradan KASA'ya süpürülür)
 Ağ işleri arka planda tek bir işçi iş parçacığında yapılır; ana tur beklemez.
 """
+import json
 import math
 import queue
 import threading
@@ -81,10 +82,11 @@ class _Desk:
     def open(self, c, side, contracts, stop, tp, lev):
         inst = f"{c}-USDT-SWAP"
         sp = self.specs()[inst]
-        if (inst, lev) not in self.lev_set:
+        lk = (inst, lev, side if self.mode() == "long_short_mode" else 0)
+        if lk not in self.lev_set:
             self.ex.req("POST", "/api/v5/account/set-leverage",
                         {"instId": inst, "lever": str(lev), "mgnMode": "isolated", **self._ps(side)})
-            self.lev_set.add((inst, lev))
+            self.lev_set.add(lk)
         d = self.ex.req("POST", "/api/v5/trade/order", {
             "instId": inst, "tdMode": "isolated", "side": "buy" if side > 0 else "sell", "ordType": "market",
             "sz": _fmt(contracts, sp["lotSz"]), **self._ps(side),
@@ -128,6 +130,7 @@ def _record(R, c, p, pnl, px, reason):
     R["trades"].append({"ts": int(time.time() * 1000), "sym": c, "side": "UZUN" if p["side"] > 0 else "KISA",
                         "pnl": round(pnl, 2), "pct": round(pct, 1), "reason": reason, "open": p["ts"], "real": True})
     R["trades"] = R["trades"][-300:]
+    R["realized"] = round(R.get("realized", 0.0) + pnl, 4)
     _note(R, "exit", f"GERÇEK KAPAT {c} · {'+' if pnl >= 0 else ''}{pnl:.2f}$ (teminata göre %{pct:+.0f}) · {reason}")
 
 
@@ -147,6 +150,14 @@ def _sync(D, R, cfg):
     for c, p in list(R["pos"].items()):
         if c in live:
             x = live[c]
+            gone = c not in cfg.get("_held", [c]) and time.time() * 1000 - p["ts"] > 60000
+            if (gone or R["halt"] or R["dead"]) and time.time() - p.get("close_try", 0) > 30:
+                p["close_try"] = time.time()
+                try:
+                    D.close(c, p["side"])
+                    p["closing"] = p.get("closing") or ("deneme masası kapattı" if gone else "zarar sınırı")
+                except Exception as e:
+                    R["err"] = f"{c} kapatılamadı, yeniden denenecek: {e}"[:200]
             p.update(now=float(x.get("markPx") or x.get("last") or p["entry"]), upl=float(x.get("upl") or 0),
                      liq=float(x.get("liqPx") or 0) or p.get("liq"), margin=float(x.get("margin") or x.get("imr") or p["margin"]))
             continue
@@ -157,6 +168,8 @@ def _sync(D, R, cfg):
             h = D.last_closed(c)
         except Exception:
             pass
+        if h and int(h.get("uTime") or 0) < p["ts"]:
+            h = None  # eski bir pozisyonun kaydı
         pnl = float(h.get("realizedPnl") or h.get("pnl") or 0) if h else 0.0
         reason = p.get("closing") or ("borsadaki zarar durdur / kâr al" if h else "borsada kapanmış")
         _record(R, c, p, pnl, float(h.get("closeAvgPx") or 0) if h else 0, reason)
@@ -174,8 +187,9 @@ def _sync(D, R, cfg):
             _note(R, "info", f"{c} pozisyonu borsada bulundu; masa yönetimine alındı")
     # gün başı ve zarar sınırları
     total = eq + R["harvest"]
+    want = float(cfg["real_budget"])
     if R["funded"] > 0 and not R["trades"] and not R["pos"] and not R["harvest"]:
-        R["funded"] = round(eq, 4)  # ilk işlemden önce taban = hesaptaki gerçek tutar
+        R["funded"] = round(eq, 4)  # ilk işlemden önce taban = hesaptaki gerçek tutar (artık küçük USDT kâr sayılmaz)
     if R["day"] != _day():
         R["day"], R["day_eq"], R["halt"] = _day(), eq, ""
     if R["pos"] and not R["halt"] and R["day_eq"] > 0 and eq <= R["day_eq"] * (1 - cfg["daily_loss_pct"] / 100):
@@ -187,19 +201,22 @@ def _sync(D, R, cfg):
         _note(R, "risk", f"MASA DURDU: {R['dead']}. Ayarlardan yeniden başlatılana kadar işlem yok")
         _close_all(D, R, "toplam zarar sınırı")
     # bütçe: fon hesabından işlem hesabına (yalnız bir kez / bütçe artınca); kâr: pozisyon yokken fona geri
-    want = float(cfg["real_budget"])
     if not R["dead"] and R["funded"] < want:
         free = D.ex.funding("USDT")
-        amt = min(want - R["funded"], free)
+        base = eq if R["funded"] <= 0 else R["funded"]
+        amt = min(max(0.0, want - base), free)
+        if R["funded"] <= 0 and amt < 1 and base >= 1:
+            R["funded"] = round(min(base, want), 4)
         if amt >= 1:
+            R["funded"] = base
             D.ex.move("USDT", amt, transfer.FUNDING, transfer.TRADING)
             R["funded"] = round(R["funded"] + amt, 4)
             _note(R, "info", f"{amt:.2f} USDT fon hesabından işlem hesabına geçti (gerçek masa bütçesi {R['funded']:.2f} $)")
             R["eq"], R["avail"] = round(eq + amt, 4), round(avail + amt, 4)
             if R["day_eq"]:
                 R["day_eq"] += amt
-    elif not R["pos"] and eq - R["funded"] + R["harvest"] > 0 and eq > want + 1:
-        amt = math.floor((eq - want) * 100) / 100
+    elif not R["pos"] and R.get("realized", 0) - R["harvest"] >= 1 and eq > want + 1:
+        amt = math.floor(min(eq - want, R.get("realized", 0) - R["harvest"]) * 100) / 100  # yalnız gerçekleşen kâr
         if amt >= 1 and avail >= amt:
             D.ex.move("USDT", amt, transfer.TRADING, transfer.FUNDING)
             R["harvest"] = round(R["harvest"] + amt, 4)
@@ -296,11 +313,14 @@ def step(state, S, paper_cfg, N=None):
     if _W["R"] is None:
         _W["R"] = state.get("levr") or _new(cfg)
     R = _W["R"]
-    if cfg.get("real_reset", 0) != R.get("reset", 0):  # ayarlardan yeniden başlat: durma kaldırılır
-        with _LOCK:
+    if cfg.get("real_reset", 0) != R.get("reset", 0) and _LOCK.acquire(timeout=0.05):  # ayarlardan yeniden başlat: durma kaldırılır
+        try:
             R["reset"], R["dead"], R["halt"] = cfg.get("real_reset", 0), "", ""
-            R["funded"], R["harvest"] = R["eq"], 0.0
+            R["funded"], R["harvest"], R["realized"] = R["eq"], 0.0, 0.0
             _note(R, "info", "Masa ayarlardan yeniden başlatıldı")
+        finally:
+            _LOCK.release()
+    cfg["_held"] = list(L.get("positions") or {})
     _W["cfg"] = cfg
     if _W["t"] is None or not _W["t"].is_alive():
         _W["t"] = threading.Thread(target=_loop, daemon=True)
@@ -311,20 +331,38 @@ def step(state, S, paper_cfg, N=None):
     for e in evs:
         if cfg["real"] or e[0] in ("close", "trail"):
             _Q.put(e)
-    with _LOCK:
+    if not _LOCK.acquire(timeout=0.05):
+        return  # işçi borsayla konuşuyor: bu tur bir önceki kayıt geçerli
+    try:
         R["on"] = bool(cfg["real"])
         for kind, text in R.pop("out", []):
             if N:
                 t = text.replace("GERÇEK ", "")
                 N.add("trades" if kind != "risk" else "alerts", f"{TITLE} · {t.split(' ')[0].capitalize()}", t, 4,
                       ["chart_with_upwards_trend" if kind == "buy" else "moneybag" if "+" in t else "warning"])
-        state["levr"] = {k: (dict(v) if isinstance(v, dict) else list(v) if isinstance(v, list) else v) for k, v in R.items()}
+        state["levr"] = json.loads(json.dumps(R))
+    finally:
+        _LOCK.release()
 
 
 def trim_log():
-    with _LOCK:
-        if _W["R"]:
-            del _W["R"]["log"][:-5]
+    if _LOCK.acquire(timeout=1):
+        try:
+            if _W["R"]:
+                del _W["R"]["log"][:-5]
+        finally:
+            _LOCK.release()
+
+
+def quiesce(timeout=20):
+    """Yeniden başlamadan önce: sıradaki emirler bitsin, işçi yeni emir başlatmasın; son kayıt döner."""
+    t = time.time()
+    while not _Q.empty() and time.time() - t < timeout:
+        time.sleep(0.2)
+    if _W["R"] is None:
+        return None
+    _LOCK.acquire(timeout=timeout)  # bırakılmaz: süreç birazdan yeniden başlıyor
+    return json.loads(json.dumps(_W["R"]))
 
 
 def public(state):

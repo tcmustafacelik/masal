@@ -105,16 +105,37 @@ def _run(req, X):
     try:
         if k in ("tr", "g"):
             ex = transfer._clients()[k]
-            ok, bad = [], []
+            want = str(req.get("to") or ("TRY" if k == "tr" else "USDT"))
+            ok, bad, todo = [], [], []
             for c in ccys:
                 if c in CASH or (k == "tr" and c in _HELD["tr"]) or (k == "g" and c == "SOL"):
                     bad.append(f"{c} (korunuyor)")
-                    continue
+                else:
+                    todo.append(c)
+            # 1) OKX "küçük varlıkları dönüştür" (kolay çevir): en küçük tutar sınırı yok
+            try:
+                lst = ex.req("GET", "/api/v5/trade/easy-convert-currency-list")[0]
+                tos = lst.get("toCcy") or []
+                to = want if want in tos else ("USDT" if "USDT" in tos else (tos[0] if tos else None))
+                easy = [c for c in todo if c in {d["fromCcy"] for d in lst.get("fromData") or []}]
+                for i in range(0, len(easy), 5):
+                    part = easy[i:i + 5]
+                    try:
+                        ex.req("POST", "/api/v5/trade/easy-convert", {"fromCcy": part, "toCcy": to})
+                        ok += [f"{c}→{to}" for c in part]
+                    except Exception as e:
+                        for c in part:
+                            bad.append(f"{c} ({str(e)[:60]})")
+                    time.sleep(0.3)
+                todo = [c for c in todo if c not in easy]
+            except Exception as e:
+                print("Kolay çevir kullanılamadı:", e)
+            # 2) kalanlar: OKX Convert (fiyat teklifiyle)
+            for c in todo:
                 try:
-                    want = str(req.get("to") or ("TRY" if k == "tr" else "USDT"))
                     alt = [x for x in (("TRY", "USDT") if k == "tr" else ("USDT", "USDC")) if x != want]
-                    to = _convert(ex, c, (want, *alt))
-                    ok.append(f"{c}→{to}")
+                    to2 = _convert(ex, c, (want, *alt))
+                    ok.append(f"{c}→{to2}")
                     time.sleep(0.25)  # borsa istek sınırına takılmasın
                 except Exception as e:
                     bad.append(f"{c} ({str(e)[:50]})")
@@ -122,7 +143,7 @@ def _run(req, X):
             for b in bad:
                 why.setdefault(b.split(" (", 1)[-1].rstrip(")"), []).append(b.split(" (")[0])
             msg = (f"{len(ok)} coin çevrildi ({', '.join(ok[:8])}{'…' if len(ok) > 8 else ''})" if ok else "çevrilen yok") + \
-                  "".join(f" · {len(v)} coin olmadı: {k[:70]}" for k, v in list(why.items())[:2])
+                  "".join(f" · {len(v)} coin olmadı: {k_[:70]}" for k_, v in list(why.items())[:2])
             note(X, f"{name}: " + msg)
             _OUT.append(["push", f"{name} · küçük bakiyeler", msg])
         elif k == "m":
@@ -148,12 +169,14 @@ def step(state, S, N=None):
             X["dust_at"] = 0
     L = state.get("live") or {}
     _HELD["tr"] = {i.split("-")[0] for i in (L.get("positions") or {})}
-    seen = set(X.get("dust_seen") or [])
+    seen_l = list(X.get("dust_seen") or [])
+    seen = set(seen_l)
     for r in S.get("dust") or []:
         rid = str(r.get("id") or "")
         if not rid or rid in seen or rid in _SEEN or time.time() * 1000 - float(r.get("ts") or 0) > 3600_000:
             continue
         _SEEN.add(rid)
         seen.add(rid)
-        X["dust_seen"] = list(seen)[-50:]
+        seen_l.append(rid)
+        X["dust_seen"] = seen_l[-50:]
         threading.Thread(target=_run, args=(r, X), daemon=True).start()
