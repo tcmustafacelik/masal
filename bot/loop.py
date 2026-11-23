@@ -227,7 +227,7 @@ def main():
                 ok = sh("git", "checkout", "FETCH_HEAD", "--", "bot").returncode == 0
                 sh("git", "reset", "-q", "bot")
                 # yeni kod açılabiliyor mu? açılamıyorsa eski kodla devam (bozuk gönderim botu kilitlemesin)
-                if ok and sh(sys.executable, "-c", "import bot.loop, bot.run").returncode == 0:
+                if ok and sh(sys.executable, "-c", "import bot.loop, bot.run, bot.transfer, bot.dust, bot.money, bot.meme, bot.meme_gercek, bot.meme_aktar, bot.kaldirac, bot.kaldirac_gercek").returncode == 0:
                     try:
                         flush_desks()
                         push_data(wait=True)
@@ -242,10 +242,12 @@ def main():
                     print("Yeni bot kodu açılamadı; eski kodla devam ediliyor.")
                     start_rev = rev
             if time.time() - last_hb > 3 * 60:  # nabız 3 dk'da bir; bot 10 dk susarsa telefona uyarı düşer
-                try:
-                    heartbeat(notifier())
-                except Exception as e:
-                    print("Nabız kurulamadı:", e)
+                def _hb():
+                    try:
+                        heartbeat(notifier())
+                    except Exception as e:
+                        print("Nabız kurulamadı:", e)
+                threading.Thread(target=_hb, daemon=True).start()  # ntfy yavaşsa tur beklemesin
                 last_hb = time.time()
             custom_backtest()
             if bt_finished():

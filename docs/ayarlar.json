@@ -211,7 +211,17 @@
       "DOGE",
       "HYPE",
       "ZEC",
-      "PEPE"
+      "PEPE",
+      "BNB",
+      "ADA",
+      "LINK",
+      "SUI",
+      "AVAX",
+      "LTC",
+      "DOT",
+      "WIF",
+      "BCH",
+      "TRX"
     ],
     "real": true,
     "real_budget": 20,

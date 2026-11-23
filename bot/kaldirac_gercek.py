@@ -73,7 +73,7 @@ class _Desk:
     def positions(self):
         out = {}
         for p in self.ex.req("GET", "/api/v5/account/positions?instType=SWAP"):
-            if float(p.get("pos") or 0) != 0 and p["instId"].endswith("-USDT-SWAP"):
+            if float(p.get("pos") or 0) != 0 and p["instId"].endswith("-USDT-SWAP") and p.get("mgnMode", "isolated") == "isolated":
                 out[p["instId"].split("-")[0]] = p
         return out
 
@@ -186,7 +186,8 @@ def _sync(D, R, cfg):
                 except Exception as e:
                     R["err"] = f"{c} stop kontrolü: {e}"[:200]
             gone = c not in cfg.get("_held", [c]) and time.time() * 1000 - p["ts"] > 60000
-            if (gone or R["halt"] or R["dead"]) and time.time() - p.get("close_try", 0) > 30:
+            lockd = R["dead"].startswith("kayıt açılamadı")  # şifre değişti: pozisyonlar borsadaki stop/hedefle kalır
+            if (gone or R["halt"] or (R["dead"] and not lockd) or not cfg.get("real")) and time.time() - p.get("close_try", 0) > 30:
                 p["close_try"] = time.time()
                 try:
                     D.close(c, p["side"])
@@ -213,7 +214,9 @@ def _sync(D, R, cfg):
         del R["pos"][c]
     # kayıtta olmayan pozisyon (ör. bot emir verdikten hemen sonra yeniden başladı): masa sahiplenir, yönetmeye devam eder
     for c, x in live.items():
-        if c not in R["pos"] and c in cfg.get("coins", []) and x.get("mgnMode", "isolated") == "isolated":  # elle açılan çapraz pozisyona dokunulmaz
+        if (c not in R["pos"] and c in cfg.get("coins", []) and x.get("mgnMode", "isolated") == "isolated"
+                and (c in cfg.get("_held", []) or time.time() * 1000 - float(x.get("cTime") or 0) < 120_000)):
+            # yalnız masanın açmış olabileceği pozisyon sahiplenilir; elle açılan pozisyona dokunulmaz
             pos = float(x.get("pos") or 0)
             side = (1 if x.get("posSide") == "long" else -1) if x.get("posSide") in ("long", "short") else (1 if pos > 0 else -1)
             avg = float(x.get("avgPx") or 0)

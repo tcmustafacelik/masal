@@ -548,7 +548,9 @@ def step(state, S, N):
         a, b = MEME_DIRS.get(r["dir"]) or (ROUTES[r["dir"]][0], ROUTES[r["dir"]][2])
         _note(X, f"İstek: {NAMES[a]} → {NAMES[b]} {amt:.2f} USDT")
     # iptal istekleri: henüz gönderilmemiş işler durdurulur, fon hesabına ayrılan para alım-satım hesabına geri döner
-    for rid in (S.get("xfer_cancel") or []):
+    _th = _JOBS.get("t")
+    busy = bool(_th and _th.is_alive())  # iş parçacığı gönderim yaparken iptal edilmez (sonraki turda yeniden bakılır)
+    for rid in ([] if busy else (S.get("xfer_cancel") or [])):
         job = next((j for j in X["jobs"] if j["id"] == str(rid) and j["stage"] == "new"), None)
         if not job:
             continue

@@ -508,7 +508,12 @@ def quiesce(timeout=20):
     if not _LOCK.acquire(timeout=timeout):  # işçi meşgul: yarım kayıt yazılmaz, son tur kaydı geçerli
         return None
     _W["held"] = True  # bırakılmaz: süreç birazdan yeniden başlıyor (başlamazsa resume())
-    return json.loads(json.dumps(_W["R"]))
+    R = _W["R"]
+    while _ADJ:  # bekleyen taban düzeltmeleri kayda geçsin (yeniden başlayınca zarar/kâr sanılmasın)
+        a = _ADJ.pop(0)
+        if R.get("start"):
+            R["start"] = round(max(0.0, R["start"] + a), 2)
+    return json.loads(json.dumps(R))
 
 
 def resume():

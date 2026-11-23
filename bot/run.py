@@ -232,7 +232,9 @@ def clear_old(state, S):
         del L["log"][:-5]  # aynı liste (portföy de bu listeye yazıyor)
     L["notifs"] = []
     X = state.get("xfer") or {}
-    X["jobs"] = [j for j in X.get("jobs", []) if j.get("stage") not in ("done", "failed")]
+    nowm = time.time() * 1000  # bankaya çekilecek TL'yi koruyan son 48 saatin g2tr işleri silinmez
+    X["jobs"] = [j for j in X.get("jobs", []) if j.get("stage") not in ("done", "failed")
+                 or (j.get("dir") == "g2tr" and nowm - (j.get("sent_ts") or j.get("ts") or 0) < 48 * 3600_000)]
     X["log"] = []
     for k in ("meme", "lev", "levr", "memer"):
         d = state.get(k) or {}
