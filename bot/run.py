@@ -133,12 +133,18 @@ def liquidate(p, S):
     L = p.s
     req = int(S.get("liquidate") or 0)
     if req and req > L.get("liquidated_at", 0):
-        L["liquidated_at"] = req
-        ts = int(time.time() * 1000)
+        now = int(time.time() * 1000)
+        if now - L.get("liq_try", 0) < 20_000:
+            return
+        L["liq_try"] = now
         for inst in list(L["positions"]):
-            p._sell_lots(ts, inst, L["last_prices"].get(inst, 0), list(L["positions"][inst]["lots"]),
+            p._sell_lots(now, inst, L["last_prices"].get(inst, 0), list(L["positions"][inst]["lots"]),
                          "Elle: hepsini sat")
-        note(L, "Uygulamadan istenen 'hepsini sat' tamamlandı")
+        # hepsi satılana kadar (en çok 10 dk) 20 sn'de bir yeniden denenir; bir hata isteği kaybettirmez
+        if not L["positions"] or now - req > 600_000:
+            L["liquidated_at"] = req
+            note(L, "Uygulamadan istenen 'hepsini sat' tamamlandı" if not L["positions"]
+                 else "'Hepsini sat' 10 dakikada tamamlanamadı; kalan coinler için yeniden iste")
 
 
 def convert_request(p, S, N):
@@ -461,10 +467,15 @@ def main():
     state["updated"] = int(time.time() * 1000)
     state["universe"] = sorted(series)
     save_state(state)
-    report.build(state, S)
+    try:
+        report.build(state, S)
+    except Exception as e:  # özet yazılamasa da işlemler kayıtlı kalır, bildirimler gider
+        print("Özet yazılamadı:", e)
     N.flush()
     if events:
-        print(f"{len(events)} yeni mum işlendi, {len(series)} coin takipte.")
+        if _CACHE.get("logbar") != _bar_no():  # her 5 sn'de değil, sadece yeni 15 dk'lık mumda yazılsın
+            _CACHE["logbar"] = _bar_no()
+            print(f"Yeni mum: {len(series)} coin takipte.")
     return signature(state, S)
 
 

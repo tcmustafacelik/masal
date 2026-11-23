@@ -202,6 +202,7 @@ def main():
             errors += 1
             traceback.print_exc()
             if errors >= 5:
+                push_data(wait=True)  # bitmeden önce son kayıt mutlaka gönderilsin
                 raise  # üst üste hata: oturum biter, bir dakika sonra yenisi başlar
         took = time.time() - t0
         run.PERF["turn"] = round(took, 2)

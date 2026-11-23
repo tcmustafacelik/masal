@@ -24,6 +24,9 @@ def quote_of(inst):
     return inst.split("-")[1]
 
 
+_INST = {}
+
+
 class OkxPrivate:
     def __init__(self):
         self.key = os.environ.get("OKX_API_KEY", "")
@@ -31,7 +34,7 @@ class OkxPrivate:
         self.passphrase = os.environ.get("OKX_API_PASSPHRASE", "")
         if not (self.key and self.secret and self.passphrase):
             raise RuntimeError("API anahtarları tanımlı değil (GitHub Secrets).")
-        self._inst = {}
+        self._inst = _INST  # coin kuralları (adım, asgari miktar) oturum boyunca bir kez alınır
 
     def _req(self, method, path, body=None):
         now = datetime.now(timezone.utc)
@@ -99,9 +102,13 @@ class OkxPrivate:
                 "tgtCcy": "quote_ccy" if quote else "base_ccy"}
         oid = self._req("POST", "/api/v5/trade/order", body)[0]["ordId"]
         o = {}
-        for _ in range(10):  # piyasa emri genelde anında dolar; en fazla ~6 sn bekle
+        for _ in range(20):  # piyasa emri genelde anında dolar; ağ hatasında da emri kaybetmeden ~12 sn sorulur
             time.sleep(0.6)
-            o = self._req("GET", f"/api/v5/trade/order?instId={inst}&ordId={oid}")[0]
+            try:
+                o = self._req("GET", f"/api/v5/trade/order?instId={inst}&ordId={oid}")[0]
+            except Exception as e:
+                print("Emir durumu okunamadı, yeniden soruluyor:", inst, e)
+                continue
             if o["state"] in ("filled", "canceled", "mmp_canceled"):
                 break
         return o
@@ -356,8 +363,9 @@ class LivePortfolio(Portfolio):
         except Exception as e:
             lot["algo"] = None
             self._note(ts, f"HATA borsa koruması {inst}: {tr_err(e)}")
-            self._emit("alerts", "Borsa koruması kurulamadı", f"{inst}: {tr_err(e)}. Bot saatlik kontrolle korumaya devam eder.",
-                       4, ["warning"])
+            if self._once_per_day("err_protect"):  # her 5 sn'de bildirim yağmasın
+                self._emit("alerts", "Borsa koruması kurulamadı", f"{inst}: {tr_err(e)}. Bot her kontrolde yeniden dener.",
+                           4, ["warning"])
 
     def check_holdings(self, every=60):
         """Kayıttaki coin miktarını OKX'teki gerçek miktarla karşılaştırır (dakikada bir).
@@ -444,6 +452,8 @@ class LivePortfolio(Portfolio):
                 if st in ("effective", "partially_effective"):
                     oid = a.get("ordId") or (a.get("ordIdList") or [""])[0]
                     o = self.api.order(inst, oid) if oid else {}
+                    if oid and o.get("state") in ("live", "partially_filled"):
+                        continue  # tetiklenen emir henüz dolmadı: dolunca işlenir (yarım sonuç yazılmaz)
                     filled = float(o.get("accFillSz") or a.get("actualSz") or 0)
                     avg_q = float(o.get("avgPx") or a.get("actualPx") or 0)
                     fee = float(o.get("fee") or 0)
@@ -498,7 +508,12 @@ class LivePortfolio(Portfolio):
             lot_sz, min_sz, _ = self.api.instrument(inst)
             sz = floor_to(min(want, have), lot_sz)
             if sz < min_sz:
-                self._note(ts, f"{inst} satılamadı: miktar asgari sınırın altında")
+                if floor_to(want, lot_sz) >= min_sz:
+                    # coin kayıtta var ama borsada serbest değil (koruma emri yeni tetiklenmiş ya da iptali bitmemiş):
+                    # kayıt silinmez; borsadaki sonuç bir sonraki kontrolde işlenir ya da satış yeniden denenir
+                    self._note(ts, f"{inst.split('-')[0]}: borsada serbest bakiye yok, tekrar denenecek")
+                    return  # iptal edilen koruma, kontrolde "iptal" görülünce yeniden kurulur
+                self._note(ts, f"{inst} satılamadı: miktar asgari sınırın altında (küsurat)")
                 pos["lots"] = [l for l in pos["lots"] if l not in lots]
                 if not pos["lots"]:
                     del self.s["positions"][inst]
@@ -519,7 +534,15 @@ class LivePortfolio(Portfolio):
                                      "amount": round(proceeds, 2), "pnl": round(pnl, 2),
                                      "pnl_pct": round(pnl / cost * 100, 2) if cost else 0,
                                      "reason": reason, "real": True})
-            pos["lots"] = [l for l in pos["lots"] if l not in lots]
+            share = filled / want if want else 1
+            if share < 0.995:
+                # kısmi dolum: satılmayan kısım kayıtta kalır (oranla küçültülür) ve yeniden korunur
+                for l in lots:
+                    l["qty"] *= (1 - share)
+                    l["cost"] *= (1 - share)
+                    l["algo"] = None
+            else:
+                pos["lots"] = [l for l in pos["lots"] if l not in lots]
             if not pos["lots"]:
                 del self.s["positions"][inst]
             sign = "+" if pnl >= 0 else "−"

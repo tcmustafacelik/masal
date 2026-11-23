@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.39.0';
+const APP_VERSION = '1.40.0';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -432,6 +432,8 @@ function gloss(k) {
       <li><span class="chip g">Alım şartında</span> fiyat alım seviyesinde; ${c?.instant ? 'bot birkaç saniye içinde alır' : '15 dakikalık mum bu seviyede kapanırsa bot alır'}.</li>
       <li><span class="chip a">Düşüş filtresi</span> coin hızlı düşüyor; düşüş yavaşlayana kadar alım bekletiliyor.</li>
       <li><span class="chip a">Şartta · bütçe dolu</span> fiyat uygun ama coinlere ayrılan para dolu; bir kademe satılınca alır.</li>
+      <li><span class="chip a">Şartta · coin sınırı dolu</span> fiyat uygun ama aynı anda tutulabilecek coin sayısı dolu; elindeki bir coin satılınca alır.</li>
+      <li><b>Alım</b> fiyatı bir eşiktir: fiyat bunun altına inince bot <b>o anki (daha düşük) fiyattan</b> alır.</li>
       <li><i class="kd">1 kademe</i> coin zaten elde; mavi yüzde kadar daha düşerse bir sonraki kademe alınır (<b>2. alım</b> fiyatı).</li></ul>
       <p>Şartta görünüp alınmıyorsa: ${c?.instant ? '' : 'mum henüz kapanmamıştır, ya da '}bütçe sınırı / coin sayısı dolmuştur.</p>`],
         pozisyon: ['Elimdeki coinler', `<ul><li><b>Alış → şimdi:</b> ortalama alış fiyatın ve şu anki fiyat.</li>
@@ -649,14 +651,17 @@ function renderNow(x) {
     if (w && w.items.length) {
         const items = w.items.map(it => { const cur = livePrice(it.i, it.p); return { ...it, cur, gap: (cur / it.t - 1) * 100 }; }).sort((a, b) => (a.f ? 1 : 0) - (b.f ? 1 : 0) || a.gap - b.gap);
         const show = nowAll ? items : items.slice(0, 5);
-        const full = !w.room || w.coins >= w.max_coins || !!x.paused || !!x.halted || !!x.blocked_today; // alım şartı var ama alım yapılamıyor
+        // alım şartı var ama alım yapılamıyorsa gerçek sebep yazılır (elde olan coine kademe eklemeyi coin sınırı engellemez)
+        const why = (it) => x.halted ? 'acil fren' : x.paused ? 'beklemede' : x.blocked_today ? 'bugünlük durdu' : !w.room ? 'bütçe dolu' : (!it.h && w.coins >= w.max_coins) ? 'coin sınırı dolu' : '';
         h += `<div class="wh">${ic('i-list')}Alıma en yakın coinler<button class="qm" data-q="yakin" aria-label="Açıklama">?</button></div><div class="list">`;
         h += show.map(it => {
             let chip;
             if (it.f)
                 chip = `<span class="chip a">${ic('i-pause')}Düşüş filtresi</span>`;
-            else if (it.gap <= 0)
-                chip = full ? `<span class="chip a">${ic('i-layers')}Şartta · bütçe dolu</span>` : `<span class="chip g">${ic('i-check')}Alım şartında</span>`;
+            else if (it.gap <= 0) {
+                const r = why(it);
+                chip = r ? `<span class="chip a">${ic('i-layers')}Şartta · ${r}</span>` : `<span class="chip g">${ic('i-check')}Alım şartında</span>`;
+            }
             else
                 chip = `<span class="chip ${it.h ? 'b' : 'm'}">%${nf(it.gap, it.gap < 10 ? 1 : 0)} düşerse</span>`;
             const near = it.f || it.gap <= 0 ? '' : `<div class="near"><i style="width:${Math.max(4, Math.min(100, 100 - it.gap * 20)).toFixed(0)}%"></i></div>`;
@@ -781,6 +786,9 @@ function renderPositions(x) {
     if (swDrag)
         return;
     const pos = x.positions, ps = document.getElementById('posSum'), canSell = sel === 'live' && !!x.armed;
+    for (const k in SELLING)
+        if (!pos.some(p => p.inst === k))
+            delete SELLING[k]; // satıldı: "Satılıyor" kalksın
     {
         const T = pos.reduce((a, p) => a + p.qty * sellPrice(p.inst, p.price) - p.cost, 0);
         ps.className = 'hsum ' + cls(T);
@@ -806,7 +814,7 @@ function renderPositions(x) {
     const box = document.getElementById('positions');
     let sx = 0, sy = 0, el = null, dx = 0, lock = '';
     const start = (x, y, t) => { const w = t.closest('.swr'); if (!w)
-        return; el = w; sx = x; sy = y; dx = 0; lock = ''; };
+        return; el = w; sx = x; sy = y; dx = 0; lock = ''; swDrag = true; w.classList.add('drag'); };
     const move = (x, y, ev) => {
         if (!el)
             return;
@@ -822,10 +830,13 @@ function renderPositions(x) {
         el.querySelector('.swc').style.transform = `translateX(${dx}px)`;
     };
     const end = () => {
-        if (!el)
+        if (!el) {
+            swDrag = false;
             return;
+        }
         const c = el.querySelector('.swc');
         c.style.transform = '';
+        el.classList.remove('drag');
         if (lock === 'x') {
             swOpen = dx < -44 ? el.dataset.i : '';
             box.querySelectorAll('.swr').forEach(w => w.classList.toggle('open', w.dataset.i === swOpen));
@@ -844,7 +855,7 @@ function renderPositions(x) {
         start(e.clientX, e.clientY, e.target); });
     box.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' && e.buttons)
         move(e.clientX, e.clientY, e); });
-    box.addEventListener('pointerup', e => { if (e.pointerType === 'mouse')
+    window.addEventListener('pointerup', e => { if (e.pointerType === 'mouse')
         end(); });
     box.addEventListener('click', e => {
         const b = e.target.closest('.swb');
@@ -861,14 +872,14 @@ function renderPositions(x) {
     });
 }
 // Tek coini sat: ayarlar.json'a satış isteği yazılır, bot ~5 sn içinde piyasa fiyatından satar
-async function sellCoin(inst) {
-    if (SELLING[inst])
+async function sellCoin(inst, retry = true) {
+    if (SELLING[inst] && retry)
         return;
     if (!token) {
         toast('Satmak için önce Ayarlar\'dan GitHub bağlantısını kur');
         return;
     }
-    SELLING[inst] = true;
+    SELLING[inst] = Date.now();
     swOpen = '';
     if (S)
         render();
@@ -876,9 +887,13 @@ async function sellCoin(inst) {
         const cur = await tfetch(API + '?t=' + Date.now(), { headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' }, cache: 'no-store' }).then(r => { if (!r.ok)
             throw r.status; return r.json(); });
         const data = JSON.parse(decodeURIComponent(escape(atob(cur.content.replace(/\n/g, '')))));
-        data.sell = { ts: Date.now(), insts: [inst] };
+        // Az önce başka bir coin için istek verildiyse o da listede kalsın (arka arkaya iki satış birbirini silmesin)
+        const p = data.sell, keep = p && Date.now() - (p.ts || 0) < 90000 ? (p.insts || []) : [];
+        data.sell = { ts: Date.now(), insts: [...new Set([...keep, inst])] };
         const body = { message: 'Uygulamadan satış: ' + inst, content: btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2) + '\n'))), sha: cur.sha, branch: 'main' };
         const r = await tfetch(API, { method: 'PUT', headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        if (r.status === 409 && retry)
+            return sellCoin(inst, false); // aynı anda başka kayıt: güncel hâlle bir kez daha
         if (!r.ok)
             throw r.status;
         sha = (await r.json()).content.sha;
@@ -889,10 +904,18 @@ async function sellCoin(inst) {
         toast(`${sym(inst)} satış isteği gönderildi; bot birkaç saniye içinde satar.`);
     }
     catch (e) {
+        delete SELLING[inst];
+        if (S)
+            render();
         toast('Satış isteği gönderilemedi (' + e + '), tekrar dene');
+        return;
     }
-    setTimeout(() => { delete SELLING[inst]; if (S)
-        render(); }, 60000);
+    // coin listeden düşünce "Satılıyor" kendiliğinden kalkar (renderPositions); 2 dakikada satılmazsa düğme geri gelir
+    setTimeout(() => { if (SELLING[inst]) {
+        delete SELLING[inst];
+        if (S)
+            render();
+    } }, 120000);
 }
 function renderRules(R, c) {
     const rows = c ? [
@@ -1719,6 +1742,19 @@ async function save(obj, msg, keepDraft, retry = true) {
     try {
         const cur = await tfetch(API + '?t=' + Date.now(), { headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' }, cache: 'no-store' }).then(r => { if (!r.ok)
             throw r.status; return r.json(); });
+        // Başka cihazdan/ekrandan gelmiş bekleyen istekler (satış, çevirme, hepsini sat, bildirim temizleme) bu kayıtla silinmesin
+        try {
+            const fr = JSON.parse(decodeURIComponent(escape(atob(cur.content.replace(/\n/g, '')))));
+            const d = data;
+            for (const k of ['sell', 'convert'])
+                if ((fr[k]?.ts || 0) > (d[k]?.ts || 0))
+                    d[k] = fr[k];
+            if ((+fr.liquidate || 0) > (+d.liquidate || 0))
+                d.liquidate = fr.liquidate;
+            if (fr.notify && d.notify && (fr.notify.cleared || 0) > (d.notify.cleared || 0))
+                d.notify.cleared = fr.notify.cleared;
+        }
+        catch (e) { }
         const body = { message: 'Ayarlar uygulamadan güncellendi', content: btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2) + '\n'))), sha: cur.sha, branch: 'main' };
         const r = await tfetch(API, { method: 'PUT', headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
         if (r.status === 409 && retry) {

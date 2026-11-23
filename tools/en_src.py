@@ -384,6 +384,12 @@ EN = {
     "Varlık özeti": "Asset summary", "bütün paran": "all your money", "Yatırdığın": "Invested", "Şu an hepsi": "Total now", "Fark": "Difference",
     "Botta nakit": "Cash in bot", "Kasada yedek": "Reserve", "Kasa dahil hedef": "Target incl. treasury",
     "Hedefe {0} {1} kaldı · {2}": "{0} {1} to target · {2}",
+    "Şartta · coin sınırı dolu": "Condition met · coin limit full", "Şartta · acil fren": "Condition met · emergency brake",
+    "Şartta · beklemede": "Condition met · paused", "Şartta · bugünlük durdu": "Condition met · stopped for today",
+    "Şartta · bütçe dolu": "Condition met · budget full", "Satılıyor…": "Selling…",
+    "fiyat uygun ama aynı anda tutulabilecek coin sayısı dolu; elindeki bir coin satılınca alır.": "the price is right but the coin limit is full; buys once a coin is sold.",
+    "fiyatı bir eşiktir: fiyat bunun altına inince bot": "price is a threshold: once the price drops below it, the bot buys at", "o anki (daha düşük) fiyattan": "the current (lower) price",
+    "alır.": ".", "Alım": "Buy",
 }
 
 

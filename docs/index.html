@@ -458,7 +458,8 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 .swr.open .swc{transform:translateX(-88px)}
 .swb{position:absolute;right:0;top:0;bottom:0;width:88px;border:0;background:var(--red);color:#fff;font:700 13px/1.2 inherit;font-family:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;cursor:pointer}
 .swb svg{width:18px;height:18px}
-.swr.busy .swb{background:var(--amber)}.swr.busy .swc{opacity:.75}
+.swr.drag .swc{transition:none}
+.swr.busy .swb{visibility:hidden}.swr.busy .swc>*{opacity:.6}.swr.busy .swc .end::after{content:'Satılıyor…';display:block;font-size:11px;font-weight:600;color:var(--amber);margin-top:2px}
 /* ---- alıma yakın coinler: sade satır ---- */
 .wrow .mid b{display:flex;align-items:center;gap:0}
 .kd{font-style:normal;font-size:10.5px;font-weight:600;color:var(--blue);background:var(--blue-bg);padding:2px 5px;border-radius:4px;margin-left:5px;white-space:nowrap}
@@ -637,6 +638,6 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 <div class="toast" id="toast" hidden></div>
 <div class="qsh" id="qsh" hidden><div class="qb"><div class="gr"></div><h3><span><svg class="i" id="qIco"><use href="#i-info"/></svg></span><b id="qTitle"></b></h3><div class="qt" id="qText"></div><button class="btn primary" id="qOk">Anladım</button></div></div>
 
-<script src="app.js?v=1.39.0"></script>
+<script src="app.js?v=1.40.0"></script>
 </body>
 </html>
