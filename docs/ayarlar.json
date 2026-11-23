@@ -173,7 +173,7 @@
     "bank": 100,
     "size_pct": 20,
     "max_pos": 3,
-    "min_liq": 20000,
+    "min_liq": 10000,
     "max_fdv": 15000000,
     "min_age_min": 10,
     "max_age_h": 168,
