@@ -775,11 +775,17 @@ h2{margin:0 2px 7px}
 .lr b,.lr small{text-align:center}
 #ladder .hint{text-align:left}
 
-/* 1.69.3: birim sayının altında, küçük ve ortalı (+ düğmesine değmez) */
-.step .sv{display:flex;flex-direction:column;align-items:center;justify-content:center;width:54px;align-self:stretch;cursor:text}
-.step .sv input,#setv .step .sv input{width:100%!important;height:auto!important;padding:0!important;text-align:center!important;line-height:1.15}
-.step .sv .u{width:auto!important;padding:0!important;text-align:center!important;font-size:9.5px!important;line-height:1;margin-top:1px;color:var(--faint)}
-.step .sv:has(.u) input{margin-top:1px}
+/* 1.69.4: sayı kutusu — bütün sistemde tek, orantılı tasarım: [−] [sayı/birim] [+] */
+.step,#setv .step{display:flex;align-items:center;gap:4px;border:0!important;background:transparent!important;border-radius:0;overflow:visible;flex:none;height:auto}
+.step button,#setv .step button{width:30px!important;height:30px!important;border-radius:8px;border:1px solid var(--line)!important;background:var(--surface)!important;color:var(--muted);display:grid;place-items:center;padding:0;-webkit-tap-highlight-color:transparent;transition:background .15s,color .15s}
+.step button:active{background:var(--acc-bg)!important;color:var(--acc-ink,var(--text))}
+.step button svg.i{width:13px!important;height:13px!important}
+.step .sv{display:flex;flex-direction:column;align-items:center;justify-content:center;width:56px!important;height:36px;border:1px solid var(--line);border-radius:9px;background:var(--surface);cursor:text;align-self:auto}
+.step .sv input,#setv .step .sv input{width:100%!important;height:auto!important;padding:0!important;margin:0!important;border:0;background:transparent;text-align:center!important;font-size:14px!important;font-weight:650;line-height:1.15}
+.step .sv .u{width:auto!important;padding:0!important;text-align:center!important;font-size:9px!important;line-height:1;margin-top:1px;color:var(--faint);letter-spacing:.2px}
+.step.changed{box-shadow:none!important}.step.changed .sv{border-color:var(--acc);background:var(--acc-bg)}
+.ldh{flex-wrap:wrap}.ldh b,.ldh{white-space:nowrap}
+.field .lb{min-width:0;overflow:visible}.field .lb span{overflow-wrap:anywhere}
 </style>
 </head>
 <body>
@@ -977,6 +983,6 @@ h2{margin:0 2px 7px}
 <div class="toast" id="toast" hidden></div>
 <div class="qsh" id="qsh" hidden><div class="qb"><div class="gr"></div><h3><span><svg class="i" id="qIco"><use href="#i-info"/></svg></span><b id="qTitle"></b></h3><div class="qt" id="qText"></div><button class="btn primary" id="qOk">Anladım</button></div></div>
 
-<script src="app.js?v=1.69.3"></script>
+<script src="app.js?v=1.69.4"></script>
 </body>
 </html>
