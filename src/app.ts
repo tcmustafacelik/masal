@@ -1,4 +1,4 @@
-const APP_VERSION='1.65.0';
+const APP_VERSION='1.66.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -149,7 +149,7 @@ async function load_(quiet?: boolean) {lastLoad=Date.now();offlineData=false;cle
     syncMark(!offlineData);
     // dil ve tema buluttan: başka cihazda değiştirildiyse bu cihaz da uyar (az önce burada değiştirildiyse bekler)
     {const st=S.settings as any,recent=Date.now()-+(localStore('masal_pref_ts')||0)<180000;
-     if(st&&!recent){if(st.theme&&st.theme!==themeMode())setTheme(st.theme);if(st.lang&&st.lang!==LANG){localStore('masal_pref_ts',String(Date.now()));setLang(st.lang);return}}}
+     if(st&&!recent){if(st.theme&&st.theme!==themeMode())setTheme(st.theme);if((st as any).accent&&(st as any).accent!==(localStore('masal-renk')||'amber'))setAccent((st as any).accent);if(st.lang&&st.lang!==LANG){localStore('masal_pref_ts',String(Date.now()));setLang(st.lang);return}}}
     nMerge();
     if(offlineData){err.innerHTML=`Bağlantı kurulamadı; <b>${dt(S.updated)}</b> tarihli son veri gösteriliyor. Kendiliğinden yeniden deneniyor…`;err.style.display='block';retryTimer=setTimeout(()=>load(true),15000)}if(S.strategies.live)sel='live';if(!S.strategies[sel])sel = Object.keys(S.strategies)[0] as StrategyKey;render();pollMarket();startNotes();
   }catch(e){syncMark(false);console.error(e);err.textContent='Veriler alınamadı (bağlantı ya da VPN). Kendiliğinden yeniden deneniyor…';err.style.display='block';retryTimer=setTimeout(()=>load(true),10000)}
@@ -1505,7 +1505,7 @@ async function save(obj?: Settings, msg?: string, keepDraft?: boolean, retry = t
       for(const k of ['sell','convert'])if((fr[k]?.ts||0)>(d[k]?.ts||0))d[k]=fr[k];
       if((+fr.liquidate||0)>(+d.liquidate||0))d.liquidate=fr.liquidate;
       if(fr.notify&&d.notify&&(fr.notify.cleared||0)>(d.notify.cleared||0))d.notify.cleared=fr.notify.cleared;
-      for(const k of ['xfer_req','xfer_cancel','dust','desk_cmd'])(d as any)[k]=fr[k]||[];if((+fr.clear||0)>(+(d as any).clear||0))(d as any).clear=fr.clear;for(const k of ['lang','theme'])if(fr[k])(d as any)[k]=fr[k]}catch(e){}
+      for(const k of ['xfer_req','xfer_cancel','dust','desk_cmd'])(d as any)[k]=fr[k]||[];if((+fr.clear||0)>(+(d as any).clear||0))(d as any).clear=fr.clear;for(const k of ['lang','theme','accent'])if(fr[k])(d as any)[k]=fr[k]}catch(e){}
     const body={message:'Ayarlar uygulamadan güncellendi',content:btoa(unescape(encodeURIComponent(JSON.stringify(data,null,2)+'\n'))),sha:cur.sha,branch:'main'};
     const r=await tfetch(API,{method:'PUT',headers:{Authorization:'Bearer '+token,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify(body)});
     if(r.status===409&&retry){btn.innerHTML=ic('i-check')+'Kaydet';return save(obj||data,msg,keepDraft,false)} // çakışma: güncel sürümle bir kez daha
@@ -1607,6 +1607,9 @@ function themeMode(){try{return localStorage.getItem('masal-tema')||'auto'}catch
 const darkMQ=matchMedia('(prefers-color-scheme: dark)');
 function applyTheme(){const m=themeMode(),d=m==='dark'||(m==='auto'&&darkMQ.matches);document.documentElement.dataset.theme=d?'dark':'light';
   document.querySelector<HTMLMetaElement>('meta[name=theme-color]').content=d?'#0F131A':'#F4F5F7'}
+const ACCENTS: [string,string,string][]=[['amber','Kehribar','#D9861A'],['ocean','Okyanus','#2F6FDB'],['emerald','Zümrüt','#178A5B'],['violet','Ametist','#7A52C7'],['graphite','Grafit','#334155']];
+function setAccent(a: string){localStore('masal-renk',a);if(a==='amber')delete document.documentElement.dataset.accent;else document.documentElement.dataset.accent=a}
+{const a=localStore('masal-renk');if(a&&a!=='amber')document.documentElement.dataset.accent=a}
 function setTheme(m){try{localStorage.setItem('masal-tema',m)}catch(e){}applyTheme()}
 darkMQ.addEventListener?.('change',applyTheme);applyTheme();
 function installSection(){
@@ -1616,6 +1619,8 @@ function installSection(){
   else if(installEvt)h+=`<div style="font-size:13px;margin-bottom:10px">Masal'ı ana ekrana ekle; kendi simgesiyle uygulama gibi açılır, internet yokken de son verileri gösterir.</div><button class="btn primary" id="instBtn" style="width:100%">${ic('i-phone')}Ana ekrana ekle</button>`;
   else h+=`<ol class="steps" style="margin-top:0"><li><b>Android (Chrome):</b> sağ üstteki ⋮ → <b>Ana ekrana ekle</b></li><li><b>iPhone (Safari):</b> Paylaş → <b>Ana Ekrana Ekle</b></li><li><b>Bilgisayar (Chrome/Edge):</b> adres çubuğundaki <b>Yükle</b> simgesi</li></ol>`;
   const tm=themeMode();
+  {const cur=localStore('masal-renk')||'amber';
+   h+=`<div class="prf" style="display:block"><b>Renk</b><div class="accs" id="accTiles" style="margin-top:6px">${ACCENTS.map(([k,n,c])=>`<button type="button" class="${cur===k?'on':''}" data-accent="${k}"><i style="background:${c}"></i>${n}</button>`).join('')}</div></div>`;}
   h+=`<div class="prf"><b>Tema</b><div class="seg mini" id="themeTiles">${[['light','i-sun','Açık'],['dark','i-moon','Koyu'],['auto','i-auto','Otomatik']].map(([k,i,n])=>`<button type="button" class="${tm===k?'on':''}" data-th="${k}">${ic(i)}${n}</button>`).join('')}</div></div>`;
   h+=`<div class="prf"><b>Dil</b><div class="seg mini" id="langTiles">${[['tr','Türkçe'],['en','English']].map(([k,n])=>`<button type="button" class="${LANG===k?'on':''}" data-lg="${k}">${n}</button>`).join('')}</div></div>`;
   const newer=remoteVer&&vcmp(remoteVer.version,APP_VERSION)>0;
@@ -1626,7 +1631,7 @@ function installSection(){
 function bindInstall(){document.querySelectorAll<HTMLElement>('#langTiles button').forEach(t=>t.onclick=async()=>{const l=t.dataset.lg as 'tr'|'en';if(l===LANG)return;
     // dil bulutta tutulur: bütün cihazlar ve bildirimler aynı dilde
     localStore('masal_pref_ts',String(Date.now()));await cloudPatch(o=>{o.lang=l},'Dil değişti');
-    setLang(l)});document.querySelectorAll<HTMLElement>('#themeTiles button').forEach(t=>t.onclick=()=>{setTheme(t.dataset.th);localStore('masal_pref_ts',String(Date.now()));cloudPatch(o=>{(o as any).theme=t.dataset.th},'Tema değişti');document.querySelectorAll<HTMLElement>('#themeTiles button').forEach(x=>x.classList.toggle('on',x===t))});const v=document.getElementById('verBtn');if(v)v.onclick=()=>{if(remoteVer&&vcmp(remoteVer.version,APP_VERSION)>0)applyUpdate();else checkVersion(true)};const b=document.getElementById('instBtn');if(b)b.onclick=async()=>{installEvt.prompt();await installEvt.userChoice;installEvt=null;renderForm()}}
+    setLang(l)});document.querySelectorAll<HTMLElement>('#accTiles button').forEach(t=>t.onclick=()=>{setAccent(t.dataset.accent);cloudPatch(o=>{(o as any).accent=t.dataset.accent},'Renk değişti');document.querySelectorAll<HTMLElement>('#accTiles button').forEach(x=>x.classList.toggle('on',x===t))});document.querySelectorAll<HTMLElement>('#themeTiles button').forEach(t=>t.onclick=()=>{setTheme(t.dataset.th);localStore('masal_pref_ts',String(Date.now()));cloudPatch(o=>{(o as any).theme=t.dataset.th},'Tema değişti');document.querySelectorAll<HTMLElement>('#themeTiles button').forEach(x=>x.classList.toggle('on',x===t))});const v=document.getElementById('verBtn');if(v)v.onclick=()=>{if(remoteVer&&vcmp(remoteVer.version,APP_VERSION)>0)applyUpdate();else checkVersion(true)};const b=document.getElementById('instBtn');if(b)b.onclick=async()=>{installEvt.prompt();await installEvt.userChoice;installEvt=null;renderForm()}}
 
 /* ---------- sürüm ---------- */
 let remoteVer=null;

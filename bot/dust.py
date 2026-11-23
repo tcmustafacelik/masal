@@ -73,6 +73,19 @@ def scan(C):
     return res
 
 
+def _tr_err(e):
+    """Borsa hatasını kısa Türkçe sebebe çevirir."""
+    t = str(e)
+    for code, msg in (("52917", "borsanın en az çevirme tutarının altında"),
+                      ("59121", "OKX bu coinler için kolay çevirmeyi şu an kabul etmedi (borsa sebep belirtmedi; birkaç saat sonra tekrar dene)"),
+                      ("51008", "bakiye yetersiz"), ("51001", "bu coin için çevirme yok"), ("52914", "bu çift çevrilemiyor"),
+                      ("52912", "fiyat teklifi alınamadı"), ("50011", "çok sık istek; biraz sonra tekrar dene"),
+                      ("58350", "bakiye yetersiz"), ("bakiye yok", "bakiye yok (zaten çevrilmiş olabilir)")):
+        if code in t:
+            return msg
+    return "borsa reddetti" + (f" (kod {t.split(':')[0]})" if ":" in t else "")
+
+
 def _convert(ex, ccy, quotes):
     # para fon hesabındaysa işlem hesabına alınır (Convert işlem hesabından yapılır)
     try:
@@ -125,7 +138,7 @@ def _run(req, X):
                         ok += [f"{c}→{to}" for c in part]
                     except Exception as e:
                         for c in part:
-                            bad.append(f"{c} ({str(e)[:60]})")
+                            bad.append(f"{c} ({_tr_err(e)})")
                     time.sleep(0.3)
                 todo = [c for c in todo if c not in easy]
             except Exception as e:
@@ -138,12 +151,12 @@ def _run(req, X):
                     ok.append(f"{c}→{to2}")
                     time.sleep(0.25)  # borsa istek sınırına takılmasın
                 except Exception as e:
-                    bad.append(f"{c} ({str(e)[:50]})")
+                    bad.append(f"{c} ({_tr_err(e)})")
             why = {}
             for b in bad:
                 why.setdefault(b.split(" (", 1)[-1].rstrip(")"), []).append(b.split(" (")[0])
             msg = (f"{len(ok)} coin çevrildi ({', '.join(ok[:8])}{'…' if len(ok) > 8 else ''})" if ok else "çevrilen yok") + \
-                  "".join(f" · {len(v)} coin olmadı: {k_[:70]}" for k_, v in list(why.items())[:2])
+                  "".join(f" · {len(v)} coin olmadı ({', '.join(v[:4])}{'…' if len(v) > 4 else ''}): {k_}" for k_, v in list(why.items())[:3])
             note(X, f"{name}: " + msg)
             _OUT.append(["push", f"{name} · küçük bakiyeler", msg])
         elif k == "m":

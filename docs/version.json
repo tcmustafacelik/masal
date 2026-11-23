@@ -1,10 +1,21 @@
 {
-  "version": "1.65.0",
+  "version": "1.66.0",
   "date": "2026-11-23",
   "notes": [
-    "Memecoin kâr süpürme: MEME cüzdanı başlangıç tutarının üstüne çıkınca kârın %50'si haftada bir MEME → Global → KASA yolunu otomatik izler (açık token varken yapılmaz); oran ve aralık Ayarlar → Kasalar'da futures ile ortak"
+    "5 renk seçeneği: Kehribar, Okyanus, Zümrüt, Ametist, Grafit (Ayarlar → Uygulama → Renk); seçili öğeler, sekmeler ve anahtarlar seçtiğin renkte",
+    "Ayar sekmeleri artık kaymıyor; üstte kesik ya da arkada kutu görünmüyor",
+    "Küçük bakiye sonuçları Türkçe ve hangi coinin neden çevrilmediği yazıyor"
   ],
   "history": [
+    {
+      "version": "1.66.0",
+      "date": "2026-11-23",
+      "notes": [
+        "5 renk seçeneği: Kehribar, Okyanus, Zümrüt, Ametist, Grafit (Ayarlar → Uygulama → Renk); seçili öğeler, sekmeler ve anahtarlar seçtiğin renkte",
+        "Ayar sekmeleri artık kaymıyor; üstte kesik ya da arkada kutu görünmüyor",
+        "Küçük bakiye sonuçları Türkçe ve hangi coinin neden çevrilmediği yazıyor"
+      ]
+    },
     {
       "version": "1.65.0",
       "date": "2026-11-23",
@@ -125,15 +136,6 @@
       "notes": [
         "Kasalar: OKX Global ↔ MEME aktarımı (Global'de SOL alınıp MEME'ye gider; MEME'den gelen SOL satılıp USDT olur)",
         "Yenilikler ekranı: her yeni sürümde neyin eklendiği uygulama açılınca gösterilir"
-      ]
-    },
-    {
-      "version": "1.54.0",
-      "date": "2026-11-23",
-      "notes": [
-        "Gerçek futures ve gerçek memecoin masaları açıldı",
-        "Kasalar'a MEME cüzdanı eklendi (4 kasa yan yana)",
-        "Deneme masaları ekrandan kalktı; arka planda karar vermeye devam ediyor"
       ]
     }
   ]

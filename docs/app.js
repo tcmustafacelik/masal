@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.65.0';
+const APP_VERSION = '1.66.0';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -320,6 +320,8 @@ async function load_(quiet) {
             if (st && !recent) {
                 if (st.theme && st.theme !== themeMode())
                     setTheme(st.theme);
+                if (st.accent && st.accent !== (localStore('masal-renk') || 'amber'))
+                    setAccent(st.accent);
                 if (st.lang && st.lang !== LANG) {
                     localStore('masal_pref_ts', String(Date.now()));
                     setLang(st.lang);
@@ -2668,7 +2670,7 @@ async function save(obj, msg, keepDraft, retry = true) {
                 d[k] = fr[k] || [];
             if ((+fr.clear || 0) > (+d.clear || 0))
                 d.clear = fr.clear;
-            for (const k of ['lang', 'theme'])
+            for (const k of ['lang', 'theme', 'accent'])
                 if (fr[k])
                     d[k] = fr[k];
         }
@@ -2867,6 +2869,16 @@ function applyTheme() {
     document.documentElement.dataset.theme = d ? 'dark' : 'light';
     document.querySelector('meta[name=theme-color]').content = d ? '#0F131A' : '#F4F5F7';
 }
+const ACCENTS = [['amber', 'Kehribar', '#D9861A'], ['ocean', 'Okyanus', '#2F6FDB'], ['emerald', 'Zümrüt', '#178A5B'], ['violet', 'Ametist', '#7A52C7'], ['graphite', 'Grafit', '#334155']];
+function setAccent(a) { localStore('masal-renk', a); if (a === 'amber')
+    delete document.documentElement.dataset.accent;
+else
+    document.documentElement.dataset.accent = a; }
+{
+    const a = localStore('masal-renk');
+    if (a && a !== 'amber')
+        document.documentElement.dataset.accent = a;
+}
 function setTheme(m) { try {
     localStorage.setItem('masal-tema', m);
 }
@@ -2883,6 +2895,10 @@ function installSection() {
     else
         h += `<ol class="steps" style="margin-top:0"><li><b>Android (Chrome):</b> sağ üstteki ⋮ → <b>Ana ekrana ekle</b></li><li><b>iPhone (Safari):</b> Paylaş → <b>Ana Ekrana Ekle</b></li><li><b>Bilgisayar (Chrome/Edge):</b> adres çubuğundaki <b>Yükle</b> simgesi</li></ol>`;
     const tm = themeMode();
+    {
+        const cur = localStore('masal-renk') || 'amber';
+        h += `<div class="prf" style="display:block"><b>Renk</b><div class="accs" id="accTiles" style="margin-top:6px">${ACCENTS.map(([k, n, c]) => `<button type="button" class="${cur === k ? 'on' : ''}" data-accent="${k}"><i style="background:${c}"></i>${n}</button>`).join('')}</div></div>`;
+    }
     h += `<div class="prf"><b>Tema</b><div class="seg mini" id="themeTiles">${[['light', 'i-sun', 'Açık'], ['dark', 'i-moon', 'Koyu'], ['auto', 'i-auto', 'Otomatik']].map(([k, i, n]) => `<button type="button" class="${tm === k ? 'on' : ''}" data-th="${k}">${ic(i)}${n}</button>`).join('')}</div></div>`;
     h += `<div class="prf"><b>Dil</b><div class="seg mini" id="langTiles">${[['tr', 'Türkçe'], ['en', 'English']].map(([k, n]) => `<button type="button" class="${LANG === k ? 'on' : ''}" data-lg="${k}">${n}</button>`).join('')}</div></div>`;
     const newer = remoteVer && vcmp(remoteVer.version, APP_VERSION) > 0;
@@ -2900,6 +2916,7 @@ function bindInstall() {
         await cloudPatch(o => { o.lang = l; }, 'Dil değişti');
         setLang(l);
     });
+    document.querySelectorAll('#accTiles button').forEach(t => t.onclick = () => { setAccent(t.dataset.accent); cloudPatch(o => { o.accent = t.dataset.accent; }, 'Renk değişti'); document.querySelectorAll('#accTiles button').forEach(x => x.classList.toggle('on', x === t)); });
     document.querySelectorAll('#themeTiles button').forEach(t => t.onclick = () => { setTheme(t.dataset.th); localStore('masal_pref_ts', String(Date.now())); cloudPatch(o => { o.theme = t.dataset.th; }, 'Tema değişti'); document.querySelectorAll('#themeTiles button').forEach(x => x.classList.toggle('on', x === t)); });
     const v = document.getElementById('verBtn');
     if (v)

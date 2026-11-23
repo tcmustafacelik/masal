@@ -14,6 +14,7 @@ DEFAULTS = {
     "live": False,          # True: gerçek emir gönderilir
     "lang": "",             # uygulama ve bildirim dili (bulutta; boşsa Türkçe ve cihaz seçimi geçerli)
     "theme": "",            # uygulama teması (bulutta; boşsa cihaz seçimi geçerli)
+    "accent": "",           # vurgu rengi (kehribar, okyanus, zümrüt, ametist, grafit)
     "paused": False,        # True: gerçek hesapta yeni alım yapılmaz (açık pozisyonlar korunur)
     "liquidate": 0,         # zaman damgası; yeniyse gerçek hesaptaki her şey satılır
     "sell": {"ts": 0, "insts": []},
