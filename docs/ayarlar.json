@@ -165,7 +165,7 @@
     "daily_max": 1000,
     "sweep_on": true,
     "sweep_pct": 50,
-    "sweep_days": 7,
+    "sweep_days": 1,
     "sweep_min": 15
   },
   "meme": {
