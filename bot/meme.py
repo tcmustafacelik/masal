@@ -34,6 +34,7 @@ DEFAULT = {
     "max_hold_h": 4,     # en uzun tutma süresi
     "slip_pct": 1.0,     # varsayılan kayma (her yön)
     "fee_pct": 0.5,      # DEX + işlem ücreti (her yön)
+    "max_m5": 8,         # son 5 dk'da bundan fazla yükselmişse girilmez (kovalanmaz)
 }
 EVERY = 10  # saniye
 
@@ -135,7 +136,7 @@ def _risk(m, p, rug, cfg, now_ms):
     return None
 
 
-def _signal(p):
+def _signal(p, max_m5=15):
     """Gözcü: hacim patlaması + alıcı baskısı + kovalamaya değmeyecek kadar yükselmemiş fiyat."""
     v = p.get("volume") or {}
     ch = p.get("priceChange") or {}
@@ -144,7 +145,7 @@ def _signal(p):
     v5, v1h = v.get("m5") or 0, v.get("h1") or 0
     spike = v5 / (v1h / 12) if v1h > 0 else 0
     m5, h1 = ch.get("m5") or 0, ch.get("h1") or 0
-    if spike >= 2 and b >= s * 1.2 and 0 < m5 <= 15 and h1 > 0:
+    if spike >= 2 and b >= s * 1.2 and 0 < m5 <= max_m5 and h1 > 0:
         return f"hacim {spike:.1f}x · alıcı {b}/{s} · 5 dk %{m5:+.1f} · 1 sa %{h1:+.1f}"
     return None
 
@@ -216,7 +217,7 @@ def step(state, S):
             continue
         sym = (p.get("baseToken") or {}).get("symbol") or m[:4]
         M["stats"]["scanned"] += 1
-        sig = _signal(p)
+        sig = _signal(p, cfg.get("max_m5", 8))
         if not sig:
             continue
         M["seen"][m] = ts

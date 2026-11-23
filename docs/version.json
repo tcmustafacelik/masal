@@ -1,11 +1,19 @@
 {
-  "version": "1.60.2",
+  "version": "1.61.0",
   "date": "2026-11-23",
   "notes": [
-    "Bot turu 2 saniyeye indi",
-    "Uygulama bir istek gönderince sonraki 40 saniye boyunca saniyede bir yenilenir; sonuç daha çabuk görünür"
+    "Memecoin yüksek kazanç ayarı: kâr al %100, iz süren stop %25 kârdan sonra zirveden %20, zarar kes %15, en uzun 6 saat, işlem başına %20, en fazla 3 token, en az 30 bin $ likidite",
+    "Memecoin: son 5 dakikada %8'den fazla fırlamış token kovalanmaz (kayıpların çoğu böyle girişlerdendi); Ayarlar'da değiştirilebilir"
   ],
   "history": [
+    {
+      "version": "1.61.0",
+      "date": "2026-11-23",
+      "notes": [
+        "Memecoin yüksek kazanç ayarı: kâr al %100, iz süren stop %25 kârdan sonra zirveden %20, zarar kes %15, en uzun 6 saat, işlem başına %20, en fazla 3 token, en az 30 bin $ likidite",
+        "Memecoin: son 5 dakikada %8'den fazla fırlamış token kovalanmaz (kayıpların çoğu böyle girişlerdendi); Ayarlar'da değiştirilebilir"
+      ]
+    },
     {
       "version": "1.60.2",
       "date": "2026-11-23",
