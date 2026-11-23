@@ -57,9 +57,9 @@
     "cleared": 1795409509
   },
   "sell": {
-    "ts": 1795371278705,
+    "ts": 1795426366512,
     "insts": [
-      "MENGO-USDT"
+      "LTC-USDT"
     ]
   },
   "quote": "USDT",
