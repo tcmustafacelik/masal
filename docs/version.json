@@ -1,7 +1,7 @@
 {
-  "version": "1.49.0",
+  "version": "1.50.0",
   "date": "2026-11-23",
   "notes": [
-    "Fable denetimi: aktarım güvenliği (çift gönderim, takılan para, ücret), nakit eşitleme tüm para birimleri, daha az OKX isteği, ekran yenilemesi hafifledi"
+    "Coin ayrıntısında mum grafiği (hacim, fiyat ölçeği, canlı son fiyat); OKX TR çıkışları uygulamadan yönlendirilir"
   ]
 }

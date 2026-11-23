@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.49.0';
+const APP_VERSION = '1.50.0';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -936,7 +936,7 @@ async function syncReal(retry = true) {
 /* ---------- Para aktarımı: TR ↔ Global ↔ KASA (USDT, Arbitrum One). İstek bulut ayar dosyasına yazılır, bot gönderir. ---------- */
 /* Uçlar: her kasanın simgesi, rengi ve kısa adı (kartlarda ve pencerede aynı standart) */
 const XEND = { tr: ['OKX TR', 'i-bank', 'e1'], g: ['OKX Global', 'i-globe', 'e2'], k: ['KASA', 'i-vault', 'e3'] };
-const XDIR = { tr2g: ['tr', 'g', 'Bota yeni para'], g2tr: ['g', 'tr', 'TL\'ye çevrilir'], tr2k: ['tr', 'k', 'Soğuk cüzdana'], g2k: ['g', 'k', 'Soğuk cüzdana'] };
+const XDIR = { tr2g: ['tr', 'g', 'OKX TR uygulamasından'], g2tr: ['g', 'tr', 'TL\'ye çevrilir'], tr2k: ['tr', 'k', 'OKX TR uygulamasından'], g2k: ['g', 'k', 'Soğuk cüzdana'] };
 const xName = (d) => `${XEND[XDIR[d][0]][0]} → ${XEND[XDIR[d][1]][0]}`;
 const XST = { new: ['Sırada', 'i-clock', 'w'], sent: ['Yolda', 'i-out', 'w'], arriving: ['Ulaşıyor', 'i-in', 'w'], done: ['Tamam', 'i-check', 'ok'], failed: ['Olmadı', 'i-stop', 'bad'] };
 function xEnd(k) { const e = XEND[k]; return `<span class="xe ${e[2]}">${ic(e[1])}</span>`; }
@@ -978,6 +978,17 @@ function xKasalar(X) {
     ${all != null ? `<div class="xb"><span>Hepsi birlikte <b>$${nf(all, 2)}</b>${r ? ` · <b>${tl(all * r, 0)}</b>` : ''}</span>${X?.kasa ? `<span>KASA'da komisyon için <b>${nf(X.kasa.eth || 0, 4)} ETH</b></span>` : ''}</div>` : ''}`;
 }
 function openXfer(dir) {
+    if (dir.startsWith('tr')) {
+        const q = document.getElementById('qsh');
+        q.dataset.n = '';
+        qHead('i-bank', 'Anladım');
+        document.getElementById('qTitle').textContent = xName(dir);
+        document.getElementById('qText').innerHTML = `<div class="xfs"><p class="xnote">OKX TR, Türkiye kuralı gereği API'den (bottan) yapılan para çıkışlarını kabul etmiyor (hata 58380). Bu yönü <b>OKX TR uygulamasından</b> yap; ücretsiz ve anında:</p>
+      <div class="xinfo"><div>${ic('i-bank')}<span>1</span><b>OKX TR → Varlıklar → Çek → USDT</b></div><div>${ic(dir === 'tr2g' ? 'i-globe' : 'i-vault')}<span>2</span><b>${dir === 'tr2g' ? 'OKX kullanıcıları → OKX Global hesabın' : 'Adres defterinden KASA (Arbitrum)'}</b></div><div>${ic('i-check')}<span>3</span><b>Gelince bot kasalarda gösterir</b></div></div>
+      <a class="btn primary xgo" href="https://tr.okx.com/balance/withdrawal" target="_blank" rel="noopener">${ic('i-out')}OKX TR'yi aç</a></div>`;
+        q.hidden = false;
+        return;
+    }
     const X = S?.xfer || {}, [f, t] = XDIR[dir], q = document.getElementById('qsh'), fromTr = f === 'tr', r = +(X.usdtry || USDTTRY || 0);
     q.dataset.n = '';
     qHead(XEND[t][1], 'Vazgeç');
@@ -1158,7 +1169,7 @@ async function drawCoin(live = false) {
             return;
         const t = tk?.data?.[0];
         if (!live) {
-            CD.rows = (cd?.data || []).map((r) => [+r[0], +r[4], +r[2], +r[3]]).reverse();
+            CD.rows = (cd?.data || []).slice(0, 80).map((r) => [+r[0], +r[1], +r[2], +r[3], +r[4], +r[5]]).reverse();
             {
                 const h = CQ.filter(x => LP[base + '-' + x]);
                 CD.has = new Set(h.length ? h : CQ);
@@ -1166,7 +1177,10 @@ async function drawCoin(live = false) {
         }
         const rows = CD.rows || [], has = CD.has || new Set(CQ);
         if (t && rows.length) {
-            rows[rows.length - 1][1] = +t.last;
+            const r = rows[rows.length - 1], v = +t.last;
+            r[4] = v;
+            r[2] = Math.max(r[2], v);
+            r[3] = Math.min(r[3], v);
         }
         if (!t) {
             box.innerHTML = `<div class="qpair">${CQ.map(x => `<button data-cq="${x}" class="${x === q ? 'on' : ''}" ${has.has(x) ? '' : 'disabled'}>${x}</button>`).join('')}</div><div class="empty">${ic('i-info')}<div>${inst} paritesi OKX TR'de yok</div></div>`;
@@ -1203,12 +1217,20 @@ function bindCoin() {
 function coinSvg(rows) {
     if (rows.length < 2)
         return '';
-    const W = 340, H = 150, c = rows.map(r => r[1]), hi = Math.max(...rows.map(r => r[2])), lo = Math.min(...rows.map(r => r[3])), sp = (hi - lo) || 1;
-    const x = (i) => i / (rows.length - 1) * W, y = (v) => H - 6 - (v - lo) / sp * (H - 12);
-    const d = c.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(''), up = c[c.length - 1] >= c[0], col = up ? 'var(--green)' : 'var(--red)';
-    return `<svg class="cdc" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><defs><linearGradient id="cdg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${up ? '#178A5B' : '#C9473F'}" stop-opacity=".18"/><stop offset="1" stop-color="${up ? '#178A5B' : '#C9473F'}" stop-opacity="0"/></linearGradient></defs>
-    <path d="${d}L${W},${H}L0,${H}Z" fill="url(#cdg)"/><path d="${d}" fill="none" stroke="${col}" stroke-width="1.8" vector-effect="non-scaling-stroke"/>
-    <circle cx="${x(c.length - 1)}" cy="${y(c[c.length - 1])}" r="3" fill="${col}"/></svg>`;
+    // Mum grafiği: yeşil = kapanış açılıştan yüksek, kırmızı = düşük; altta hacim çubukları; sağda fiyat ölçeği
+    const W = 340, H = 170, VH = 26, PW = W - 44, n = rows.length, hi = Math.max(...rows.map(r => r[2])), lo = Math.min(...rows.map(r => r[3])), sp = (hi - lo) || 1, vmax = Math.max(...rows.map(r => r[5])) || 1;
+    const cw = PW / n, y = (v) => 4 + (hi - v) / sp * (H - VH - 12), dec = hi >= 100 ? 2 : hi >= 1 ? 4 : Math.min(8, 3 - Math.floor(Math.log10(hi || 1)));
+    let g = '';
+    for (let k = 0; k <= 3; k++) {
+        const v = lo + sp * k / 3, yy = y(v);
+        g += `<line x1="0" x2="${PW}" y1="${yy.toFixed(1)}" y2="${yy.toFixed(1)}" class="gl"/><text x="${PW + 4}" y="${(yy + 3).toFixed(1)}" class="gt">${nf(v, dec)}</text>`;
+    }
+    const c = rows.map((r, i) => {
+        const [, o, h, l, cl, v] = r, up = cl >= o, x = i * cw + cw / 2, bw = Math.max(1.2, cw * .62), t = y(Math.max(o, cl)), bh = Math.max(1, Math.abs(y(o) - y(cl))), col = up ? '#178A5B' : '#C9473F', vh = v / vmax * VH;
+        return `<line x1="${x.toFixed(1)}" x2="${x.toFixed(1)}" y1="${y(h).toFixed(1)}" y2="${y(l).toFixed(1)}" stroke="${col}" stroke-width="1"/><rect x="${(x - bw / 2).toFixed(1)}" y="${t.toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" fill="${col}" rx=".6"/><rect x="${(x - bw / 2).toFixed(1)}" y="${(H - vh).toFixed(1)}" width="${bw.toFixed(1)}" height="${vh.toFixed(1)}" fill="${col}" opacity=".25"/>`;
+    }).join('');
+    const last = rows[n - 1][4], ly = y(last), lc = last >= rows[n - 1][1] ? '#178A5B' : '#C9473F';
+    return `<svg class="cdc" viewBox="0 0 ${W} ${H}">${g}${c}<line x1="0" x2="${PW}" y1="${ly.toFixed(1)}" y2="${ly.toFixed(1)}" stroke="${lc}" stroke-dasharray="3 3" stroke-width=".8"/><rect x="${PW + 1}" y="${(ly - 7).toFixed(1)}" width="43" height="14" rx="3" fill="${lc}"/><text x="${PW + 4}" y="${(ly + 3.5).toFixed(1)}" class="gp">${nf(last, dec)}</text></svg>`;
 }
 document.addEventListener('click', e => {
     const el = e.target.closest('.row');
