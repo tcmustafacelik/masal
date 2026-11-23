@@ -1,4 +1,4 @@
-const APP_VERSION='1.53.0';
+const APP_VERSION='1.54.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -298,24 +298,6 @@ function renderMasa() {
     <div class="card mfeed">${feed.length ? feed.slice(0, 30).map(([ts, k, tag, txt]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k}">${tag}</em><div>${txt}</div></div>`).join('') : `<div class="empty">${ic('i-list')}<div>Henüz kayıt yok</div></div>`}</div>`;
 }
 /** Memecoin masası (deneme): Solana'daki yeni tokenler gerçek fiyatlarla, sanal parayla. */
-function renderLev(): string {
-  const L = (S as any)?.lev; if (!L) return '';
-  const usd = (v: number, d = 2) => '$' + nf(v, d), pct = (L.equity / L.start - 1) * 100, st = L.stats || {};
-  const esc = (t: any) => String(t).replace(/</g, '&lt;'), pf = (v: number) => nf(v, v >= 100 ? 2 : v >= 1 ? 4 : Math.min(8, 2 - Math.floor(Math.log10(v || 1))));
-  const pos = (L.positions || []).map((p: any) => {const g = p.pnl / p.margin * 100;
-    return `<div class="fr"><time>${masaClock(p.ts)}</time><em class="ft ${p.side === 'UZUN' ? 'al' : 'zar'}">${p.side}</em><div><b>${p.sym}</b> teminat ${usd(p.margin)} · <span class="${cls(p.pnl)}">${p.pnl >= 0 ? '+' : ''}${usd(p.pnl)} (${spc(g, 0)})</span><small>giriş ${pf(p.entry)} · stop ${pf(p.stop)} · hedef ${pf(p.tp)} · tasfiye ${pf(p.liq)}</small></div></div>`}).join('');
-  const feed = (L.log || []).slice(0, 15).map(([ts, k, t]: [number, string, string]) =>
-    `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : 'not'}">${k === 'buy' ? 'AÇ' : k === 'exit' ? 'KAPAT' : 'ENGEL'}</em><div>${esc(t).replace(/^(AÇ|KAPAT|ENGEL) /, '')}</div></div>`).join('');
-  return `<h2 class="mh">${ic('i-layers')}Deneme masası<span class="hsum">sanal para · kararlar buradan</span></h2>
-    <div class="card mmeme">
-      <div class="mtop"><div><span>Sanal kasa</span><b>${usd(L.equity)}</b></div><div><span>Sonuç</span><b class="${cls(pct)}">${spc(pct, 1)}</b></div>
-        <div><span>Kapanan</span><b>${L.closed}</b></div><div><span>Kazanma</span><b>${L.win_rate == null ? '—' : '%' + L.win_rate}</b></div></div>
-      <div class="mflow"><span>Gözcü ${nf(st.checked || 0, 0)} mum</span>${ic('i-chev')}<span>Sinyal ${st.signals || 0}</span>${ic('i-chev')}<span>Giriş ${st.entered || 0}</span></div>
-      <p class="mnote">OKX Global vadeli piyasası gerçek fiyatlarla izlenir; işlem sanal parayla yapılır. Gerçek masa kararlarını buradan alır. İşlem başına kasanın %1'i riske edilir, günlük %5 zararda masa o gün kapanır.${L.halt ? ` <b class="dn">Bugün durduruldu: günlük zarar sınırı.</b>` : ''}${L.err ? ` <b class="dn">Veri uyarısı: ${esc(L.err).slice(0, 80)}</b>` : ''}</p>
-      ${pos ? `<div class="mfeed">${pos}</div>` : ''}
-      ${feed ? `<div class="mfeed">${feed}</div>` : `<div class="empty">${ic('i-eye')}<div>Henüz sinyal yok; saatlik mumlar kapandıkça bakılıyor</div></div>`}
-    </div>`;
-}
 function renderLevR(): string {
   const R = (S as any)?.levr;
   if (!R) return (S as any)?.live_enc && !pw ? `<div class="warn">${ic('i-lock')}<div>Gerçek futures masasını görmek için kilidi aç.</div></div>` : '';
@@ -354,24 +336,6 @@ function renderMemeR(): string {
       <p class="mnote">Deneme masasının al-sat kararları MEME cüzdanında Jupiter üzerinden gerçek parayla uygulanır. Fiyat etkisi %${nf(+mm.max_slip || 2, 1)}'yi aşan alım yapılmaz; toplam ${usd(ml, 0)} zararda masa durur. KASA'ya dokunulmaz. ${st}${R.err ? ` <b class="dn">Uyarı: ${esc(R.err).slice(0, 110)}</b>` : ''}</p>
       ${pos ? `<div class="mfeed">${pos}</div>` : ''}
       ${feed ? `<div class="mfeed">${feed}</div>` : `<div class="empty">${ic('i-eye')}<div>${R.sol > 0 ? 'Henüz gerçek işlem yok; şartı tutan token bekleniyor' : 'MEME cüzdanına SOL gönderilince başlar'}</div></div>`}
-    </div>`;
-}
-function renderMeme(): string {
-  const M = (S as any)?.meme; if (!M) return '';
-  const usd = (v: number, d = 2) => '$' + nf(v, d), pnl = M.equity - M.start, pct = (M.equity / M.start - 1) * 100;
-  const st = M.stats || {};
-  const pos = (M.positions || []).map((p: any) => {const g = (p.now / p.entry - 1) * 100;
-    return `<div class="fr"><time>${masaClock(p.ts)}</time><em class="ft al">AÇIK</em><div><b>${p.sym}</b> ${usd(p.value)} · <span class="${cls(g)}">${spc(g, 1)}</span><small>giriş: ${String(p.why).replace(/</g, '&lt;')}</small></div></div>`}).join('');
-  const feed = (M.log || []).slice(0, 15).map(([ts, k, t]: [number, string, string]) =>
-    `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+|kâr al/.test(t) ? 'sat' : 'zar') : 'not'}">${k === 'buy' ? 'AL' : k === 'exit' ? 'SAT' : 'ENGEL'}</em><div>${String(t).replace(/^(AL|SAT|ENGEL) /, '').replace(/</g, '&lt;')}</div></div>`).join('');
-  return `<h2 class="mh">${ic('i-flask')}Deneme masası<span class="hsum">sanal para · kararlar buradan</span></h2>
-    <div class="card mmeme">
-      <div class="mtop"><div><span>Sanal kasa</span><b>${usd(M.equity)}</b></div><div><span>Sonuç</span><b class="${cls(pnl)}">${spc(pct, 1)}</b></div>
-        <div><span>İşlem</span><b>${M.sells}</b></div><div><span>Kazanma</span><b>${M.win_rate == null ? '—' : '%' + M.win_rate}</b></div></div>
-      <div class="mflow"><span>Gözcü ${nf(st.scanned || 0, 0)} kontrol</span>${ic('i-chev')}<span>Bekçi ${st.blocked || 0} engel</span>${ic('i-chev')}<span>Giriş ${st.entered || 0}</span></div>
-      <p class="mnote">Solana'daki yeni tokenler DexScreener ve RugCheck verisiyle 20 sn'de bir taranır. Bu masa sanal parayla çalışır; gerçek masa al-sat kararlarını buradan alır.${M.err ? ` <b class="dn">Veri uyarısı: ${String(M.err).slice(0, 80).replace(/</g, '&lt;')}</b>` : ''}</p>
-      ${pos ? `<div class="mfeed">${pos}</div>` : ''}
-      ${feed ? `<div class="mfeed">${feed}</div>` : `<div class="empty">${ic('i-eye')}<div>Henüz şartı tutan token yok; Bekçi sıkı çalışıyor</div></div>`}
     </div>`;
 }
 document.getElementById('masaBtn').onclick = () => showMasa(true);
@@ -613,7 +577,7 @@ async function syncReal(retry = true){
 }
 /* ---------- Para aktarımı: TR ↔ Global ↔ KASA (USDT, Arbitrum One). İstek bulut ayar dosyasına yazılır, bot gönderir. ---------- */
 /* Uçlar: her kasanın simgesi, rengi ve kısa adı (kartlarda ve pencerede aynı standart) */
-const XEND: Record<string, [string, string, string]> = {tr:['OKX TR','i-bank','e1'], g:['OKX Global','i-globe','e2'], k:['KASA','i-vault','e3']};
+const XEND: Record<string, [string, string, string]> = {tr:['OKX TR','i-bank','e1'], g:['OKX Global','i-globe','e2'], k:['KASA','i-vault','e3'], m:['MEME','i-flask','e4']};
 const XDIR: Record<string, [string, string, string]> = {tr2g:['tr','g','OKX TR uygulamasından'], g2tr:['g','tr','TL\'ye çevrilir'], tr2k:['tr','k','OKX TR uygulamasından'], g2k:['g','k','Soğuk cüzdana']};
 const xName=(d: string)=>`${XEND[XDIR[d][0]][0]} → ${XEND[XDIR[d][1]][0]}`;
 const XST: Record<string, [string, string, string]> = {new:['Sırada','i-clock','w'],sent:['Yolda','i-out','w'],arriving:['Ulaşıyor','i-in','w'],done:['Tamam','i-check','ok'],failed:['Olmadı','i-stop','bad']};
@@ -641,9 +605,10 @@ let xfSrc='bos',USDTTRY=0,xfId='';
 function xKasalar(X: any): string {
   const r=+(X?.usdtry||USDTTRY||0),o: any=S?.okx||{};
   const trUsd=X?.tr_total!=null?+X.tr_total:(o.total_tl&&r?o.total_tl/r:null),gUsd=X?.g_val!=null?+X.g_val:null,kUsd=X?.kasa?.usd!=null?+X.kasa.usd:null;
-  const all=[trUsd,gUsd,kUsd].every(v=>v!=null)?trUsd+gUsd+kUsd:null;
+  const MR: any=(S as any)?.memer,mUsd=MR?.addr?+MR.value||0:null;
+  const all=[trUsd,gUsd,kUsd].every(v=>v!=null)?trUsd+gUsd+kUsd+(mUsd||0):null;
   const cell=(k: string,u: number|null)=>`<div>${xEnd(k)}<span>${XEND[k][0]}</span><b>${u==null?'—':'$'+nf(u,2)}</b><small>${u!=null&&r?tl(u*r,0):''}</small></div>`;
-  return `<div class="xk">${cell('tr',trUsd)}${cell('g',gUsd)}${cell('k',kUsd)}</div>
+  return `<div class="xk${mUsd!=null?' x4':''}">${cell('tr',trUsd)}${cell('g',gUsd)}${cell('k',kUsd)}${mUsd!=null?cell('m',mUsd):''}</div>
     ${all!=null?`<div class="xb"><span>Hepsi birlikte <b>$${nf(all,2)}</b>${r?` · <b>${tl(all*r,0)}</b>`:''}</span>${X?.kasa?`<span>KASA'da komisyon için <b>${nf(X.kasa.eth||0,4)} ETH</b></span>`:''}</div>`:''}`;
 }
 function openXfer(dir: string){
@@ -796,13 +761,13 @@ function showView(v: string){
 }
 document.querySelectorAll<HTMLElement>('#deck button').forEach(b=>b.onclick=()=>showView(b.dataset.v));
 function renderDeck(){
-  if(!S)return;const L: any=(S as any).lev,M: any=(S as any).meme,X: any=(S as any).xfer,sp=S.strategies?.live;
+  if(!S)return;const X: any=(S as any).xfer,sp=S.strategies?.live;
   const set=(id: string,t: string)=>{const e=document.getElementById(id);if(e&&e.textContent!==t)e.textContent=t};
   if(sp&&!sp.locked){const p=liveEquity(sp)-sp.start_cash;set('dkSpot',(p>=0?'+':'−')+nf(Math.abs(p),0)+' TL')}
-  {const R2: any=(S as any).levr;if(R2?.on)set('dkFut','Gerçek $'+nf(R2.equity,2));else if(L)set('dkFut','$'+nf(L.equity,2))}{const R3: any=(S as any).memer;if(R3?.on)set('dkMeme','Gerçek $'+nf(R3.value,2));else if(M)set('dkMeme','$'+nf(M.equity,2))}
-  if(X){const a=[X.tr_total,X.g_val,X.kasa?.usd];if(a.every((v: any)=>v!=null))set('dkKasa','$'+nf(a.reduce((x: number,y: number)=>x+y,0),0))}
-  if(VIEW==='fut'){const b=document.getElementById('futBody');setH(b,(renderLevR()+renderLev())||`<div class="empty">${ic('i-layers')}<div>Kaldıraç masası verisi bekleniyor</div></div>`)}
-  if(VIEW==='meme'){const b=document.getElementById('memeBody');setH(b,(renderMemeR()+renderMeme())||`<div class="empty">${ic('i-flask')}<div>Memecoin masası verisi bekleniyor</div></div>`)}
+  {const R2: any=(S as any).levr;set('dkFut',R2?.on?'$'+nf(R2.equity,2):'kapalı')}{const R3: any=(S as any).memer;set('dkMeme',R3?.on?'$'+nf(R3.value,2):'kapalı')}
+  if(X){const a=[X.tr_total,X.g_val,X.kasa?.usd];if(a.every((v: any)=>v!=null))set('dkKasa','$'+nf(a.reduce((x: number,y: number)=>x+y,0)+(+(S as any).memer?.value||0),0))}
+  if(VIEW==='fut'){const b=document.getElementById('futBody');setH(b,renderLevR()||`<div class="empty">${ic('i-layers')}<div>Kaldıraç masası verisi bekleniyor</div></div>`)}
+  if(VIEW==='meme'){const b=document.getElementById('memeBody');setH(b,renderMemeR()||`<div class="empty">${ic('i-flask')}<div>Memecoin masası verisi bekleniyor</div></div>`)}
 }
 
 const ICON_BAD = new Set<string>(), ICON_OK = new Set<string>();

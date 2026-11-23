@@ -169,6 +169,17 @@
     "sweep_min": 15
   },
   "meme": {
-    "wallet": "7YmjQvaZdKDKmfmTPP1vmUxK8ns1CKEim9ovBbwNEKwN"
+    "wallet": "7YmjQvaZdKDKmfmTPP1vmUxK8ns1CKEim9ovBbwNEKwN",
+    "real": true,
+    "max_loss": 6,
+    "max_slip": 2,
+    "size_pct": 25,
+    "max_pos": 3
+  },
+  "lev": {
+    "real": true,
+    "real_budget": 20,
+    "real_lev": 2,
+    "max_loss": 8
   }
 }
