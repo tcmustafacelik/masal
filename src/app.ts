@@ -1,4 +1,4 @@
-const APP_VERSION='1.46.2';
+const APP_VERSION='1.47.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -571,20 +571,24 @@ async function syncReal(retry = true){
   if(btn)btn.disabled=false;
 }
 /* ---------- Para aktarımı: TR ↔ Global ↔ KASA (USDT, Arbitrum One). İstek bulut ayar dosyasına yazılır, bot gönderir. ---------- */
-const XDIR: Record<string, [string, string, string, string]> = {
-  tr2g:['OKX TR → Global','TL/USDT gönderilir','i-link','c1'], g2tr:['Global → OKX TR','TL\'ye çevrilir','i-back','c2'],
-  tr2k:['OKX TR → KASA','soğuk cüzdana','i-lock','c3'], g2k:['Global → KASA','soğuk cüzdana','i-shield','c4']};
-const XST: Record<string, string> = {new:'sırada',sent:'yolda',arriving:'ulaşıyor',done:'tamam',failed:'olmadı'};
+/* Uçlar: her kasanın simgesi, rengi ve kısa adı (kartlarda ve pencerede aynı standart) */
+const XEND: Record<string, [string, string, string]> = {tr:['OKX TR','i-bank','e1'], g:['OKX Global','i-globe','e2'], k:['KASA','i-vault','e3']};
+const XDIR: Record<string, [string, string, string]> = {tr2g:['tr','g','Bota yeni para'], g2tr:['g','tr','TL\'ye çevrilir'], tr2k:['tr','k','Soğuk cüzdana'], g2k:['g','k','Soğuk cüzdana']};
+const xName=(d: string)=>`${XEND[XDIR[d][0]][0]} → ${XEND[XDIR[d][1]][0]}`;
+const XST: Record<string, [string, string, string]> = {new:['Sırada','i-clock','w'],sent:['Yolda','i-out','w'],arriving:['Ulaşıyor','i-in','w'],done:['Tamam','i-check','ok'],failed:['Olmadı','i-stop','bad']};
+function xEnd(k: string){const e=XEND[k];return `<span class="xe ${e[2]}">${ic(e[1])}</span>`}
 function renderXfer(){
   const box=document.getElementById('xfer');if(!box)return;
   const X: any=(S as any)?.xfer;
   if(sel!=='live'||!S?.strategies?.live||S.strategies.live.locked){box.hidden=true;return}
   box.hidden=false;
-  const jobs=(X?.jobs||[]).slice(0,4).map((j: any)=>`<div><time>${masaClock(j.ts)}</time><span>${XDIR[j.dir]?.[0]||j.dir} · <b>${nf(j.amt,2)} $</b><em class="${j.stage==='done'?'ok':j.stage==='failed'?'bad':''}">${XST[j.stage]||j.stage}${j.stage!=='done'&&j.msg?' · '+j.msg:''}</em></span>${j.stage==='new'?`<button class="xc" data-xc="${j.id}">İptal</button>`:''}</div>`).join('');
-  box.innerHTML=`<div class="ah">${ic('i-refresh')}<b>Kasalar ve aktarım</b><span>dakikada bir</span></div>
+  const jobs=(X?.jobs||[]).slice(0,4).map((j: any)=>{const st=XST[j.stage]||[j.stage,'i-info','w'];
+    return `<div class="xr"><span class="xs ${st[2]}">${ic(st[1])}</span><div class="xm"><b>${XDIR[j.dir]?xName(j.dir):j.dir}<i>${nf(j.amt,2)} $</i></b>
+      <small>${masaClock(j.ts)} · ${st[0]}${j.stage!=='done'&&j.msg&&j.msg!=='sırada'?' · '+j.msg:''}</small></div>${j.stage==='new'?`<button class="xc" data-xc="${j.id}">İptal</button>`:''}</div>`}).join('');
+  box.innerHTML=`<div class="ah">${ic('i-wallet')}<b>Kasalar ve aktarım</b><span>dakikada bir</span></div>
     ${xKasalar(X)}
+    <div class="xt">${Object.keys(XDIR).map(k=>{const [f,t,sub]=XDIR[k];return `<button data-x="${k}"><span class="xrt">${xEnd(f)}${ic('i-chev')}${xEnd(t)}</span><b>${xName(k)}</b><small>${sub}</small></button>`}).join('')}</div>
     <div class="xb"><span>TR'de boşta <b>${X?.free_tl!=null?tl(Math.max(0,X.free_tl),0):'—'}</b></span><span>Bugün gönderilen <b>$${nf(X?.day_sum||0,0)} / ${nf(X?.daily_max||1000,0)}</b></span></div>
-    <div class="xt">${Object.entries(XDIR).map(([k,v])=>`<button class="${v[3]}" data-x="${k}">${ic(v[2])}${v[0]}<small>${v[1]}</small></button>`).join('')}</div>
     ${jobs?`<div class="xj">${jobs}</div>`:''}`;
   box.querySelectorAll<HTMLElement>('[data-x]').forEach(b=>b.onclick=()=>openXfer(b.dataset.x));
   box.querySelectorAll<HTMLElement>('[data-xc]').forEach(b=>b.onclick=()=>cancelXfer(b.dataset.xc,b as HTMLButtonElement));
@@ -595,22 +599,40 @@ function xKasalar(X: any): string {
   const r=+(X?.usdtry||USDTTRY||0),o: any=S?.okx||{};
   const trUsd=X?.tr_total!=null?+X.tr_total:(o.total_tl&&r?o.total_tl/r:null),gUsd=X?.g_val!=null?+X.g_val:null,kUsd=X?.kasa?.usd!=null?+X.kasa.usd:null;
   const all=[trUsd,gUsd,kUsd].every(v=>v!=null)?trUsd+gUsd+kUsd:null;
-  const cell=(n: string,i: string,u: number|null,sub='')=>`<div>${ic(i)}<span>${n}</span><b>${u==null?'—':'$'+nf(u,2)}</b><small>${u!=null&&r?tl(u*r,0):''}${sub}</small></div>`;
-  return `<div class="xk">${cell('OKX TR','i-wallet',trUsd)}${cell('OKX Global','i-link',gUsd)}${cell('KASA','i-lock',kUsd)}</div>
+  const cell=(k: string,u: number|null)=>`<div>${xEnd(k)}<span>${XEND[k][0]}</span><b>${u==null?'—':'$'+nf(u,2)}</b><small>${u!=null&&r?tl(u*r,0):''}</small></div>`;
+  return `<div class="xk">${cell('tr',trUsd)}${cell('g',gUsd)}${cell('k',kUsd)}</div>
     ${all!=null?`<div class="xb"><span>Hepsi birlikte <b>$${nf(all,2)}</b>${r?` · <b>${tl(all*r,0)}</b>`:''}</span>${X?.kasa?`<span>KASA'da komisyon için <b>${nf(X.kasa.eth||0,4)} ETH</b></span>`:''}</div>`:''}`;
 }
 function openXfer(dir: string){
-  const X: any=(S as any)?.xfer||{},v=XDIR[dir],q=document.getElementById('qsh'),fromTr=dir.startsWith('tr');
-  q.dataset.n='';qHead(v[2],'Vazgeç');document.getElementById('qOk').hidden=true;document.getElementById('qTitle').textContent=v[0];
-  const freeUsd=X.free_tl!=null&&USDTTRY?Math.max(0,X.free_tl)/USDTTRY:0;
-  xfSrc=fromTr&&freeUsd<1?'bot':'bos'; // TR'de boşta para yoksa varsayılan "Bottan al"
-  const draw=()=>{const t=document.getElementById('qText');
-    t.innerHTML=`<div class="xfs">${fromTr?`<div class="seg"><button data-s="bos" class="${xfSrc==='bos'?'on':''}">Boştaki paradan</button><button data-s="bot" class="${xfSrc==='bot'?'on':''}">Bottan al</button></div>`:''}
-      <input id="xfAmt" type="number" inputmode="decimal" min="1" step="1" placeholder="Tutar (USDT)" value="${(document.getElementById('xfAmt') as HTMLInputElement)?.value||''}">
-      <div class="hint">${fromTr?(xfSrc==='bos'?`TR'de bota ait olmayan boş para kullanılır (şu an ~${X.free_tl!=null?tl(Math.max(0,X.free_tl),0):'—'}). Gerekirse TL USDT'ye çevrilir.`:'Bottaki paradan alınır; bütçe ve kasa bu tutar kadar düşürülür.'):'Global\'deki USDT gönderilir.'}
-      ${dir==='g2tr'?' TR\'ye gelince TL\'ye çevrilip Nakit\'e konur; bankaya çekimi sen yaparsın.':''}${dir.endsWith('k')?' Soğuk cüzdan (KASA) adresi sabittir: 0x0113…7db7.':''} ${dir.endsWith('k')?'Ağ ücreti ~0,003 $.':'OKX iç transferi: ücretsiz ve anında.'} Günlük sınır ${nf(X.daily_max||1000,0)} $.</div>
-      <button class="btn primary" id="xfGo" style="width:100%;margin-top:12px">Gönder</button></div>`;
-    t.querySelectorAll<HTMLElement>('[data-s]').forEach(b=>b.onclick=()=>{xfSrc=b.dataset.s;draw()});
+  const X: any=(S as any)?.xfer||{},[f,t]=XDIR[dir],q=document.getElementById('qsh'),fromTr=f==='tr',r=+(X.usdtry||USDTTRY||0);
+  q.dataset.n='';qHead(XEND[t][1],'Vazgeç');document.getElementById('qOk').hidden=true;document.getElementById('qTitle').textContent='Para gönder';
+  const freeUsd=X.free_tl!=null&&r?Math.max(0,X.free_tl)/r:0,botTl=+(S?.strategies?.live?.cash||0);
+  xfSrc=fromTr&&freeUsd<1?'bot':'bos';
+  const bal=(k: string)=>{const o: any=S?.okx||{};const u=k==='tr'?(X.tr_total??(o.total_tl&&r?o.total_tl/r:null)):k==='g'?X.g_val:X.kasa?.usd;return u==null?'—':'$'+nf(u,2)};
+  const fee=t==='k'?'~0,003 $ ağ ücreti':'Ücretsiz (yedek yol ~0,003 $)',time_=t==='k'?'Birkaç dakika':'Birkaç saniye – birkaç dakika';
+  const draw=()=>{const tx=document.getElementById('qText'),cur=(document.getElementById('xfAmt') as HTMLInputElement)?.value||'';
+    tx.innerHTML=`<div class="xfs">
+      <div class="xroute"><div>${xEnd(f)}<b>${XEND[f][0]}</b><small>${bal(f)}</small></div><span class="xar">${ic('i-chev')}</span><div>${xEnd(t)}<b>${XEND[t][0]}</b><small>${bal(t)}</small></div></div>
+      ${fromTr?`<div class="xlab">Kaynak</div><div class="seg">
+        <button data-s="bos" class="${xfSrc==='bos'?'on':''}">${ic('i-wallet')}<b>Boştaki para</b><small>~${nf(freeUsd,2)} USDT</small></button>
+        <button data-s="bot" class="${xfSrc==='bot'?'on':''}">${ic('i-coins')}<b>Bottan al</b><small>botta nakit ${tl(botTl,0)}</small></button></div>`:''}
+      <div class="xlab">Tutar</div>
+      <div class="xamt"><input id="xfAmt" type="number" inputmode="decimal" min="1" step="1" placeholder="0" value="${cur}"><span>USDT</span></div>
+      <div class="xeq" id="xfEq">${r&&+cur?'≈ '+tl(+cur*r,0):'&nbsp;'}</div>
+      <div class="xq">${[5,10,25,50,100].map(v=>`<button data-q="${v}">${v} $</button>`).join('')}</div>
+      <div class="xinfo">
+        <div>${ic('i-shield')}<span>Ücret</span><b>${fee}</b></div>
+        <div>${ic('i-clock')}<span>Süre</span><b>${time_}</b></div>
+        <div>${ic('i-flag')}<span>Günlük sınır</span><b>$${nf(X.day_sum||0,0)} / ${nf(X.daily_max||1000,0)}</b></div>
+        ${fromTr&&xfSrc==='bot'?`<div>${ic('i-info')}<span>Bütçe</span><b>Bu tutar kadar düşer</b></div>`:''}
+        ${dir==='g2tr'?`<div>${ic('i-info')}<span>Varınca</span><b>TL'ye çevrilip Nakit'e konur</b></div>`:''}
+        ${t==='k'?`<div>${ic('i-lock')}<span>Adres</span><b>0x0113…7db7 (sabit)</b></div>`:''}
+      </div>
+      <button class="btn primary xgo" id="xfGo">${ic('i-out')}Gönder</button></div>`;
+    tx.querySelectorAll<HTMLElement>('[data-s]').forEach(b=>b.onclick=()=>{xfSrc=b.dataset.s;draw()});
+    tx.querySelectorAll<HTMLElement>('[data-q]').forEach(b=>b.onclick=()=>{(document.getElementById('xfAmt') as HTMLInputElement).value=b.dataset.q;upd()});
+    const inp=document.getElementById('xfAmt') as HTMLInputElement,upd=()=>{document.getElementById('xfEq').innerHTML=r&&+inp.value?'≈ '+tl(+inp.value*r,0):'&nbsp;'};
+    inp.oninput=upd;
     document.getElementById('xfGo').onclick=()=>sendXfer(dir);};
   document.getElementById('qText').innerHTML='';draw();q.hidden=false;
 }
@@ -635,7 +657,7 @@ async function sendXfer(dir: string, retry = true){
   {const X: any=(S as any)?.xfer||{},freeUsd=X.free_tl!=null&&USDTTRY?Math.max(0,X.free_tl)/USDTTRY:null;
    if(dir.startsWith('tr')&&xfSrc==='bos'&&freeUsd!=null&&freeUsd<amt){toast(`TR'de boşta sadece ~${nf(freeUsd,2)} USDT var. "Bottan al"ı seç ya da önce bankadan TL yatır.`);return}}
   if(!token){toast('Önce Ayarlar\'dan GitHub bağlantısını kur');return}
-  const btn=document.getElementById('xfGo') as HTMLButtonElement;if(btn){btn.disabled=true;btn.textContent='Gönderiliyor…'}
+  const btn=document.getElementById('xfGo') as HTMLButtonElement;if(btn){btn.disabled=true;btn.lastChild.textContent='Gönderiliyor…'}
   try{
     const cur=await tfetch(API+'?t='+Date.now(),{headers:{Authorization:'Bearer '+token,Accept:'application/vnd.github+json'},cache:'no-store'}).then(r=>{if(!r.ok)throw r.status;return r.json()});
     const data=JSON.parse(decodeURIComponent(escape(atob(cur.content.replace(/\n/g,'')))));
@@ -648,8 +670,8 @@ async function sendXfer(dir: string, retry = true){
     if(r.status===409&&retry)return sendXfer(dir,false);
     if(!r.ok)throw r.status;sha=(await r.json()).content.sha;
     for(const o of [orig,draft])if(o){(o as any).xfer_req=data.xfer_req;if(src==='bot'){o.budget=data.budget;o.kasa=data.kasa}}
-    document.getElementById('qsh').hidden=true;toast(`${XDIR[dir][0]}: ${nf(amt,2)} USDT isteği gönderildi; bot birkaç saniye içinde başlar.`);
-  }catch(e){toast('İstek gönderilemedi ('+e+'), tekrar dene');if(btn){btn.disabled=false;btn.textContent='Gönder'}}
+    document.getElementById('qsh').hidden=true;toast(`${xName(dir)}: ${nf(amt,2)} USDT isteği gönderildi; bot birkaç saniye içinde başlar.`);
+  }catch(e){toast('İstek gönderilemedi ('+e+'), tekrar dene');if(btn){btn.disabled=false;btn.lastChild.textContent='Gönder'}}
 }
 
 const ICON_BAD = new Set<string>(), ICON_OK = new Set<string>();

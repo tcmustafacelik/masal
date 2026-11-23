@@ -1,7 +1,7 @@
 {
-  "version": "1.46.2",
+  "version": "1.47.0",
   "date": "2026-11-23",
   "notes": [
-    "Aktarım: boşta para yoksa 'Bottan al' seçili gelir, yetmeyen tutar gönderilmez"
+    "Kasalar ve aktarım ekranı yenilendi: simgeli kasalar, rota, hızlı tutar, ücret/süre bilgisi"
   ]
 }
