@@ -1,4 +1,4 @@
-const APP_VERSION='1.43.0';
+const APP_VERSION='1.44.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -292,11 +292,30 @@ function renderMasa() {
       <div><span>İşlem</span><b>${x.trades}</b></div><div><span>Kazanma</span><b>${x.win_rate == null ? '—' : '%' + nf(x.win_rate, 0)}</b></div></div>
     <div class="mflow">${['Gözcü', 'Bekçi', 'Alıcı', 'Çıkışçı'].map((n, i) => `<span>${n}</span>${i < 3 ? ic('i-chev') : ''}`).join('')}</div>
     <div class="agrid">${agents.map(([k, i, n, r, s, body]) => `<div class="agent a-${k}"><div class="ah2"><span class="aic">${ic(i as string)}</span><b>${n}</b></div>${s}<small class="arole">${r}</small>${body}</div>`).join('')}</div>
+    ${renderLev()}
     ${renderMeme()}
     <h2 class="mh">${ic('i-list')}Canlı akış<span class="hsum">her işlem sebebiyle</span></h2>
     <div class="card mfeed">${feed.length ? feed.slice(0, 30).map(([ts, k, tag, txt]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k}">${tag}</em><div>${txt}</div></div>`).join('') : `<div class="empty">${ic('i-list')}<div>Henüz kayıt yok</div></div>`}</div>`;
 }
 /** Memecoin masası (deneme): Solana'daki yeni tokenler gerçek fiyatlarla, sanal parayla. */
+function renderLev(): string {
+  const L = (S as any)?.lev; if (!L) return '';
+  const usd = (v: number, d = 2) => '$' + nf(v, d), pct = (L.equity / L.start - 1) * 100, st = L.stats || {};
+  const esc = (t: any) => String(t).replace(/</g, '&lt;'), pf = (v: number) => nf(v, v >= 100 ? 2 : v >= 1 ? 4 : Math.min(8, 2 - Math.floor(Math.log10(v || 1))));
+  const pos = (L.positions || []).map((p: any) => {const g = p.pnl / p.margin * 100;
+    return `<div class="fr"><time>${masaClock(p.ts)}</time><em class="ft ${p.side === 'UZUN' ? 'al' : 'zar'}">${p.side}</em><div><b>${p.sym}</b> teminat ${usd(p.margin)} · <span class="${cls(p.pnl)}">${p.pnl >= 0 ? '+' : ''}${usd(p.pnl)} (${spc(g, 0)})</span><small>giriş ${pf(p.entry)} · stop ${pf(p.stop)} · hedef ${pf(p.tp)} · tasfiye ${pf(p.liq)}</small></div></div>`}).join('');
+  const feed = (L.log || []).slice(0, 15).map(([ts, k, t]: [number, string, string]) =>
+    `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : 'not'}">${k === 'buy' ? 'AÇ' : k === 'exit' ? 'KAPAT' : 'ENGEL'}</em><div>${esc(t).replace(/^(AÇ|KAPAT|ENGEL) /, '')}</div></div>`).join('');
+  return `<h2 class="mh">${ic('i-layers')}Kaldıraç masası<span class="hsum">deneme · sanal para</span></h2>
+    <div class="card mmeme">
+      <div class="mtop"><div><span>Sanal kasa</span><b>${usd(L.equity)}</b></div><div><span>Sonuç</span><b class="${cls(pct)}">${spc(pct, 1)}</b></div>
+        <div><span>Kapanan</span><b>${L.closed}</b></div><div><span>Kazanma</span><b>${L.win_rate == null ? '—' : '%' + L.win_rate}</b></div></div>
+      <div class="mflow"><span>Gözcü ${nf(st.checked || 0, 0)} mum</span>${ic('i-chev')}<span>Sinyal ${st.signals || 0}</span>${ic('i-chev')}<span>Giriş ${st.entered || 0}</span></div>
+      <p class="mnote">OKX Global vadeli piyasası gerçek fiyatlarla izlenir; işlem sanal parayla yapılır. İzole marjin, en fazla 3x, işlem başına kasanın %1'i riske edilir, günlük %5 zararda masa o gün kapanır.${L.halt ? ` <b class="dn">Bugün durduruldu: günlük zarar sınırı.</b>` : ''}${L.err ? ` <b class="dn">Veri uyarısı: ${esc(L.err).slice(0, 80)}</b>` : ''}</p>
+      ${pos ? `<div class="mfeed">${pos}</div>` : ''}
+      ${feed ? `<div class="mfeed">${feed}</div>` : `<div class="empty">${ic('i-eye')}<div>Henüz sinyal yok; saatlik mumlar kapandıkça bakılıyor</div></div>`}
+    </div>`;
+}
 function renderMeme(): string {
   const M = (S as any)?.meme; if (!M) return '';
   const usd = (v: number, d = 2) => '$' + nf(v, d), pnl = M.equity - M.start, pct = (M.equity / M.start - 1) * 100;

@@ -351,6 +351,9 @@ def signature(state, S):
     parts.append((state.get("okx") or {}).get("ok"))
     mm = state.get("meme") or {}
     parts.append([len(mm.get("trades", [])), sorted(mm.get("positions", {})), len(mm.get("log", []))])
+    lv = state.get("lev") or {}
+    parts.append([len(lv.get("trades", [])), sorted(lv.get("positions", {})), len(lv.get("log", [])),
+                  [round(v.get("stop", 0), 8) for v in (lv.get("positions") or {}).values()]])
     parts.append(json.dumps(S, sort_keys=True, default=str))
     return json.dumps(parts, default=str)
 
@@ -483,6 +486,11 @@ def main():
         meme.step(state, S)  # memecoin deneme masası (sanal para; ağ işi arka planda)
     except Exception as e:
         print("Memecoin masası hatası:", e)
+    try:
+        from . import kaldirac
+        kaldirac.step(state, S)  # kaldıraç deneme masası (sanal para; ağ işi arka planda)
+    except Exception as e:
+        print("Kaldıraç masası hatası:", e)
     PERF["main"] = round(time.time() - t_start, 2)
     state["perf"] = dict(PERF)
     # Gönderilen bildirimler buluta da yazılır (gerçek hesabın şifreli kaydında): uygulama her cihazda aynı listeyi görür

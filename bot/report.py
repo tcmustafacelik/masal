@@ -25,6 +25,14 @@ def describe(key, c):
             f"zirveden {pct(c['trailing'])} geri çekilince çıkar.")
 
 
+def _lev(state):
+    try:
+        from . import kaldirac
+        return kaldirac.public(state)
+    except Exception:
+        return None
+
+
 def _meme(state):
     try:
         from . import meme
@@ -103,7 +111,7 @@ def build(state, S=None):
         "updated": state.get("updated"), "created": state.get("created"),
         "mode": "Sanal", "start_cash": config.START_CASH,
         "risk": config.RISK, "fee": config.FEE_RATE, "slippage": config.SLIPPAGE,
-        "universe": state.get("universe", []), "strategies": strategies, "settings": S, "okx": state.get("okx"), "perf": state.get("perf"), "meme": _meme(state),
+        "universe": state.get("universe", []), "strategies": strategies, "settings": S, "okx": state.get("okx"), "perf": state.get("perf"), "meme": _meme(state), "lev": _lev(state),
     }
     if vault.password() and "live" in strategies:
         # Gerçek hesap bilgileri herkese açık sayfada şifreli durur; uygulama OKX şifresiyle çözer
