@@ -1,7 +1,44 @@
 {
-  "version": "1.54.0",
+  "version": "1.55.0",
   "date": "2026-11-23",
   "notes": [
-    "Deneme masaları arayüzden kalktı (arkada karar vermeye devam ediyor); Kasalar'a MEME cüzdanı; gerçek futures ve memecoin açıldı"
+    "Kasalar: OKX Global ↔ MEME aktarımı (Global'de SOL alınıp MEME'ye gider; MEME'den gelen SOL satılıp USDT olur)",
+    "Yenilikler ekranı: her yeni sürümde neyin eklendiği uygulama açılınca gösterilir"
+  ],
+  "history": [
+    {
+      "version": "1.55.0",
+      "date": "2026-11-23",
+      "notes": [
+        "Kasalar: OKX Global ↔ MEME aktarımı (Global'de SOL alınıp MEME'ye gider; MEME'den gelen SOL satılıp USDT olur)",
+        "Yenilikler ekranı: her yeni sürümde neyin eklendiği uygulama açılınca gösterilir"
+      ]
+    },
+    {
+      "version": "1.54.0",
+      "date": "2026-11-23",
+      "notes": [
+        "Gerçek futures ve gerçek memecoin masaları açıldı",
+        "Kasalar'a MEME cüzdanı eklendi (4 kasa yan yana)",
+        "Deneme masaları ekrandan kalktı; arka planda karar vermeye devam ediyor"
+      ]
+    },
+    {
+      "version": "1.53.0",
+      "date": "2026-11-23",
+      "notes": [
+        "Gerçek memecoin masası: MEME cüzdanında Jupiter ile alım-satım",
+        "Fiyat etkisi %2'yi aşan alım reddedilir, nedeni yazılır",
+        "Ayarlar → Memecoin: gerçek mod anahtarı, en fazla kayıp, en fazla fiyat etkisi"
+      ]
+    },
+    {
+      "version": "1.52.0",
+      "date": "2026-11-23",
+      "notes": [
+        "Gerçek futures masası (OKX Global): borsada kayıtlı zarar durdur, bütçe ve en fazla kayıp sınırı",
+        "Ayarlar'a Futures ve Memecoin bölümleri"
+      ]
+    }
   ]
 }

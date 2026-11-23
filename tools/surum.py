@@ -3,8 +3,14 @@ docs/version.json, src/app.ts içindeki APP_VERSION ve docs/app.js (derleme) bir
 import json, re, sys, datetime, pathlib
 root = pathlib.Path(__file__).resolve().parent.parent
 ver, notes = sys.argv[1], sys.argv[2:]
+try:
+    hist = json.loads((root / "docs/version.json").read_text()).get("history") or []
+except Exception:
+    hist = []
+today = datetime.date.today().isoformat()
+hist = ([{"version": ver, "date": today, "notes": notes}] + [h for h in hist if h.get("version") != ver])[:15]
 (root / "docs/version.json").write_text(json.dumps(
-    {"version": ver, "date": datetime.date.today().isoformat(), "notes": notes}, ensure_ascii=False, indent=2) + "\n")
+    {"version": ver, "date": today, "notes": notes, "history": hist}, ensure_ascii=False, indent=2) + "\n")
 p = root / "src/app.ts"
 p.write_text(re.sub(r"const APP_VERSION\s*=\s*'[^']*'", f"const APP_VERSION='{ver}'", p.read_text()))
 import subprocess

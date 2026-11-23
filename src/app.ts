@@ -1,4 +1,4 @@
-const APP_VERSION='1.54.0';
+const APP_VERSION='1.55.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -578,7 +578,7 @@ async function syncReal(retry = true){
 /* ---------- Para aktarımı: TR ↔ Global ↔ KASA (USDT, Arbitrum One). İstek bulut ayar dosyasına yazılır, bot gönderir. ---------- */
 /* Uçlar: her kasanın simgesi, rengi ve kısa adı (kartlarda ve pencerede aynı standart) */
 const XEND: Record<string, [string, string, string]> = {tr:['OKX TR','i-bank','e1'], g:['OKX Global','i-globe','e2'], k:['KASA','i-vault','e3'], m:['MEME','i-flask','e4']};
-const XDIR: Record<string, [string, string, string]> = {tr2g:['tr','g','OKX TR uygulamasından'], g2tr:['g','tr','TL\'ye çevrilir'], tr2k:['tr','k','OKX TR uygulamasından'], g2k:['g','k','Soğuk cüzdana']};
+const XDIR: Record<string, [string, string, string]> = {tr2g:['tr','g','OKX TR uygulamasından'], g2tr:['g','tr','TL\'ye çevrilir'], tr2k:['tr','k','OKX TR uygulamasından'], g2k:['g','k','Soğuk cüzdana'], g2m:['g','m','SOL alınıp gönderilir'], m2g:['m','g','SOL satılıp USDT olur']};
 const xName=(d: string)=>`${XEND[XDIR[d][0]][0]} → ${XEND[XDIR[d][1]][0]}`;
 const XST: Record<string, [string, string, string]> = {new:['Sırada','i-clock','w'],sent:['Yolda','i-out','w'],arriving:['Ulaşıyor','i-in','w'],done:['Tamam','i-check','ok'],failed:['Olmadı','i-stop','bad']};
 function xEnd(k: string){const e=XEND[k];return `<span class="xe ${e[2]}">${ic(e[1])}</span>`}
@@ -620,8 +620,8 @@ function openXfer(dir: string){
   q.dataset.n='';qHead(XEND[t][1],'Vazgeç');document.getElementById('qTitle').textContent='Para gönder';
   const freeUsd=X.free_tl!=null&&r?Math.max(0,X.free_tl)/r:0,botTl=+(S?.strategies?.live?.cash||0);
   xfSrc=fromTr&&freeUsd<1?'bot':'bos';xfId='x'+Date.now().toString(36);
-  const bal=(k: string)=>{const o: any=S?.okx||{};const u=k==='tr'?(X.tr_total??(o.total_tl&&r?o.total_tl/r:null)):k==='g'?X.g_val:X.kasa?.usd;return u==null?'—':'$'+nf(u,2)};
-  const fee=t==='k'?'~0,003 $ ağ ücreti':'Ücretsiz (yedek yol ~0,003 $)',time_=t==='k'?'Birkaç dakika':'Birkaç saniye – birkaç dakika';
+  const bal=(k: string)=>{const o: any=S?.okx||{};const u=k==='tr'?(X.tr_total??(o.total_tl&&r?o.total_tl/r:null)):k==='g'?X.g_val:k==='m'?(S as any)?.memer?.value:X.kasa?.usd;return u==null?'—':'$'+nf(u,2)};
+  const mm=f==='m'||t==='m',fee=mm?'~0,02 $ ağ ücreti + alım-satım ücreti':t==='k'?'~0,003 $ ağ ücreti':'Ücretsiz (yedek yol ~0,003 $)',time_=mm||t==='k'?'Birkaç dakika':'Birkaç saniye – birkaç dakika';
   const draw=()=>{const tx=document.getElementById('qText'),cur=(document.getElementById('xfAmt') as HTMLInputElement)?.value||'';
     tx.innerHTML=`<div class="xfs">
       <div class="xroute"><div>${xEnd(f)}<b>${XEND[f][0]}</b><small>${bal(f)}</small></div><span class="xar">${ic('i-chev')}</span><div>${xEnd(t)}<b>${XEND[t][0]}</b><small>${bal(t)}</small></div></div>
@@ -639,6 +639,8 @@ function openXfer(dir: string){
         ${fromTr&&xfSrc==='bot'?`<div>${ic('i-info')}<span>Bütçe</span><b>Bu tutar kadar düşer</b></div>`:''}
         ${dir==='g2tr'?`<div>${ic('i-info')}<span>Varınca</span><b>TL'ye çevrilip Nakit'e konur</b></div>`:''}
         ${t==='k'?`<div>${ic('i-lock')}<span>Adres</span><b>0x0113…7db7 (sabit)</b></div>`:''}
+        ${dir==='g2m'?`<div>${ic('i-info')}<span>Nasıl</span><b>Global fonundaki USDT ile SOL alınır, MEME'ye gider</b></div><div>${ic('i-lock')}<span>Adres</span><b>7Ymj…EKwN (sabit)</b></div>`:''}
+        ${dir==='m2g'?`<div>${ic('i-info')}<span>Nasıl</span><b>SOL Global'e gider, satılıp USDT olur</b></div>`:''}
       </div>
       <button class="btn primary xgo" id="xfGo">${ic('i-out')}Gönder</button></div>`;
     tx.querySelectorAll<HTMLElement>('[data-s]').forEach(b=>b.onclick=()=>{xfSrc=b.dataset.s;draw()});
@@ -667,6 +669,9 @@ async function sendXfer(dir: string, retry = true){
   const amt=Math.round((+(document.getElementById('xfAmt') as HTMLInputElement)?.value||0)*100)/100;
   if(!(amt>=1)){toast('Tutarı yaz (en az 1 USDT)');return}
   {const X: any=(S as any)?.xfer||{},freeUsd=X.free_tl!=null&&USDTTRY?Math.max(0,X.free_tl)/USDTTRY:null;
+   const MR: any=(S as any)?.memer;
+   if(dir==='m2g'&&MR&&amt>Math.max(0,(MR.sol-0.02)*(MR.solpx||0))){toast(`MEME'de boşta ~$${nf(Math.max(0,(MR.sol-0.02)*(MR.solpx||0)),2)} SOL var (tokenler hariç)`);return}
+   if(dir==='g2m'&&!MR?.addr){toast('MEME cüzdanı bağlı değil');return}
    if(dir.startsWith('g')&&X.g_val!=null&&amt>+X.g_val){toast(`OKX Global'de ~$${nf(+X.g_val,2)} var; daha fazlası gönderilemez`);return}
    if(dir.startsWith('tr')&&xfSrc==='bot'&&USDTTRY&&amt*USDTTRY*1.01>+(S?.strategies?.live?.cash||0)){toast('Botta bu kadar boş nakit yok; önce bazı coinler satılmalı');return}
    if(dir.startsWith('tr')&&xfSrc==='bos'&&freeUsd!=null&&freeUsd<amt){toast(`TR'de boşta sadece ~${nf(freeUsd,2)} USDT var. "Bottan al"ı seç ya da önce bankadan TL yatır.`);return}}
@@ -1505,7 +1510,21 @@ async function checkVersion(manual?: boolean) {
     bar.innerHTML=`<div class="in">${ic('i-refresh')}<div><b>Yeni sürüm algılandı: ${remoteVer.version}</b><small>${(remoteVer.notes||[]).slice(0,2).join(' · ')}</small></div><button class="btn" id="upBtn">Güncelle</button></div>`;
     bar.hidden=false;document.getElementById('upBtn').onclick=applyUpdate;
   }else{bar.hidden=true;if(manual)toast('Masal güncel: sürüm '+APP_VERSION)}
+  showNews();
   if(!document.getElementById('setv').hidden&&draft)renderForm();
+}
+/** Yenilikler: uygulama yeni sürümle ilk açıldığında, görülmemiş sürümlerin notları bir kez gösterilir. */
+function showNews(){
+  const seen=localStore('masal_seen_ver')||'1.51.1';
+  if(!remoteVer||remoteVer.version!==APP_VERSION)return;
+  if(vcmp(APP_VERSION,seen)<=0)return;
+  const list=(remoteVer.history||[{version:remoteVer.version,notes:remoteVer.notes}]).filter((h: any)=>vcmp(h.version,seen)>0).slice(0,6);
+  localStore('masal_seen_ver',APP_VERSION);
+  if(!list.length)return;
+  const q=document.getElementById('qsh');if(!q.hidden)return;
+  q.dataset.n='';qHead('i-spark','Tamam');document.getElementById('qTitle').textContent='Yenilikler';
+  document.getElementById('qText').innerHTML=`<div class="news">${list.map((h: any)=>`<div><b>Sürüm ${h.version}</b><ul>${(h.notes||[]).map((n: string)=>`<li>${String(n).replace(/</g,'&lt;')}</li>`).join('')}</ul></div>`).join('')}</div>`;
+  q.hidden=false;
 }
 async function applyUpdate(){
   try{const regs=await navigator.serviceWorker?.getRegistrations?.()||[];for(const r of regs)await r.update();

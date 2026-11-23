@@ -27,7 +27,8 @@ G_DEP = "0x74877903737257289dc07e7baf1f4b078c2a82a3"  # OKX Global USDT yatırma
 TR_DEP = "0x1e194face9b26c78f75d854d741cf6547730b705"  # OKX TR USDT yatırma adresi (Arbitrum One)
 ROUTES = {  # yön: (kaynak, hedef adres, hedef borsa ya da None)
     "tr2g": ("tr", G_DEP, "g"), "g2tr": ("g", TR_DEP, "tr"), "tr2k": ("tr", KASA, None), "g2k": ("g", KASA, None)}
-NAMES = {"tr": "OKX TR", "g": "OKX Global", None: "KASA"}
+NAMES = {"tr": "OKX TR", "g": "OKX Global", None: "KASA", "m": "MEME"}
+MEME_DIRS = {"g2m": ("g", "m"), "m2g": ("m", "g")}  # SOL ile; ayrıntı meme_aktar.py
 FUNDING, TRADING = "6", "18"
 DEFAULT = {"daily_max": 1000, "sweep_on": True, "sweep_pct": 50, "sweep_days": 7, "sweep_min": 10}
 
@@ -376,7 +377,7 @@ def step(state, S, N):
     # yeni istekler
     for r in (S.get("xfer_req") or []):
         rid = str(r.get("id") or "")
-        if not rid or rid in X["seen"] or r.get("dir") not in ROUTES:
+        if not rid or rid in X["seen"] or (r.get("dir") not in ROUTES and r.get("dir") not in MEME_DIRS):
             continue
         X["seen"] = (X["seen"] + [rid])[-100:]
         if now * 1000 - float(r.get("ts") or 0) > 3600_000:
@@ -389,11 +390,16 @@ def step(state, S, N):
             continue
         X["jobs"].append({"id": rid, "dir": r["dir"], "amt": amt, "src": r.get("src") or "bos", "ts": int(r.get("ts") or now * 1000),
                           "stage": "new", "msg": "sırada"})
-        _note(X, f"İstek: {NAMES[ROUTES[r['dir']][0]]} → {NAMES[ROUTES[r['dir']][2]]} {amt:.2f} USDT")
+        a, b = MEME_DIRS.get(r["dir"]) or (ROUTES[r["dir"]][0], ROUTES[r["dir"]][2])
+        _note(X, f"İstek: {NAMES[a]} → {NAMES[b]} {amt:.2f} USDT")
     # iptal istekleri: henüz gönderilmemiş işler durdurulur, fon hesabına ayrılan para alım-satım hesabına geri döner
     for rid in (S.get("xfer_cancel") or []):
         job = next((j for j in X["jobs"] if j["id"] == str(rid) and j["stage"] == "new"), None)
         if not job:
+            continue
+        if job["dir"] in MEME_DIRS:
+            job.update(stage="failed", msg="iptal edildi")
+            _note(X, f"İptal: {job['dir']} {job['amt']} USDT")
             continue
         src = ROUTES[job["dir"]][0]
         try:
@@ -415,6 +421,21 @@ def step(state, S, N):
         X["tick"] = now
         for job in X["jobs"]:
             if job["stage"] in ("done", "failed"):
+                continue
+            if job["dir"] in MEME_DIRS:
+                try:
+                    from . import meme_aktar
+                    if job["stage"] == "new" and X.get("day_sum", 0) + job["amt"] > float(cfg["daily_max"]):
+                        job["msg"] = f"günlük sınır ({cfg['daily_max']} $) dolu; yarın gönderilecek"
+                        continue
+                    meme_aktar.run(job, X, C, N, _note)
+                except Exception as e:
+                    if job["stage"] == "sent":
+                        job["msg"] = f"kontrol edilemedi, tekrar denenecek: {str(e)[:120]}"
+                    else:
+                        job.update(stage="failed", msg=str(e)[:300])
+                        _note(X, f"Aktarım başarısız: {job['msg']}")
+                        N.add("money", "Aktarım başarısız", job["msg"][:200], 4, ["warning"])
                 continue
             src, addr, dest = ROUTES[job["dir"]]
             ex = C[src]
