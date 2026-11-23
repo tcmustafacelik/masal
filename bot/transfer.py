@@ -65,8 +65,12 @@ class Ex:
         return 0.0
 
     def funding(self, ccy, total=False):
+        # OKX TR fon hesabında "availBal" çekilebilir parayı 0 gösterebiliyor (çekim yine de yapılabiliyor);
+        # bu yüzden kullanılabilir = bakiye − dondurulan alınır
         d = self.req("GET", f"/api/v5/asset/balances?ccy={ccy}")
-        return float(d[0].get("bal" if total else "availBal") or 0) if d else 0.0
+        if not d:
+            return 0.0
+        return float(d[0].get("bal") or 0) - (0 if total else float(d[0].get("frozenBal") or 0))
 
     def move(self, ccy, amt, frm, to):
         if amt > 0:
