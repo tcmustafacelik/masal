@@ -28,7 +28,7 @@ DEFAULT = {
     "min_age_min": 10,   # en az bu kadar dakikalık havuz (ilk dakikaların tuzaklarından kaçın)
     "max_age_h": 72,
     "tp_pct": 30,        # kâr al
-    "tp_part": 50,       # kâr alda satılan oran (%); kalanı iz süren stopla tutulur. 100 = hepsi satılır
+    "tp_part": 100,      # kâr alda satılan oran (%); kalanı iz süren stopla tutulur. 100 = hepsi satılır
     "trail_from": 15,    # bu kârdan sonra iz süren stop devreye girer
     "trail_pct": 12,     # zirveden bu kadar geri çekilirse sat
     "sl_pct": 15,        # zarar kes

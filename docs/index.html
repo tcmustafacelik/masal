@@ -710,7 +710,6 @@ h2{margin:0 2px 7px}
 
 /* 1.69: kesilen yazılar */
 .acch .att small{-webkit-line-clamp:2!important;white-space:normal!important}
-.al{flex-wrap:wrap}.al b{white-space:normal;text-align:right}
 [data-theme=dark] .tile.on .ic,[data-theme=dark] .ntiles .tile.on .ck{color:#111827}
 .assets .aleg div{padding:6px 5px 6px 9px}
 
@@ -787,6 +786,35 @@ h2{margin:0 2px 7px}
 .step.changed{border-color:var(--acc)!important;box-shadow:0 0 0 1px var(--acc)!important}
 .step.changed .sv{background:transparent!important}
 .field .lb{min-width:0;overflow:visible}.field .lb span{overflow-wrap:anywhere}
+
+/* 1.70.1: gönder sayfası "Tümü" kısayolu */
+.xq .xall{display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1;background:var(--acc-bg)!important;border-color:var(--acc-line)!important;color:var(--acc-ink,var(--text));font-weight:700}
+.xq .xall small{font-size:9.5px;font-weight:600;opacity:.8;margin-top:1px}
+.xq .xall:disabled{opacity:.45}
+.xq button.off{opacity:.4}
+
+/* 1.70.1: Fable 3. tur görsel düzeltmeler */
+#setv .step.changed,.step.changed{border-color:var(--acc)!important;box-shadow:0 0 0 1px var(--acc)!important}
+#setv .step.bad,.step.bad{border-color:var(--red)!important;box-shadow:0 0 0 1px var(--red)!important;background:var(--red-bg)!important}
+.field .lb span{display:block!important;-webkit-line-clamp:unset!important;overflow:visible!important}
+.ldh{flex-wrap:wrap;white-space:nowrap}
+.agent .al{flex-wrap:wrap}.agent .al b{white-space:normal;margin-left:auto;text-align:right}
+.agent .al b span{color:inherit}.agent .al b span.up{color:var(--green)}.agent .al b span.dn{color:var(--red)}
+.wrow .end{max-width:46%}.wrow .end .chip{white-space:normal;text-align:left}
+.wgrid .wr span{flex:none;overflow:visible}.wgrid .wr small{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.step .sv{width:auto!important;min-width:84px;max-width:120px}.step .sv input,#setv .step .sv input{max-width:92px}
+.step .sv .u{opacity:1}
+.assets .aleg span{gap:3px}
+
+/* 1.70.1: toplam varlık birim seçimi ve gizle/göster */
+.ovw .oh b{white-space:nowrap}
+.ovw .ocur{margin-left:auto;display:flex;gap:2px;padding:2px;border-radius:8px;background:var(--line2)}
+.ovw .ocur button{border:0;background:transparent;font:inherit;font-size:10.5px;font-weight:700;color:var(--muted);padding:3px 7px;border-radius:6px;-webkit-tap-highlight-color:transparent}
+.ovw .ocur button.on{background:var(--surface);color:var(--acc-ink,var(--text));box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.ovw .oeye{border:0;background:var(--line2);width:28px;height:26px;border-radius:7px;display:grid;place-items:center;color:var(--muted);-webkit-tap-highlight-color:transparent}
+.ovw .oeye svg{width:14px!important;height:14px!important}
+.ovw .abar .pk,.ovw .og .pk em{background:var(--amber)!important}
+.ovw .abar .pg,.ovw .og .pg em{background:#8b5cf6!important}
 </style>
 </head>
 <body>
@@ -984,6 +1012,6 @@ h2{margin:0 2px 7px}
 <div class="toast" id="toast" hidden></div>
 <div class="qsh" id="qsh" hidden><div class="qb"><div class="gr"></div><h3><span><svg class="i" id="qIco"><use href="#i-info"/></svg></span><b id="qTitle"></b></h3><div class="qt" id="qText"></div><button class="btn primary" id="qOk">Anladım</button></div></div>
 
-<script src="app.js?v=1.70.0"></script>
+<script src="app.js?v=1.70.1"></script>
 </body>
 </html>

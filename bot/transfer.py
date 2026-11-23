@@ -617,6 +617,7 @@ def _balances(C, o, bot_cash):
     if C["g"].ok:
         try:
             out["g_val"] = round(float(C["g"].req("GET", "/api/v5/asset/asset-valuation?ccy=USDT")[0].get("totalBal") or 0), 2)
+            out["g_fund"] = round(C["g"].funding("USDT"), 2)  # gönderilebilir: fon hesabındaki boş USDT (futures teminatı hariç)
         except Exception as e:
             print("Global bakiye okunamadı:", e)
     try:

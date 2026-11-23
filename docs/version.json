@@ -1,12 +1,21 @@
 {
-  "version": "1.70.0",
+  "version": "1.70.1",
   "date": "2026-11-23",
   "notes": [
-    "Sayı kutuları yenilendi: tek parça, renkli, hepsi aynı boyda; sayı ve birim yan yana",
-    "Memecoin kademeli kâr al: kâr alda belirlediğin kısım satılır, kalanı iz süren stopla yükselişte tutulur",
-    "Futures izleme listesi 8'den 18 coine çıktı; Fable 3. tur bot düzeltmeleri"
+    "Toplam varlıkta USDT / BTC / TRY seçimi ve tutarları gizle-göster",
+    "Para gönderme sayfalarında 'Tümü' kısayolu; bakiye değiştikçe kendiliğinden güncellenir",
+    "Fable 3. tur: değişen/hatalı ayar kutusu belirgin, kesilen açıklamalar, Ajan masası hizası, renk ayrımı"
   ],
   "history": [
+    {
+      "version": "1.70.1",
+      "date": "2026-11-23",
+      "notes": [
+        "Toplam varlıkta USDT / BTC / TRY seçimi ve tutarları gizle-göster",
+        "Para gönderme sayfalarında 'Tümü' kısayolu; bakiye değiştikçe kendiliğinden güncellenir",
+        "Fable 3. tur: değişen/hatalı ayar kutusu belirgin, kesilen açıklamalar, Ajan masası hizası, renk ayrımı"
+      ]
+    },
     {
       "version": "1.70.0",
       "date": "2026-11-23",
@@ -114,13 +123,6 @@
       "date": "2026-11-23",
       "notes": [
         "Memecoin kâr süpürme: MEME cüzdanı başlangıç tutarının üstüne çıkınca kârın %50'si haftada bir MEME → Global → KASA yolunu otomatik izler (açık token varken yapılmaz); oran ve aralık Ayarlar → Kasalar'da futures ile ortak"
-      ]
-    },
-    {
-      "version": "1.64.0",
-      "date": "2026-11-23",
-      "notes": [
-        "Ayar ekranları inceldi: satırlar, değer kutuları, açılır bölümler, sekmeler ve seçim kutuları daha küçük ve sade"
       ]
     }
   ]
