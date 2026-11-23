@@ -390,6 +390,22 @@ details.setup summary::-webkit-details-marker{display:none}
 .ft.al{background:var(--blue-bg);color:var(--blue)}.ft.sat{background:var(--green-bg);color:var(--green)}.ft.zar{background:var(--red-bg);color:var(--red)}.ft.not{background:var(--line2);color:var(--muted)}.ft.err{background:var(--red-bg);color:var(--red)}
 .mfeed .fr>div{min-width:0;overflow-wrap:anywhere}.mfeed small{display:block;color:var(--muted);font-size:11px;margin-top:1px}
 .hero .use{margin-top:13px}
+.xf{margin-top:12px;padding:13px 14px}
+.assets .xsync{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin-top:9px;padding:8px;font-size:12.5px;-webkit-tap-highlight-color:transparent}.assets .xsync svg{width:15px;height:15px}
+.assets .xw{margin-top:6px;font-size:11.5px;line-height:1.45;color:var(--red)}
+.xf .ah{display:flex;align-items:center;gap:7px;font-size:13.5px}.xf .ah svg{width:16px;height:16px;color:var(--muted)}.xf .ah span{margin-left:auto;font-size:11.5px;color:var(--faint)}
+.xf .xb{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:8px;font-size:11.5px;color:var(--muted)}.xf .xb b{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums}
+.xf .xt{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:11px}
+.xf .xt button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:64px;padding:8px 6px;border:1px solid var(--line2);border-radius:10px;background:var(--card2,transparent);color:var(--text);font:inherit;font-size:12.5px;font-weight:600;text-align:center;-webkit-tap-highlight-color:transparent;user-select:none;cursor:pointer}
+.xf .xt button svg{width:18px;height:18px}.xf .xt button small{font-size:10.5px;font-weight:500;color:var(--muted)}
+.xf .xt .c1 svg{color:#3b82f6}.xf .xt .c2 svg{color:#10b981}.xf .xt .c3 svg,.xf .xt .c4 svg{color:#d97706}
+.xf .xj{margin-top:10px;border-top:1px solid var(--line2);padding-top:6px}
+.xf .xj div{display:flex;gap:8px;align-items:baseline;padding:4px 0;font-size:12px}.xf .xj time{color:var(--faint);font-variant-numeric:tabular-nums;flex:none}.xf .xj span{flex:1;min-width:0}.xf .xj em{display:block;font-style:normal;font-size:11px;color:var(--muted);margin-top:1px}
+.xf .xj em.ok{color:var(--green)}.xf .xj em.bad{color:var(--red)}
+.xfs .seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0}.xfs .seg button{padding:9px 6px;border:1px solid var(--line2);border-radius:9px;background:transparent;color:var(--text);font:inherit;font-size:12.5px;-webkit-tap-highlight-color:transparent}
+.xfs .seg button.on{border-color:var(--acc,#d97706);background:color-mix(in srgb,var(--acc,#d97706) 12%,transparent);font-weight:600}
+.xfs input{width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid var(--line2);border-radius:9px;background:transparent;color:var(--text);font:inherit;font-size:16px;font-variant-numeric:tabular-nums}
+.xfs .hint{font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.45}
 .assets{margin-top:12px;padding:13px 14px}
 .assets .ah{display:flex;align-items:center;gap:7px;font-size:13.5px}.assets .ah svg{width:16px;height:16px;color:var(--muted)}.assets .ah span{margin-left:auto;font-size:11.5px;color:var(--faint)}
 .assets .a2{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:10px}
@@ -562,7 +578,7 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
   <div class="err" id="err"></div>
   <div class="cols">
   <div class="colA">
-  <section id="heroSec"><div class="hero" id="hero"></div><div class="card assets" id="assets" hidden></div><div id="alerts"></div></section>
+  <section id="heroSec"><div class="hero" id="hero"></div><div class="card assets" id="assets" hidden></div><div class="card xf" id="xfer" hidden></div><div id="alerts"></div></section>
 
   <section id="nowSec">
     <h2><svg class="i"><use href="#i-target"/></svg>Bot şimdi ne yapıyor<button class="qm" data-q="nasil" aria-label="Açıklama">?</button></h2>
@@ -673,6 +689,6 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 <div class="toast" id="toast" hidden></div>
 <div class="qsh" id="qsh" hidden><div class="qb"><div class="gr"></div><h3><span><svg class="i" id="qIco"><use href="#i-info"/></svg></span><b id="qTitle"></b></h3><div class="qt" id="qText"></div><button class="btn primary" id="qOk">Anladım</button></div></div>
 
-<script src="app.js?v=1.44.1"></script>
+<script src="app.js?v=1.45.0"></script>
 </body>
 </html>

@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.44.1';
+const APP_VERSION = '1.45.0';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -168,6 +168,7 @@ async function openLive() {
         const o = await unseal(S.live_enc, pw);
         S.strategies.live = o.strategy;
         S.okx = o.okx;
+        S.xfer = o.xfer;
     }
     catch (e) {
         pw = '';
@@ -375,6 +376,7 @@ function render() {
                 localStore('masal_pw', v);
                 S.strategies.live = o.strategy;
                 S.okx = o.okx;
+                S.xfer = o.xfer;
                 render();
                 toast('Kilit açıldı');
             }
@@ -695,7 +697,7 @@ async function startNotes() {
     };
     nBadge();
 }
-function qHead(i, b) { document.querySelector('#qIco use').setAttribute('href', '#' + i); document.getElementById('qOk').textContent = b; }
+function qHead(i, b) { document.querySelector('#qIco use').setAttribute('href', '#' + i); const k = document.getElementById('qOk'); k.textContent = b; k.hidden = false; }
 function openNotes() {
     const q = document.getElementById('qsh');
     q.dataset.n = '1';
@@ -845,6 +847,7 @@ function renderMetrics(x) {
         h += `<div class="use">${live ? '' : `<div class="uh" style="color:var(--text);font-size:12.5px;line-height:1.45">${x.desc}</div>`}<div class="uh">${x.trades} kapanan işlem · başlangıç ${tl(x.start_cash, 0)}${live ? '' : ' (sanal para)'}</div></div>`;
     hero.innerHTML = h;
     renderAssets(x, eq);
+    renderXfer();
 }
 /** Varlık özeti: yatırdığın toplam para ile şu an elindeki her şey (bot + kasadaki yedek) yan yana. */
 function renderAssets(x, eq) {
@@ -868,7 +871,162 @@ function renderAssets(x, eq) {
     box.innerHTML = `<div class="ah">${ic('i-wallet')}<b>Varlık özeti</b><span>bütün paran</span></div>
     <div class="a2"><div><span>Yatırdığın</span><b>${tl(kasa, 0)}</b></div><div><span>Şu an hepsi</span><b>${tl(now, 0)}</b></div>
       <div><span>Fark</span><b class="${cls(net)}">${sgn(net)} TL</b></div></div>
-    <div class="a3"><span>Botta nakit <b>${tl(x.cash, 0)}</b></span><span>Coinlerde <b>${tl(inCoins, 0)}</b></span><span>Kasada yedek <b>${tl(reserve, 0)}</b></span></div>${tgt}`;
+    <div class="a3"><span>Botta nakit <b>${tl(x.cash, 0)}</b></span><span>Coinlerde <b>${tl(inCoins, 0)}</b></span><span>Kasada yedek <b>${tl(reserve, 0)}</b></span></div>${realLine(x, now)}${tgt}`;
+    const sb = document.getElementById('syncBtn');
+    if (sb)
+        sb.onclick = () => syncReal();
+}
+/** Borsadaki gerçek toplam: uygulamadaki kayıtla tutmuyorsa açıkça gösterilir (bot fazlasını kullanmaz). */
+function realLine(x, now) {
+    const o = S?.okx || {}, real = +(o.total_tl || x.real_total || 0);
+    if (!real)
+        return '';
+    const gap = now - real, f = +(o.fund_tl || 0);
+    const warn = Math.abs(gap) > Math.max(50, real * .01) ? `<div class="xw dn">Uygulamadaki hesap borsadan ${tl(Math.abs(gap), 0)} ${gap > 0 ? 'fazla' : 'az'}. ${gap > 0 ? 'Kasa/bütçe borsadakinden yüksek girilmiş olabilir; bot olmayan parayı kullanmaz.' : 'Borsaya eklenen para henüz bota verilmemiş.'}</div>` : '';
+    return `<div class="a3"><span>OKX TR'de gerçek toplam <b>${tl(real, 0)}</b></span>${f >= 1 ? `<span>Nakit (fon hesabı) <b>${tl(f, 0)}</b></span>` : ''}</div>${warn}
+    <button class="btn xsync" id="syncBtn">${ic('i-refresh')}Borsayla eşleştir</button>`;
+}
+/** "Borsayla eşleştir": bütçe ve kasa borsadaki gerçek paraya göre ayarlanır.
+ *  Bütçe öyle seçilir ki bottaki nakit = alım-satım hesabındaki gerçek boş para olur (kâr/zarar geçmişi bozulmaz);
+ *  kasa = bütçe + fon hesabındaki nakit (yedek). */
+async function syncReal(retry = true) {
+    const x = S?.strategies?.live, o = S?.okx;
+    if (!x || !o || o.try == null) {
+        toast('Borsa bilgisi henüz gelmedi, biraz sonra dene');
+        return;
+    }
+    if (!token) {
+        toast('Önce Ayarlar\'dan GitHub bağlantısını kur');
+        return;
+    }
+    const free = (+o.try || 0) + (+o.usdt_tl || 0), base = +(x.base ?? x.start_cash) || 0, b = Math.max(0, Math.round(base + free - (+x.cash || 0))), k = Math.round(b + (+o.fund_tl || 0));
+    const btn = document.getElementById('syncBtn');
+    if (btn)
+        btn.disabled = true;
+    try {
+        const cur = await tfetch(API + '?t=' + Date.now(), { headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' }, cache: 'no-store' }).then(r => { if (!r.ok)
+            throw r.status; return r.json(); });
+        const data = JSON.parse(decodeURIComponent(escape(atob(cur.content.replace(/\n/g, '')))));
+        data.budget = b;
+        data.kasa = k;
+        const body = { message: 'Borsayla eşleştir: bütçe ' + b + ' · kasa ' + k, content: btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2) + '\n'))), sha: cur.sha, branch: 'main' };
+        const r = await tfetch(API, { method: 'PUT', headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        if (r.status === 409 && retry)
+            return syncReal(false);
+        if (!r.ok)
+            throw r.status;
+        sha = (await r.json()).content.sha;
+        for (const s0 of [orig, draft])
+            if (s0) {
+                s0.budget = b;
+                s0.kasa = k;
+            }
+        toast(`Eşleştirildi: botta ${tl(b, 0)}, kasa ${tl(k, 0)}. Bot birkaç saniyede uygular.`);
+    }
+    catch (e) {
+        toast('Eşleştirilemedi (' + e + '), tekrar dene');
+    }
+    if (btn)
+        btn.disabled = false;
+}
+/* ---------- Para aktarımı: TR ↔ Global ↔ KASA (USDT, Arbitrum One). İstek bulut ayar dosyasına yazılır, bot gönderir. ---------- */
+const XDIR = {
+    tr2g: ['OKX TR → Global', 'TL/USDT gönderilir', 'i-link', 'c1'], g2tr: ['Global → OKX TR', 'TL\'ye çevrilir', 'i-back', 'c2'],
+    tr2k: ['OKX TR → KASA', 'soğuk cüzdana', 'i-lock', 'c3'], g2k: ['Global → KASA', 'soğuk cüzdana', 'i-shield', 'c4']
+};
+const XST = { new: 'sırada', sent: 'yolda', arriving: 'ulaşıyor', done: 'tamam', failed: 'olmadı' };
+function renderXfer() {
+    const box = document.getElementById('xfer');
+    if (!box)
+        return;
+    const X = S?.xfer;
+    if (sel !== 'live' || !S?.strategies?.live || S.strategies.live.locked) {
+        box.hidden = true;
+        return;
+    }
+    box.hidden = false;
+    const jobs = (X?.jobs || []).slice(0, 4).map((j) => `<div><time>${masaClock(j.ts)}</time><span>${XDIR[j.dir]?.[0] || j.dir} · <b>${nf(j.amt, 2)} $</b><em class="${j.stage === 'done' ? 'ok' : j.stage === 'failed' ? 'bad' : ''}">${XST[j.stage] || j.stage}${j.stage !== 'done' && j.msg ? ' · ' + j.msg : ''}</em></span></div>`).join('');
+    box.innerHTML = `<div class="ah">${ic('i-refresh')}<b>Para aktarımı</b><span>USDT · Arbitrum</span></div>
+    <div class="xb"><span>TR'de boşta <b>${X?.free_tl != null ? tl(Math.max(0, X.free_tl), 0) : '—'}</b></span><span>Global'de <b>${X?.g_val != null ? '$' + nf(X.g_val, 2) : '—'}</b></span><span>Bugün gönderilen <b>$${nf(X?.day_sum || 0, 0)} / ${nf(X?.daily_max || 1000, 0)}</b></span></div>
+    <div class="xt">${Object.entries(XDIR).map(([k, v]) => `<button class="${v[3]}" data-x="${k}">${ic(v[2])}${v[0]}<small>${v[1]}</small></button>`).join('')}</div>
+    ${jobs ? `<div class="xj">${jobs}</div>` : ''}`;
+    box.querySelectorAll('[data-x]').forEach(b => b.onclick = () => openXfer(b.dataset.x));
+}
+let xfSrc = 'bos', USDTTRY = 0;
+function openXfer(dir) {
+    const X = S?.xfer || {}, v = XDIR[dir], q = document.getElementById('qsh'), fromTr = dir.startsWith('tr');
+    q.dataset.n = '';
+    qHead(v[2], 'Vazgeç');
+    document.getElementById('qOk').hidden = true;
+    document.getElementById('qTitle').textContent = v[0];
+    xfSrc = 'bos';
+    const draw = () => {
+        const t = document.getElementById('qText');
+        t.innerHTML = `<div class="xfs">${fromTr ? `<div class="seg"><button data-s="bos" class="${xfSrc === 'bos' ? 'on' : ''}">Boştaki paradan</button><button data-s="bot" class="${xfSrc === 'bot' ? 'on' : ''}">Bottan al</button></div>` : ''}
+      <input id="xfAmt" type="number" inputmode="decimal" min="1" step="1" placeholder="Tutar (USDT)" value="${document.getElementById('xfAmt')?.value || ''}">
+      <div class="hint">${fromTr ? (xfSrc === 'bos' ? `TR'de bota ait olmayan boş para kullanılır (şu an ~${X.free_tl != null ? tl(Math.max(0, X.free_tl), 0) : '—'}). Gerekirse TL USDT'ye çevrilir.` : 'Bottaki paradan alınır; bütçe ve kasa bu tutar kadar düşürülür.') : 'Global\'deki USDT gönderilir.'}
+      ${dir === 'g2tr' ? ' TR\'ye gelince TL\'ye çevrilip Nakit\'e konur; bankaya çekimi sen yaparsın.' : ''}${dir.endsWith('k') ? ' Soğuk cüzdan (KASA) adresi sabittir: 0x0113…7db7.' : ''} Ağ ücreti ~0,003 $. Günlük sınır ${nf(X.daily_max || 1000, 0)} $.</div>
+      <button class="btn primary" id="xfGo" style="width:100%;margin-top:12px">Gönder</button></div>`;
+        t.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { xfSrc = b.dataset.s; draw(); });
+        document.getElementById('xfGo').onclick = () => sendXfer(dir);
+    };
+    document.getElementById('qText').innerHTML = '';
+    draw();
+    q.hidden = false;
+}
+async function sendXfer(dir, retry = true) {
+    const amt = Math.round((+document.getElementById('xfAmt')?.value || 0) * 100) / 100;
+    if (!(amt >= 1)) {
+        toast('Tutarı yaz (en az 1 USDT)');
+        return;
+    }
+    if (!token) {
+        toast('Önce Ayarlar\'dan GitHub bağlantısını kur');
+        return;
+    }
+    const btn = document.getElementById('xfGo');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Gönderiliyor…';
+    }
+    try {
+        const cur = await tfetch(API + '?t=' + Date.now(), { headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' }, cache: 'no-store' }).then(r => { if (!r.ok)
+            throw r.status; return r.json(); });
+        const data = JSON.parse(decodeURIComponent(escape(atob(cur.content.replace(/\n/g, '')))));
+        const src = dir.startsWith('tr') ? xfSrc : 'bos';
+        data.xfer_req = [...(data.xfer_req || []).filter((r) => Date.now() - (r.ts || 0) < 3600000), { id: 'x' + Date.now().toString(36), ts: Date.now(), dir, amt, src }];
+        if (src === 'bot') {
+            const tlv = Math.ceil(amt * (USDTTRY || 0) * 1.01);
+            if (!tlv)
+                throw 'kur yok';
+            data.budget = Math.max(0, (+data.budget || 0) - tlv);
+            data.kasa = Math.max(0, (+data.kasa || 0) - tlv);
+        }
+        const body = { message: 'Uygulamadan aktarım: ' + dir + ' ' + amt + ' USDT', content: btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2) + '\n'))), sha: cur.sha, branch: 'main' };
+        const r = await tfetch(API, { method: 'PUT', headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        if (r.status === 409 && retry)
+            return sendXfer(dir, false);
+        if (!r.ok)
+            throw r.status;
+        sha = (await r.json()).content.sha;
+        for (const o of [orig, draft])
+            if (o) {
+                o.xfer_req = data.xfer_req;
+                if (src === 'bot') {
+                    o.budget = data.budget;
+                    o.kasa = data.kasa;
+                }
+            }
+        document.getElementById('qsh').hidden = true;
+        toast(`${XDIR[dir][0]}: ${nf(amt, 2)} USDT isteği gönderildi; bot birkaç saniye içinde başlar.`);
+    }
+    catch (e) {
+        toast('İstek gönderilemedi (' + e + '), tekrar dene');
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Gönder';
+        }
+    }
 }
 const ICON_BAD = new Set(), ICON_OK = new Set();
 // Coinin hangi paritede alınıp satıldığını gösteren küçük etiket (TRY, USDT, USDC, EUR)
@@ -1087,6 +1245,8 @@ async function pollMarket() {
             // tek istekle OKX TR'deki tüm TL paritelerinin anlık fiyatı ve 24 saatlik hacmi
             const r = await tfetch('https://tr.okx.com/api/v5/market/tickers?instType=SPOT', { cache: 'no-store' }, 6000).then(r => r.json()).catch(() => null);
             const all = r?.data || [], byId = new Map(all.map(t => [t.instId, t])), L_ = i => +(byId.get(i)?.last || 0), usd = L_('USDT-TRY');
+            if (usd)
+                USDTTRY = usd;
             // Fiyatlar TL karşılığıyla: USDT kuru USDT-TRY'den, USDC ve EUR farkı düşük USDT pariteleri üzerinden
             const K = { TRY: 1, USDT: usd, USDC: usd * L_('USDC-USDT'), EUR: L_('USDT-EUR') ? usd / L_('USDT-EUR') : 0 };
             const rows = all.filter(t => K[String(t.instId).split('-')[1]]);

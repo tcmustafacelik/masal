@@ -1,7 +1,7 @@
 {
-  "version": "1.44.1",
+  "version": "1.45.0",
   "date": "2026-11-23",
   "notes": [
-    "Geri tuşu artık uygulamayı kapatmıyor; açık ekranı kapatır, ana ekranda iki kez basınca çıkar"
+    "Para aktarımı (TR ↔ Global ↔ KASA), kâr süpürme, borsayla eşleştir; bot olmayan parayı kullanmaz"
   ]
 }

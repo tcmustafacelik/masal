@@ -25,6 +25,14 @@ def describe(key, c):
             f"zirveden {pct(c['trailing'])} geri çekilince çıkar.")
 
 
+def _xfer(state, S):
+    try:
+        from . import transfer
+        return transfer.public(state, S)
+    except Exception:
+        return None
+
+
 def _lev(state):
     try:
         from . import kaldirac
@@ -88,7 +96,7 @@ def build(state, S=None):
             "desc": (f"{cfg['name']} stratejisi gerçek OKX TR hesabında, {tr(start)} TL bütçeyle. "
                      + ("Emirler gerçek." if s.get("armed") else "Şu an deneme modunda: emir gönderilmiyor.")) if live else describe(s["key"], p.cfg),
             "live": live, "armed": bool(s.get("armed")), "start_cash": start, "log": s.get("log", [])[-20:][::-1],
-            "paused": bool(s.get("paused")), "target_done": s.get("target_done"), "kasa": s.get("kasa"), "base": s.get("base"), "topups": s.get("topups", 0),
+            "paused": bool(s.get("paused")), "target_done": s.get("target_done"), "kasa": s.get("kasa"), "real_total": s.get("real_total"), "cash_gap": s.get("cash_gap"), "base": s.get("base"), "topups": s.get("topups", 0),
             "last_topup": s.get("last_topup"), "checkpoint": s.get("checkpoint"),
             "risk": dict(p.risk, lot=p.cfg.get("lot")),
             "equity": round(eq, 2), "cash": round(s["cash"], 2),
@@ -111,12 +119,12 @@ def build(state, S=None):
         "updated": state.get("updated"), "created": state.get("created"),
         "mode": "Sanal", "start_cash": config.START_CASH,
         "risk": config.RISK, "fee": config.FEE_RATE, "slippage": config.SLIPPAGE,
-        "universe": state.get("universe", []), "strategies": strategies, "settings": S, "okx": state.get("okx"), "perf": state.get("perf"), "meme": _meme(state), "lev": _lev(state),
+        "universe": state.get("universe", []), "strategies": strategies, "settings": S, "okx": state.get("okx"), "perf": state.get("perf"), "meme": _meme(state), "lev": _lev(state), "xfer": _xfer(state, S),
     }
     if vault.password() and "live" in strategies:
         # Gerçek hesap bilgileri herkese açık sayfada şifreli durur; uygulama OKX şifresiyle çözer
         lv = strategies.pop("live")
-        out["live_enc"] = vault.seal({"strategy": lv, "okx": state.get("okx")})
+        out["live_enc"] = vault.seal({"strategy": lv, "okx": state.get("okx"), "xfer": out.pop("xfer", None)})
         out["live_public"] = {"armed": lv["armed"], "paused": lv["paused"]}
         out["okx"] = None
     with open(OUT, "w", encoding="utf-8") as f:

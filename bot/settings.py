@@ -17,6 +17,8 @@ DEFAULTS = {
     "paused": False,        # True: gerçek hesapta yeni alım yapılmaz (açık pozisyonlar korunur)
     "liquidate": 0,         # zaman damgası; yeniyse gerçek hesaptaki her şey satılır
     "sell": {"ts": 0, "insts": []},
+    "xfer": {"daily_max": 1000, "sweep_on": True, "sweep_pct": 50, "sweep_days": 7, "sweep_min": 10},  # para aktarımı ve kâr süpürme
+    "xfer_req": [],  # uygulamadan aktarım istekleri [{id, ts, dir, amt, src}]; her biri bir kez işlenir
     "convert": {"ts": 0},
     "target": {"on": False, "amount": 20000, "mode": "profit"},  # açıksa hedefe ulaşınca her şey satılır ve bot durur
     "meme": {"on": True, "bank": 100.0, "size_pct": 10, "max_pos": 5, "min_liq": 20000, "max_fdv": 5000000, "min_age_min": 10, "max_age_h": 72, "tp_pct": 30, "trail_from": 15, "trail_pct": 12, "sl_pct": 15, "max_hold_h": 4, "slip_pct": 1.0, "fee_pct": 0.5},  # memecoin deneme masası (sanal para)

@@ -52,6 +52,30 @@ def note(L, text):
     print(text)
 
 
+def sync_cash(state, L):
+    """Botun nakit kaydını borsadaki gerçek boş parayla eşitler (fazlasını asla kullanmaz).
+    Ayarlara borsadakinden yüksek bir bütçe girilse bile bot olmayan parayla alım denemez; fark uygulamada gösterilir."""
+    o = state.get("okx") or {}
+    if not L.get("armed") or not o.get("ok") or o.get("try") is None or time.time() * 1000 - (o.get("ts") or 0) > 300_000:
+        return
+    real = float(o.get("try") or 0) + float(o.get("usdt_tl") or 0)  # alım-satım hesabındaki boş TL + USDT karşılığı
+    over = L["cash"] - real
+    if over <= max(20.0, real * 0.01):
+        L.pop("over_ts", None)
+    else:
+        # Alım/satım sonrası eski ölçümle yanlış eşitleme olmasın: fark iki ayrı ölçümde (90 sn arayla) sürmeli
+        # ve arada işlem olmamalı
+        last = max([t.get("ts", 0) for t in L.get("trades", [])[-5:]] + [0])
+        if not L.get("over_ts") or last > L["over_ts"] - 30_000:
+            L["over_ts"] = o["ts"]
+        elif o["ts"] - L["over_ts"] >= 90_000:
+            L.pop("over_ts", None)
+            L["cash"] = round(real, 2)
+            L["cash_gap"] = round(L.get("cash_gap", 0.0) + over, 2)
+            note(L, f"Nakit borsayla eşitlendi: kayıtta {tr(over)} TL fazla görünüyordu (borsada {tr(real)} TL boş)")
+    L["real_total"] = o.get("total_tl")
+
+
 def setup_live(state, S):
     """Gerçek hesap portföyünü ayarlara göre hazırlar."""
     armed, key, budget = bool(S["live"]), S["strategy"], float(S["budget"])
@@ -101,6 +125,7 @@ def setup_live(state, S):
         note(L, "Bot durduruldu: yeni alım yapılmayacak" if want_pause else "Bot yeniden başlatıldı")
     L["paused"] = want_pause
     L["kasa"], L["armed"] = float(S["kasa"]), armed
+    sync_cash(state, L)
     if not L.get("eq_v2"):  # eski grafik noktaları başlangıç parası bilgisi olmadan tutuluyordu; temiz başla
         L["equity"], L["eq_v2"] = [], True
     L["scale"] = L["start_cash"] / config.START_CASH
@@ -247,6 +272,12 @@ def check_okx():
             out["usdt"] = round(api.available(config.QUOTE), 2)
             out["usdt_tl"] = round(out["usdt"] * okx.rate(config.QUOTE), 2)  # boştaki USDT/USDC/EUR'nun TL karşılığı
             out["quote"] = config.QUOTE
+        try:  # borsadaki gerçek toplam (işlem + fon hesabı, coinler dahil) ve fon hesabındaki boş TL
+            out["total_tl"] = round(float(api._req("GET", "/api/v5/asset/asset-valuation?ccy=TRY")[0].get("totalBal") or 0), 2)
+            fb = api._req("GET", "/api/v5/asset/balances?ccy=TRY,USDT")
+            out["fund_tl"] = round(sum(float(b.get("availBal") or 0) * (1 if b["ccy"] == "TRY" else okx.rate("USDT")) for b in fb), 2)
+        except Exception as e:
+            print("Borsa toplamı okunamadı:", e)
         return out
     except Exception as e:
         return {"ok": False, "status": f"Bağlantı hatası: {tr_err(e)}"[:200], "ts": int(time.time() * 1000)}
@@ -351,6 +382,8 @@ def signature(state, S):
     parts.append((state.get("okx") or {}).get("ok"))
     mm = state.get("meme") or {}
     parts.append([len(mm.get("trades", [])), sorted(mm.get("positions", {})), len(mm.get("log", []))])
+    xf = state.get("xfer") or {}
+    parts.append([(j.get("id"), j.get("stage"), j.get("msg")) for j in xf.get("jobs", [])] + [xf.get("free_tl"), xf.get("g_val")])
     lv = state.get("lev") or {}
     parts.append([len(lv.get("trades", [])), sorted(lv.get("positions", {})), len(lv.get("log", [])),
                   [round(v.get("stop", 0), 8) for v in (lv.get("positions") or {}).values()]])
@@ -486,6 +519,12 @@ def main():
         meme.step(state, S)  # memecoin deneme masası (sanal para; ağ işi arka planda)
     except Exception as e:
         print("Memecoin masası hatası:", e)
+    try:
+        from . import transfer
+        if L["armed"]:
+            transfer.step(state, S, N)  # TR ↔ Global ↔ KASA para aktarımı ve kâr süpürme
+    except Exception as e:
+        print("Aktarım hatası:", e)
     try:
         from . import kaldirac
         kaldirac.step(state, S)  # kaldıraç deneme masası (sanal para; ağ işi arka planda)
