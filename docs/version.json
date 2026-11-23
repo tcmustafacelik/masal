@@ -1,11 +1,17 @@
 {
-  "version": "1.66.1",
+  "version": "1.66.2",
   "date": "2026-11-23",
   "notes": [
-    "Spot: bankadan gelen TL Fonlama hesabında kalıyordu, bot kullanamıyordu; artık kendiliğinden Alım-satım hesabına alınıyor ve bildirim geliyor",
-    "Gizlilik: kasa, futures ve memecoin kayıtları da herkese açık depoda şifreli tutuluyor"
+    "Açılır bölümlerde uzun özet yazısı ok simgesini sıkıştırıyordu; düzeltildi"
   ],
   "history": [
+    {
+      "version": "1.66.2",
+      "date": "2026-11-23",
+      "notes": [
+        "Açılır bölümlerde uzun özet yazısı ok simgesini sıkıştırıyordu; düzeltildi"
+      ]
+    },
     {
       "version": "1.66.1",
       "date": "2026-11-23",
@@ -127,14 +133,6 @@
         "Küçük bakiyeler: borsa ve cüzdan başına liste; tek tek ya da hepsini seçip çevir; tek seferde en fazla 10 coin (fazlası uyarılır)",
         "Sayfa yenilenince aynı bölümde ve aynı yerde kalınır",
         "Elle satışta bekleme süresi saniye olarak görünür"
-      ]
-    },
-    {
-      "version": "1.56.0",
-      "date": "2026-11-23",
-      "notes": [
-        "Kasalar: Küçük bakiyeleri çevir (OKX TR → TL, OKX Global → USDT, MEME token artıkları → SOL); botun açık coinlerine dokunulmaz",
-        "Kasalar'da son aktarım ve çevirme kayıtları görünür"
       ]
     }
   ]
