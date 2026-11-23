@@ -207,7 +207,7 @@ def _send(ex, side, addr, dest, amt, job, X):
             raise RuntimeError(f"{NAMES[dest]} hesap numarası okunamadı; güvenlik için gönderilmedi")
         body = {"ccy": "USDT", "amt": f"{amt:.2f}", "dest": "3", "toAddr": uid, "toAddrType": "2", "clientId": job["id"][:32]}
         fee, chain = 0.0, "OKX iç transfer"
-        info = {"walletType": "exchange", "exchId": "okx"}
+        info = {"walletType": "exchange", "exchId": "did:ethr:0xd2cdd38f986924dc26850e6ff998304d398559bb"}  # OKX (borsa listesi)
         if len(nm) >= 2:
             info.update(rcvrFirstName=" ".join(nm[:-1]), rcvrLastName=nm[-1])
         # Türkiye kuralı: alıcı adresi de istenir. GitHub gizli ayarı OKX_ALICI_ADRES = "İl|İlçe|Mahalle ve sokak"
