@@ -775,9 +775,11 @@ h2{margin:0 2px 7px}
 .lr b,.lr small{text-align:center}
 #ladder .hint{text-align:left}
 
-/* 1.69.2: birim yazıları (adet, saat, kat…) sıkışmasın, ortalı dursun */
-.step input,#setv .step input{width:46px!important;text-align:right;padding-right:3px}
-.step .u{width:36px!important;font-size:11px!important;text-align:left;padding-left:3px;white-space:nowrap;overflow:hidden}
+/* 1.69.3: birim sayının altında, küçük ve ortalı (+ düğmesine değmez) */
+.step .sv{display:flex;flex-direction:column;align-items:center;justify-content:center;width:54px;align-self:stretch;cursor:text}
+.step .sv input,#setv .step .sv input{width:100%!important;height:auto!important;padding:0!important;text-align:center!important;line-height:1.15}
+.step .sv .u{width:auto!important;padding:0!important;text-align:center!important;font-size:9.5px!important;line-height:1;margin-top:1px;color:var(--faint)}
+.step .sv:has(.u) input{margin-top:1px}
 </style>
 </head>
 <body>
@@ -975,6 +977,6 @@ h2{margin:0 2px 7px}
 <div class="toast" id="toast" hidden></div>
 <div class="qsh" id="qsh" hidden><div class="qb"><div class="gr"></div><h3><span><svg class="i" id="qIco"><use href="#i-info"/></svg></span><b id="qTitle"></b></h3><div class="qt" id="qText"></div><button class="btn primary" id="qOk">Anladım</button></div></div>
 
-<script src="app.js?v=1.69.2"></script>
+<script src="app.js?v=1.69.3"></script>
 </body>
 </html>

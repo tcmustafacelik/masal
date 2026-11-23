@@ -1,4 +1,4 @@
-const APP_VERSION='1.69.2';
+const APP_VERSION='1.69.3';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -1280,8 +1280,8 @@ function field([k,label,hint,u,step,min,max,dec]){
   const v=P(draft,k),h=typeof hint==='function'?hint():hint;
   return `<div class="field" data-k="${k}"><div class="lb"><b>${label}</b><span class="h">${h}</span><em></em></div>
    <div class="step"><button data-d="-1" aria-label="Azalt">${ic('i-minus')}</button>
-   <input inputmode="decimal" value="${fv(v,dec)}" data-step="${step}" data-min="${min}" data-max="${max}" data-dec="${dec}">
-   <span class="u">${u}</span><button data-d="1" aria-label="Artır">${ic('i-plus')}</button></div></div>`}
+   <label class="sv"><input inputmode="decimal" value="${fv(v,dec)}" data-step="${step}" data-min="${min}" data-max="${max}" data-dec="${dec}">
+   ${u?`<span class="u">${u}</span>`:''}</label><button data-d="1" aria-label="Artır">${ic('i-plus')}</button></div></div>`}
 
 // En çok coin bulunan pariteler (OKX TR): USDT ~300, EUR ~270, USDC ~270, TRY ~130
 const QUOTES: [string,string,string][]=[['USDT','₮','Önerilen'],['USDC','$','Düşük fark'],['EUR','€','Düşük fark'],['TRY','₺','Fark yüksek']];

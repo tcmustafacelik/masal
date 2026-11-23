@@ -1,10 +1,17 @@
 {
-  "version": "1.69.2",
+  "version": "1.69.3",
   "date": "2026-11-23",
   "notes": [
-    "Ayar kutularındaki birim yazıları (adet, saat, kat, %) sıkışmadan sayının yanında duruyor"
+    "Ayar kutularında birim (adet, saat, %, kat) artık sayının altında küçük ve ortalı; + düğmesine değmiyor"
   ],
   "history": [
+    {
+      "version": "1.69.3",
+      "date": "2026-11-23",
+      "notes": [
+        "Ayar kutularında birim (adet, saat, %, kat) artık sayının altında küçük ve ortalı; + düğmesine değmiyor"
+      ]
+    },
     {
       "version": "1.69.2",
       "date": "2026-11-23",
@@ -117,14 +124,6 @@
       "notes": [
         "Bot turu 2 saniyeye indi",
         "Uygulama bir istek gönderince sonraki 40 saniye boyunca saniyede bir yenilenir; sonuç daha çabuk görünür"
-      ]
-    },
-    {
-      "version": "1.60.1",
-      "date": "2026-11-23",
-      "notes": [
-        "Küçük bakiyeler: seçtiğin coinlerin hepsi tek seferde çevrilir (10 sınırı kalktı)",
-        "Düzeltme: çevirme sonucu Kasalar'da ve bildirimde görünmüyordu"
       ]
     }
   ]
