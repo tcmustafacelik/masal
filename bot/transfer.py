@@ -195,6 +195,10 @@ def _send(ex, side, addr, dest, amt, job, X):
         info = {"walletType": "exchange", "exchId": "okx"}
         if len(nm) >= 2:
             info.update(rcvrFirstName=" ".join(nm[:-1]), rcvrLastName=nm[-1])
+        # Türkiye kuralı: alıcı adresi de istenir. GitHub gizli ayarı OKX_ALICI_ADRES = "İl|İlçe|Mahalle ve sokak"
+        ad = [x.strip() for x in os.environ.get("OKX_ALICI_ADRES", "").split("|")]
+        if len(ad) >= 3 and all(ad[:3]):
+            info.update(rcvrCountry="Turkey", rcvrCountrySubDivision=ad[0], rcvrTownName=ad[1], rcvrStreetName=ad[2])
     else:
         chain, fee, min_wd = ex.chain()
         if amt < min_wd:
@@ -230,6 +234,8 @@ def _wd(ex, body, info, nm, dest):
         # Seyahat kuralı: alıcı bilgisiyle tekrar dene
         if dest and len(nm) < 2:
             raise RuntimeError(f"OKX alıcı adı istiyor; GitHub'a OKX_ALICI (ad soyad) eklenmeli · {e}")
+        if dest and "rcvrStreetName" in str(e) and "rcvrStreetName" not in info:
+            raise RuntimeError("OKX TR alıcı adresi istiyor; GitHub'a OKX_ALICI_ADRES (İl|İlçe|Mahalle ve sokak) eklenmeli")
         body["rcvrInfo"] = info
         return ex.req("POST", "/api/v5/asset/withdrawal", body)[0]
 
