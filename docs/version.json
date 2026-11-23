@@ -1,7 +1,7 @@
 {
-  "version": "1.46.0",
+  "version": "1.46.1",
   "date": "2026-11-23",
   "notes": [
-    "Kasalar: OKX TR, OKX Global ve KASA bakiyesi yan yana; fon hesabında hazır para aktarımı bekletmez"
+    "Aktarım iptali: bekleyen aktarım iptal edilir, para bota geri döner"
   ]
 }

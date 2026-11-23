@@ -3,8 +3,8 @@
   "paused": false,
   "liquidate": 0,
   "strategy": "grid",
-  "budget": 20193,
-  "kasa": 20193,
+  "budget": 20445,
+  "kasa": 20445,
   "topup": {
     "amount": 100,
     "profit_pct": 1,
@@ -169,5 +169,9 @@
       "amt": 5,
       "src": "bos"
     }
+  ],
+  "xfer_cancel": [
+    "x1a208f30987",
+    "x1a208f77851"
   ]
 }

@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.46.0';
+const APP_VERSION = '1.46.1';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -945,13 +945,14 @@ function renderXfer() {
         return;
     }
     box.hidden = false;
-    const jobs = (X?.jobs || []).slice(0, 4).map((j) => `<div><time>${masaClock(j.ts)}</time><span>${XDIR[j.dir]?.[0] || j.dir} · <b>${nf(j.amt, 2)} $</b><em class="${j.stage === 'done' ? 'ok' : j.stage === 'failed' ? 'bad' : ''}">${XST[j.stage] || j.stage}${j.stage !== 'done' && j.msg ? ' · ' + j.msg : ''}</em></span></div>`).join('');
+    const jobs = (X?.jobs || []).slice(0, 4).map((j) => `<div><time>${masaClock(j.ts)}</time><span>${XDIR[j.dir]?.[0] || j.dir} · <b>${nf(j.amt, 2)} $</b><em class="${j.stage === 'done' ? 'ok' : j.stage === 'failed' ? 'bad' : ''}">${XST[j.stage] || j.stage}${j.stage !== 'done' && j.msg ? ' · ' + j.msg : ''}</em></span>${j.stage === 'new' ? `<button class="xc" data-xc="${j.id}">İptal</button>` : ''}</div>`).join('');
     box.innerHTML = `<div class="ah">${ic('i-refresh')}<b>Kasalar ve aktarım</b><span>dakikada bir</span></div>
     ${xKasalar(X)}
     <div class="xb"><span>TR'de boşta <b>${X?.free_tl != null ? tl(Math.max(0, X.free_tl), 0) : '—'}</b></span><span>Bugün gönderilen <b>$${nf(X?.day_sum || 0, 0)} / ${nf(X?.daily_max || 1000, 0)}</b></span></div>
     <div class="xt">${Object.entries(XDIR).map(([k, v]) => `<button class="${v[3]}" data-x="${k}">${ic(v[2])}${v[0]}<small>${v[1]}</small></button>`).join('')}</div>
     ${jobs ? `<div class="xj">${jobs}</div>` : ''}`;
     box.querySelectorAll('[data-x]').forEach(b => b.onclick = () => openXfer(b.dataset.x));
+    box.querySelectorAll('[data-xc]').forEach(b => b.onclick = () => cancelXfer(b.dataset.xc, b));
 }
 let xfSrc = 'bos', USDTTRY = 0;
 /** Üç kasa yan yana: OKX TR, OKX Global, KASA (soğuk cüzdan); dolar ve TL karşılığı, dakikada bir borsadan/zincirden. */
@@ -983,6 +984,40 @@ function openXfer(dir) {
     document.getElementById('qText').innerHTML = '';
     draw();
     q.hidden = false;
+}
+async function cancelXfer(id, btn, retry = true) {
+    if (!token) {
+        toast('Önce Ayarlar\'dan GitHub bağlantısını kur');
+        return;
+    }
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = '…';
+    }
+    try {
+        const cur = await tfetch(API + '?t=' + Date.now(), { headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' }, cache: 'no-store' }).then(r => { if (!r.ok)
+            throw r.status; return r.json(); });
+        const data = JSON.parse(decodeURIComponent(escape(atob(cur.content.replace(/\n/g, '')))));
+        data.xfer_cancel = [...(data.xfer_cancel || []).slice(-20), id];
+        const body = { message: 'Aktarım iptali: ' + id, content: btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2) + '\n'))), sha: cur.sha, branch: 'main' };
+        const r = await tfetch(API, { method: 'PUT', headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        if (r.status === 409 && retry)
+            return cancelXfer(id, btn, false);
+        if (!r.ok)
+            throw r.status;
+        sha = (await r.json()).content.sha;
+        for (const o of [orig, draft])
+            if (o)
+                o.xfer_cancel = data.xfer_cancel;
+        toast('İptal isteği gönderildi; para alım-satım hesabına geri konacak.');
+    }
+    catch (e) {
+        toast('İptal gönderilemedi (' + e + ')');
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'İptal';
+        }
+    }
 }
 async function sendXfer(dir, retry = true) {
     const amt = Math.round((+document.getElementById('xfAmt')?.value || 0) * 100) / 100;

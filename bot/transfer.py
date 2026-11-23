@@ -321,6 +321,22 @@ def step(state, S, N):
         X["jobs"].append({"id": rid, "dir": r["dir"], "amt": amt, "src": r.get("src") or "bos", "ts": int(r.get("ts") or now * 1000),
                           "stage": "new", "msg": "sırada"})
         _note(X, f"İstek: {NAMES[ROUTES[r['dir']][0]]} → {NAMES[ROUTES[r['dir']][2]]} {amt:.2f} USDT")
+    # iptal istekleri: henüz gönderilmemiş işler durdurulur, fon hesabına ayrılan para alım-satım hesabına geri döner
+    for rid in (S.get("xfer_cancel") or []):
+        job = next((j for j in X["jobs"] if j["id"] == str(rid) and j["stage"] == "new"), None)
+        if not job:
+            continue
+        src = ROUTES[job["dir"]][0]
+        try:
+            ex = C[src]
+            back = min(job["amt"], ex.funding("USDT", total=True))
+            if back > 0 and ex.ok:
+                ex.move("USDT", back, FUNDING, TRADING)
+            job.update(stage="failed", msg=f"iptal edildi; {back:.2f} USDT alım-satım hesabına geri kondu")
+        except Exception as e:
+            job.update(stage="failed", msg=f"iptal edildi; para fon hesabında kaldı ({str(e)[:80]})")
+        _note(X, f"İptal: {NAMES[src]} {job['amt']} USDT · {job['msg']}")
+        N.add("money", "Aktarım iptal edildi", job["msg"], 3, ["x"])
     try:
         _sweep(C, X, cfg, N)
     except Exception as e:

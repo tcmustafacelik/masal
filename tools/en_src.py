@@ -417,6 +417,7 @@ EN = {
     "OKX iç transferi: ücretsiz ve anında.": "OKX internal transfer: free and instant.", "Ağ ücreti ~0,003 $.": "Network fee ~$0.003.",
     "Hepsi birlikte {0}": "All together {0}", "KASA": "VAULT",
     "Kasalar ve aktarım": "Balances and transfers", "dakikada bir": "every minute", "KASA'da komisyon için {0}": "Fee balance in VAULT {0}",
+    "İptal": "Cancel",
     "Memecoin masası": "Memecoin desk", "deneme · sanal para": "test · virtual money", "Sanal kasa": "Virtual bank", "Sonuç": "Result",
     "İşlem": "Trades", "Kazanma": "Win rate", "AÇIK": "OPEN", "ENGEL": "BLOCK", "Gözcü {0} kontrol": "Scout {0} checks", "Bekçi {0} engel": "Guard {0} blocks", "Giriş {0}": "Entries {0}",
     "Solana'daki yeni tokenler DexScreener ve RugCheck verisiyle 20 sn'de bir taranır. Gerçek para, cüzdan ya da anahtar yok; sonuçlar birkaç gün izlenip karar verilecek.": "New Solana tokens are scanned every 20 s with DexScreener and RugCheck data. No real money, wallet or keys; results will be watched for a few days before deciding.",
