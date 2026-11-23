@@ -691,6 +691,79 @@ h2{margin:0 2px 7px}
 .assets .atg .tb i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,var(--acc),var(--green));transition:width .5s}
 .assets .atg .th{display:flex;justify-content:space-between;font-size:10.5px;color:var(--faint);margin-top:4px;font-variant-numeric:tabular-nums}
 .assets .atg .th span:nth-child(2){color:var(--muted);font-weight:600}
+
+/* 1.69: ayar grupları ve kademe merdiveni */
+.fgrp{margin-top:12px}.fgrp:first-child{margin-top:0}
+.fgh{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--acc-ink,var(--muted));padding:0 0 6px;border-bottom:1px solid var(--line2);margin-bottom:2px}
+.fgh svg{width:14px;height:14px}
+.fgrp .field:first-of-type{border-top:0}
+#ladder{margin:10px 0 4px;padding:9px;border-radius:10px;background:var(--line2)}
+#ladder:empty{display:none}
+.ldh{display:flex;align-items:baseline;gap:6px;font-size:12px;font-weight:650;margin-bottom:6px}.ldh span{margin-left:auto;font-size:10.5px;font-weight:500;color:var(--muted)}
+.lr{position:relative;display:grid;grid-template-columns:22px repeat(3,minmax(0,1fr));align-items:center;gap:6px;padding:5px 6px;margin-top:3px;border-radius:7px;background:var(--surface);overflow:hidden}
+.lr>i{position:absolute;left:0;bottom:0;height:2px;background:var(--acc)}
+.lr em{font-style:normal;width:20px;height:20px;border-radius:6px;display:grid;place-items:center;font-size:11px;font-weight:700;background:var(--acc-bg);color:var(--acc-ink,var(--text))}
+.lr span{min-width:0}.lr b{display:block;font-size:12px;font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap}
+.lr small{display:block;font-size:9.5px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lr.off{opacity:.45}.lr.off em{background:var(--red-bg);color:var(--red)}
+#ladder .hint{font-size:10.5px;margin:7px 2px 0;line-height:1.45}
+
+/* 1.69: kesilen yazılar */
+.acch .att small{-webkit-line-clamp:2!important;white-space:normal!important}
+.al{flex-wrap:wrap}.al b{white-space:normal;text-align:right}
+[data-theme=dark] .tile.on .ic,[data-theme=dark] .ntiles .tile.on .ck{color:#111827}
+.assets .aleg div{padding:6px 5px 6px 9px}
+
+/* 1.69: ana sayfa toplam kartı ve masa kartları (Varlık özetiyle aynı görsel dil) */
+.ovw .ob{padding:12px}
+.ovw .oh{display:flex;align-items:center;gap:7px;font-size:13.5px}.ovw .oh svg{width:16px;height:16px;color:var(--muted)}.ovw .oh span{margin-left:auto;font-size:11.5px;color:var(--faint)}
+.ovw .obig{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-top:8px}
+.ovw .obig strong{display:block;font-size:26px;font-weight:700;letter-spacing:-.5px;line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ovw .obig small{display:block;font-size:11.5px;color:var(--muted);margin-top:2px}
+.ovw .adf,.dhero .adf{flex:none;text-align:right;font-size:14px;font-weight:700;padding:5px 9px;border-radius:8px;background:var(--line2);font-variant-numeric:tabular-nums;white-space:nowrap}
+.ovw .adf small,.dhero .adf small{display:block;font-size:10.5px;font-weight:600;opacity:.85;color:inherit}
+.ovw .adf.up,.dhero .adf.up{background:var(--green-bg);color:var(--green)}.ovw .adf.dn,.dhero .adf.dn{background:var(--red-bg);color:var(--red)}
+.ovw .abar{display:flex;gap:2px;height:10px;border-radius:5px;overflow:hidden;margin-top:11px;background:var(--line2)}
+.ovw .abar i{display:block;height:100%;transition:width .5s}
+.ovw .abar .ptr{background:var(--blue)}.ovw .abar .pg{background:var(--violet)}.ovw .abar .pm{background:var(--teal)}.ovw .abar .pk{background:var(--acc)}
+.ovw .og{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:8px}
+.ovw .og>div{position:relative;padding:6px 7px 6px 10px;border:0!important;border-radius:8px;background:var(--line2);min-width:0;overflow:hidden}
+.ovw .og em{position:absolute;left:0;top:0;bottom:0;width:3px}
+.ovw .og .ptr em{background:var(--blue)}.ovw .og .pg em{background:var(--violet)}.ovw .og .pm em{background:var(--teal)}.ovw .og .pk em{background:var(--acc)}
+.ovw .og span{display:flex!important;align-items:center;gap:4px;font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ovw .og span svg{width:12px;height:12px;flex:none}
+.ovw .og>div>b{display:block;font-size:14px;font-weight:650;margin-top:2px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ovw .og small{display:block;font-size:11px;margin-top:1px}.ovw .og small b{font-size:11px;font-weight:650}.ovw .og small b.mu{color:var(--faint);font-weight:500}
+.dhero{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;padding:2px 4px}
+.dhero small{display:block;font-size:11.5px;color:var(--muted)}
+.dhero strong{display:block;font-size:24px;font-weight:700;letter-spacing:-.4px;line-height:1.15;font-variant-numeric:tabular-nums}
+.dhero>div>span{display:block;font-size:11px;color:var(--faint);margin-top:2px}
+.drisk{margin:10px 4px 0}.drisk>div:first-child{display:flex;align-items:center;font-size:11.5px;color:var(--muted)}
+.drisk span{display:flex;align-items:center;gap:4px}.drisk span svg{width:13px;height:13px}.drisk b{margin-left:auto;color:var(--text);font-variant-numeric:tabular-nums}
+.drisk .rb{height:7px;border-radius:4px;background:var(--line2);margin-top:5px;overflow:hidden}
+.drisk .rb i{display:block;height:100%;border-radius:4px;transition:width .5s}.drisk .rb i.ok{background:var(--green)}.drisk .rb i.mid{background:var(--amber)}.drisk .rb i.low{background:var(--red)}
+.dchips{display:grid;grid-template-columns:repeat(auto-fit,minmax(70px,1fr));gap:5px;margin:9px 4px 6px}
+.dchips span{padding:5px 7px;border-radius:8px;background:var(--line2);font-size:10px;color:var(--muted);min-width:0}
+.dchips b{display:block;font-size:12.5px;color:var(--text);font-weight:650;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+.mmeme .mnote{display:flex;gap:5px;align-items:flex-start;flex-wrap:wrap}.mmeme .mnote>svg{width:12px;height:12px;flex:none;margin-top:2px;color:var(--faint)}
+.funnel{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:6px}
+.funnel>div{position:relative;padding:7px 8px 9px;border-radius:9px;background:var(--line2);overflow:hidden;min-width:0}
+.funnel svg{width:14px;height:14px;color:var(--muted)}
+.funnel b{display:block;font-size:16px;font-weight:700;margin-top:2px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.funnel span{display:block;font-size:10.5px;color:var(--muted)}
+.funnel i{position:absolute;left:0;bottom:0;height:3px}.funnel .f1 i{background:var(--blue)}.funnel .f2 i{background:var(--red)}.funnel .f3 i{background:var(--green)}
+.funnel .f3 svg{color:var(--green)}.funnel .f2 svg{color:var(--red)}
+.wgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.wgrid .wr{position:relative;display:block;padding:7px 9px 9px;border:0;border-radius:9px;background:var(--line2);overflow:hidden;min-width:0;font-size:12px}
+.wgrid .wr>div{display:flex;align-items:baseline;justify-content:space-between;gap:6px;min-width:0}
+.wgrid .wr>div+div{margin-top:2px}
+.wgrid .wr b{font-size:13px;font-weight:700}
+.wgrid .wr em{font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.3px;padding:1px 5px;border-radius:5px}
+.wgrid .wu em{background:var(--green-bg);color:var(--green)}.wgrid .wd em{background:var(--red-bg);color:var(--red)}
+.wgrid .wr span{font-size:11.5px;color:var(--text);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.wgrid .wr small{flex:none;font-size:10px;color:var(--muted)}
+.wgrid .wr>i{position:absolute;left:0;bottom:0;height:3px;border-radius:0 2px 2px 0}
+.wgrid .wu>i{background:var(--green)}.wgrid .wd>i{background:var(--red)}
 </style>
 </head>
 <body>
@@ -856,6 +929,8 @@ h2{margin:0 2px 7px}
     <span class="dirty" id="dirtyTag" hidden>Kaydedilmedi</span>
   </div>
 
+  <div id="setForm"></div>
+
   <section id="linkSec">
     <h2><span class="hb c-blue"><svg class="i"><use href="#i-link"/></svg></span>Hesaplar ve anahtarlar</h2>
     <div class="lkh">Borsalar · API anahtarları</div>
@@ -876,7 +951,6 @@ h2{margin:0 2px 7px}
     <div class="card" id="conn"></div>
   </section>
 
-  <div id="setForm"></div>
 
   <div class="savebar" id="savebar" hidden>
     <span><svg class="i"><use href="#i-info"/></svg>Kaydedilmemiş değişiklik var</span>
@@ -887,6 +961,6 @@ h2{margin:0 2px 7px}
 <div class="toast" id="toast" hidden></div>
 <div class="qsh" id="qsh" hidden><div class="qb"><div class="gr"></div><h3><span><svg class="i" id="qIco"><use href="#i-info"/></svg></span><b id="qTitle"></b></h3><div class="qt" id="qText"></div><button class="btn primary" id="qOk">Anladım</button></div></div>
 
-<script src="app.js?v=1.68.0"></script>
+<script src="app.js?v=1.69.0"></script>
 </body>
 </html>

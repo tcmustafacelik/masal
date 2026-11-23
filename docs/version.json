@@ -1,10 +1,21 @@
 {
-  "version": "1.68.0",
+  "version": "1.69.0",
   "date": "2026-11-23",
   "notes": [
-    "Varlık özeti yenilendi: büyük toplam, kâr/zarar rozeti, renkli dağılım çubuğu, borsa eşleşme durumu ve hedef çubuğu"
+    "Ana sayfa, Futures ve Memecoin kartları görsel yenilendi (toplam, dağılım çubuğu, risk çubuğu, tarama hunisi, izlenen coin çubukları)",
+    "Kademeli ayarlar gruplandı; 3. ve sonraki kademeler açıkça yazıldı; kademe merdiveni önizlemesi eklendi",
+    "Fable 2. tur: aktarım ve memecoin güvenlik düzeltmeleri, daha hızlı bot turu, uygulamada veri donması ve renk geri dönmesi giderildi"
   ],
   "history": [
+    {
+      "version": "1.69.0",
+      "date": "2026-11-23",
+      "notes": [
+        "Ana sayfa, Futures ve Memecoin kartları görsel yenilendi (toplam, dağılım çubuğu, risk çubuğu, tarama hunisi, izlenen coin çubukları)",
+        "Kademeli ayarlar gruplandı; 3. ve sonraki kademeler açıkça yazıldı; kademe merdiveni önizlemesi eklendi",
+        "Fable 2. tur: aktarım ve memecoin güvenlik düzeltmeleri, daha hızlı bot turu, uygulamada veri donması ve renk geri dönmesi giderildi"
+      ]
+    },
     {
       "version": "1.68.0",
       "date": "2026-11-23",
@@ -121,17 +132,6 @@
         "Kasalar: KASA → OKX Global ve KASA → OKX TR (tutar ve adres hazır, Trust Wallet'ta onaylanır)",
         "Küçük bakiye çevrilince telefona bildirim gelir",
         "Spot'ta son işlemler ve coin bazında kâr/zarar kısa görünür; 'daha fazla göster' ile açılır"
-      ]
-    },
-    {
-      "version": "1.58.0",
-      "date": "2026-11-23",
-      "notes": [
-        "Bot güncellemelerinde artık yaklaşık 1 dakikalık kesinti yok; aynı oturumda birkaç saniyede yeniden başlıyor",
-        "Futures: iz süren stop borsadaki zarar durdurmaya da taşınıyor; bot yeniden başlarken açılan pozisyon kaybolmuyor, masa sahipleniyor",
-        "Futures ve Memecoin gerçek işlemleri telefona bildirim olarak geliyor",
-        "Memecoin: satıştan sonra boşalan token hesapları kapatılıp kirası (~0,15 $) geri alınıyor",
-        "Kâr süpürme yalnızca futures kârını sayıyor; dışarıdan yatırılan para kâr sayılıp KASA'ya geri gönderilmiyor"
       ]
     }
   ]

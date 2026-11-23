@@ -1,5 +1,5 @@
 // Masal: sürüm numaralı dosyalar önbellekten anında, sayfa önce ağdan (yavaşsa önbellekten) gelir; çevrimdışıyken son kopya açılır.
-const CACHE = 'masal-1.68.0';
+const CACHE = 'masal-1.69.0';
 const SHELL = ['./', 'index.html', 'app.js', 'manifest.webmanifest', 'favicon.svg', 'logo-192.png', 'logo-512.png'];
 
 self.addEventListener('install', e => {
