@@ -1,13 +1,17 @@
 {
-  "version": "1.63.0",
+  "version": "1.64.0",
   "date": "2026-11-23",
   "notes": [
-    "Ana sayfa: bütün kasaların toplamı ve Spot, Futures, Memecoin kâr/zararı ayrı ayrı; hepsinin toplam kâr/zararı TL olarak",
-    "Küçük bakiyeler: OKX'in 'küçük varlıkları dönüştür' sistemi kullanılıyor; en küçük tutar sınırı olmadan çevrilir, olmayanlar fiyat teklifiyle denenir",
-    "Fable denetimi düzeltmeleri: gerçek masaların ana turu bekletmesi, alımdan hemen sonra yanlış zarar sınırı, para aktarımında kâr/zarar karışması, kapanmayan pozisyonların yeniden denenmesi, yeniden başlarken emir kaybı, yarım kayıt dosyası, çift küçük bakiye isteği, kilitlenen Kaydet, Trust Wallet bağlantısı ve daha fazlası",
-    "Uygulama daha az çalışıyor: listeler yalnız değişince yeniden çiziliyor, yavaş bağlantıda istekler üst üste binmiyor"
+    "Ayar ekranları inceldi: satırlar, değer kutuları, açılır bölümler, sekmeler ve seçim kutuları daha küçük ve sade"
   ],
   "history": [
+    {
+      "version": "1.64.0",
+      "date": "2026-11-23",
+      "notes": [
+        "Ayar ekranları inceldi: satırlar, değer kutuları, açılır bölümler, sekmeler ve seçim kutuları daha küçük ve sade"
+      ]
+    },
     {
       "version": "1.63.0",
       "date": "2026-11-23",
@@ -132,14 +136,6 @@
         "Gerçek memecoin masası: MEME cüzdanında Jupiter ile alım-satım",
         "Fiyat etkisi %2'yi aşan alım reddedilir, nedeni yazılır",
         "Ayarlar → Memecoin: gerçek mod anahtarı, en fazla kayıp, en fazla fiyat etkisi"
-      ]
-    },
-    {
-      "version": "1.52.0",
-      "date": "2026-11-23",
-      "notes": [
-        "Gerçek futures masası (OKX Global): borsada kayıtlı zarar durdur, bütçe ve en fazla kayıp sınırı",
-        "Ayarlar'a Futures ve Memecoin bölümleri"
       ]
     }
   ]
