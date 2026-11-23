@@ -43,6 +43,16 @@ def check(name, base, pre):
             print(f"{lbl}: okunuyor · {len(n)} varlık var · boş USDT {usdt:.2f}")
         except Exception as e:
             print(f"{lbl}: HATA {e}")
+    for pth in ("/api/v5/account/max-withdrawal?ccy=USDT", "/api/v5/asset/non-tradable-assets?ccy=USDT"):
+        try:
+            print("  ", pth.split("?")[0].split("/")[-1], req(base, key, sec, pas, pth)[:2])
+        except Exception as e:
+            print("  ", pth.split("?")[0].split("/")[-1], "HATA", e)
+    try:
+        cs = req(base, key, sec, pas, "/api/v5/asset/currencies?ccy=USDT")
+        print("   kota:", {k: cs[0].get(k) for k in ("wdQuota", "usedWdQuota", "usedWdQuotaUnit")} if cs else None)
+    except Exception as e:
+        print("   kota HATA", e)
     try:
         d = req(base, key, sec, pas, "/api/v5/asset/deposit-address?ccy=USDT")
         print("USDT yatırma adresleri:", ", ".join(f"{x['chain']}={mask(x['addr'])}" for x in d[:8]))
