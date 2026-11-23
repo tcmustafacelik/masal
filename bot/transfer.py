@@ -55,7 +55,7 @@ class Ex:
             d = json.loads(e.read() or b"{}")
         if d.get("code") != "0":
             d0 = (d.get("data") or [{}])[0]
-            raise RuntimeError(f"{d.get('code')}: {d.get('msg') or ''} {d0.get('sMsg', '')}".strip())
+            raise RuntimeError(f"{d.get('code')}: {d.get('msg') or ''} {d0.get('sMsg', '')}".strip() + ("" if d.get("msg") else f" {json.dumps(d)[:200]}"))
         return d["data"]
 
     def trading(self, ccy):
@@ -237,7 +237,27 @@ def _wd(ex, body, info, nm, dest):
         if dest and "rcvrStreetName" in str(e) and "rcvrStreetName" not in info:
             raise RuntimeError("OKX TR alıcı adresi istiyor; GitHub'a OKX_ALICI_ADRES (İl|İlçe|Mahalle ve sokak) eklenmeli")
         body["rcvrInfo"] = info
-        return ex.req("POST", "/api/v5/asset/withdrawal", body)[0]
+        try:
+            return ex.req("POST", "/api/v5/asset/withdrawal", body)[0]
+        except RuntimeError as e2:
+            if "58380" not in str(e2) or "rcvrCountry" not in info:
+                raise
+            # 58380 (açıklamasız): alıcı bilgisinin biçimi. Ülke kodu ve Türkçe harfsiz yazımla dene
+            tr_ = str.maketrans("çğıöşüÇĞİÖŞÜ", "cgiosuCGIOSU")
+            last = e2
+            for country, fold in (("TR", False), ("TR", True), ("Turkey", True), ("Türkiye", False)):
+                alt = {k: (v.translate(tr_) if fold and isinstance(v, str) else v) for k, v in info.items()}
+                alt["rcvrCountry"] = country
+                body["rcvrInfo"] = alt
+                try:
+                    r = ex.req("POST", "/api/v5/asset/withdrawal", body)[0]
+                    print("Aktarım: alıcı bilgisi biçimi kabul edildi:", country, "harfsiz" if fold else "")
+                    return r
+                except RuntimeError as e3:
+                    last = e3
+                    if "58380" not in str(e3):
+                        raise
+            raise last
 
 
 WD_STATE = {"-3": "iptal ediliyor", "-2": "iptal edildi", "-1": "başarısız", "0": "sırada", "1": "zincire gönderiliyor",
