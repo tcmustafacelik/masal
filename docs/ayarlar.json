@@ -22,7 +22,7 @@
     "lot_pct": 3.1,
     "lot_tp_pct": 4.8,
     "max_lots": 10,
-    "max_coins": 2,
+    "max_coins": 5,
     "stop_pct": 50,
     "use_pct": 85,
     "trend_filter_pct": 0,
@@ -184,12 +184,12 @@
     "max_hold_h": 6,
     "slip_pct": 1,
     "fee_pct": 0.5,
+    "max_m5": 8,
     "wallet": "7YmjQvaZdKDKmfmTPP1vmUxK8ns1CKEim9ovBbwNEKwN",
     "real": true,
     "max_loss": 6,
     "max_slip": 2,
-    "real_reset": 0,
-    "max_m5": 8
+    "real_reset": 0
   },
   "lev": {
     "on": true,
@@ -328,5 +328,6 @@
       ],
       "to": "USDT"
     }
-  ]
+  ],
+  "desk_cmd": []
 }
