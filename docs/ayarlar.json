@@ -318,6 +318,15 @@
         "SOL"
       ],
       "to": "USDT"
+    },
+    {
+      "id": "dmwtn3yxj",
+      "ts": 1795460980375,
+      "ex": "g",
+      "ccys": [
+        "BABYDOGE"
+      ],
+      "to": "USDT"
     }
   ]
 }
