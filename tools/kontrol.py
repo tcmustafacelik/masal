@@ -80,3 +80,28 @@ check("OKX TR", "https://tr.okx.com", "OKX")
 check("OKX Global", "https://www.okx.com", "OKXG")
 moves("OKX TR", "https://tr.okx.com", "OKX")
 moves("OKX Global", "https://www.okx.com", "OKXG")
+
+
+def dust_check():
+    """Küçük bakiye sayısı ve OKX Convert ile tek bir deneme fiyatı (işlem yapmaz)."""
+    import sys
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from bot import transfer, dust
+    for k, ex in transfer._clients().items():
+        if not ex.ok:
+            continue
+        try:
+            lst = [(c, a, u) for c, (a, u) in dust._assets(ex).items() if c not in dust.CASH and 0 <= u < dust.SMALL]
+            print(f"{k} küçük bakiye: {len(lst)} coin")
+            for c, a, u in lst[:3]:
+                try:
+                    e = ex.req("POST", "/api/v5/asset/convert/estimate-quote",
+                               {"baseCcy": c, "quoteCcy": "USDT", "side": "sell", "rfqSz": f"{a:f}", "rfqSzCcy": c})[0]
+                    print(f"  {c}: çevrilebilir (fiyat teklifi alındı)")
+                except Exception as err:
+                    print(f"  {c}: {str(err)[:140]}")
+        except Exception as e:
+            print(k, "HATA", e)
+
+
+dust_check()
