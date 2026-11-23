@@ -171,6 +171,7 @@ def step(state, S):
         if len(rows) < 210:
             continue
         k = _ind(rows)
+        L.setdefault("watch", {})[c] = {"hh": k["hh"], "ll": k["ll"], "e200": k["e200"], "up": k["e20"] > k["e50"]}
         if L["seen"].get(c) == k["t"]:
             continue  # bu mum için karar verildi
         L["seen"][c] = k["t"]
@@ -223,6 +224,29 @@ def step(state, S):
         L["equity"] = L["equity"][-700:]
 
 
+def watch_list(L, px):
+    """Uygulama için: izlenen coinler, fiyat ve sinyale uzaklık (20 sa zirve/dip kırılımı, 200 sa ortalama yönü)."""
+    out = []
+    for c, w in (L.get("watch") or {}).items():
+        x = px.get(c) or 0
+        if not x:
+            continue
+        side = "UZUN" if x > w["e200"] else "KISA"
+        lvl = w["hh"] if side == "UZUN" else w["ll"]
+        out.append({"sym": c, "px": x, "side": side, "lvl": lvl, "dist": round((lvl / x - 1) * 100, 2), "open": c in L["positions"]})
+    return sorted(out, key=lambda r: abs(r["dist"]))
+
+
+def manual_close(state, sym, reason="elle kapatıldı"):
+    """Uygulamadan 'Kapat': deneme masasında kapatılır, olay gerçek masaya da gider."""
+    L = state.get("lev") or {}
+    p = (L.get("positions") or {}).get(sym)
+    if p:
+        _close(L, sym, p["now"], int(time.time() * 1000), reason, {**DEFAULT})
+    else:
+        L.setdefault("ev", []).append(["close", sym, reason])
+
+
 def public(state):
     L = state.get("lev")
     if not L:
@@ -235,5 +259,6 @@ def public(state):
                            "now": p["now"], "stop": p["stop"], "tp": p["tp"], "liq": p["liq"], "margin": round(p["margin"], 2),
                            "pnl": round(_upnl(p, p["now"]), 2), "why": p["why"]} for c, p in L["positions"].items()],
             "trades": done[-40:][::-1], "log": L["log"][-40:][::-1], "equity_series": L["equity"][-200:],
+            "watch": watch_list(L, {c: p for c, p in _SNAP.get("px", {}).items()}),
             "closed": len(done), "win_rate": round(len(wins) / len(done) * 100) if done else None,
             "updated": L.get("snap"), "err": _SNAP.get("err") or ""}

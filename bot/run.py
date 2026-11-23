@@ -242,6 +242,26 @@ def clear_old(state, S):
     print("Eski kayıtlar temizlendi")
 
 
+def desk_commands(state, S):
+    """Uygulamadan masa komutları: {"desk_cmd": [{id, ts, desk: lev|meme, act: close|sell, sym}]} (her biri bir kez)."""
+    done = state.setdefault("desk_done", [])
+    for c in S.get("desk_cmd") or []:
+        cid = str(c.get("id") or "")
+        if not cid or cid in done or time.time() * 1000 - float(c.get("ts") or 0) > 600_000:
+            continue
+        done.append(cid)
+        try:
+            if c.get("desk") == "lev":
+                from . import kaldirac
+                kaldirac.manual_close(state, str(c.get("sym")))
+            elif c.get("desk") == "meme":
+                from . import meme
+                meme.manual_sell(state, str(c.get("sym")))
+        except Exception as e:
+            print("Masa komutu:", e)
+    state["desk_done"] = done[-50:]
+
+
 def sell_selected(p, S):
     """Uygulamadan/ayarlardan istenen coinleri bir kez satar (zaman damgası yeniyse)."""
     L, req = p.s, S.get("sell") or {}
@@ -509,6 +529,7 @@ def main():
     run_bars([live], live_events, live_series)
     liquidate(live, S)
     sell_selected(live, S)
+    desk_commands(state, S)
     clear_old(state, S)
     check_target(live, S, N)
     convert_request(live, S, N)

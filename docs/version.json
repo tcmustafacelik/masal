@@ -1,11 +1,23 @@
 {
-  "version": "1.61.0",
+  "version": "1.62.0",
   "date": "2026-11-23",
   "notes": [
-    "Memecoin yüksek kazanç ayarı: kâr al %100, iz süren stop %25 kârdan sonra zirveden %20, zarar kes %15, en uzun 6 saat, işlem başına %20, en fazla 3 token, en az 30 bin $ likidite",
-    "Memecoin: son 5 dakikada %8'den fazla fırlamış token kovalanmaz (kayıpların çoğu böyle girişlerdendi); Ayarlar'da değiştirilebilir"
+    "Futures: açık pozisyonda 'Kapat' düğmesi; izlenen coinler ve sinyale ne kadar uzak oldukları; son kararlar (sinyal, çıkış, engel)",
+    "Memecoin: açık tokende 'Sat' düğmesi; tarama özeti ve hangi tokenin neden alındığı/engellendiği",
+    "Futures kâr/zarar, ilk işlemden önce hesaptaki gerçek tutardan başlar (kâr gibi görünen artık sayılmaz)",
+    "KASA → Global/TR: Trust Wallet uygulaması doğrudan açılır"
   ],
   "history": [
+    {
+      "version": "1.62.0",
+      "date": "2026-11-23",
+      "notes": [
+        "Futures: açık pozisyonda 'Kapat' düğmesi; izlenen coinler ve sinyale ne kadar uzak oldukları; son kararlar (sinyal, çıkış, engel)",
+        "Memecoin: açık tokende 'Sat' düğmesi; tarama özeti ve hangi tokenin neden alındığı/engellendiği",
+        "Futures kâr/zarar, ilk işlemden önce hesaptaki gerçek tutardan başlar (kâr gibi görünen artık sayılmaz)",
+        "KASA → Global/TR: Trust Wallet uygulaması doğrudan açılır"
+      ]
+    },
     {
       "version": "1.61.0",
       "date": "2026-11-23",

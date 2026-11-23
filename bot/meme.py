@@ -252,6 +252,22 @@ def step(state, S):
         M["equity"] = M["equity"][-700:]
 
 
+def manual_sell(state, mint, reason="elle satıldı"):
+    """Uygulamadan 'Sat': deneme masasında satılır, olay gerçek masaya da gider."""
+    M = state.get("meme") or {}
+    pos = (M.get("positions") or {}).get(mint)
+    ts = int(time.time() * 1000)
+    if pos:
+        got = pos["qty"] * pos["now"]
+        pnl = got - pos["cost"]
+        M["cash"] += got
+        M["trades"].append({"ts": ts, "sym": pos["sym"], "mint": mint, "side": "SAT", "usd": round(got, 2),
+                            "pnl": round(pnl, 2), "pct": round(pnl / pos["cost"] * 100, 1), "reason": reason})
+        _note(M, ts, "exit", f"SAT {pos['sym']} ${got:.2f} · {reason}")
+        del M["positions"][mint]
+    M.setdefault("ev", []).append(["sell", mint, reason])
+
+
 def public(state):
     """Uygulamaya gidecek özet (deneme verisi; gerçek para yok, şifrelenmez)."""
     M = state.get("meme")

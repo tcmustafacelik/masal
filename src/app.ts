@@ -1,4 +1,4 @@
-const APP_VERSION='1.61.0';
+const APP_VERSION='1.62.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -308,7 +308,7 @@ function renderLevR(): string {
   const pf = (v: number) => nf(v, v >= 100 ? 2 : v >= 1 ? 4 : Math.min(8, 2 - Math.floor(Math.log10(v || 1))));
   const lv = (orig || S?.settings as any)?.lev || {}, ml = +lv.max_loss || 10, left = Math.max(0, ml + Math.min(0, R.pnl));
   const pos = (R.positions || []).map((p: any) => {const g = p.margin ? p.pnl / p.margin * 100 : 0;
-    return `<div class="fr"><time>${masaClock(p.ts)}</time><em class="ft ${p.side === 'UZUN' ? 'al' : 'zar'}">${p.side}</em><div><b>${p.sym}</b> ${p.lev || ''}x · teminat ${usd(p.margin)} · <span class="${cls(p.pnl)}">${p.pnl < 0 ? '−' : '+'}${usd(Math.abs(p.pnl))} (${spc(g, 0)})</span><small>giriş ${pf(p.entry)} · borsada stop ${pf(p.stop)} · hedef ${pf(p.tp)}</small></div></div>`}).join('');
+    return `<div class="fr"><time>${masaClock(p.ts)}</time><em class="ft ${p.side === 'UZUN' ? 'al' : 'zar'}">${p.side}</em><div><b>${p.sym}</b> ${p.lev || ''}x · teminat ${usd(p.margin)} · <span class="${cls(p.pnl)}">${p.pnl < 0 ? '−' : '+'}${usd(Math.abs(p.pnl))} (${spc(g, 0)})</span><small>giriş ${pf(p.entry)} · borsada stop ${pf(p.stop)} · hedef ${pf(p.tp)}</small></div>${deskBtn('lev', p.sym, 'Kapat')}</div>`}).join('');
   const feed = (R.log || []).slice(0, 15).map(([ts, k, t]: [number, string, string]) =>
     `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : 'not'}">${k === 'buy' ? 'AÇ' : k === 'exit' ? 'KAPAT' : k === 'risk' ? 'ENGEL' : 'BİLGİ'}</em><div>${esc(t).replace(/^GERÇEK (AÇ|KAPAT|ENGEL) ?/, '')}</div></div>`).join('');
   const st = R.dead ? `<b class="dn">Durdu: ${esc(R.dead)}. Ayarlar → Futures → Yeniden başlat.</b>` : R.halt ? `<b class="dn">Bugün durduruldu: günlük zarar sınırı.</b>` : !R.on ? '<b>Kapalı.</b> Ayarlar → Futures\'tan açılır.' : '';
@@ -319,7 +319,41 @@ function renderLevR(): string {
       <p class="mnote">Bütçe ${usd(R.funded)} · en fazla ${usd(ml, 0)} kayıp · zarar durdur borsada kayıtlı.${R.harvest ? ` Fona alınan kâr ${usd(R.harvest)}.` : ''} ${st}${R.err ? ` <b class="dn">Uyarı: ${esc(R.err).slice(0, 90)}</b>` : ''}</p>
       ${pos ? `<div class="mfeed">${pos}</div>` : ''}
       ${feed ? `<div class="mfeed">${feed}</div>` : `<div class="empty">${ic('i-eye')}<div>Henüz gerçek işlem yok; sinyal gelince açılır</div></div>`}
-    </div>`;
+    </div>${levWatch()}`;
+}
+/** Futures: izlenen coinler ve sinyale uzaklık; deneme masasının son kararları */
+function levWatch(): string {
+  const L = (S as any)?.lev; if (!L) return '';
+  const pf = (v: number) => nf(v, v >= 100 ? 2 : v >= 1 ? 4 : Math.min(8, 2 - Math.floor(Math.log10(v || 1))));
+  const w = (L.watch || []).map((r: any) => `<div class="wr"><b>${r.sym}</b><span>${pf(r.px)}</span><em class="${r.side === 'UZUN' ? 'up' : 'dn'}">${r.open ? 'açık' : `${r.side === 'UZUN' ? '↑' : '↓'} ${nf(Math.abs(r.dist), 1)}%`}</em></div>`).join('');
+  const lg = (L.log || []).slice(0, 8).map(([ts, k, t]: [number, string, string]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : 'not'}">${k === 'buy' ? 'SİNYAL' : k === 'exit' ? 'ÇIKIŞ' : 'ENGEL'}</em><div>${String(t).replace(/^(AÇ|KAPAT|ENGEL) /, '').replace(/</g, '&lt;')}</div></div>`).join('');
+  return `<h2 class="mh">${ic('i-eye')}İzlenen coinler<span class="hsum">sinyale uzaklık · saatlik</span></h2>
+    <div class="card"><div class="wgrid">${w || `<div class="empty">${ic('i-refresh')}<div>Mumlar yükleniyor</div></div>`}</div>
+    <p class="hint">↑ fiyat son 20 saatin zirvesini bu kadar yükselince UZUN, ↓ dibini bu kadar düşünce KISA açılır (200 saatlik ortalamanın yönünde).</p></div>
+    ${lg ? `<h2 class="mh">${ic('i-list')}Son kararlar<span class="hsum">${L.stats?.signals || 0} sinyal · ${L.stats?.entered || 0} giriş</span></h2><div class="card mfeed">${lg}</div>` : ''}`;
+}
+/** Futures/Memecoin pozisyonunu elle kapatma düğmesi: istek ayarlara yazılır, bot birkaç saniyede uygular */
+const DESK_BUSY: Record<string, number> = {};
+function deskBtn(desk: string, sym: string, label: string): string {
+  const k = desk + ':' + sym, busy = DESK_BUSY[k] && Date.now() - DESK_BUSY[k] < 60000;
+  return `<button class="dbtn${busy ? ' busy' : ''}" type="button" data-desk="${desk}" data-sym="${sym}" ${busy ? 'disabled' : ''}>${busy ? 'Gönderildi…' : label}</button>`;
+}
+document.addEventListener('click', async e => {
+  const b = (e.target as HTMLElement).closest?.('[data-desk]') as HTMLButtonElement; if (!b) return;
+  if (!token) { toast('Önce Ayarlar\'dan GitHub bağlantısını kur'); return; }
+  const desk = b.dataset.desk, sym = b.dataset.sym; DESK_BUSY[desk + ':' + sym] = Date.now(); b.disabled = true; b.textContent = 'Gönderildi…';
+  const ok = await cloudPatch(o => { (o as any).desk_cmd = [...((o as any).desk_cmd || []).filter((r: any) => Date.now() - (r.ts || 0) < 600000), {id: 'c' + Date.now().toString(36), ts: Date.now(), desk, act: desk === 'lev' ? 'close' : 'sell', sym}]; }, 'Masa komutu: ' + desk + ' ' + sym);
+  toast(ok ? 'İstek gönderildi; bot birkaç saniyede piyasa fiyatından kapatır' : 'İstek gönderilemedi, tekrar dene');
+  if (!ok) { delete DESK_BUSY[desk + ':' + sym]; b.disabled = false; }
+});
+/** Memecoin: tarama özeti ve son kararlar (hangi token neden alındı / engellendi) */
+function memeScan(): string {
+  const M = (S as any)?.meme; if (!M) return '';
+  const st = M.stats || {}, esc = (t: any) => String(t).replace(/</g, '&lt;');
+  const lg = (M.log || []).slice(0, 10).map(([ts, k, t]: [number, string, string]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : 'not'}">${k === 'buy' ? 'SİNYAL' : k === 'exit' ? 'ÇIKIŞ' : 'ENGEL'}</em><div>${esc(t).replace(/^(AL|SAT|ENGEL) /, '')}</div></div>`).join('');
+  return `<h2 class="mh">${ic('i-eye')}Tarama<span class="hsum">10 sn'de bir · Solana</span></h2>
+    <div class="card"><div class="mflow"><span>Taranan ${nf(st.scanned || 0, 0)}</span>${ic('i-chev')}<span>Engellenen ${st.blocked || 0}</span>${ic('i-chev')}<span>Sinyal ${st.entered || 0}</span></div>
+    ${lg ? `<div class="mfeed">${lg}</div>` : ''}</div>`;
 }
 function renderMemeR(): string {
   const R = (S as any)?.memer;
@@ -327,7 +361,7 @@ function renderMemeR(): string {
   const usd = (v: number, d = 2) => '$' + nf(v, d), esc = (t: any) => String(t).replace(/</g, '&lt;');
   const mm = (orig || S?.settings as any)?.meme || {}, ml = +mm.max_loss || 10, left = Math.max(0, ml + Math.min(0, R.pnl));
   const pos = (R.positions || []).map((p: any) => {const g = p.cost ? (p.val / p.cost - 1) * 100 : 0;
-    return `<div class="fr"><time>${masaClock(p.ts)}</time><em class="ft al">AÇIK</em><div><b>${esc(p.sym)}</b> ${usd(p.val)} · <span class="${cls(g)}">${spc(g, 1)}</span><small>giriş ${usd(p.cost)} · ${esc(p.why)}</small></div></div>`}).join('');
+    return `<div class="fr"><time>${masaClock(p.ts)}</time><em class="ft al">AÇIK</em><div><b>${esc(p.sym)}</b> ${usd(p.val)} · <span class="${cls(g)}">${spc(g, 1)}</span><small>giriş ${usd(p.cost)} · ${esc(p.why)}</small></div>${deskBtn('meme', p.mint, 'Sat')}</div>`}).join('');
   const feed = (R.log || []).slice(0, 15).map(([ts, k, t]: [number, string, string]) =>
     `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : 'not'}">${k === 'buy' ? 'AL' : k === 'exit' ? 'SAT' : k === 'risk' ? 'ENGEL' : 'BİLGİ'}</em><div>${esc(t).replace(/^GERÇEK (AL|SAT|ENGEL) ?/, '')}</div></div>`).join('');
   const st = R.dead ? `<b class="dn">Durdu: ${esc(R.dead)}. Ayarlar → Memecoin → Yeniden başlat.</b>` : !R.on ? '<b>Kapalı.</b> Ayarlar → Memecoin\'den açılır.' : '';
@@ -339,7 +373,7 @@ function renderMemeR(): string {
       <p class="mnote">Jupiter ile alım-satım · fiyat etkisi en fazla %${nf(+mm.max_slip || 2, 1)} · ${usd(ml, 0)} zararda durur · KASA'ya dokunulmaz. ${st}${R.err ? ` <b class="dn">Uyarı: ${esc(R.err).slice(0, 110)}</b>` : ''}</p>
       ${pos ? `<div class="mfeed">${pos}</div>` : ''}
       ${feed ? `<div class="mfeed">${feed}</div>` : `<div class="empty">${ic('i-eye')}<div>${R.sol > 0 ? 'Henüz gerçek işlem yok; şartı tutan token bekleniyor' : 'MEME cüzdanına SOL gönderilince başlar'}</div></div>`}
-    </div>`;
+    </div>${memeScan()}`;
 }
 document.getElementById('masaBtn').onclick = () => showMasa(true);
 document.getElementById('closeMasa').onclick = () => showMasa(false);
@@ -654,7 +688,7 @@ function openKasaSend(dir: string){
   const X: any=(S as any)?.xfer||{},[nm,addr]=KDEST[dir],q=document.getElementById('qsh'),have=+(X.kasa?.usd||0),eth=+(X.kasa?.eth||0),sh=addr.slice(0,6)+'…'+addr.slice(-4);
   q.dataset.n='';qHead('i-vault','Kapat');document.getElementById('qTitle').textContent=`KASA → ${nm}`;
   const draw=()=>{const a=(document.getElementById('kAmt') as HTMLInputElement)?.value||(have?String(Math.floor(have*100)/100):'');
-    const link=`https://link.trustwallet.com/send?asset=c10042221_t0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9&address=${addr}${+a?`&amount=${+a}`:''}`;
+    const link=`trust://send?asset=c10042221_t0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9&address=${addr}${+a?`&amount=${+a}`:''}`;
     document.getElementById('qText').innerHTML=`<div class="xfs">
       <div class="xroute"><div>${xEnd('k')}<b>KASA</b><small>$${nf(have,2)}</small></div><span class="xar">${ic('i-chev')}</span><div>${xEnd(dir==='k2g'?'g':'tr')}<b>${nm}</b><small>Arbitrum</small></div></div>
       <p class="xnote">KASA'nın anahtarı güvenlik için sistemde yok; gönderimi <b>Trust Wallet'ta sen onaylarsın</b>. Tutar ve adres hazır gelir.</p>
@@ -1450,7 +1484,7 @@ async function save(obj?: Settings, msg?: string, keepDraft?: boolean, retry = t
       for(const k of ['sell','convert'])if((fr[k]?.ts||0)>(d[k]?.ts||0))d[k]=fr[k];
       if((+fr.liquidate||0)>(+d.liquidate||0))d.liquidate=fr.liquidate;
       if(fr.notify&&d.notify&&(fr.notify.cleared||0)>(d.notify.cleared||0))d.notify.cleared=fr.notify.cleared;
-      d.xfer_req=fr.xfer_req||[];d.xfer_cancel=fr.xfer_cancel||[]}catch(e){}
+      d.xfer_req=fr.xfer_req||[];d.xfer_cancel=fr.xfer_cancel||[];(d as any).dust=fr.dust||[];(d as any).desk_cmd=fr.desk_cmd||[]}catch(e){}
     const body={message:'Ayarlar uygulamadan güncellendi',content:btoa(unescape(encodeURIComponent(JSON.stringify(data,null,2)+'\n'))),sha:cur.sha,branch:'main'};
     const r=await tfetch(API,{method:'PUT',headers:{Authorization:'Bearer '+token,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify(body)});
     if(r.status===409&&retry){btn.innerHTML=ic('i-check')+'Kaydet';return save(obj||data,msg,keepDraft,false)} // çakışma: güncel sürümle bir kez daha

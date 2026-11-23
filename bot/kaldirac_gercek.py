@@ -174,6 +174,8 @@ def _sync(D, R, cfg):
             _note(R, "info", f"{c} pozisyonu borsada bulundu; masa yönetimine alındı")
     # gün başı ve zarar sınırları
     total = eq + R["harvest"]
+    if R["funded"] > 0 and not R["trades"] and not R["pos"] and not R["harvest"]:
+        R["funded"] = round(eq, 4)  # ilk işlemden önce taban = hesaptaki gerçek tutar
     if R["day"] != _day():
         R["day"], R["day_eq"], R["halt"] = _day(), eq, ""
     if R["pos"] and not R["halt"] and R["day_eq"] > 0 and eq <= R["day_eq"] * (1 - cfg["daily_loss_pct"] / 100):
