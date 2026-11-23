@@ -390,6 +390,21 @@ EN = {
     "fiyat uygun ama aynı anda tutulabilecek coin sayısı dolu; elindeki bir coin satılınca alır.": "the price is right but the coin limit is full; buys once a coin is sold.",
     "fiyatı bir eşiktir: fiyat bunun altına inince bot": "price is a threshold: once the price drops below it, the bot buys at", "o anki (daha düşük) fiyattan": "the current (lower) price",
     "alır.": ".", "Alım": "Buy",
+    "Ajan masası": "Agent desk", "Ajan masası: bot ne yapıyor, neden yapıyor": "Agent desk: what the bot does and why",
+    "Gözcü": "Scout", "Bekçi": "Guard", "Alıcı": "Buyer", "Çıkışçı": "Exit", "Kâtip": "Clerk", "Kasadar": "Treasurer",
+    "Fırsat arar, alım yapmaz": "Finds opportunities, never trades", "Riskli alımı durdurur": "Stops risky buys",
+    "Şart oluşunca anında alır": "Buys the moment conditions are met", "Kârı borsada toplar, zararı keser": "Takes profit on the exchange, cuts losses",
+    "Her kararı sebebiyle yazar": "Logs every decision with a reason", "Parayı ve hedefi izler": "Watches money and the target",
+    "TARIYOR": "SCANNING", "DURDU": "STOPPED", "GEÇİRİYOR": "PASSING", "ENGELLİYOR": "BLOCKING", "HAZIR": "READY", "BEKLİYOR": "WAITING",
+    "DENEME": "TEST", "KORUYOR": "PROTECTING", "KORUMA BEKLİYOR": "AWAITING PROTECTION", "YAZIYOR": "WRITING", "KÂRDA": "IN PROFIT", "ZARARDA": "AT A LOSS",
+    "İzlenen": "Watched", "Şartta": "Condition met", "Düşüş filtresinde": "In drop filter", "Engel": "Block", "yok": "none",
+    "Alım tutarı": "Buy amount", "Son alım": "Last buy", "Kademe aralığı": "Step spacing", "Açık coin": "Open coins", "Borsa korumalı": "Exchange-protected",
+    "Son satış": "Last sell", "Kayıt": "Log", "{0} satır": "{0} lines", "Kapanan işlem": "Closed trades", "Bottaki para": "Bot money", "Günlük sınır": "Daily limit",
+    "Canlı akış": "Live feed", "her işlem sebebiyle": "every trade with its reason", "sebep: {0} kademe · deneme": "reason: step {0} · test",
+    "sebep: {0} kademe": "reason: step {0}", "sebep: Kademe kârı": "reason: Step profit", "sebep: Kademe kârı · deneme": "reason: Step profit · test",
+    "sebep: Elle satış": "reason: Manual sell", "sebep: {0} kademe · anlık": "reason: step {0} · instant", "{0} altı": "below {0}",
+    "Gerçek hesabın kilidi açık olmalı": "The real account must be unlocked", "Henüz kayıt yok": "No records yet", "şartta": "met",
+    "{0} · {1} dk önce": "{0} · {1} min ago", "{0} · {1} sa önce": "{0} · {1} h ago", "{0} · az önce": "{0} · just now",
 }
 
 

@@ -1,7 +1,7 @@
 {
-  "version": "1.40.0",
+  "version": "1.41.0",
   "date": "2026-11-23",
   "notes": [
-    "Fable incelemesi düzeltmeleri: manuel satış düğmesi, satış isteği kaybolmaz, doğru 'şartta' sebebi"
+    "Ajan masası: botun her parçası canlı kartta, her işlem sebebiyle"
   ]
 }

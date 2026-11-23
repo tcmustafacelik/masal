@@ -1,4 +1,4 @@
-const APP_VERSION='1.40.0';
+const APP_VERSION='1.41.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -151,7 +151,7 @@ async function load(quiet?: boolean) {lastLoad=Date.now();offlineData=false;clea
 }
 
 function render(){
-  updLine();homeChecks();
+  updLine();homeChecks();renderMasa();
   const L=S.strategies.live;
   {const m=document.getElementById('mode'),halt=L&&L.halted,real=L&&L.armed,want=orig?orig.live:S.settings?.live;
    const pending=L&&!halt&&want!==undefined&&!!want!==!!real;
@@ -239,6 +239,64 @@ function gloss(k: string): [string, string] {
   };
   return G[k]||['',''];
 }
+/* ---------- Ajan masası: botun her parçası bir "ajan" kartı; ne yaptığı ve neden yaptığı canlı görünür ----------
+   Veriler botun gerçek kaydından gelir (izlenen coinler, koruma durumu, işlemler, bot kayıtları); uydurma rakam yok. */
+let masaOn = false;
+function showMasa(on: boolean) {
+  masaOn = on; document.getElementById('mainv').hidden = on; document.getElementById('masav').hidden = !on;
+  document.querySelector('header').hidden = on; scrollTo(0, 0); if (on) renderMasa(); else pollMarket();
+}
+function masaClock(ts: number) { const d = new Date(ts), p = (n: number) => String(n).padStart(2, '0'); return `${p(d.getHours())}:${p(d.getMinutes())}`; }
+function renderMasa() {
+  if (!masaOn || !S) return;
+  const box = document.getElementById('masaBody'), x = S.strategies.live;
+  if (!x || x.locked) { box.innerHTML = `<div class="empty">${ic('i-lock')}<div>Gerçek hesabın kilidi açık olmalı</div></div>`; return; }
+  const w = x.watch, c = x.cfg, R = x.risk, pos = x.positions || [], rec = x.recent || [];
+  const eq = liveEquity(x), today = x.today_pnl + (eq - x.equity);
+  const items = (w?.items || []).map(it => { const cur = livePrice(it.i, it.p); return {...it, cur, gap: (cur / it.t - 1) * 100}; });
+  const near = items.filter(i => !i.f).sort((a, b) => a.gap - b.gap).slice(0, 3);
+  const filtered = items.filter(i => i.f).length, inCond = items.filter(i => !i.f && i.gap <= 0).length;
+  const buys = rec.filter(t => t.side === 'AL'), sells = rec.filter(t => t.side === 'SAT');
+  const prot = pos.filter(p => p.protected === true).length;
+  const kill = R?.kill_switch || 0, dayLim = R?.daily_loss_limit || 0;
+  const blocks: string[] = [];
+  if (x.halted) blocks.push('acil fren'); if (x.paused) blocks.push('beklemede'); if (x.blocked_today) blocks.push('günlük sınır');
+  if (w && !w.room) blocks.push('bütçe dolu'); if (w && w.coins >= w.max_coins) blocks.push('coin sınırı dolu');
+  const st = (on: boolean, a: string, b: string) => `<em class="ast ${on ? 'on' : 'off'}"><i></i>${on ? a : b}</em>`;
+  const ln = (k: string, v: string) => `<div class="al"><span>${k}</span><b>${v}</b></div>`;
+  const agents = [
+    ['scan', 'i-eye', 'Gözcü', 'Fırsat arar, alım yapmaz', st(!x.halted, 'TARIYOR', 'DURDU'),
+      ln('İzlenen', `${items.length} coin`) + ln('Şartta', `${inCond} coin`) +
+      (near.length ? `<div class="ach">${near.map(i => `<span>${sym(i.i)} <b class="${i.gap <= 0 ? 'up' : ''}">${i.gap <= 0 ? 'şartta' : '%' + nf(i.gap, 1)}</b></span>`).join('')}</div>` : '')],
+    ['risk', 'i-shield', 'Bekçi', 'Riskli alımı durdurur', st(!blocks.length, 'GEÇİRİYOR', 'ENGELLİYOR'),
+      ln('Düşüş filtresinde', `${filtered} coin`) + ln('Engel', blocks.length ? blocks.join(', ') : 'yok') +
+      ln('Acil fren', kill ? `${tl(kill, 0)} altı` : '—')],
+    ['buy', 'i-coins', 'Alıcı', 'Şart oluşunca anında alır', st(!blocks.length && !!x.armed, 'HAZIR', x.armed ? 'BEKLİYOR' : 'DENEME'),
+      ln('Alım tutarı', c ? tl(c.lot, 0) : '—') + ln('Son alım', buys[0] ? `${sym(buys[0].inst)} · ${ago(buys[0].ts)}` : '—') +
+      ln('Kademe aralığı', c ? pp(c.step) : '—')],
+    ['exit', 'i-pnl', 'Çıkışçı', 'Kârı borsada toplar, zararı keser', st(prot === pos.length, 'KORUYOR', 'KORUMA BEKLİYOR'),
+      ln('Açık coin', `${pos.length}`) + ln('Borsa korumalı', `${prot}/${pos.length}`) +
+      ln('Son satış', sells[0] ? `${sym(sells[0].inst)} <span class="${cls(sells[0].pnl || 0)}">${sgn(sells[0].pnl || 0)} TL</span>` : '—')],
+    ['log', 'i-list', 'Kâtip', 'Her kararı sebebiyle yazar', st(true, 'YAZIYOR', ''),
+      ln('Kayıt', `${(x.log || []).length} satır`) + ln('Kapanan işlem', `${x.trades}`) + ln('Kazanma', x.win_rate == null ? '—' : '%' + nf(x.win_rate, 0))],
+    ['cash', 'i-wallet', 'Kasadar', 'Parayı ve hedefi izler', st(today >= 0, 'KÂRDA', 'ZARARDA'),
+      ln('Bottaki para', tl(eq, 0)) + ln('Bugün', `<span class="${cls(today)}">${sgn(today)} TL</span>`) + ln('Günlük sınır', dayLim ? tl(dayLim, 0) : '—')],
+  ];
+  // canlı akış: işlemler (sebebiyle) + bot notları, zamana göre
+  const feed: [number, string, string, string][] = [];
+  for (const t of rec.slice(0, 25)) feed.push([t.ts, t.side === 'AL' ? 'al' : (t.pnl || 0) >= 0 ? 'sat' : 'zar', t.side === 'AL' ? 'AL' : 'SAT',
+    `<b>${sym(t.inst)}</b> ${tl(t.amount, 0)}${t.side === 'SAT' ? ` · <span class="${cls(t.pnl || 0)}">${sgn(t.pnl || 0)} TL</span>` : ''}<small>sebep: ${(t.reason || '—').replace(/</g, '&lt;')}</small>`]);
+  for (const [ts, msg] of (x.log || []).slice(0, 20)) if (!/^(AL|SAT|\[deneme\]) /.test(msg)) feed.push([ts, /HATA|uyarı|alınamıyor/i.test(msg) ? 'err' : 'not', /HATA/i.test(msg) ? 'HATA' : 'NOT', msg.replace(/</g, '&lt;')]);
+  feed.sort((a, b) => b[0] - a[0]);
+  box.innerHTML = `<div class="mtop"><div><span>Bottaki para</span><b>${tl(eq, 0)}</b></div><div><span>Bugün</span><b class="${cls(today)}">${sgn(today)} TL</b></div>
+      <div><span>İşlem</span><b>${x.trades}</b></div><div><span>Kazanma</span><b>${x.win_rate == null ? '—' : '%' + nf(x.win_rate, 0)}</b></div></div>
+    <div class="mflow">${['Gözcü', 'Bekçi', 'Alıcı', 'Çıkışçı'].map((n, i) => `<span>${n}</span>${i < 3 ? ic('i-chev') : ''}`).join('')}</div>
+    <div class="agrid">${agents.map(([k, i, n, r, s, body]) => `<div class="agent a-${k}"><div class="ah2"><span class="aic">${ic(i as string)}</span><b>${n}</b></div>${s}<small class="arole">${r}</small>${body}</div>`).join('')}</div>
+    <h2 class="mh">${ic('i-list')}Canlı akış<span class="hsum">her işlem sebebiyle</span></h2>
+    <div class="card mfeed">${feed.length ? feed.slice(0, 30).map(([ts, k, tag, txt]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k}">${tag}</em><div>${txt}</div></div>`).join('') : `<div class="empty">${ic('i-list')}<div>Henüz kayıt yok</div></div>`}</div>`;
+}
+document.getElementById('masaBtn').onclick = () => showMasa(true);
+document.getElementById('closeMasa').onclick = () => showMasa(false);
 /* ---------- bulut: verilerin GitHub'la eşitlenme durumu (üst çubuktaki bulut simgesi) ----------
    Bot her değişiklikte (en geç 30 sn'de bir) kayıtları buluta yedekler; uygulama birkaç saniyede bir kontrol eder. */
 let syncOk = 0, syncBad = false;
