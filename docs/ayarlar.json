@@ -3,8 +3,8 @@
   "paused": false,
   "liquidate": 0,
   "strategy": "grid",
-  "budget": 20448,
-  "kasa": 20448,
+  "budget": 20192,
+  "kasa": 20192,
   "topup": {
     "amount": 100,
     "profit_pct": 1,
@@ -149,5 +149,14 @@
       }
     }
   },
-  "theme": "auto"
+  "theme": "auto",
+  "xfer_req": [
+    {
+      "id": "x1a208f30987",
+      "ts": 1795446475143,
+      "dir": "tr2g",
+      "amt": 5,
+      "src": "bot"
+    }
+  ]
 }
