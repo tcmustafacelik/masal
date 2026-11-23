@@ -199,7 +199,26 @@ def _send(ex, side, addr, dest, amt, job, X):
                 "fee": f"{fee:f}".rstrip("0").rstrip(".") or "0", "clientId": job["id"][:32]}
         info = {"walletType": "private"}
     try:
-        res = ex.req("POST", "/api/v5/asset/withdrawal", body)[0]
+        res = _wd(ex, body, info, nm, dest)
+    except RuntimeError as e:
+        if not (dest and "58207" in str(e)):
+            raise
+        # Alıcı hesap (UID) adres defterinde "OKX kullanıcısı" olarak kayıtlı değil: doğrulanmış Arbitrum adresine zincirden gönder
+        addr = ROUTES[job["dir"]][1]
+        if addr.lower() not in _clients()[dest].dep_addr():
+            raise RuntimeError(f"{NAMES[dest]} yatırma adresi kayıtlı adresle tutmuyor; güvenlik için gönderilmedi")
+        chain, fee, min_wd = ex.chain()
+        body = {"ccy": "USDT", "amt": f"{amt:.2f}", "dest": "4", "toAddr": addr, "chain": chain,
+                "fee": f"{fee:f}".rstrip("0").rstrip(".") or "0", "clientId": job["id"][:32]}
+        res = _wd(ex, body, info, nm, dest)
+    job.update(stage="sent", wdId=res.get("wdId"), fee=fee, chain=chain, sent_ts=int(time.time() * 1000))
+    X["day_sum"] = round(X.get("day_sum", 0) + amt, 2)
+    _note(X, f"{NAMES[side]} → {NAMES[dest]}: {amt:.2f} USDT gönderildi ({chain}, ücret {fee:g})")
+
+
+def _wd(ex, body, info, nm, dest):
+    try:
+        return ex.req("POST", "/api/v5/asset/withdrawal", body)[0]
     except RuntimeError as e:
         s = str(e).lower()
         if not any(k in s for k in ("rcvr", "travel", "receiver", "recipient", "beneficiary", "wallet type", "local laws")):
@@ -208,10 +227,7 @@ def _send(ex, side, addr, dest, amt, job, X):
         if dest and len(nm) < 2:
             raise RuntimeError(f"OKX alıcı adı istiyor; GitHub'a OKX_ALICI (ad soyad) eklenmeli · {e}")
         body["rcvrInfo"] = info
-        res = ex.req("POST", "/api/v5/asset/withdrawal", body)[0]
-    job.update(stage="sent", wdId=res.get("wdId"), fee=fee, chain=chain, sent_ts=int(time.time() * 1000))
-    X["day_sum"] = round(X.get("day_sum", 0) + amt, 2)
-    _note(X, f"{NAMES[side]} → {NAMES[dest]}: {amt:.2f} USDT gönderildi ({chain}, ücret {fee:g})")
+        return ex.req("POST", "/api/v5/asset/withdrawal", body)[0]
 
 
 WD_STATE = {"-3": "iptal ediliyor", "-2": "iptal edildi", "-1": "başarısız", "0": "sırada", "1": "zincire gönderiliyor",
@@ -373,6 +389,14 @@ def step(state, S, N):
                     _poll(C, job, X, N)
             except Exception as e:
                 job.update(stage="failed", msg=str(e)[:300])
+                if job["stage"] == "failed" and src == "tr" and ex.ok:  # hazırlanan para fon hesabında kalmasın
+                    try:
+                        back = min(job["amt"], ex.funding("USDT", total=True))
+                        if back > 0.01:
+                            ex.move("USDT", back, FUNDING, TRADING)
+                            job["msg"] += f" · {back:.2f} USDT alım-satım hesabına geri kondu"
+                    except Exception:
+                        pass
                 _note(X, f"HATA {NAMES[src]} → {NAMES[dest]} {job['amt']} USDT: {job['msg']}")
                 N.add("alerts", "Aktarım yapılamadı", f"{NAMES[src]} → {NAMES[dest]} {job['amt']} USDT: {job['msg']}", 5, ["warning"])
         X["jobs"] = [j for j in X["jobs"] if j["stage"] not in ("done", "failed") or now * 1000 - j["ts"] < 7 * 86400_000][-30:]
