@@ -487,8 +487,8 @@ def step(state, S, N):
                 N.add("alerts", "Aktarım yapılamadı", f"{NAMES[src]} → {NAMES[dest]} {job['amt']} USDT: {job['msg']}", 5, ["warning"])
         X["jobs"] = [j for j in X["jobs"] if j["stage"] not in ("done", "failed") or now * 1000 - j["ts"] < 7 * 86400_000][-30:]
     # uygulama için bakiye özeti (dakikada bir, arka planda: ana turu bekletmez)
-    if now - X.get("bal_at", 0) >= 60 and not (_BAL.get("t") and _BAL["t"].is_alive()):
-        X["bal_at"] = now
+    if now - X.get("bal_at", 0) >= (60 if X.get("dust_at", 1) else 5) and not (_BAL.get("t") and _BAL["t"].is_alive()):
+        X["bal_at"], X["dust_at"] = now, 1
         o = state.get("okx") or {}
         bot_cash = float((state.get("live") or {}).get("cash") or 0)
         _BAL["t"] = threading.Thread(target=_balances, args=(C, o, bot_cash), daemon=True)
@@ -518,6 +518,11 @@ def _balances(C, o, bot_cash):
         except Exception as e:
             print("Global bakiye okunamadı:", e)
     try:
+        from . import dust
+        out["dust"] = dust.scan(C)
+    except Exception as e:
+        print("Küçük bakiyeler okunamadı:", e)
+    try:
         out["kasa"] = kasa_balance()
     except Exception as e:
         print("KASA bakiyesi okunamadı:", e)
@@ -533,4 +538,4 @@ def public(state, S=None):
             "log": X.get("log", [])[:20], "free_tl": X.get("free_tl"), "g_val": X.get("g_val"), "kasa": X.get("kasa"),
             "tr_total": X.get("tr_total"), "usdtry": X.get("usdtry"), "g_base": X.get("g_base", 0),
             "day_sum": X.get("day_sum", 0), "daily_max": cfg["daily_max"], "sweep": {k: cfg[k] for k in ("sweep_on", "sweep_pct", "sweep_days")},
-            "sweep_at": int(X.get("sweep_at", 0) * 1000)}
+            "sweep_at": int(X.get("sweep_at", 0) * 1000), "dust": X.get("dust")}

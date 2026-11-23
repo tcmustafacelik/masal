@@ -272,11 +272,11 @@ def _sync(R, cfg, prices, held_paper, key):
         R["equity"] = R["equity"][-700:]
 
 
-def _dust(key, R):
+def _dust(key, R, only=None):
     """Masanın tutmadığı token artıklarını SOL'a satar (çok küçükse Jupiter yol bulamaz; atlanır)."""
     n = 0
     for m, h in _holdings(R["addr"]).items():
-        if m in R["pos"] or m == SOL:
+        if m in R["pos"] or m == SOL or (only is not None and m not in only):
             continue
         try:
             _execute(key, _swap(key, R["addr"], m, SOL, h["raw"]))
@@ -308,7 +308,7 @@ def _loop():
                 elif ev and ev[0] == "sell" and ev[1] in R["pos"]:
                     _sell(key, R, ev[1], ev[2], cfg)
                 elif ev and ev[0] == "dust":
-                    _dust(key, R)
+                    _dust(key, R, set(ev[1]) if len(ev) > 1 else None)
                 elif ev and ev[0] == "kill":
                     for m in list(R["pos"]):
                         R["pos"][m]["closing"] = "masa kapatıldı"

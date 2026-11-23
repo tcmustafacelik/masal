@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.56.0';
+const APP_VERSION = '1.57.0';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -557,11 +557,11 @@ function renderLevR() {
     }).join('');
     const feed = (R.log || []).slice(0, 15).map(([ts, k, t]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : 'not'}">${k === 'buy' ? 'AÇ' : k === 'exit' ? 'KAPAT' : k === 'risk' ? 'ENGEL' : 'BİLGİ'}</em><div>${esc(t).replace(/^GERÇEK (AÇ|KAPAT|ENGEL) ?/, '')}</div></div>`).join('');
     const st = R.dead ? `<b class="dn">Durdu: ${esc(R.dead)}. Ayarlar → Futures → Yeniden başlat.</b>` : R.halt ? `<b class="dn">Bugün durduruldu: günlük zarar sınırı.</b>` : !R.on ? '<b>Kapalı.</b> Ayarlar → Futures\'tan açılır.' : '';
-    return `<h2 class="mh">${ic('i-layers')}Gerçek futures<span class="hsum"><em class="rbadge">GERÇEK</em> OKX Global</span></h2>
+    return `<h2 class="mh">${ic('i-layers')}Futures<span class="hsum"><em class="rbadge">GERÇEK</em>OKX Global</span><button class="mset" type="button" data-sett="fut">${ic('i-gear')}Ayarlar</button></h2>
     <div class="card mmeme">
       <div class="mtop"><div><span>Masa</span><b>${usd(R.equity)}</b></div><div><span>Kâr/zarar</span><b class="${cls(R.pnl)}">${R.pnl < 0 ? '−' : '+'}${usd(Math.abs(R.pnl))}</b></div>
         <div><span>Kalan risk</span><b>${usd(left)}</b></div><div><span>Kazanma</span><b>${R.win_rate == null ? '—' : '%' + R.win_rate}</b></div></div>
-      <p class="mnote">Deneme masasının kararları gerçek parayla uygulanır. Bütçe ${usd(R.funded)}, en fazla ${usd(ml, 0)} kayıp; her pozisyonun zarar durdurması borsada kayıtlıdır.${R.harvest ? ` Fona alınan kâr ${usd(R.harvest)}.` : ''} ${st}${R.err ? ` <b class="dn">Uyarı: ${esc(R.err).slice(0, 90)}</b>` : ''}</p>
+      <p class="mnote">Bütçe ${usd(R.funded)} · en fazla ${usd(ml, 0)} kayıp · zarar durdur borsada kayıtlı.${R.harvest ? ` Fona alınan kâr ${usd(R.harvest)}.` : ''} ${st}${R.err ? ` <b class="dn">Uyarı: ${esc(R.err).slice(0, 90)}</b>` : ''}</p>
       ${pos ? `<div class="mfeed">${pos}</div>` : ''}
       ${feed ? `<div class="mfeed">${feed}</div>` : `<div class="empty">${ic('i-eye')}<div>Henüz gerçek işlem yok; sinyal gelince açılır</div></div>`}
     </div>`;
@@ -579,11 +579,11 @@ function renderMemeR() {
     const feed = (R.log || []).slice(0, 15).map(([ts, k, t]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : 'not'}">${k === 'buy' ? 'AL' : k === 'exit' ? 'SAT' : k === 'risk' ? 'ENGEL' : 'BİLGİ'}</em><div>${esc(t).replace(/^GERÇEK (AL|SAT|ENGEL) ?/, '')}</div></div>`).join('');
     const st = R.dead ? `<b class="dn">Durdu: ${esc(R.dead)}. Ayarlar → Memecoin → Yeniden başlat.</b>` : !R.on ? '<b>Kapalı.</b> Ayarlar → Memecoin\'den açılır.' : '';
     const ad = R.addr ? `${R.addr.slice(0, 4)}…${R.addr.slice(-4)}` : '';
-    return `<h2 class="mh">${ic('i-flask')}Gerçek memecoin<span class="hsum"><em class="rbadge">GERÇEK</em> MEME cüzdanı ${ad}</span></h2>
+    return `<h2 class="mh">${ic('i-flask')}Memecoin<span class="hsum"><em class="rbadge">GERÇEK</em>${ad}</span><button class="mset" type="button" data-sett="meme">${ic('i-gear')}Ayarlar</button></h2>
     <div class="card mmeme">
       <div class="mtop"><div><span>Cüzdan</span><b>${usd(R.value)}</b></div><div><span>Kâr/zarar</span><b class="${cls(R.pnl)}">${R.pnl < 0 ? '−' : '+'}${usd(Math.abs(R.pnl))}</b></div>
         <div><span>SOL</span><b>${nf(R.sol, 4)}</b></div><div><span>Kalan risk</span><b>${usd(left)}</b></div></div>
-      <p class="mnote">Deneme masasının al-sat kararları MEME cüzdanında Jupiter üzerinden gerçek parayla uygulanır. Fiyat etkisi %${nf(+mm.max_slip || 2, 1)}'yi aşan alım yapılmaz; toplam ${usd(ml, 0)} zararda masa durur. KASA'ya dokunulmaz. ${st}${R.err ? ` <b class="dn">Uyarı: ${esc(R.err).slice(0, 110)}</b>` : ''}</p>
+      <p class="mnote">Jupiter ile alım-satım · fiyat etkisi en fazla %${nf(+mm.max_slip || 2, 1)} · ${usd(ml, 0)} zararda durur · KASA'ya dokunulmaz. ${st}${R.err ? ` <b class="dn">Uyarı: ${esc(R.err).slice(0, 110)}</b>` : ''}</p>
       ${pos ? `<div class="mfeed">${pos}</div>` : ''}
       ${feed ? `<div class="mfeed">${feed}</div>` : `<div class="empty">${ic('i-eye')}<div>${R.sol > 0 ? 'Henüz gerçek işlem yok; şartı tutan token bekleniyor' : 'MEME cüzdanına SOL gönderilince başlar'}</div></div>`}
     </div>`;
@@ -975,24 +975,64 @@ function renderXfer() {
     <div class="xb"><span>TR'de boşta <b>${X?.free_tl != null ? tl(Math.max(0, X.free_tl), 0) : '—'}</b></span><span>Bugün gönderilen <b>$${nf(X?.day_sum || 0, 0)} / ${nf(X?.daily_max || 1000, 0)}</b></span></div>
     ${jobs ? `<div class="xj">${jobs}</div>` : ''}
     <div class="xdh">${ic('i-coins')}<b>Küçük bakiyeleri çevir</b><span>tek dokunuş</span></div>
-    <div class="xt x3">${DUST.map(([k, f, to, sub]) => `<button data-dust="${k}"><span class="xrt">${xEnd(f)}${ic('i-chev')}<span class="xe e5">${to}</span></span><b>${XEND[f][0]}</b><small>${sub}</small></button>`).join('')}</div>
+    <div class="xt x3">${DUST.map(([k, f, to]) => {
+        const l = (X?.dust || {})[k] || [], u = l.reduce((a, x) => a + (+x.usd || 0), 0);
+        return `<button data-dust="${k}"><span class="xrt">${xEnd(f)}${ic('i-chev')}<span class="xe e5">${to}</span></span><b>${XEND[f][0]}</b><small>${l.length ? `${l.length} coin · $${nf(u, 2)}` : 'artık yok'}</small></button>`;
+    }).join('')}</div>
     ${(X?.log || []).length ? `<div class="xlog">${X.log.slice(0, 3).map(([t, m]) => `<div><time>${masaClock(t)}</time><span>${String(m).replace(/</g, '&lt;')}</span></div>`).join('')}</div>` : ''}`))
         return;
     box.querySelectorAll('[data-x]').forEach(b => b.onclick = () => openXfer(b.dataset.x));
     box.querySelectorAll('[data-xc]').forEach(b => b.onclick = () => cancelXfer(b.dataset.xc, b));
-    box.querySelectorAll('[data-dust]').forEach(b => b.onclick = async () => {
-        if (!token) {
-            toast('Önce Ayarlar\'dan GitHub bağlantısını kur');
-            return;
-        }
-        const k = b.dataset.dust, d = DUST.find(x => x[0] === k);
-        b.disabled = true;
-        const ok = await cloudPatch(o => { o.dust = [...(o.dust || []).filter((r) => Date.now() - (r.ts || 0) < 3600000), { id: 'd' + Date.now().toString(36), ts: Date.now(), ex: k }]; }, 'Küçük bakiye çevirme: ' + k);
-        b.disabled = false;
-        toast(ok ? `${XEND[d[1]][0]}: küçük bakiyeler ${d[2]}'ye çevriliyor; sonuç birkaç saniyede aşağıda görünür` : 'İstek gönderilemedi, tekrar dene');
-    });
+    box.querySelectorAll('[data-dust]').forEach(b => b.onclick = () => openDust(b.dataset.dust));
 }
-const DUST = [['tr', 'tr', 'TL', 'artıklar TL olur'], ['g', 'g', '$', 'artıklar USDT olur'], ['m', 'm', 'SOL', 'artıklar SOL olur']];
+const DUST = [['tr', 'tr', 'TL'], ['g', 'g', 'USDT'], ['m', 'm', 'SOL']], DUST_MAX = 10;
+/** Küçük bakiyeler: tek tek ya da hepsi seçilir; tek seferde en fazla DUST_MAX coin çevrilir (fazlası uyarılır). */
+function openDust(k) {
+    const X = S?.xfer || {}, d = DUST.find(x => x[0] === k), list = (X.dust || {})[k] || [], q = document.getElementById('qsh');
+    q.dataset.n = '';
+    qHead(XEND[d[1]][1], 'Vazgeç');
+    document.getElementById('qTitle').textContent = `${XEND[d[1]][0]} · küçük bakiyeler`;
+    const pick = new Set(list.slice(0, DUST_MAX).map(x => x.ccy));
+    const draw = () => {
+        const all = list.length && pick.size === list.length, sum = list.filter(x => pick.has(x.ccy)).reduce((a, x) => a + (+x.usd || 0), 0);
+        document.getElementById('qText').innerHTML = list.length ? `<div class="dsh">
+      <div class="dtop"><span>${list.length} coin · $${nf(list.reduce((a, x) => a + (+x.usd || 0), 0), 2)} · ${d[2]}'ye çevrilir</span><button class="dall" type="button">${all ? 'Hiçbiri' : 'Tümünü seç'}</button></div>
+      <div class="dlist">${list.map(x => `<button type="button" class="drow${pick.has(x.ccy) ? ' on' : ''}" data-dc="${x.ccy}"><span class="dck">${ic('i-check')}</span><b>${String(x.sym || x.ccy).replace(/</g, '&lt;')}</b><small>${nf(+x.amt, +x.amt >= 1 ? 2 : 6)}</small><em>$${nf(+x.usd, 2)}</em></button>`).join('')}</div>
+      ${pick.size > DUST_MAX ? `<div class="warn">${ic('i-info')}<div>Tek seferde en fazla <b>${DUST_MAX}</b> coin çevrilir. <b>${pick.size}</b> seçtin: ilk ${DUST_MAX} tanesi şimdi, kalan <b>${pick.size - DUST_MAX}</b> tanesi için bir kez daha dokun.</div></div>` : ''}
+      ${k !== 'm' ? `<p class="hint">Botun elindeki coinler ve nakit listede yoktur; dokunulmaz.</p>` : `<p class="hint">Masanın açık tokenleri listede yoktur. Çok küçük artıklarda Jupiter yol bulamayabilir.</p>`}
+      <button class="btn primary xgo" id="dGo" ${pick.size ? '' : 'disabled'}>${ic('i-refresh')}Seçilenleri çevir (${Math.min(pick.size, DUST_MAX)} · $${nf(sum, 2)})</button></div>`
+            : `<div class="empty">${ic('i-check')}<div>Çevrilecek küçük bakiye yok</div></div>`;
+        const t = document.getElementById('qText');
+        t.querySelectorAll('[data-dc]').forEach(b => b.onclick = () => { const c = b.dataset.dc; pick.has(c) ? pick.delete(c) : pick.add(c); draw(); });
+        const da = t.querySelector('.dall');
+        if (da)
+            da.onclick = () => { if (all)
+                pick.clear();
+            else
+                list.forEach(x => pick.add(x.ccy)); draw(); };
+        const go = document.getElementById('dGo');
+        if (go)
+            go.onclick = async () => {
+                if (!token) {
+                    toast('Önce Ayarlar\'dan GitHub bağlantısını kur');
+                    return;
+                }
+                const ccys = list.map(x => x.ccy).filter(c => pick.has(c)).slice(0, DUST_MAX);
+                go.disabled = true;
+                const ok = await cloudPatch(o => { o.dust = [...(o.dust || []).filter((r) => Date.now() - (r.ts || 0) < 3600000), { id: 'd' + Date.now().toString(36), ts: Date.now(), ex: k, ccys }]; }, 'Küçük bakiye çevirme: ' + k);
+                if (ok) {
+                    q.hidden = true;
+                    toast(`${ccys.length} coin ${d[2]}'ye çevriliyor; sonuç birkaç saniyede Kasalar'da görünür`);
+                }
+                else {
+                    go.disabled = false;
+                    toast('İstek gönderilemedi, tekrar dene');
+                }
+            };
+    };
+    draw();
+    q.hidden = false;
+}
 let xfSrc = 'bos', USDTTRY = 0, xfId = '';
 /** Üç kasa yan yana: OKX TR, OKX Global, KASA (soğuk cüzdan); dolar ve TL karşılığı, dakikada bir borsadan/zincirden. */
 function xKasalar(X) {
@@ -1306,8 +1346,11 @@ function showView(v) {
     document.querySelectorAll('#deck button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
     scrollTo(0, 0);
     renderDeck();
+    navSave();
 }
 document.querySelectorAll('#deck button').forEach(b => b.onclick = () => showView(b.dataset.v));
+document.addEventListener('click', e => { const b = e.target.closest?.('[data-sett]'); if (b)
+    openSettingsTab(b.dataset.sett); });
 function renderDeck() {
     if (!S)
         return;
@@ -1401,7 +1444,7 @@ function renderPositions(x) {
         }
         const row = `<div class="row pos${canSell ? ' swc' : ''}">${cico(p.inst)}
       <div class="mid"><b>${sym(p.inst)}${pq(p.inst)}${prot}${p.lots > 1 ? `<i class="kd">${p.lots} kademe</i>` : ''}</b><span>Alış ${px(p.avg)} → satış ${px(cur)}<br>${ago(p.since)} alındı${volTxt(p.inst) ? ` · hacim ${volTxt(p.inst)}` : ''}</span>${rng}</div>
-      <div class="end"><b>${tl(val, 0)}</b><span class="plc ${cls(pl) || 'z'}">${sgn(pl)} TL</span><span class="plp ${cls(pl)}">${spc(plp)}</span></div></div>`;
+      <div class="end"${SELLING[p.inst] ? ` data-sell="Satış isteği · ${Math.round((Date.now() - SELLING[p.inst]) / 1000)} sn"` : ''}><b>${tl(val, 0)}</b><span class="plc ${cls(pl) || 'z'}">${sgn(pl)} TL</span><span class="plp ${cls(pl)}">${spc(plp)}</span></div></div>`;
         return canSell ? `<div class="swr${swOpen === p.inst ? ' open' : ''}${SELLING[p.inst] ? ' busy' : ''}" data-i="${p.inst}"><button class="swb" data-sell="${p.inst}">${ic('i-sell')}${SELLING[p.inst] ? 'Satılıyor' : 'Sat'}</button>${row}</div>` : row;
     }).join('')
         : `<div class="empty">${ic('i-box')}<div>Şu an açık pozisyon yok</div></div>`;
@@ -2165,9 +2208,21 @@ function renderConn() {
             }
         };
 }
+let STAB = 'spot';
+const STABS = [['spot', 'i-coins', 'Spot'], ['fut', 'i-layers', 'Futures'], ['meme', 'i-flask', 'Memecoin'], ['kasa', 'i-vault', 'Kasalar'], ['app', 'i-phone', 'Uygulama']];
+const SEC_TAB = { 'Kasa': 'spot', 'Kasadan ekleme': 'spot', 'Koruma': 'spot', 'Kâr hedefi': 'spot', 'Futures': 'fut', 'Memecoin': 'meme', 'Aktarım ve KASA': 'kasa' };
+function openSettingsTab(t) { STAB = t; document.getElementById('openSet').click(); }
 function renderForm() {
     const live = draft.live;
-    let h = `<section><h2><span class="hb c-green">${ic('i-power')}</span>Çalışma</h2>
+    const dirtyTab = (t) => SECTIONS.some(sec => SEC_TAB[sec.t] === t && secDirty([...sec.f.map(x => x[0]), ...(sec.sw || []).map(x => x[0])]));
+    for (const id of ['linkSec', 'connSec']) {
+        const e = document.getElementById(id);
+        if (e)
+            e.hidden = STAB !== 'app';
+    }
+    let h = `<div class="tiles stabs">${STABS.map(([k, i, n]) => `<button class="tile ${STAB === k ? 'on' : ''}" data-stab="${k}"><span class="ic">${ic(i)}</span><span class="nm">${n}</span>${dirtyTab(k) ? '<i class="dot"></i>' : ''}</button>`).join('')}</div>`;
+    if (STAB === 'spot') {
+        h += `<section><h2><span class="hb c-green">${ic('i-power')}</span>Çalışma</h2>
    <div class="tiles two" data-g="mode">${tile(!live, 'demo', 'i-flask', 'Deneme', 'Emir gönderilmez')}${tile(live, 'real', 'i-coins', 'Gerçek', 'OKX TR hesabında')}</div>
    ${live && !orig.live ? `<div class="warn">${ic('i-info')}<div>Kaydedince bot OKX TR hesabında <b>gerçek emir</b> vermeye başlar. API anahtarı GitHub Secrets'ta olmalı.</div></div>` : ''}
    ${!live && orig.live ? `<div class="warn">${ic('i-info')}<div>Denemeye geçince hesaptaki coinler bot tarafından satılmaz. Gerekirse önce aşağıdan <b>Hepsini sat</b>.</div></div>` : ''}
@@ -2180,11 +2235,17 @@ function renderForm() {
    <section><h2><span class="hb c-blue">${ic('i-target')}</span>Strateji</h2><div class="tiles" data-g="strat">${['grid', 'dip', 'trend'].map(k => tile(draft.strategy === k, k, ICON[k], SNAMES[k])).join('')}</div>
    ${draft.strategy !== orig.strategy && orig.live ? `<div class="warn">${ic('i-info')}<div>Gerçek modda strateji değişince eski stratejinin açık coinleri satılır, yeni strateji temiz başlar.</div></div>` : ''}</section>
    <section><h2><span class="hb c-violet">${ic('i-shield')}</span>Kontrol<span class="hsum" style="font-weight:500;color:var(--faint);font-size:11px">değiştirdikçe güncellenir</span></h2><div class="card chk" id="checks"></div></section>`;
-    h += '<section style="margin-bottom:-2px"><h2><span class="hb c-gray">' + ic('i-layers') + '</span>Ayrıntılı ayarlar<span class="hsum" style="font-weight:500;color:var(--faint);font-size:11px">dokununca açılır</span></h2></section>';
-    h += notifySection();
+        h += '<section style="margin-bottom:-2px"><h2><span class="hb c-gray">' + ic('i-layers') + '</span>Ayrıntılı ayarlar<span class="hsum" style="font-weight:500;color:var(--faint);font-size:11px">dokununca açılır</span></h2></section>';
+    }
+    if (STAB === 'app')
+        h += notifySection();
     if (!draft.target)
         draft.target = { on: false, amount: 20000, mode: 'profit' };
     for (const sec of SECTIONS) {
+        if (SEC_TAB[sec.t] !== STAB)
+            continue;
+        if (STAB !== 'spot')
+            OPEN.add(sec.t);
         const tg = sec.t === 'Kâr hedefi', ff = tg && draft.target.mode === 'total' ? [TGT_TOTAL] : secFields(sec);
         h += accOpen(sec.t, sec.t, sec.i, SEC_C[sec.t], SUMS[sec.t](), secDirty([...ff.map(x => x[0]), ...(tg ? ['target.on', 'target.mode'] : []), ...(sec.sw || []).map(x => x[0])])) + `<div class="card">`
             + (sec.sw || []).map(([k, a, b]) => `<div style="margin-bottom:4px">${swRow('sw_' + k.replace('.', '_'), !!P(draft, k), a, b)}</div>`).join('')
@@ -2197,26 +2258,33 @@ function renderForm() {
     }
     const sf = STRAT_F[draft.strategy];
     const grid = draft.strategy === 'grid';
-    h += accOpen('strat', SNAMES[draft.strategy] + ' ayarları', ICON[draft.strategy], 'blue', SUMS[draft.strategy](), secDirty([...sf.map(x => x[0]), ...(grid ? ['grid.instant'] : [])])) + `<div class="card">${sf.map(field).join('')}`
-        + (grid ? `<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line2)">${swRow('instSw', !!draft.grid.instant, 'Anlık alım', 'Fiyat değince hemen alır')}</div>` : '') + `</div>` + ACC_END;
-    h += installSection();
-    h += `<section class="clr"><button class="btn xsync" type="button" id="clrOld">${ic('i-trash')}Eski kayıtları temizle</button><p class="hint">Canlı akış, aktarım geçmişi, masa günlükleri ve bildirimler silinir; işlem geçmişi ve kâr/zarar hesabı korunur.</p></section>`;
+    if (STAB === 'spot')
+        h += accOpen('strat', SNAMES[draft.strategy] + ' ayarları', ICON[draft.strategy], 'blue', SUMS[draft.strategy](), secDirty([...sf.map(x => x[0]), ...(grid ? ['grid.instant'] : [])])) + `<div class="card">${sf.map(field).join('')}`
+            + (grid ? `<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line2)">${swRow('instSw', !!draft.grid.instant, 'Anlık alım', 'Fiyat değince hemen alır')}</div>` : '') + `</div>` + ACC_END;
+    if (STAB === 'app') {
+        h += installSection();
+        h += `<section class="clr"><button class="btn xsync" type="button" id="clrOld">${ic('i-trash')}Eski kayıtları temizle</button><p class="hint">Canlı akış, aktarım geçmişi, masa günlükleri ve bildirimler silinir; işlem geçmişi ve kâr/zarar hesabı korunur.</p></section>`;
+    }
     const f = document.getElementById('setForm');
     f.innerHTML = h;
-    document.getElementById('clrOld').onclick = async () => {
-        if (!token) {
-            toast('Önce GitHub bağlantısını kur');
-            return;
-        }
-        const t = Date.now(), top = Math.ceil(t / 1000);
-        const ok = await cloudPatch(o => { o.clear = t; o.notify = { ...(o.notify || {}), cleared: top }; }, 'Eski kayıtlar temizlendi');
-        if (ok) {
-            localStore('masal_nclr', String(top));
-            NOTES.length = 0;
-            nBadge();
-        }
-        toast(ok ? 'Eski kayıtlar temizleniyor; bot birkaç saniyede uygular' : 'Temizleme isteği gönderilemedi, tekrar dene');
-    };
+    f.querySelectorAll('[data-stab]').forEach(b => b.onclick = () => { STAB = b.dataset.stab; renderForm(); window.scrollTo(0, 0); navSave(); });
+    const on = (id, fn) => { const e = document.getElementById(id); if (e)
+        e.onclick = fn; };
+    if (document.getElementById('clrOld'))
+        document.getElementById('clrOld').onclick = async () => {
+            if (!token) {
+                toast('Önce GitHub bağlantısını kur');
+                return;
+            }
+            const t = Date.now(), top = Math.ceil(t / 1000);
+            const ok = await cloudPatch(o => { o.clear = t; o.notify = { ...(o.notify || {}), cleared: top }; }, 'Eski kayıtlar temizlendi');
+            if (ok) {
+                localStore('masal_nclr', String(top));
+                NOTES.length = 0;
+                nBadge();
+            }
+            toast(ok ? 'Eski kayıtlar temizleniyor; bot birkaç saniyede uygular' : 'Temizleme isteği gönderilemedi, tekrar dene');
+        };
     f.querySelectorAll('.acch').forEach(b => b.onclick = () => {
         const sec = b.parentElement, id = sec.dataset.acc;
         sec.classList.toggle('open');
@@ -2230,8 +2298,8 @@ function renderForm() {
     f.querySelectorAll('[data-g=mode] .tile').forEach(b => b.onclick = () => { draft.live = b.dataset.t === 'real'; renderForm(); });
     f.querySelectorAll('[data-g=quote] .tile').forEach(b => b.onclick = () => { draft.quote = b.dataset.t; renderForm(); });
     f.querySelectorAll('[data-g=strat] .tile').forEach(b => b.onclick = () => { draft.strategy = b.dataset.t; renderForm(); });
-    document.getElementById('pauseSw').onclick = () => { draft.paused = !draft.paused; renderForm(); };
-    document.getElementById('tgtSw').onclick = () => { draft.target.on = !draft.target.on; renderForm(); };
+    on('pauseSw', () => { draft.paused = !draft.paused; renderForm(); });
+    on('tgtSw', () => { draft.target.on = !draft.target.on; renderForm(); });
     document.querySelectorAll('#tgtMode button').forEach(b => b.onclick = () => { draft.target.mode = b.dataset.m; renderForm(); });
     for (const sec of SECTIONS)
         for (const [k] of (sec.sw || [])) {
@@ -2250,18 +2318,19 @@ function renderForm() {
         isw.onclick = () => { draft.grid.instant = !draft.grid.instant; renderForm(); };
     bindNotify();
     bindInstall();
-    document.getElementById('sellAll').onclick = () => {
-        if (!sellArm) {
-            sellArm = setTimeout(() => { sellArm = 0; renderForm(); }, 4000);
-            return renderForm();
-        }
-        clearTimeout(sellArm);
-        sellArm = 0;
-        const keep = JSON.parse(JSON.stringify(orig));
-        keep.liquidate = Date.now();
-        keep.paused = true;
-        save(keep, 'Hepsini sat isteği gönderildi; bot birkaç saniye içinde satar ve durur.');
-    };
+    if (document.getElementById('sellAll'))
+        document.getElementById('sellAll').onclick = () => {
+            if (!sellArm) {
+                sellArm = setTimeout(() => { sellArm = 0; renderForm(); }, 4000);
+                return renderForm();
+            }
+            clearTimeout(sellArm);
+            sellArm = 0;
+            const keep = JSON.parse(JSON.stringify(orig));
+            keep.liquidate = Date.now();
+            keep.paused = true;
+            save(keep, 'Hepsini sat isteği gönderildi; bot birkaç saniye içinde satar ve durur.');
+        };
     f.querySelectorAll('.field[data-k]').forEach(el => {
         const k = el.dataset.k, inp = el.querySelector('input');
         const set = (raw, fromBtn) => {
@@ -2559,6 +2628,7 @@ function showSettings(on) {
         loadSettings();
     else
         pollMarket();
+    navSave();
 }
 document.getElementById('openSet').onclick = () => showSettings(true);
 document.getElementById('closeSet').onclick = () => { if (draft && JSON.stringify(orig) !== JSON.stringify(clean(draft)) && !confirmLeave())
@@ -2824,3 +2894,38 @@ addEventListener('popstate', () => {
     toast('Çıkmak için geri tuşuna tekrar bas');
     history.pushState({ masal: 1 }, '');
 });
+/* ---------- sayfa yenilenince aynı yerde kal: bölüm, ayarlar sekmesi ve kaydırma konumu (bu sekmede saklanır) ---------- */
+let navReady = false;
+function navSave() { if (!navReady)
+    return; try {
+    sessionStorage.setItem('masal_nav', JSON.stringify({ v: VIEW, set: !document.getElementById('setv').hidden, stab: STAB, y: Math.round(scrollY) }));
+}
+catch (e) { } }
+{
+    let t = 0;
+    addEventListener('scroll', () => { clearTimeout(t); t = setTimeout(navSave, 250); }, { passive: true });
+}
+(function navRestore() {
+    let n = null;
+    try {
+        n = JSON.parse(sessionStorage.getItem('masal_nav') || 'null');
+    }
+    catch (e) { }
+    if (!n) {
+        navReady = true;
+        return;
+    }
+    setTimeout(() => {
+        if (n.set) {
+            STAB = n.stab || 'spot';
+            showSettings(true);
+        }
+        else if (n.v && n.v !== 'spot')
+            showView(n.v);
+        navReady = true;
+        let k = 0;
+        const go = () => { scrollTo(0, n.y || 0); if (++k < 6 && Math.abs(scrollY - (n.y || 0)) > 4)
+            setTimeout(go, 400); };
+        setTimeout(go, 300);
+    }, 60);
+})();

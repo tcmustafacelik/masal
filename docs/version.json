@@ -1,11 +1,23 @@
 {
-  "version": "1.56.0",
+  "version": "1.57.0",
   "date": "2026-11-23",
   "notes": [
-    "Kasalar: Küçük bakiyeleri çevir (OKX TR → TL, OKX Global → USDT, MEME token artıkları → SOL); botun açık coinlerine dokunulmaz",
-    "Kasalar'da son aktarım ve çevirme kayıtları görünür"
+    "Ayarlar sekmelere ayrıldı: Spot, Futures, Memecoin, Kasalar, Uygulama; Futures ve Memecoin ekranındaki Ayarlar düğmesi doğrudan kendi sekmesini açar",
+    "Küçük bakiyeler: borsa ve cüzdan başına liste; tek tek ya da hepsini seçip çevir; tek seferde en fazla 10 coin (fazlası uyarılır)",
+    "Sayfa yenilenince aynı bölümde ve aynı yerde kalınır",
+    "Elle satışta bekleme süresi saniye olarak görünür"
   ],
   "history": [
+    {
+      "version": "1.57.0",
+      "date": "2026-11-23",
+      "notes": [
+        "Ayarlar sekmelere ayrıldı: Spot, Futures, Memecoin, Kasalar, Uygulama; Futures ve Memecoin ekranındaki Ayarlar düğmesi doğrudan kendi sekmesini açar",
+        "Küçük bakiyeler: borsa ve cüzdan başına liste; tek tek ya da hepsini seçip çevir; tek seferde en fazla 10 coin (fazlası uyarılır)",
+        "Sayfa yenilenince aynı bölümde ve aynı yerde kalınır",
+        "Elle satışta bekleme süresi saniye olarak görünür"
+      ]
+    },
     {
       "version": "1.56.0",
       "date": "2026-11-23",

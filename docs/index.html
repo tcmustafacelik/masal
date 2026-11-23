@@ -426,6 +426,10 @@ details.setup summary::-webkit-details-marker{display:none}
 .xdh{display:flex;align-items:center;gap:8px;margin:16px 2px 8px;font-size:13px}.xdh .i{width:16px;height:16px;color:var(--muted)}.xdh span{margin-left:auto;font-size:11px;color:var(--faint)}
 .xf .xt.x3{grid-template-columns:repeat(3,minmax(0,1fr))}.xe.e5{background:#EEF1F6;color:#5B6576;font-size:10px;font-weight:700;width:auto;min-width:30px;padding:0 6px}
 .xlog{margin-top:10px;border-top:1px solid var(--line2);padding-top:8px;display:grid;gap:5px}.xlog div{display:flex;gap:8px;font-size:11.5px;color:var(--muted);line-height:1.35}.xlog time{flex:none;font-variant-numeric:tabular-nums;color:var(--faint)}
+.stabs{grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:6px;margin:4px 0 14px;position:sticky;top:0;z-index:5;background:var(--bg);padding:6px 0}.stabs .tile{padding:9px 2px 8px;min-height:0;position:relative}.stabs .tile .ic{width:30px;height:30px}.stabs .tile .nm{font-size:11px}.stabs .dot{position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--amber)}
+.mh .mset{margin-left:8px;display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:9px;padding:4px 9px;font-size:11.5px;font-weight:600;letter-spacing:0;text-transform:none;-webkit-tap-highlight-color:transparent}.mh .mset .i{width:13px;height:13px}.mh .hsum{display:inline-flex;align-items:center;white-space:nowrap}
+.dtop{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-bottom:8px}.dall{margin-left:auto;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:9px;padding:5px 10px;font-size:12px;font-weight:600;-webkit-tap-highlight-color:transparent}
+.dlist{display:grid;gap:6px;max-height:46vh;overflow:auto;margin-bottom:10px}.drow{display:grid;grid-template-columns:26px 1fr auto auto;align-items:center;gap:8px;border:1px solid var(--line2);background:var(--card);border-radius:11px;padding:9px 10px;text-align:left;color:var(--text);-webkit-tap-highlight-color:transparent;user-select:none}.drow small{color:var(--muted);font-size:11.5px;font-variant-numeric:tabular-nums}.drow em{font-style:normal;font-weight:600;font-size:12.5px;font-variant-numeric:tabular-nums;min-width:52px;text-align:right}.dck{width:22px;height:22px;border-radius:7px;border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;color:transparent}.dck .i{width:14px;height:14px}.drow.on{border-color:var(--amber);background:var(--amber-bg)}.drow.on .dck{background:var(--amber);border-color:var(--amber);color:#fff}
 .xe.e3{background:#FCF1E3;color:#C27A12}.xe.e4{background:#F1ECFB;color:#7A52C7}.xf .xk.x4{grid-template-columns:repeat(2,minmax(0,1fr))}
 .xf .xb{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:9px;font-size:11.5px;color:var(--muted)}.xf .xb b{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums}
 .xf .xk{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:11px}
@@ -553,7 +557,7 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 .swb{position:absolute;right:0;top:0;bottom:0;width:88px;border:0;background:var(--red);color:#fff;font:700 13px/1.2 inherit;font-family:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;cursor:pointer}
 .swb svg{width:18px;height:18px}
 .swr.drag .swc{transition:none}
-.swr.busy .swb{visibility:hidden}.swr.busy .swc>*{opacity:.6}.swr.busy .swc .end::after{content:'Satılıyor…';display:block;font-size:11px;font-weight:600;color:var(--amber);margin-top:2px}
+.swr.busy .swb{visibility:hidden}.swr.busy .swc>*{opacity:.6}.swr.busy .swc .end::after{content:attr(data-sell);display:block;font-size:11px;font-weight:600;color:var(--amber);margin-top:2px}
 /* ---- alıma yakın coinler: sade satır ---- */
 .wrow .mid b{display:flex;align-items:center;gap:0}
 .kd{font-style:normal;font-size:10.5px;font-weight:600;color:var(--blue);background:var(--blue-bg);padding:2px 5px;border-radius:4px;margin-left:5px;white-space:nowrap}
@@ -724,7 +728,7 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
     <span class="dirty" id="dirtyTag" hidden>Kaydedilmedi</span>
   </div>
 
-  <section>
+  <section id="linkSec">
     <h2><span class="hb c-blue"><svg class="i"><use href="#i-link"/></svg></span>Hesaplar ve anahtarlar</h2>
     <div class="lkh">Borsalar · API anahtarları</div>
     <div class="tiles lks l2">
@@ -755,6 +759,6 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 <div class="toast" id="toast" hidden></div>
 <div class="qsh" id="qsh" hidden><div class="qb"><div class="gr"></div><h3><span><svg class="i" id="qIco"><use href="#i-info"/></svg></span><b id="qTitle"></b></h3><div class="qt" id="qText"></div><button class="btn primary" id="qOk">Anladım</button></div></div>
 
-<script src="app.js?v=1.56.0"></script>
+<script src="app.js?v=1.57.0"></script>
 </body>
 </html>
