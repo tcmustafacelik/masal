@@ -181,5 +181,12 @@
     "real_budget": 20,
     "real_lev": 2,
     "max_loss": 8
-  }
+  },
+  "dust": [
+    {
+      "id": "dtest1",
+      "ts": 1795458016930,
+      "ex": "g"
+    }
+  ]
 }
