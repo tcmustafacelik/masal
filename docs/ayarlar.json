@@ -225,6 +225,24 @@
       "ccys": [
         "BABYDOGE"
       ]
+    },
+    {
+      "id": "dmwtlyoju",
+      "ts": 1795459054026,
+      "ex": "tr",
+      "ccys": [
+        "VVV",
+        "LIT",
+        "GRASS",
+        "CT",
+        "PUMP",
+        "TAO",
+        "GRVT",
+        "ZRO",
+        "DOS",
+        "AI"
+      ],
+      "to": "USDT"
     }
   ]
 }
