@@ -1,4 +1,4 @@
-const APP_VERSION='1.57.0';
+const APP_VERSION='1.57.1';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -610,23 +610,27 @@ const DUST: [string,string,string][]=[['tr','tr','TL'],['g','g','USDT'],['m','m'
 function openDust(k: string){
   const X: any=(S as any)?.xfer||{},d=DUST.find(x=>x[0]===k),list: any[]=(X.dust||{})[k]||[],q=document.getElementById('qsh');
   q.dataset.n='';qHead(XEND[d[1]][1],'Vazgeç');document.getElementById('qTitle').textContent=`${XEND[d[1]][0]} · küçük bakiyeler`;
-  const pick=new Set<string>(list.slice(0,DUST_MAX).map(x=>x.ccy));
+  const pick=new Set<string>(list.slice(0,DUST_MAX).map(x=>x.ccy));let to=k==='tr'?(localStore('masal_dust_to')||'TRY'):k==='g'?'USDT':'SOL';
+  const TOS: Record<string,[string,string][]>={tr:[['TRY','TL'],['USDT','USDT']],g:[['USDT','USDT'],['USDC','USDC']],m:[['SOL','SOL']]};
+  const usd=(v: number)=>v>0&&v<0.01?'<$0,01':'$'+nf(v,2);
   const draw=()=>{const all=list.length&&pick.size===list.length,sum=list.filter(x=>pick.has(x.ccy)).reduce((a,x)=>a+(+x.usd||0),0);
     document.getElementById('qText').innerHTML=list.length?`<div class="dsh">
-      <div class="dtop"><span>${list.length} coin · $${nf(list.reduce((a,x)=>a+(+x.usd||0),0),2)} · ${d[2]}'ye çevrilir</span><button class="dall" type="button">${all?'Hiçbiri':'Tümünü seç'}</button></div>
-      <div class="dlist">${list.map(x=>`<button type="button" class="drow${pick.has(x.ccy)?' on':''}" data-dc="${x.ccy}"><span class="dck">${ic('i-check')}</span><b>${String(x.sym||x.ccy).replace(/</g,'&lt;')}</b><small>${nf(+x.amt,+x.amt>=1?2:6)}</small><em>$${nf(+x.usd,2)}</em></button>`).join('')}</div>
+      <div class="xlab">Neye çevrilsin</div><div class="seg dto">${TOS[k].map(([c,n])=>`<button type="button" data-to="${c}" class="${to===c?'on':''}"><b>${n}</b></button>`).join('')}</div>
+      <div class="dtop"><span>${list.length} coin · ${usd(list.reduce((a,x)=>a+(+x.usd||0),0))}</span><button class="dall" type="button">${all?'Hiçbiri':'Tümünü seç'}</button></div>
+      <div class="dlist">${list.map(x=>`<button type="button" class="drow${pick.has(x.ccy)?' on':''}" data-dc="${x.ccy}"><span class="dck">${ic('i-check')}</span><b>${String(x.sym||x.ccy).replace(/</g,'&lt;')}</b><small>${nf(+x.amt,+x.amt>=1?2:6)}</small><em>${usd(+x.usd)}</em></button>`).join('')}</div>
       ${pick.size>DUST_MAX?`<div class="warn">${ic('i-info')}<div>Tek seferde en fazla <b>${DUST_MAX}</b> coin çevrilir. <b>${pick.size}</b> seçtin: ilk ${DUST_MAX} tanesi şimdi, kalan <b>${pick.size-DUST_MAX}</b> tanesi için bir kez daha dokun.</div></div>`:''}
-      ${k!=='m'?`<p class="hint">Botun elindeki coinler ve nakit listede yoktur; dokunulmaz.</p>`:`<p class="hint">Masanın açık tokenleri listede yoktur. Çok küçük artıklarda Jupiter yol bulamayabilir.</p>`}
-      <button class="btn primary xgo" id="dGo" ${pick.size?'':'disabled'}>${ic('i-refresh')}Seçilenleri çevir (${Math.min(pick.size,DUST_MAX)} · $${nf(sum,2)})</button></div>`
+      ${k!=='m'?`<p class="hint">Botun elindeki coinler ve nakit listede yoktur; dokunulmaz. Borsanın en az çevirme tutarının altındaki çok küçük artıklar çevrilemeyebilir; sonuç aşağıda yazar.</p>`:`<p class="hint">Masanın açık tokenleri listede yoktur. Çok küçük artıklarda Jupiter yol bulamayabilir.</p>`}
+      <button class="btn primary xgo" id="dGo" ${pick.size?'':'disabled'}>${ic('i-refresh')}${Math.min(pick.size,DUST_MAX)} coini ${(TOS[k].find(x=>x[0]===to)||[to,to])[1]}'ye çevir · ${usd(sum)}</button></div>`
       :`<div class="empty">${ic('i-check')}<div>Çevrilecek küçük bakiye yok</div></div>`;
     const t=document.getElementById('qText');
     t.querySelectorAll<HTMLElement>('[data-dc]').forEach(b=>b.onclick=()=>{const c=b.dataset.dc;pick.has(c)?pick.delete(c):pick.add(c);draw()});
+    t.querySelectorAll<HTMLElement>('[data-to]').forEach(b=>b.onclick=()=>{to=b.dataset.to;if(k==='tr')localStore('masal_dust_to',to);draw()});
     const da=t.querySelector<HTMLElement>('.dall');if(da)da.onclick=()=>{if(all)pick.clear();else list.forEach(x=>pick.add(x.ccy));draw()};
     const go=document.getElementById('dGo') as HTMLButtonElement;if(go)go.onclick=async()=>{
       if(!token){toast('Önce Ayarlar\'dan GitHub bağlantısını kur');return}
       const ccys=list.map(x=>x.ccy).filter(c=>pick.has(c)).slice(0,DUST_MAX);go.disabled=true;
-      const ok=await cloudPatch(o=>{(o as any).dust=[...((o as any).dust||[]).filter((r: any)=>Date.now()-(r.ts||0)<3600000),{id:'d'+Date.now().toString(36),ts:Date.now(),ex:k,ccys}]},'Küçük bakiye çevirme: '+k);
-      if(ok){q.hidden=true;toast(`${ccys.length} coin ${d[2]}'ye çevriliyor; sonuç birkaç saniyede Kasalar'da görünür`)}else{go.disabled=false;toast('İstek gönderilemedi, tekrar dene')}};
+      const ok=await cloudPatch(o=>{(o as any).dust=[...((o as any).dust||[]).filter((r: any)=>Date.now()-(r.ts||0)<3600000),{id:'d'+Date.now().toString(36),ts:Date.now(),ex:k,ccys,to}]},'Küçük bakiye çevirme: '+k);
+      if(ok){q.hidden=true;toast(`${ccys.length} coin ${to}'ye çevriliyor; sonuç birkaç saniyede Kasalar'da görünür`)}else{go.disabled=false;toast('İstek gönderilemedi, tekrar dene')}};
   };
   draw();q.hidden=false;
 }

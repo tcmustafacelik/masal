@@ -110,7 +110,9 @@ def _run(req, X):
                     bad.append(f"{c} (korunuyor)")
                     continue
                 try:
-                    to = _convert(ex, c, ("TRY", "USDT") if k == "tr" else ("USDT",))
+                    want = str(req.get("to") or ("TRY" if k == "tr" else "USDT"))
+                    alt = [x for x in (("TRY", "USDT") if k == "tr" else ("USDT", "USDC")) if x != want]
+                    to = _convert(ex, c, (want, *alt))
                     ok.append(f"{c}→{to}")
                 except Exception as e:
                     bad.append(f"{c} ({str(e)[:50]})")
