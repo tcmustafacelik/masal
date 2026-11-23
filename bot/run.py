@@ -9,7 +9,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 
 from . import config, okx, report, settings, vault
-from .live import tr_err
+from .live import tr_err, spot_snapshot
 from .notify import Notifier
 from .engine import Portfolio, new_state, run_bars, watch, step_for, lot_for
 
@@ -380,11 +380,28 @@ _CACHE = {"uni": (0, None), "bars": {}}
 PERF = {}  # son turların süresi (uygulamadaki bulut ekranı ve hız takibi için)
 
 
+_UNI = {"t": None, "try": 0.0}
+
+
 def _universe():
+    """İzlenen coin listesi (10 dk'da bir yenilenir). İlk turda ve parite değişince beklenir; sonraki yenilemeler
+    arka planda yapılır (2 büyük istek ana turu bekletmez), o sırada eldeki liste kullanılır."""
     t, u, q = (_CACHE["uni"] + (None,))[:3]
-    if u is None or q != config.QUOTE or time.time() - t > 600:  # parite değişince liste hemen yenilenir
+    if u is None or q != config.QUOTE:  # parite değişince liste hemen yenilenir
         u = okx.universe()
         _CACHE["uni"] = (time.time(), u, config.QUOTE)
+    elif time.time() - t > 600 and not (_UNI["t"] and _UNI["t"].is_alive()) and time.time() - _UNI["try"] > 30:
+        _UNI["try"] = time.time()
+
+        def _bg(q0=config.QUOTE):
+            try:
+                v = okx.universe()
+                if q0 == config.QUOTE:
+                    _CACHE["uni"] = (time.time(), v, q0)
+            except Exception as e:
+                print("Coin listesi yenilenemedi (eldeki liste kullanılıyor):", e)
+        _UNI["t"] = threading.Thread(target=_bg, daemon=True)
+        _UNI["t"].start()
     return u
 
 
@@ -392,30 +409,104 @@ def _bar_no():
     return int(time.time() // (config.BAR_MIN * 60))
 
 
-def _candles(inst):
-    """Kapanmış mumlar sadece mum kapanışında değişir; arada önbellekten verilir."""
-    hit = _CACHE["bars"].get(inst)
-    if hit and hit[0] == _bar_no() and time.time() - hit[1] < 600:
-        return hit[2]
-    bars = okx.candles(inst, limit=300)
-    _CACHE["bars"][inst] = (_bar_no(), time.time(), bars)
-    return bars
+_BARS = {"t": None, "fail": {}}
 
 
-def _prefetch(insts):
-    """Mum kapanışında yenilenmesi gereken coinlerin mumlarını aynı anda çeker (60 coin ~5 sn yerine ~20 sn).
-    Hız sınırı okx._get içinde; hata veren coin sırayla çekilirken yeniden denenir."""
-    need = [i for i in insts if not ((h := _CACHE["bars"].get(i)) and h[0] == _bar_no() and time.time() - h[1] < 600)]
-    if len(need) < 2:
-        return
+def _stale(inst):
+    """Bu coinin mumları yenilenmeli mi? Kapanmış mumlar sadece mum kapanışında değişir; arada önbellekten verilir."""
+    h = _CACHE["bars"].get(inst)
+    if not h:
+        return True
+    age = time.time() - h[1]
+    if h[0] != _bar_no() or age >= 600:
+        return True
+    # Mum yeni kapandıysa borsa "kapandı" işaretini 1-2 sn geç koyabilir: son mum henüz gelmediyse 10 dk beklenmez,
+    # ilk 90 sn içinde 4 sn arayla yeniden sorulur (karar gecikmesin)
+    start = _bar_no() * config.BAR_MIN * 60
+    late = not h[2] or h[2][-1][0] < start * 1000
+    return late and time.time() - start < 90 and age >= 4
+
+
+def _fetch_bars(need):
+    """Arka plan: mumlar aynı anda çekilir (hız sınırı okx._get içinde), hepsi bitince tek adımda yayınlanır."""
+    bars, vols = {}, {}
 
     def one(i):
+        no = _bar_no()
         try:
-            _candles(i)
-        except Exception:
-            pass
+            bars[i] = (no, time.time(), okx.candles(i, limit=300, retries=2, vol_out=vols))
+        except Exception as e:
+            _BARS["fail"][i] = time.time()
+            print("Atlandı:", i, e)
     with ThreadPoolExecutor(max_workers=6) as ex:
         list(ex.map(one, need))
+    _BARS["out"] = (bars, vols)
+
+
+def _series(insts):
+    """Coinlerin kapanmış mumları. Mum kapanışında yenileme arka planda yapılır (60 coin ~5-20 sn; ana tur beklemez:
+    korumalar, aktarımlar ve masalar o sırada çalışmaya devam eder). Yeni mumlar hepsi birden yayınlanır; böylece aynı
+    mumun coinleri motor tarafından birlikte değerlendirilir. Yalnız oturumun ilk turunda beklenir."""
+    def merge():
+        out = _BARS.pop("out", None)
+        if out:
+            _CACHE["bars"].update(out[0])
+            okx.VOL.update(out[1])
+    th = _BARS["t"]
+    if not (th and th.is_alive()):
+        merge()  # canlılığa bakıldıktan sonra alınır: biten çekimin sonucu kaçmaz
+        now = time.time()
+        need = [i for i in sorted(insts) if _stale(i) and now - _BARS["fail"].get(i, 0) > 20]
+        if need:
+            th = _BARS["t"] = threading.Thread(target=_fetch_bars, args=(need,), daemon=True)
+            th.start()
+            if not _CACHE["bars"]:  # oturumun ilk turu: mum olmadan karar verilemez
+                th.join()
+                merge()
+    return {i: _CACHE["bars"][i][2] for i in sorted(insts) if i in _CACHE["bars"]}
+
+
+_SPOT = {}
+
+
+def _spot_sync(live):
+    """Borsadaki korumaların (kâr al / zarar durdur) ve coin bakiyelerinin durumu arka planda okunur; biten okumanın
+    sonucu burada, ana turda kayda işlenir (tur borsayı beklemez). Eksik koruma varsa hemen burada kurulur."""
+    if not live.armed:
+        return
+    L = live.s
+    th = _SPOT.get("t")
+    alive = bool(th and th.is_alive())  # önce bakılır: bu arada biten okumanın sonucu aşağıda alınır
+    snap = _SPOT.pop("out", None)
+    live.reconcile(snap=snap or {})  # borsada tetiklenen korumaları kayda geçir
+    if snap and snap.get("have") is not None:
+        try:
+            live.check_holdings(have=snap["have"], base=snap.get("qty"), pending=snap.get("pending"))  # kayıttaki coin miktarı OKX'tekiyle aynı mı
+        except Exception as e:
+            print("Bakiye eşleştirme yapılamadı:", e)
+    if alive or not L["positions"]:
+        return
+    now = int(time.time() * 1000)
+    algos = [(inst, l["algo"]) for inst, p in L["positions"].items() for l in p["lots"] if l.get("algo")]
+    due = now - L.get("hold_ck", 0) >= 60_000  # bakiye eşleştirme dakikada bir
+    if not algos and not due:
+        return
+    ccys = None
+    if due:
+        L["hold_ck"] = now
+        ccys = sorted({i.split("-")[0] for i in L["positions"]})
+    qty = {inst: sum(l["qty"] for l in p["lots"]) for inst, p in L["positions"].items()}
+    api = live.api
+
+    def _bg():
+        try:
+            out = spot_snapshot(api, algos, ccys)
+            out["qty"] = qty
+            _SPOT["out"] = out
+        except Exception as e:
+            print("Borsa kontrolü:", e)
+    _SPOT["t"] = threading.Thread(target=_bg, daemon=True)
+    _SPOT["t"].start()
 
 
 def instant_buys(live, series):
@@ -427,7 +518,7 @@ def instant_buys(live, series):
     w = watch(live, series)
     if not w or not w["items"]:
         return
-    prices = okx.prices_tl()  # TL karşılığı anlık fiyatlar
+    prices = okx.prices_tl()  # TL karşılığı anlık fiyatlar (tek istek, bu turda okunur: alım kararı eski fiyatla verilmez)
     ts = int(time.time() * 1000)
     s = live.s
     for it in sorted(w["items"], key=lambda x: (prices.get(x["i"], x["p"]) / x["t"])):
@@ -454,15 +545,24 @@ def instant_buys(live, series):
         avg = it["t"] / (1 - c["step"]) if c["step"] < 1 else it["t"]
         why = f"{c.get('sma_h', 20):g} sa ortalamanın %{(1 - price / avg) * 100:.1f} altında · fark %{spread * 100:.2f}"
         pos = s["positions"].get(inst)
+        bought = False
         if pos:
             n = len(pos["lots"])
             last_e = pos["lots"][-1]["entry"]
             if n < c["max_lots"] and price <= last_e * (1 - step_for(c, n)) and live._room(lot_for(c, n)):
-                live._buy(ts, inst, price, lot_for(c, n),
-                          f"{n + 1}. kademe · anlık · son alımın %{(1 - price / last_e) * 100:.1f} altında · fark %{spread * 100:.2f}")
+                bought = live._buy(ts, inst, price, lot_for(c, n),
+                                   f"{n + 1}. kademe · anlık · son alımın %{(1 - price / last_e) * 100:.1f} altında · fark %{spread * 100:.2f}")
         elif live._can_open() and len(s["positions"]) < c["max_coins"] and live._room(c["lot"]):
-            live._buy(ts, inst, price, c["lot"], f"1. kademe · anlık · {why}")
+            bought = live._buy(ts, inst, price, c["lot"], f"1. kademe · anlık · {why}")
         s["last_prices"][inst] = prices.get(inst, price)
+        if bought and live.armed:
+            # gerçek alım birkaç saniye sürer: sıradaki coin için fiyatlar yeniden okunur; okunamazsa bu tur başka alım yapılmaz
+            try:
+                prices = okx.prices_tl()
+                ts = int(time.time() * 1000)
+            except Exception as e:
+                print("Fiyatlar yenilenemedi; kalan alımlar bir sonraki tura kaldı:", e)
+                break
 
 
 def signature(state, S):
@@ -510,13 +610,9 @@ def main():
     live.notifier = N  # deneme modunda da bildirim gelir, başlıkta "Deneme" yazar
     was_halted = L["halted"]
     try:
-        live.reconcile()  # borsada tetiklenen korumaları önce kayda geçir
+        _spot_sync(live)  # borsada tetiklenen korumaları önce kayda geçir (borsa okuması arka planda)
     except Exception as e:
         note(L, f"Borsa kontrolü yapılamadı: {tr_err(e)}")
-    try:
-        live.check_holdings()  # kayıttaki coin miktarı OKX'tekiyle aynı mı
-    except Exception as e:
-        print("Bakiye eşleştirme yapılamadı:", e)
     if L.get("pending_cut", 0) > 0 and L["cash"] > 0:  # bütçe düşürmesinin kalanını satıştan gelen nakitten al
         t = min(L["cash"], L["pending_cut"])
         L["cash"] -= t
@@ -532,13 +628,7 @@ def main():
         insts |= set(p.s["positions"])
 
     series, events = {}, []
-    _prefetch(insts)
-    for inst in sorted(insts):
-        try:
-            bars = _candles(inst)
-        except Exception as e:
-            print("Atlandı:", inst, e)
-            continue
+    for inst, bars in _series(insts).items():
         series[inst] = bars
         last_seen = max((p.s["last_bar"].get(inst, 0) for p in ports), default=0)
         if not last_seen and bars:  # listeye yeni giren coin: geçmiş mumlar sadece göstergeyi ısıtır, geçmişte işlem yapılmaz

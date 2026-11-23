@@ -27,7 +27,7 @@ DEFAULTS = {
     "convert": {"ts": 0},
     "target": {"on": False, "amount": 20000, "mode": "profit"},  # açıksa hedefe ulaşınca her şey satılır ve bot durur
     "meme": {"on": True, "bank": 100.0, "size_pct": 10, "max_pos": 5, "min_liq": 20000, "max_fdv": 5000000, "min_age_min": 10, "max_age_h": 72, "tp_pct": 30, "tp_part": 100, "trail_from": 15, "trail_pct": 12, "sl_pct": 15, "max_hold_h": 4, "slip_pct": 1.0, "fee_pct": 0.5, "max_m5": 8, "wallet": "", "real": False, "max_loss": 10.0, "max_slip": 2.0, "real_reset": 0},  # memecoin deneme masası (sanal para)
-    "lev": {"on": True, "bank": 100.0, "lev": 3, "risk_pct": 1.0, "max_pos": 3, "sl_atr": 2.0, "tp_atr": 4.0, "daily_loss_pct": 5, "fee_pct": 0.05, "slip_pct": 0.05, "coins": ["BTC", "ETH", "SOL", "XRP", "DOGE", "HYPE", "ZEC", "PEPE"], "real": False, "real_budget": 30.0, "real_lev": 2, "max_loss": 10.0, "real_reset": 0},  # kaldıraç deneme masası (sanal para, en fazla 3x)
+    "lev": {"on": True, "bank": 100.0, "lev": 3, "risk_pct": 1.0, "max_pos": 3, "sl_atr": 2.0, "tp_atr": 4.0, "daily_loss_pct": 5, "fee_pct": 0.05, "slip_pct": 0.05, "coins": ["BTC", "ETH", "SOL", "XRP", "DOGE", "HYPE", "ZEC", "PEPE"], "brk_h": 20, "trend_h": 200, "trend_on": True, "real": False, "real_budget": 30.0, "real_lev": 2, "max_loss": 10.0, "real_reset": 0},  # kaldıraç deneme masası (sanal para, en fazla 3x)
     # mode: "profit" = toplam kâr bu tutara ulaşınca; "total" = bottaki para + kasadaki yedek toplamı bu tutara ulaşınca   # zaman damgası yeniyse alım-satım hesabındaki boş TL'nin tamamı seçili pariteye çevrilir  # seçili coinleri elle sat: zaman damgası yeniyse listedekiler bir kez satılır
     "strategy": "grid",
     "quote": "USDT",        # yeni alımların paritesi: TRY, USDT ya da USDC
@@ -52,14 +52,27 @@ def _merge(base, extra):
     return out
 
 
+_GOOD = {}
+
+
 def load():
     data = {}
     if os.path.exists(PATH):
         try:
             with open(PATH, encoding="utf-8") as f:
                 data = json.load(f)
+            if not isinstance(data, dict):
+                raise ValueError("beklenmeyen biçim")
+            _GOOD["d"] = data
         except Exception as e:
-            print("Ayar dosyası okunamadı, varsayılanlar kullanılıyor:", e)
+            # Bozuk/yarım dosyada varsayılanlara dönülmez (varsayılanda gerçek mod kapalıdır; gerçek hesap kaydı
+            # "denemeye geçildi" sanılıp sıfırlanabilirdi): oturumda en son okunabilen ayarlarla devam edilir.
+            if "d" in _GOOD:
+                print("Ayar dosyası okunamadı, son okunan ayarlar kullanılıyor:", e)
+                data = _GOOD["d"]
+            else:
+                print("Ayar dosyası okunamadı, varsayılanlar kullanılıyor:", e)
+                data = {}
     s = _merge(DEFAULTS, data)
     if s["strategy"] not in config.STRATEGIES:
         s["strategy"] = "grid"

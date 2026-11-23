@@ -34,14 +34,23 @@ def _cu16(n):
             return out
 
 
-def _sol_transfer(key, to, lamports):
+def _sol_sign(key, to, lamports):
+    """SOL gönderim işlemini hazırlar ve imzalar (göndermez). (işlem, işlem kodu) döner: kod gönderimden önce bilinir."""
     me = G._pub(key)
     bh = G.b58d(G._rpc("getLatestBlockhash", [{"commitment": "finalized"}])["value"]["blockhash"])
     msg = (bytes([1, 0, 1]) + _cu16(3) + me + G.b58d(to) + SYSTEM + bh + _cu16(1) +
            bytes([2]) + _cu16(2) + bytes([0, 1]) + _cu16(12) + struct.pack("<IQ", 2, int(lamports)))
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-    tx = _cu16(1) + Ed25519PrivateKey.from_private_bytes(key).sign(msg) + msg
-    return G._rpc("sendTransaction", [base64.b64encode(tx).decode(), {"encoding": "base64", "preflightCommitment": "confirmed"}])
+    sig = Ed25519PrivateKey.from_private_bytes(key).sign(msg)
+    return base64.b64encode(_cu16(1) + sig + msg).decode(), G.b58e(sig)
+
+
+def _sol_transfer(key, to, lamports):
+    tx, _ = _sol_sign(key, to, lamports)
+    return G._rpc("sendTransaction", [tx, {"encoding": "base64", "preflightCommitment": "confirmed"}])
+
+
+UNSURE_MS = 300_000  # imzalanan işlem ~1-2 dk geçerlidir; 5 dk sonra ağda hâlâ yoksa artık giremez
 
 
 def _g_sol_chain(g):
@@ -82,14 +91,36 @@ def _g2m(g, job, X, N, note):
             return
         if not job.get("bought"):
             usd = job["amt"]
-            if g.funding("USDT") < usd - 0.01:
-                raise RuntimeError(f"Global fon hesabında {usd:.2f} USDT yok (futures teminatına dokunulmaz)")
             if not job.get("ordId"):
-                g.move("USDT", usd, transfer.FUNDING, transfer.TRADING)
+                cl = job.get("clOrd")
+                if cl:
+                    # önceki denemede alım emri gönderildi ama yanıtı alınamadı: önce borsada aranır (ikinci kez SOL alınmaz)
+                    try:
+                        o = g.find_order("SOL-USDT", cl)
+                    except RuntimeError as e:
+                        job["msg"] = f"alım emri kontrol edilemedi; tekrar denenecek: {str(e)[:80]}"
+                        return
+                    if o:
+                        job["ordId"] = o["ordId"]
+            if not job.get("ordId"):
+                if not job.get("moved"):
+                    if g.funding("USDT") < usd - 0.01:
+                        raise RuntimeError(f"Global fon hesabında {usd:.2f} USDT yok (futures teminatına dokunulmaz)")
+                    g.move("USDT", usd, transfer.FUNDING, transfer.TRADING)
+                    job["moved"] = True
+                import hashlib
+                job["clOrd"] = cl = "g" + hashlib.md5(job["id"].encode()).hexdigest()[:30]  # iş başına tek emir kimliği
                 try:
-                    o = g.market("SOL-USDT", "buy", f"{usd:.2f}", quote=True)
-                except Exception:
-                    g.move("USDT", usd, transfer.TRADING, transfer.FUNDING)  # alım olmadı: para fona geri
+                    o = g.market("SOL-USDT", "buy", f"{usd:.2f}", quote=True, cl=cl)
+                except RuntimeError:
+                    # borsa emri açıkça reddetti (alım olmadı): para fona geri. Ağ hatasında geri alınmaz;
+                    # emir verilmiş olabilir, bir sonraki kontrolde clOrd ile aranır.
+                    job.pop("clOrd", None)
+                    try:
+                        g.move("USDT", usd, transfer.TRADING, transfer.FUNDING)
+                        job.pop("moved", None)
+                    except Exception as e2:
+                        print("Aktarım: USDT fona geri alınamadı:", str(e2)[:120])
                     raise
                 job["ordId"] = o["ordId"]
                 time.sleep(2)
@@ -149,15 +180,35 @@ def _m2g(g, job, X, N, note):
         dep = next((x["addr"] for x in g.req("GET", "/api/v5/asset/deposit-address?ccy=SOL") if "solana" in x["chain"].lower()), None)
         if not dep:
             raise RuntimeError("Global SOL yatırma adresi alınamadı")
+        tx, sig = _sol_sign(key, dep, round(sol * 1e9))  # burada hata olursa hiçbir şey gönderilmemiştir
         _adj_start(-job["amt"])  # çıkan para masanın zararı sayılmasın (göndermeden önce: arada eşitleme zarar sanmasın)
-        try:
-            sig = _sol_transfer(key, dep, round(sol * 1e9))
-        except Exception:
-            _adj_start(job["amt"])
-            raise
-        job.update(stage="sent", txId=sig, sol=round(sol, 6), sent_ts=int(time.time() * 1000), msg=f"{sol:.4f} SOL gönderildi; ağda")
+        # İşlem kodu gönderimden ÖNCE kayda geçer: yanıt gelmese de (zaman aşımı) işlem ağa çıkmış olabilir.
+        # O durumda taban geri eklenmez, iş "başarısız" sayılmaz; sonuç ağdan işlem koduyla öğrenilir.
+        job.update(stage="sent", txId=sig, sol=round(sol, 6), sent_ts=int(time.time() * 1000), unsure=True,
+                   msg=f"{sol:.4f} SOL gönderiliyor")
         X["day_sum"] = round(X.get("day_sum", 0) + job["amt"], 2)
-        note(X, f"MEME → OKX Global: {sol:.4f} SOL (~{job['amt']:.2f} $) gönderildi")
+        try:
+            G._rpc("sendTransaction", [tx, {"encoding": "base64", "preflightCommitment": "confirmed"}])
+            job.pop("unsure", None)
+            job["msg"] = f"{sol:.4f} SOL gönderildi; ağda"
+            note(X, f"MEME → OKX Global: {sol:.4f} SOL (~{job['amt']:.2f} $) gönderildi")
+        except Exception as e:
+            job["msg"] = "gönderim yanıtı alınamadı; işlem ağda kontrol ediliyor"
+            note(X, f"MEME → OKX Global: {sol:.4f} SOL gönderim yanıtı alınamadı ({str(e)[:80]}); ağda kontrol edilecek")
+    elif job["stage"] == "sent" and job.get("unsure"):
+        st = (G._rpc("getSignatureStatuses", [[job["txId"]], {"searchTransactionHistory": True}]).get("value") or [None])[0]
+        if st is None:
+            if time.time() * 1000 - job["sent_ts"] > UNSURE_MS:
+                _adj_start(job["amt"])  # işlem ağa hiç girmedi: SOL cüzdanda, taban geri alınır
+                raise RuntimeError("SOL gönderimi ağa ulaşmadı; para MEME cüzdanında duruyor")
+            job["msg"] = "gönderim yanıtı alınamadı; işlem ağda kontrol ediliyor"
+            return
+        if st.get("err"):
+            _adj_start(job["amt"])  # işlem ağda reddedildi: SOL cüzdanda
+            raise RuntimeError("SOL gönderimi ağa ulaşmadı (işlem reddedildi); para MEME cüzdanında duruyor")
+        job.pop("unsure", None)  # işlem ağda: bundan sonra Global'e ulaşması beklenir
+        job["msg"] = "ağda; Global'e ulaşması bekleniyor"
+        note(X, f"MEME → OKX Global: {job.get('sol', 0):.4f} SOL (~{job['amt']:.2f} $) gönderildi")
     elif job["stage"] == "sent":
         for d in g.req("GET", "/api/v5/asset/deposit-history?ccy=SOL"):
             if d.get("txId") == job["txId"]:

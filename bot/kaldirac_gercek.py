@@ -355,7 +355,7 @@ def step(state, S, paper_cfg, N=None):
         if (state.get("locked") or {}).get("levr") and not state.get("levr"):
             _W["R"]["dead"] = "kayıt açılamadı (şifre değişmiş olabilir); ayarlardan yeniden başlat"
     R = _W["R"]
-    if cfg.get("real_reset", 0) != R.get("reset", 0) and _LOCK.acquire(timeout=0.05):  # ayarlardan yeniden başlat: durma kaldırılır
+    if cfg.get("real_reset", 0) != R.get("reset", 0) and _LOCK.acquire(False):  # ayarlardan yeniden başlat: durma kaldırılır
         (state.get("locked") or {}).pop("levr", None)
         try:
             R["reset"], R["dead"], R["halt"] = cfg.get("real_reset", 0), "", ""
@@ -375,7 +375,7 @@ def step(state, S, paper_cfg, N=None):
     for e in evs:
         if cfg["real"] or e[0] in ("close", "trail"):
             _Q.put(e)
-    if not _LOCK.acquire(timeout=0.05):
+    if not _LOCK.acquire(False):
         return  # işçi borsayla konuşuyor: bu tur bir önceki kayıt geçerli
     try:
         R["on"] = bool(cfg["real"])

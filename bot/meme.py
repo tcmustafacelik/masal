@@ -295,7 +295,7 @@ def public(state):
     wins = [t for t in sells if t["pnl"] > 0]
     return {"cash": round(M["cash"], 2), "equity": round(eq, 2), "start": M["start"], "stats": M["stats"],
             "positions": [{"mint": m, **{k: p[k] for k in ("sym", "ts", "entry", "now", "peak", "cost", "why", "url")},
-                           "value": round(p["qty"] * p["now"], 2)} for m, p in M["positions"].items()],
+                           "value": round(p["qty"] * p["now"], 2), "part": bool(p.get("part"))} for m, p in M["positions"].items()],
             "trades": M["trades"][-40:][::-1], "log": M["log"][-40:][::-1], "equity_series": M["equity"][-200:],
             "sells": len(sells), "win_rate": round(len(wins) / len(sells) * 100) if sells else None,
             "updated": M.get("snap"), "err": _SNAP.get("err") or ""}

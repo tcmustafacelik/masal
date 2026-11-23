@@ -1,7 +1,8 @@
 """Kaldıraç masası (DENEME): OKX Global sürekli vadeli (perpetual) piyasasında gerçek fiyatlarla, sanal parayla işlem.
 
 Gerçek para kullanılmaz; emir gönderilmez. Amaç: yöntemin gerçekten kazandırıp kazandırmadığını birkaç gün görmek.
-Yöntem (62 günlük 1 saatlik veride denendi): 20 saatlik kanal kırılımı, 200 saatlik ortalamanın yönünde.
+Yöntem (62 günlük 1 saatlik veride denendi): 20 saatlik kanal kırılımı, 200 saatlik ortalamanın yönünde
+(pencereler ayarlardan: brk_h, trend_h, trend_on).
   Gözcü   1 sa mumlar: fiyat son 20 saatin zirvesini kırarsa ve 200 sa ortalamanın üstündeyse UZUN;
           dibini kırarsa ve altındaysa KISA
   Bekçi   aynı anda en fazla 3 pozisyon, izole marjin, en fazla 3x; günlük zarar sınırında masayı o gün kapatır
@@ -27,6 +28,9 @@ DEFAULT = {
     "fee_pct": 0.05,      # OKX taker ücreti (her yön)
     "slip_pct": 0.05,
     "coins": ["BTC", "ETH", "SOL", "XRP", "DOGE", "HYPE", "ZEC", "PEPE"],
+    "brk_h": 20,          # kırılım kanalı (saat): fiyat son brk_h saatin zirvesini/dibini kırınca sinyal. Küçüldükçe daha sık işlem
+    "trend_h": 200,       # eğilim süzgeci: bu kadar saatlik ortalamanın yönünde işlem (en fazla 280)
+    "trend_on": True,     # False: eğilim süzgeci kapalı, yönü yalnız kırılım belirler (daha sık ve daha riskli)
 }
 EVERY = 5        # fiyat kontrolü (sn)
 CANDLE_EVERY = 300  # mum yenileme (sn); karar kapanmış saatlik mumla verilir
@@ -83,11 +87,21 @@ def _ema(a, n):
     return o
 
 
-def _ind(rows):
+def _windows(cfg):
+    """Ayarlardaki pencereler güvenli aralığa çekilir: kırılım 2-200 sa, eğilim 20-280 sa (300 mumluk veri yeter)."""
+    def num(k, lo, hi):
+        try:
+            return int(max(lo, min(hi, float(cfg.get(k) or DEFAULT[k]))))
+        except (TypeError, ValueError):
+            return DEFAULT[k]
+    return num("brk_h", 2, 200), num("trend_h", 20, 280), bool(cfg.get("trend_on", True))
+
+
+def _ind(rows, brk=20, trend=200):
     h, l, c = [r[1] for r in rows], [r[2] for r in rows], [r[3] for r in rows]
     tr = [h[0] - l[0]] + [max(h[i] - l[i], abs(h[i] - c[i - 1]), abs(l[i] - c[i - 1])) for i in range(1, len(c))]
     return {"t": rows[-1][0], "c": c[-1], "atr": _ema(tr, 14)[-1], "e20": _ema(c, 20)[-1], "e50": _ema(c, 50)[-1],
-            "e200": _ema(c, 200)[-1], "hh": max(h[-21:-1]), "ll": min(l[-21:-1])}
+            "e200": _ema(c, trend)[-1], "hh": max(h[-brk - 1:-1]), "ll": min(l[-brk - 1:-1])}  # e200: eğilim ortalaması (trend_h)
 
 
 def new_state(cfg):
@@ -173,11 +187,14 @@ def step(state, S):
         _note(L, ts, "risk", f"Günlük zarar sınırı (%{cfg['daily_loss_pct']}) doldu; bugün yeni işlem yok")
 
     # Gözcü + Bekçi + Ölçücü: kapanan saatlik mumla karar
+    brk, trend, trend_on = _windows(cfg)
+    need = max(60, brk + 2, trend + 10 if trend_on else 0)  # göstergelerin oturması için gereken mum sayısı
     for c, rows in (snap["c"] or {}).items():
-        if len(rows) < 210:
+        if len(rows) < need:
             continue
-        k = _ind(rows)
-        L.setdefault("watch", {})[c] = {"hh": k["hh"], "ll": k["ll"], "e200": k["e200"], "up": k["e20"] > k["e50"]}
+        k = _ind(rows, brk, trend)
+        L.setdefault("watch", {})[c] = {"hh": k["hh"], "ll": k["ll"], "e200": k["e200"], "up": k["e20"] > k["e50"],
+                                        "trend": trend_on}
         if L["seen"].get(c) == k["t"]:
             continue  # bu mum için karar verildi
         L["seen"][c] = k["t"]
@@ -188,12 +205,16 @@ def step(state, S):
             continue
         if p:
             continue
-        side = 1 if k["c"] > k["hh"] and k["c"] > k["e200"] else -1 if k["c"] < k["ll"] and k["c"] < k["e200"] else 0
+        if trend_on:
+            side = 1 if k["c"] > k["hh"] and k["c"] > k["e200"] else -1 if k["c"] < k["ll"] and k["c"] < k["e200"] else 0
+        else:  # eğilim süzgeci kapalı: yönü yalnız kırılım belirler
+            side = 1 if k["c"] > k["hh"] else -1 if k["c"] < k["ll"] else 0
         if not side:
             continue
         L["stats"]["signals"] += 1
-        why = (f"20 sa zirvesi kırıldı ({k['hh']:.6g}), 200 sa ort. üstünde" if side > 0
-               else f"20 sa dibi kırıldı ({k['ll']:.6g}), 200 sa ort. altında")
+        why = (f"{brk} sa zirvesi kırıldı ({k['hh']:.6g})" if side > 0 else f"{brk} sa dibi kırıldı ({k['ll']:.6g})")
+        if trend_on:
+            why += f", {trend} sa ort. {'üstünde' if side > 0 else 'altında'}"
         name = "UZUN" if side > 0 else "KISA"
         bad = None
         if L["halt"]:
@@ -231,13 +252,16 @@ def step(state, S):
 
 
 def watch_list(L, px):
-    """Uygulama için: izlenen coinler, fiyat ve sinyale uzaklık (20 sa zirve/dip kırılımı, 200 sa ortalama yönü)."""
+    """Uygulama için: izlenen coinler, fiyat ve sinyale uzaklık (brk_h sa zirve/dip kırılımı, trend_h sa ortalama yönü)."""
     out = []
     for c, w in (L.get("watch") or {}).items():
         x = px.get(c) or 0
         if not x:
             continue
-        side = "UZUN" if x > w["e200"] else "KISA"
+        if w.get("trend", True):
+            side = "UZUN" if x > w["e200"] else "KISA"
+        else:  # eğilim süzgeci kapalı: hangi kırılım daha yakınsa o
+            side = "UZUN" if abs(w["hh"] - x) <= abs(x - w["ll"]) else "KISA"
         lvl = w["hh"] if side == "UZUN" else w["ll"]
         out.append({"sym": c, "px": x, "side": side, "lvl": lvl, "dist": round((lvl / x - 1) * 100, 2), "open": c in L["positions"]})
     return sorted(out, key=lambda r: abs(r["dist"]))

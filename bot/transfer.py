@@ -89,11 +89,23 @@ class Ex:
     def dep_addr(self):
         return {x["addr"].lower() for x in self.req("GET", "/api/v5/asset/deposit-address?ccy=USDT") if "arbitrum" in x["chain"].lower()}
 
-    def market(self, inst, side, sz, quote=False):
+    def market(self, inst, side, sz, quote=False, cl=None):
         body = {"instId": inst, "tdMode": "cash", "side": side, "ordType": "market", "sz": sz}
         if quote:
             body["tgtCcy"] = "quote_ccy"
+        if cl:
+            body["clOrdId"] = cl  # kendi emir kimliğimiz: yanıt kaybolursa emir bu kimlikle bulunur (iki kez verilmez)
         return self.req("POST", "/api/v5/trade/order", body)[0]
+
+    def find_order(self, inst, cl):
+        """clOrdId ile emri arar. Emir yoksa None; borsaya sorulamadıysa hata yükselir."""
+        try:
+            d = self.req("GET", f"/api/v5/trade/order?instId={inst}&clOrdId={cl}")
+        except RuntimeError as e:
+            if "51603" in str(e):  # emir yok
+                return None
+            raise
+        return d[0] if d else None
 
 
 USDT_ARB = "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9"  # Arbitrum'daki USDT (USDT0) sözleşmesi
@@ -177,6 +189,12 @@ def _prepare(ex, side, amt, job):
         return False
     ex.move("USDT", min(t, need - f + 0.000001), TRADING, FUNDING)
     return True
+
+
+def _net_err(e):
+    """Ağ/yanıt hatası mı (istek borsaya ulaşmış olabilir, sonucu bilinmiyor)? Borsanın açık reddi (RuntimeError) değildir."""
+    import http.client
+    return isinstance(e, (OSError, http.client.HTTPException, json.JSONDecodeError)) and not isinstance(e, RuntimeError)
 
 
 def _uid(cl):
@@ -463,7 +481,8 @@ def _run_jobs(X, C, cfg, state, N, now):
                 meme_aktar.run(job, X, C, N, _note)
             except Exception as e:
                 if ((job["stage"] == "sent" and "reddetti" not in str(e) and "ulaşmadı" not in str(e))
-                        or (job.get("ordId") and not isinstance(e, RuntimeError))):  # ağ hatası: SOL alındıysa tekrar denenir
+                        or ((job.get("ordId") or job.get("clOrd")) and not isinstance(e, RuntimeError))):
+                    # ağ hatası: SOL alındıysa ya da alım emri gönderilmiş olabilirse iş bırakılmaz, tekrar denenir
                     job["msg"] = f"kontrol edilemedi, tekrar denenecek: {str(e)[:120]}"
                 else:
                     job.update(stage="failed", msg=str(e)[:300])
@@ -506,6 +525,12 @@ def _run_jobs(X, C, cfg, state, N, now):
         except Exception as e:
             if job["stage"] in ("sent", "arriving") and "reddetti" not in str(e):
                 job["msg"] = f"kontrol edilemedi, tekrar denenecek: {str(e)[:120]}"  # para yolda; iş bırakılmaz
+                continue
+            if job["stage"] == "new" and _net_err(e) and now * 1000 - job["ts"] < 86400_000:
+                # Bağlantı hatası: gönderim isteği borsaya ulaşmış olabilir. İş "başarısız" sayılmaz (kullanıcı yeniden
+                # isteyip iki kez göndermesin); bir sonraki kontrolde borsadaki kayıtla (clientId) karşılaştırılır:
+                # gönderildiyse "gönderildi" olur, gönderilmediyse yeniden denenir.
+                job["msg"] = f"bağlantı hatası; gönderim kontrol edilip tekrar denenecek: {str(e)[:100]}"
                 continue
             job.update(stage="failed", msg=str(e)[:300])
             if job["stage"] == "failed" and src == "tr" and ex.ok:  # hazırlanan para fon hesabında kalmasın

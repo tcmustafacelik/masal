@@ -2,6 +2,7 @@
 import json
 import os
 import re
+import threading
 import urllib.request
 
 from . import vault
@@ -77,18 +78,25 @@ class Notifier:
     def flush(self):
         """Bildirimler arka planda sırayla gönderilir: ntfy yavaşsa bot turu beklemez."""
         if self.queue:
-            _OUTQ.extend(self.queue[:15])  # bir turda en fazla 15 bildirim
-            _start_sender()
+            with _SLOCK:  # kuyruğa ekleme ve "gönderici çalışıyor mu" kontrolü tek adımda (bildirim kuyrukta unutulmasın)
+                _OUTQ.extend(self.queue[:15])  # bir turda en fazla 15 bildirim
+                _start_sender()
         self.queue = []
 
 
 _OUTQ = []
 _SND = {"t": None}
+_SLOCK = threading.Lock()
 
 
-def _sender():
-    while _OUTQ:
-        m = _OUTQ.pop(0)
+def _sender(own=True):
+    while True:
+        with _SLOCK:
+            if not _OUTQ:
+                if own:
+                    _SND["t"] = None  # çıkış kilit altında işaretlenir: bu andan sonra eklenen bildirim yeni gönderici başlatır
+                return
+            m = _OUTQ.pop(0)
         try:
             req = urllib.request.Request("https://ntfy.sh/", data=json.dumps(m).encode(), method="POST",
                                          headers={"Content-Type": "application/json", "User-Agent": "masal/1.0"})
@@ -98,7 +106,7 @@ def _sender():
 
 
 def _start_sender():
-    import threading
+    """_SLOCK tutulurken çağrılır."""
     t = _SND["t"]
     if t is None or not t.is_alive():
         _SND["t"] = threading.Thread(target=_sender, daemon=True)
@@ -111,7 +119,7 @@ def drain(timeout=15):
     if t is not None and t.is_alive():
         t.join(timeout)
     if _OUTQ:
-        _sender()
+        _sender(own=False)
 
 
 HB_ID = "masal-nabiz"

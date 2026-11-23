@@ -21,8 +21,12 @@ STEP = int(os.environ.get("LOOP_STEP", "2"))  # tur aralığı (sn)
 HEARTBEAT = 30
 
 
-def sh(*args, cwd=None):
-    return subprocess.run(args, capture_output=True, text=True, cwd=cwd)
+def sh(*args, cwd=None, timeout=None):
+    """timeout: ağa çıkan git komutları (fetch/push) takılırsa iş parçacığı sonsuza kadar beklemesin."""
+    try:
+        return subprocess.run(args, capture_output=True, text=True, cwd=cwd, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        return subprocess.CompletedProcess(args, 124, "", "zaman aşımı")
 
 
 def code_rev(ref):
@@ -32,28 +36,40 @@ def code_rev(ref):
     return a + b
 
 
-_FETCH = {"t": None, "ok": False}
+_FETCH = {"t": None, "ok": False, "sha": "", "rev": None, "applied": None}
 
 
 def _fetch_main():
-    _FETCH["ok"] = sh("git", "fetch", "-q", "--depth", "1", "origin", "main").returncode == 0
+    """Arka plan: ana dalı çeker ve gelen sürümü (commit) bir kez çözer. Tur boyunca "FETCH_HEAD" adı değil bu sabit
+    sürüm kullanılır; bir sonraki çekim FETCH_HEAD'i değiştirse de yarısı eski yarısı yeni dosya alınmaz."""
+    ok = sh("git", "fetch", "-q", "--depth", "1", "origin", "main", timeout=45).returncode == 0
+    sha = sh("git", "rev-parse", "FETCH_HEAD").stdout.strip() if ok else ""
+    if ok and sha and sha != _FETCH["sha"]:
+        _FETCH["rev"] = code_rev(sha)  # yalnız sürüm değişince hesaplanır
+    _FETCH["sha"] = sha or _FETCH["sha"]
+    _FETCH["ok"] = bool(ok and sha)
 
 
 def refresh_settings():
-    """Son ayarları çeker; ana daldaki bot kodunun sürümünü döndürür.
-    git fetch (0,5-1 sn) arka planda yürür: tur onu beklemez, biten çekimin sonucu bir sonraki turda uygulanır."""
-    rev = None
+    """Son ayarları çeker; ana daldaki bot kodunun sürümünü ve o sürümün commit kimliğini döndürür: (rev, sha).
+    git fetch (0,5-1 sn) arka planda yürür: tur onu beklemez, biten çekimin sonucu bir sonraki turda uygulanır.
+    Ana dal değişmediyse (çoğu tur) hiçbir git komutu çalıştırılmaz."""
+    rev = sha = None
     th = _FETCH["t"]
     if th is not None and not th.is_alive():
         if _FETCH["ok"]:
-            sh("git", "checkout", "FETCH_HEAD", "--", "docs/ayarlar.json")
-            sh("git", "reset", "-q", "docs/ayarlar.json")
-            rev = code_rev("FETCH_HEAD")
+            sha = _FETCH["sha"]
+            if sha != _FETCH["applied"]:
+                ok = sh("git", "checkout", sha, "--", "docs/ayarlar.json").returncode == 0
+                sh("git", "reset", "-q", "docs/ayarlar.json")
+                if ok:
+                    _FETCH["applied"] = sha
+            rev = _FETCH["rev"]
         _FETCH["t"] = None
     if _FETCH["t"] is None:
         _FETCH["t"] = threading.Thread(target=_fetch_main, daemon=True)
         _FETCH["t"].start()
-    return rev
+    return rev, sha
 
 
 def read_json(path):
@@ -102,7 +118,7 @@ def _push_dir(d, token, repo):
        "commit", "-qm", "Bot turu " + time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), cwd=d)
     ok = False
     for _ in range(3):
-        r = sh("git", "push", "-q", "-f", f"https://x-access-token:{token}@github.com/{repo}.git", "data", cwd=d)
+        r = sh("git", "push", "-q", "-f", f"https://x-access-token:{token}@github.com/{repo}.git", "data", cwd=d, timeout=90)
         if r.returncode == 0:
             ok = True
             break
@@ -216,35 +232,46 @@ def main():
         t0 = time.time()
         n += 1
         try:
-            rev = refresh_settings()
-            if rev and start_rev and rev != start_rev:
+            rev, sha = refresh_settings()
+            if rev and sha and start_rev and rev != start_rev:
                 wf = lambda r: sh("git", "rev-parse", f"{r}:.github/workflows/bot.yml").stdout.strip()
-                if wf("FETCH_HEAD") != wf("HEAD"):
+                if wf(sha) != wf("HEAD"):
                     print("İş akışı güncellendi; oturum yenisiyle değiştiriliyor.")
                     break
                 # yalnız bot kodu değişti: aynı oturumda birkaç saniyede yeniden başla (yeni oturumu 1 dk beklemeden)
                 import sys
-                ok = sh("git", "checkout", "FETCH_HEAD", "--", "bot").returncode == 0
+                good = os.environ.get("MASAL_SHA") or "HEAD"  # şu an çalışan (açılabildiği bilinen) kodun sürümü
+                ok = sh("git", "checkout", sha, "--", "bot").returncode == 0
                 sh("git", "reset", "-q", "bot")
                 # yeni kod açılabiliyor mu? açılamıyorsa eski kodla devam (bozuk gönderim botu kilitlemesin)
-                if ok and sh(sys.executable, "-c", "import bot.loop, bot.run, bot.transfer, bot.dust, bot.money, bot.meme, bot.meme_gercek, bot.meme_aktar, bot.kaldirac, bot.kaldirac_gercek").returncode == 0:
+                if ok and sh(sys.executable, "-c", "import bot.loop, bot.run, bot.transfer, bot.dust, bot.money, bot.meme, bot.meme_gercek, bot.meme_aktar, bot.kaldirac, bot.kaldirac_gercek", timeout=120).returncode == 0:
                     try:
                         flush_desks()
                         push_data(wait=True)
-                        os.environ["MASAL_T0"], os.environ["MASAL_REV"] = str(start), rev
+                        os.environ["MASAL_T0"], os.environ["MASAL_REV"], os.environ["MASAL_SHA"] = str(start), rev, sha
                         print("Bot kodu güncellendi; aynı oturumda yeniden başlatılıyor.", flush=True)
                         os.execv(sys.executable, [sys.executable, "-m", "bot.loop"])
                     except Exception:
+                        if good == "HEAD":
+                            os.environ.pop("MASAL_SHA", None)
+                        else:
+                            os.environ["MASAL_SHA"] = good
+                        sh("git", "checkout", good, "--", "bot")  # yeniden başlanamadı: diskteki kod da çalışan sürüme dönsün
+                        sh("git", "reset", "-q", "bot")
                         resume_desks()
                         raise
                 else:
-                    sh("git", "checkout", "HEAD", "--", "bot")
+                    # diskte, çalışan sürüm geri yüklenir (ilk indirilen HEAD değil: oturum içinde daha önce güncellenmiş olabilir)
+                    sh("git", "checkout", good, "--", "bot")
+                    sh("git", "reset", "-q", "bot")
                     print("Yeni bot kodu açılamadı; eski kodla devam ediliyor.")
                     start_rev = rev
             if time.time() - last_hb > 3 * 60:  # nabız 3 dk'da bir; bot 10 dk susarsa telefona uyarı düşer
-                def _hb():
+                hb_n = notifier()  # ayarlar ana turda okunur (arka planda okunursa config tur ortasında değişebilirdi)
+
+                def _hb(n_=hb_n):
                     try:
-                        heartbeat(notifier())
+                        heartbeat(n_)
                     except Exception as e:
                         print("Nabız kurulamadı:", e)
                 threading.Thread(target=_hb, daemon=True).start()  # ntfy yavaşsa tur beklemesin

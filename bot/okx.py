@@ -24,16 +24,17 @@ def _throttle():
         _LAST[0] = time.monotonic()
 
 
-def _get(path, params=None, retries=3):
+def _get(path, params=None, retries=3, timeout=15, throttle=True):
     url = config.BASE_URL + path
     if params:
         url += "?" + urllib.parse.urlencode(params)
     last = None
     for attempt in range(retries):
         try:
-            _throttle()
+            if throttle:
+                _throttle()
             req = urllib.request.Request(url, headers={"User-Agent": "masal/1.0", "Accept-Encoding": "gzip"})
-            with urllib.request.urlopen(req, timeout=15) as r:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
                 raw = r.read()
                 if r.headers.get("Content-Encoding") == "gzip":  # sıkıştırılmış: tüm fiyat listesi ~390 KB yerine ~100 KB
                     raw = gzip.decompress(raw)
@@ -43,45 +44,60 @@ def _get(path, params=None, retries=3):
             return body["data"]
         except Exception as e:  # ağ hatasında kısa bekleyip tekrar dene
             last = e
-            time.sleep(1.5 * (attempt + 1))
+            if attempt + 1 < retries:  # son denemeden sonra boşuna beklenmez
+                time.sleep(1.5 * (attempt + 1))
     raise RuntimeError(f"Veri alınamadı: {url} ({last})")
 
 
-def tickers():
+def tickers(fast=False):
+    """fast: her turda çağrılan anlık fiyat okuması. Tek deneme, kısa zaman aşımı; mum çekimlerinin hız sınırı
+    sırasını beklemez (fiyat listesinin sınırı ayrıdır). Olmazsa tur beklemez, bir sonraki turda yeniden okunur."""
+    if fast:
+        return _get("/api/v5/market/tickers", {"instType": "SPOT"}, retries=1, timeout=5, throttle=False)
     return _get("/api/v5/market/tickers", {"instType": "SPOT"})
 
 
 _RATE = {"t": 0.0, "v": None}
+_USDC = {"t": 0.0, "v": None}
+_EUR = {"t": 0.0, "v": None}
+_PAIRS = {"USDT-TRY": _RATE, "USDC-USDT": _USDC, "USDT-EUR": _EUR}
+
+
+def _pair(inst, box):
+    """Kur (1 dk önbellek). Her turda okunan fiyat listesi kurları da tazeler (note_rates); ayrı istek çoğu zaman gerekmez."""
+    if box["v"] is None or time.time() - box["t"] > 60:
+        v = float(_get("/api/v5/market/ticker", {"instId": inst}, retries=2, timeout=6)[0]["last"])
+        box["v"], box["t"] = v, time.time()
+    return box["v"]
+
+
+def note_rates(rows):
+    """Fiyat listesindeki kur pariteleri önbelleğe yazılır: kur için ayrı (bekleten) istek atılmaz, kur hep tazedir."""
+    now = time.time()
+    for t in rows:
+        box = _PAIRS.get(t.get("instId"))
+        if box is not None:
+            try:
+                v = float(t.get("last") or 0)
+            except (TypeError, ValueError):
+                v = 0
+            if v > 0:
+                box["v"], box["t"] = v, now
 
 
 def usdt_try():
     """USDT'nin TL kuru (1 dk önbellek)."""
-    if _RATE["v"] is None or time.time() - _RATE["t"] > 60:
-        _RATE["v"] = float(_get("/api/v5/market/ticker", {"instId": "USDT-TRY"})[0]["last"])
-        _RATE["t"] = time.time()
-    return _RATE["v"]
-
-
-_USDC = {"t": 0.0, "v": None}
+    return _pair("USDT-TRY", _RATE)
 
 
 def usdc_usdt():
     """USDC'nin USDT karşılığı (1 dk önbellek)."""
-    if _USDC["v"] is None or time.time() - _USDC["t"] > 60:
-        _USDC["v"] = float(_get("/api/v5/market/ticker", {"instId": "USDC-USDT"})[0]["last"])
-        _USDC["t"] = time.time()
-    return _USDC["v"]
-
-
-_EUR = {"t": 0.0, "v": None}
+    return _pair("USDC-USDT", _USDC)
 
 
 def usdt_eur():
     """1 USDT kaç EUR (1 dk önbellek)."""
-    if _EUR["v"] is None or time.time() - _EUR["t"] > 60:
-        _EUR["v"] = float(_get("/api/v5/market/ticker", {"instId": "USDT-EUR"})[0]["last"])
-        _EUR["t"] = time.time()
-    return _EUR["v"]
+    return _pair("USDT-EUR", _EUR)
 
 
 def rate(ccy):
@@ -108,10 +124,18 @@ ASK = {}     # anlık en iyi satış fiyatı (TL karşılığı): alım bu fiyat
 
 
 def prices_tl():
-    """TL, USDT ve USDC paritelerinin anlık fiyatı, TL karşılığı olarak (alış-satış farkı ve satış fiyatı da saklanır)."""
-    k = {q: rate(q) for q in config.QUOTES}
+    """TL, USDT ve USDC paritelerinin anlık fiyatı, TL karşılığı olarak (alış-satış farkı ve satış fiyatı da saklanır).
+    Tek istek: kurlar aynı listeden alınır. Kuru okunamayan paritenin coinleri listeye girmez (yanlış kurla fiyat verilmez)."""
+    rows = tickers(fast=True)
+    note_rates(rows)
+    k = {}
+    for q in config.QUOTES:
+        try:
+            k[q] = rate(q)
+        except Exception as e:
+            print("Kur okunamadı:", q, e)
     out = {}
-    for t in tickers():
+    for t in rows:
         inst, last = t["instId"], float(t.get("last") or 0)
         q = inst.rpartition("-")[2]
         if last and q in k:
@@ -120,6 +144,9 @@ def prices_tl():
             if bid > 0 and ask > 0:
                 SPREAD[inst] = (ask - bid) / ask
                 ASK[inst] = ask * k[q]
+            else:  # tahta boş: eski satış fiyatıyla alım kararı verilmesin (Bekçi "fark yüksek" diye geçirmez)
+                SPREAD[inst] = 1.0
+                ASK.pop(inst, None)
     return out
 
 
@@ -139,7 +166,9 @@ def universe():
     """Hacmi yeterli pariteleri (config.QUOTE) hacme göre sıralı döndürür."""
     rows = []
     ok = crypto_ids()
-    for t in tickers():
+    rows_t = tickers()
+    note_rates(rows_t)
+    for t in rows_t:
         inst = t["instId"]
         base, _, quote = inst.partition("-")
         if quote != config.QUOTE or base in config.EXCLUDED or inst not in ok:
@@ -156,12 +185,13 @@ def universe():
     return [inst for _, inst in rows[: config.MAX_SYMBOLS]]
 
 
-def candles(inst, limit=100):
-    """Son kapanmış mumlar, eskiden yeniye. Her öğe: (ts_ms, close)."""
-    data = _get("/api/v5/market/candles", {"instId": inst, "bar": config.BAR, "limit": limit})
+def candles(inst, limit=100, retries=3, vol_out=None):
+    """Son kapanmış mumlar, eskiden yeniye. Her öğe: (ts_ms, close).
+    vol_out verilirse hacimler VOL yerine oraya yazılır (arka plan çekimi: mumlarla birlikte tek adımda yayınlanır)."""
+    data = _get("/api/v5/market/candles", {"instId": inst, "bar": config.BAR, "limit": limit}, retries=retries)
     k = tl_factor(inst)  # fiyatlar TL karşılığıyla tutulur
     out = [(int(r[0]) + BAR_MS, float(r[4]) * k) for r in data if r[8] == "1"]  # sadece kapanmış mumlar; zaman = kapanış
-    VOL[inst] = [float(r[5]) for r in sorted(data, key=lambda r: int(r[0])) if r[8] == "1"]  # hacim (eskiden yeniye)
+    (VOL if vol_out is None else vol_out)[inst] = [float(r[5]) for r in sorted(data, key=lambda r: int(r[0])) if r[8] == "1"]  # hacim (eskiden yeniye)
     return sorted(out)
 
 

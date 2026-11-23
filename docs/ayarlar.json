@@ -227,7 +227,10 @@
     "real_budget": 20,
     "real_lev": 3,
     "max_loss": 8,
-    "real_reset": 0
+    "real_reset": 0,
+    "brk_h": 8,
+    "trend_h": 100,
+    "trend_on": false
   },
   "dust": [
     {

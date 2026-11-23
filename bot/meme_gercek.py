@@ -474,7 +474,7 @@ def step(state, S, paper_cfg, N=None):
     if not _W["key"]:
         state["memer"] = {**R, "on": False}
         return
-    if cfg.get("real_reset", 0) != R.get("reset", 0) and _LOCK.acquire(timeout=0.05):
+    if cfg.get("real_reset", 0) != R.get("reset", 0) and _LOCK.acquire(False):
         (state.get("locked") or {}).pop("memer", None)
         try:
             R["reset"], R["dead"], R["start"] = cfg.get("real_reset", 0), "", R["value"]
@@ -491,7 +491,7 @@ def step(state, S, paper_cfg, N=None):
     for e in evs:
         if cfg["real"] or e[0] == "sell":
             _Q.put(e)
-    if not _LOCK.acquire(timeout=0.05):
+    if not _LOCK.acquire(False):
         return  # işçi borsayla konuşuyor: bu tur bir önceki kayıt geçerli
     try:
         R["on"] = bool(cfg["real"])

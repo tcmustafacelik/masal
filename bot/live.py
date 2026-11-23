@@ -98,10 +98,31 @@ class OkxPrivate:
         return self._req("GET", f"/api/v5/trade/order?instId={inst}&ordId={ord_id}")[0]
 
     def market(self, inst, side, sz, quote=False):
+        # Emre kendi kimliğimiz (clOrdId) verilir: gönderim yanıtı ağda kaybolursa emir bu kimlikle borsada aranır;
+        # verilmiş bir emir "hata" sanılıp kayıtsız kalmaz, yeniden de gönderilmez.
+        cl = "m" + os.urandom(12).hex()
         body = {"instId": inst, "tdMode": "cash", "side": side, "ordType": "market", "sz": sz,
-                "tgtCcy": "quote_ccy" if quote else "base_ccy"}
-        oid = self._req("POST", "/api/v5/trade/order", body)[0]["ordId"]
-        o = {}
+                "tgtCcy": "quote_ccy" if quote else "base_ccy", "clOrdId": cl}
+        try:
+            oid = self._req("POST", "/api/v5/trade/order", body)[0]["ordId"]
+        except RuntimeError:
+            raise  # borsa emri açıkça reddetti
+        except Exception as e:
+            oid = None
+            for _ in range(4):
+                time.sleep(0.7)
+                try:
+                    oid = self._req("GET", f"/api/v5/trade/order?instId={inst}&clOrdId={cl}")[0]["ordId"]
+                    print("Emir yanıtı gelmedi ama emir borsada bulundu:", inst)
+                    break
+                except RuntimeError as e2:
+                    if "51603" in str(e2):  # emir yok: borsaya ulaşmamış
+                        break
+                except Exception:
+                    continue
+            if not oid:
+                raise e
+        o = {"ordId": oid, "state": "bilinmiyor"}
         for _ in range(20):  # piyasa emri genelde anında dolar; ağ hatasında da emri kaybetmeden ~12 sn sorulur
             time.sleep(0.6)
             try:
@@ -112,6 +133,42 @@ class OkxPrivate:
             if o["state"] in ("filled", "canceled", "mmp_canceled"):
                 break
         return o
+
+
+def spot_snapshot(api, algos, ccys=None):
+    """Arka planda (yalnız okuma): borsadaki korumaların durumu ve istenirse coin bakiyeleri.
+    algos: [(inst, algoId)]. Sonuç ana turda LivePortfolio.reconcile(snap=...) ile kayda işlenir; ana tur borsayı beklemez.
+    Dönen kayıt: pending = bekleyen koruma kimlikleri (okunamadıysa None), algo = {algoId: (koruma, emir)} (yalnız
+    bekleyenler dışındakiler), have = {coin: miktar} (istenmediyse/okunamadıysa None)."""
+    snap = {"ts": int(time.time() * 1000), "pending": None if algos else set(), "algo": {}, "have": None}
+    # Önce bakiye, sonra korumalar: arada tetiklenen koruma "coin eksik" sanılmaz (bakiye tam, koruma tetiklenmiş görünür)
+    if ccys:
+        try:
+            rows = api._req("GET", "/api/v5/account/balance?ccy=" + ",".join(ccys))
+            snap["have"] = {d["ccy"]: float(d.get("cashBal") or d.get("eq") or 0) for d in (rows[0].get("details", []) if rows else [])}
+        except Exception as e:
+            print("Bakiye eşleştirme yapılamadı:", e)
+    if algos:
+        try:
+            snap["pending"] = api.pending_algo_ids()
+        except Exception as e:
+            print("Bekleyen korumalar alınamadı, tek tek bakılıyor:", e)
+        for inst, aid in algos:
+            if snap["pending"] is not None and aid in snap["pending"]:
+                continue
+            try:
+                a = api.algo(aid)
+                o = {}
+                if a.get("state") in ("effective", "partially_effective"):
+                    oid = a.get("ordId") or (a.get("ordIdList") or [""])[0]
+                    o = api.order(inst, oid) if oid else {}
+                snap["algo"][aid] = (a, o)
+            except Exception as e:
+                print("Koruma durumu okunamadı:", inst, e)
+        if snap["pending"] is None and all(aid in snap["algo"] for _, aid in algos):
+            # toplu liste alınamadı ama hepsi tek tek okundu: bekleyenler buradan bilinir
+            snap["pending"] = {aid for aid, (a, _) in snap["algo"].items() if a.get("state") == "live"}
+    return snap
 
 
 def tr_err(e):
@@ -367,24 +424,34 @@ class LivePortfolio(Portfolio):
                 self._emit("alerts", "Borsa koruması kurulamadı", f"{inst}: {tr_err(e)}. Bot her kontrolde yeniden dener.",
                            4, ["warning"])
 
-    def check_holdings(self, every=60):
+    def check_holdings(self, every=60, have=None, base=None, pending=None):
         """Kayıttaki coin miktarını OKX'teki gerçek miktarla karşılaştırır (dakikada bir).
-        OKX'te daha az coin varsa (ör. elle satıldıysa) kayıt düzeltilir; bot hiçbir şey satmaz."""
+        OKX'te daha az coin varsa (ör. elle satıldıysa) kayıt düzeltilir; bot hiçbir şey satmaz.
+        have: arka planda okunmuş bakiyeler (spot_snapshot); verilirse burada borsaya istek atılmaz.
+        base: o okuma başlarken kayıttaki miktarlar; arada kaydı değişen coin (alım/satım) bu turda karşılaştırılmaz.
+        pending: aynı okumada borsada bekleyen korumalar; koruması tetiklenmiş/sonuçlanmamış coin karşılaştırılmaz
+        (satış geliri önce reconcile ile kayda geçmeli)."""
         if not self.armed or not self.s["positions"]:
             return
         now = int(time.time() * 1000)
-        if now - self.s.get("hold_ck", 0) < every * 1000:
-            return
-        self.s["hold_ck"] = now
-        ccys = [i.split("-")[0] for i in self.s["positions"]]
-        rows = self.api._req("GET", "/api/v5/account/balance?ccy=" + ",".join(ccys))
-        have = {d["ccy"]: float(d.get("cashBal") or d.get("eq") or 0) for d in (rows[0].get("details", []) if rows else [])}
+        pre = have is not None
+        if not pre:
+            if now - self.s.get("hold_ck", 0) < every * 1000:
+                return
+            self.s["hold_ck"] = now
+            ccys = [i.split("-")[0] for i in self.s["positions"]]
+            rows = self.api._req("GET", "/api/v5/account/balance?ccy=" + ",".join(ccys))
+            have = {d["ccy"]: float(d.get("cashBal") or d.get("eq") or 0) for d in (rows[0].get("details", []) if rows else [])}
         miss = self.s.setdefault("missing", {})
         for inst in list(self.s["positions"]):
-            base = inst.split("-")[0]
-            got = have.get(base, 0.0)
             pos = self.s["positions"][inst]
-            if sum(l["qty"] for l in pos["lots"]) > got * 1.03:
+            if pre and (base is None or abs(sum(l["qty"] for l in pos["lots"]) - base.get(inst, -1.0)) > 1e-12):
+                continue  # ölçümden sonra kayıt değişti (ya da ölçümde bu coin yoktu): bir sonraki ölçümde bakılır
+            if pre and (pending is None or any(l.get("algo") and l["algo"] not in pending for l in pos["lots"])):
+                continue  # koruma durumu belirsiz ya da tetiklenmiş: önce o işlenir
+            base_ccy = inst.split("-")[0]
+            got = have.get(base_ccy, 0.0)
+            if not pre and sum(l["qty"] for l in pos["lots"]) > got * 1.03:
                 # Coin eksik: büyük ihtimalle borsadaki kâr al / zarar durdur az önce çalıştı. Önce onu kayda geçir
                 # (satış geliri kasaya eklensin); kayıt hâlâ tutmuyorsa bir sonraki kontrolde düzelt.
                 self.reconcile(only=inst)
@@ -408,31 +475,38 @@ class LivePortfolio(Portfolio):
                 self._note(now, f"Koruma iptali uyarısı {inst}: {tr_err(e)}")
             if ratio < 0.05:
                 del self.s["positions"][inst]
-                msg = f"OKX'te {base} kalmamış (kayıtta {rec:.6g}); pozisyon kayıttan çıkarıldı."
+                msg = f"OKX'te {base_ccy} kalmamış (kayıtta {rec:.6g}); pozisyon kayıttan çıkarıldı."
             else:
                 for l in pos["lots"]:
                     l["qty"] *= ratio
                     l["cost"] *= ratio
                     l["algo"] = None
                     self._protect(now, inst, l)
-                msg = f"OKX'te {base} {got:.6g}, kayıtta {rec:.6g} görünüyordu; kayıt OKX'e göre düzeltildi ve korumalar yeniden kuruldu."
+                msg = f"OKX'te {base_ccy} {got:.6g}, kayıtta {rec:.6g} görünüyordu; kayıt OKX'e göre düzeltildi ve korumalar yeniden kuruldu."
             self._note(now, msg)
-            self._emit("alerts", f"Kayıt düzeltildi: {base}", msg + " Elle işlem yaptıysan bu normaldir.", 4, ["mag"])
+            self._emit("alerts", f"Kayıt düzeltildi: {base_ccy}", msg + " Elle işlem yaptıysan bu normaldir.", 4, ["mag"])
 
     def cancel_items(self, items):
         self.api.cancel_algos(items)
 
-    def reconcile(self, only=None):
-        """Borsada tetiklenen kâr al / zarar durdur emirlerini kayda geçirir, eksik korumaları yeniden kurar."""
+    def reconcile(self, only=None, snap=None):
+        """Borsada tetiklenen kâr al / zarar durdur emirlerini kayda geçirir, eksik korumaları yeniden kurar.
+        snap verilirse (spot_snapshot, arka planda okunmuş) borsaya durum sorulmaz: yalnız o okumada sonucu belli olan
+        korumalar işlenir; okumadan sonra kurulan ya da okunamayan koruma bir sonraki okumayı bekler.
+        Sonuçlar koruma kimliğiyle eşleşir ve kesindir (tetiklendi / iptal edildi), bu yüzden gecikmeli işlenmesi güvenlidir."""
         if not self.armed:
             return
         now = int(time.time() * 1000)
-        # Hız: bekleyen korumalar tek istekle alınır; sadece listede olmayan (tetiklenmiş/iptal) emirler tek tek sorulur
-        try:
-            pending = self.api.pending_algo_ids() if any(l.get("algo") for p in self.s["positions"].values() for l in p["lots"]) else set()
-        except Exception as e:
-            print("Bekleyen korumalar alınamadı, tek tek bakılıyor:", e)
-            pending = None
+        pre = snap is not None
+        if pre:
+            pending, known = snap.get("pending"), snap.get("algo") or {}
+        else:
+            # Hız: bekleyen korumalar tek istekle alınır; sadece listede olmayan (tetiklenmiş/iptal) emirler tek tek sorulur
+            try:
+                pending = self.api.pending_algo_ids() if any(l.get("algo") for p in self.s["positions"].values() for l in p["lots"]) else set()
+            except Exception as e:
+                print("Bekleyen korumalar alınamadı, tek tek bakılıyor:", e)
+                pending = None
         for inst in ([only] if only else list(self.s["positions"])):
             if inst not in self.s["positions"]:
                 continue
@@ -443,17 +517,26 @@ class LivePortfolio(Portfolio):
                     continue
                 if pending is not None and lot["algo"] in pending:
                     continue  # koruma borsada bekliyor, değişiklik yok
-                try:
-                    a = self.api.algo(lot["algo"])
-                except Exception as e:
-                    self._note(now, f"Koruma durumu okunamadı {inst}: {tr_err(e)}")
-                    continue
+                if pre:
+                    if lot["algo"] not in known:
+                        continue  # bu okumada sonucu yok: bir sonraki okumada
+                    a, o = known[lot["algo"]]
+                else:
+                    try:
+                        a = self.api.algo(lot["algo"])
+                    except Exception as e:
+                        self._note(now, f"Koruma durumu okunamadı {inst}: {tr_err(e)}")
+                        continue
+                    o = None
                 st = a.get("state")
                 if st in ("effective", "partially_effective"):
                     oid = a.get("ordId") or (a.get("ordIdList") or [""])[0]
-                    o = self.api.order(inst, oid) if oid else {}
+                    if o is None:
+                        o = self.api.order(inst, oid) if oid else {}
                     if oid and o.get("state") in ("live", "partially_filled"):
                         continue  # tetiklenen emir henüz dolmadı: dolunca işlenir (yarım sonuç yazılmaz)
+                    if oid and not o:
+                        continue  # emrin sonucu okunamadı: bir sonraki okumada
                     filled = float(o.get("accFillSz") or a.get("actualSz") or 0)
                     avg_q = float(o.get("avgPx") or a.get("actualPx") or 0)
                     fee = float(o.get("fee") or 0)
