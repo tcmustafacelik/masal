@@ -143,6 +143,21 @@ h2 svg.i{width:15px;height:15px}
 .tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 6px 10px;text-align:center;cursor:pointer;
   display:flex;flex-direction:column;align-items:center;gap:5px;min-height:96px;justify-content:center;font:inherit;color:inherit;transition:background .15s,border-color .15s}
 .tile{text-decoration:none}
+.row:has([data-coin]){cursor:pointer}
+.qpair{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:2px 0 10px}.qpair.sm{margin:8px 0 4px}
+.qpair button{padding:7px 0;border:1px solid var(--line2);border-radius:8px;background:transparent;color:var(--text);font:inherit;font-size:12.5px;font-weight:600;-webkit-tap-highlight-color:transparent}
+.qpair button.on{border-color:#D99A3A;background:#FDF5EA;color:#A8650C}.qpair button:disabled{opacity:.35}
+.cdp{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}.cdp b{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums}.cdp b small{font-size:12px;color:var(--muted);font-weight:600}.cdp span{font-size:12.5px;font-weight:600}
+.cdk{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:10px 0}.cdk div{border:1px solid var(--line2);border-radius:10px;padding:7px 8px;min-width:0}.cdk span{display:block;font-size:10.5px;color:var(--muted)}.cdk b{display:block;font-size:12.5px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cdc{width:100%;height:150px;display:block;margin-top:4px}
+.cdb{border:1px solid var(--line2);border-radius:11px;padding:2px 12px;margin-top:8px}.cdb div{display:flex;align-items:center;gap:8px;padding:7px 0;font-size:12px}.cdb div+div{border-top:1px solid var(--line2)}.cdb svg{width:15px;height:15px;color:var(--muted)}.cdb span{color:var(--muted)}.cdb b{margin-left:auto;font-weight:600}
+.cdn{font-size:10.5px;color:var(--faint);text-align:center;margin-top:8px}
+.lkh{font-size:11.5px;color:var(--muted);font-weight:600;margin:10px 2px 6px}.lkh:first-of-type{margin-top:2px}
+.tile.lk .ic.e1{background:#E8F0FD;color:#2F6FDB}.tile.lk .ic.e2{background:#E6F6EF;color:#178A5B}.tile.lk .ic.e3{background:#FCF1E3;color:#C27A12}.tile.lk .ic.e4{background:#F1ECFB;color:#7A52C7}.tile.lk .ic.e5{background:#EEF1F6;color:#5B6576}
+.tile.lk .pc{color:var(--muted);font-weight:500;font-size:10.5px;line-height:1.3}
+.lks{gap:8px}.lks.l2{grid-template-columns:repeat(2,minmax(0,1fr))!important}.lks.l3{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+.lks .tile{min-height:92px;padding:10px 6px;gap:4px}.lks .tile .nm{font-size:12.5px;line-height:1.2}
+.lks .tile .ic{width:32px;height:32px;border-radius:10px}.lks .tile .ic svg{width:17px;height:17px}
 .tile .ic{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;background:var(--line2);color:var(--muted)}
 .tile .nm{font-size:12.5px;font-weight:600;line-height:1.2}
 .tile .pc{font-size:12px;font-weight:600;font-variant-numeric:tabular-nums}
@@ -685,12 +700,17 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
   </div>
 
   <section>
-    <h2><span class="hb c-blue"><svg class="i"><use href="#i-link"/></svg></span>Hızlı bağlantılar</h2>
-    <div class="tiles two links">
-      <a class="tile" href="https://tr.okx.com/account/my-api" target="_blank" rel="noopener"><span class="ic"><svg class="i"><use href="#i-coins"/></svg></span><span class="nm">OKX API</span><span class="pc" style="color:var(--muted);font-weight:500">Yenilerken aynı şifre</span></a>
-      <a class="tile" href="https://github.com/tcmustafacelik/masal/settings/secrets/actions" target="_blank" rel="noopener"><span class="ic"><svg class="i"><use href="#i-shield"/></svg></span><span class="nm">Anahtar kasası</span><span class="pc" style="color:var(--muted);font-weight:500">GitHub Secrets</span></a>
-      <a class="tile" href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noopener"><span class="ic"><svg class="i"><use href="#i-link"/></svg></span><span class="nm">Erişim anahtarı</span><span class="pc" style="color:var(--muted);font-weight:500">GitHub token</span></a>
-      <a class="tile" href="https://github.com/tcmustafacelik/masal/actions" target="_blank" rel="noopener"><span class="ic"><svg class="i"><use href="#i-list"/></svg></span><span class="nm">Bot çalışmaları</span><span class="pc" style="color:var(--muted);font-weight:500">GitHub Actions</span></a>
+    <h2><span class="hb c-blue"><svg class="i"><use href="#i-link"/></svg></span>Hesaplar ve anahtarlar</h2>
+    <div class="lkh">Borsalar · API anahtarları</div>
+    <div class="tiles lks l2">
+      <a class="tile lk" href="https://tr.okx.com/account/my-api" target="_blank" rel="noopener"><span class="ic e1"><svg class="i"><use href="#i-bank"/></svg></span><span class="nm">OKX TR</span><span class="pc">API · yenilerken aynı şifre</span></a>
+      <a class="tile lk" href="https://www.okx.com/account/my-api" target="_blank" rel="noopener"><span class="ic e2"><svg class="i"><use href="#i-globe"/></svg></span><span class="nm">OKX Global</span><span class="pc">API · sadece Spot + Perpetual</span></a>
+    </div>
+    <div class="lkh">GitHub · bot ve gizli ayarlar</div>
+    <div class="tiles lks l3">
+      <a class="tile lk" href="https://github.com/tcmustafacelik/masal/settings/secrets/actions" target="_blank" rel="noopener"><span class="ic e3"><svg class="i"><use href="#i-lock"/></svg></span><span class="nm">Gizli ayarlar</span><span class="pc">Anahtarlar, alıcı</span></a>
+      <a class="tile lk" href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noopener"><span class="ic e4"><svg class="i"><use href="#i-shield"/></svg></span><span class="nm">Erişim anahtarı</span><span class="pc">Uygulama bağlantısı</span></a>
+      <a class="tile lk" href="https://github.com/tcmustafacelik/masal/actions" target="_blank" rel="noopener"><span class="ic e5"><svg class="i"><use href="#i-list"/></svg></span><span class="nm">Bot çalışmaları</span><span class="pc">Canlı kayıtlar</span></a>
     </div>
   </section>
 
@@ -710,6 +730,6 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 <div class="toast" id="toast" hidden></div>
 <div class="qsh" id="qsh" hidden><div class="qb"><div class="gr"></div><h3><span><svg class="i" id="qIco"><use href="#i-info"/></svg></span><b id="qTitle"></b></h3><div class="qt" id="qText"></div><button class="btn primary" id="qOk">Anladım</button></div></div>
 
-<script src="app.js?v=1.47.0"></script>
+<script src="app.js?v=1.48.0"></script>
 </body>
 </html>

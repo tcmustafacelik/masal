@@ -1,7 +1,7 @@
 {
-  "version": "1.47.0",
+  "version": "1.48.0",
   "date": "2026-11-23",
   "notes": [
-    "Kasalar ve aktarım ekranı yenilendi: simgeli kasalar, rota, hızlı tutar, ücret/süre bilgisi"
+    "Coine dokununca canlı grafik ve parite seçimi; Ayarlar'da Hesaplar ve anahtarlar düzenlendi; Aktarım ve KASA ayarları"
   ]
 }

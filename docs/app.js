@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.47.0';
+const APP_VERSION = '1.48.0';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -1104,6 +1104,100 @@ async function sendXfer(dir, retry = true) {
         }
     }
 }
+/* ---------- Coin ayrıntısı: dokununca canlı fiyat, grafik ve parite seçimi (OKX TR herkese açık verisi) ---------- */
+let CD = null;
+const CQ = ['TRY', 'USDT', 'USDC', 'EUR'], CBAR = [['15m', '15 dk'], ['1H', '1 sa'], ['4H', '4 sa'], ['1D', '1 gün']];
+function openCoin(inst) {
+    const [base, q0] = String(inst).split('-');
+    CD = { base, q: q0 || 'USDT', bar: '1H', t: null };
+    const q = document.getElementById('qsh');
+    q.dataset.n = '';
+    qHead('i-chart', 'Kapat');
+    document.getElementById('qTitle').textContent = base;
+    document.getElementById('qText').innerHTML = `<div class="cdv" id="cdv"><div class="empty">${ic('i-refresh')}<div>Yükleniyor…</div></div></div>`;
+    q.hidden = false;
+    drawCoin();
+    const tick = () => { if (!CD || q.hidden) {
+        CD = null;
+        return;
+    } drawCoin(true); CD.t = setTimeout(tick, 5000); };
+    CD.t = setTimeout(tick, 5000);
+}
+async function drawCoin(live = false) {
+    if (!CD)
+        return;
+    const { base, q, bar } = CD, inst = `${base}-${q}`, box = document.getElementById('cdv');
+    if (!box)
+        return;
+    try {
+        const [tk, cd, pairs] = await Promise.all([
+            tfetch(`https://tr.okx.com/api/v5/market/ticker?instId=${inst}`, { cache: 'no-store' }, 6000).then(r => r.json()),
+            live ? Promise.resolve(null) : tfetch(`https://tr.okx.com/api/v5/market/candles?instId=${inst}&bar=${bar}&limit=120`, { cache: 'no-store' }, 6000).then(r => r.json()),
+            live ? Promise.resolve(null) : tfetch(`https://tr.okx.com/api/v5/market/tickers?instType=SPOT`, { cache: 'force-cache' }, 6000).then(r => r.json()).catch(() => null)
+        ]);
+        if (!CD || CD.base !== base)
+            return;
+        const t = tk?.data?.[0];
+        if (!live) {
+            CD.rows = (cd?.data || []).map((r) => [+r[0], +r[4], +r[2], +r[3]]).reverse();
+            CD.has = pairs?.data ? new Set(pairs.data.filter((x) => x.instId.startsWith(base + '-')).map((x) => x.instId.split('-')[1])) : new Set(CQ);
+        }
+        const rows = CD.rows || [], has = CD.has || new Set(CQ);
+        if (t && rows.length) {
+            rows[rows.length - 1][1] = +t.last;
+        }
+        if (!t) {
+            box.innerHTML = `<div class="qpair">${CQ.map(x => `<button data-cq="${x}" class="${x === q ? 'on' : ''}" ${has.has(x) ? '' : 'disabled'}>${x}</button>`).join('')}</div><div class="empty">${ic('i-info')}<div>${inst} paritesi OKX TR'de yok</div></div>`;
+            bindCoin();
+            return;
+        }
+        const last = +t.last, open = +t.sodUtc8 || +t.open24h, ch = open ? (last / open - 1) * 100 : 0, dec = last >= 100 ? 2 : last >= 1 ? 4 : Math.min(8, 2 - Math.floor(Math.log10(last || 1)));
+        const L = S?.strategies?.live, pos = (L?.positions || []).find((p) => p.inst.split('-')[0] === base), coin = (L?.coins || []).find((c) => c.inst.split('-')[0] === base);
+        box.innerHTML = `<div class="qpair">${CQ.map(x => `<button data-cq="${x}" class="${x === q ? 'on' : ''}" ${has.has(x) ? '' : 'disabled'}>${x}</button>`).join('')}</div>
+      <div class="cdp"><b>${nf(last, dec)} <small>${q}</small></b><span class="${cls(ch)}">${ch >= 0 ? '+' : ''}${nf(ch, 2)}% · 24 sa</span></div>
+      <div class="cdk"><div><span>En yüksek</span><b>${nf(+t.high24h, dec)}</b></div><div><span>En düşük</span><b>${nf(+t.low24h, dec)}</b></div><div><span>Hacim · ${q}</span><b>${+t.volCcy24h >= 1e6 ? nf(+t.volCcy24h / 1e6, 1) + ' Mn' : +t.volCcy24h >= 1e3 ? nf(+t.volCcy24h / 1e3, 1) + ' B' : nf(+t.volCcy24h, 0)}</b></div></div>
+      ${coinSvg(rows)}
+      <div class="qpair sm">${CBAR.map(([b, l]) => `<button data-cb="${b}" class="${b === bar ? 'on' : ''}">${l}</button>`).join('')}</div>
+      ${pos ? `<div class="cdb"><div>${ic('i-coins')}<span>Botta</span><b>${pos.lots || 1} kademe · ${tl(pos.cost || 0, 0)} · ${sgn(pos.pnl || 0)} TL</b></div><div>${ic('i-pnl')}<span>Ortalama alış</span><b>${nf(pos.avg || 0, dec)}</b></div></div>` : ''}
+      ${coin ? `<div class="cdb"><div>${ic('i-chart')}<span>Bu coinden toplam</span><b class="${cls(coin.realized)}">${sgn(coin.realized)} TL · ${coin.sells} satış</b></div></div>` : ''}
+      <div class="cdn">Canlı · 5 sn'de bir · OKX TR</div>`;
+        bindCoin();
+    }
+    catch (e) {
+        if (!live)
+            box.innerHTML = `<div class="empty">${ic('i-info')}<div>Veri alınamadı, tekrar dene</div></div>`;
+    }
+}
+function bindCoin() {
+    document.querySelectorAll('#cdv [data-cq]').forEach(b => b.onclick = () => { if (CD && !b.disabled) {
+        CD.q = b.dataset.cq;
+        drawCoin();
+    } });
+    document.querySelectorAll('#cdv [data-cb]').forEach(b => b.onclick = () => { if (CD) {
+        CD.bar = b.dataset.cb;
+        drawCoin();
+    } });
+}
+function coinSvg(rows) {
+    if (rows.length < 2)
+        return '';
+    const W = 340, H = 150, c = rows.map(r => r[1]), hi = Math.max(...rows.map(r => r[2])), lo = Math.min(...rows.map(r => r[3])), sp = (hi - lo) || 1;
+    const x = (i) => i / (rows.length - 1) * W, y = (v) => H - 6 - (v - lo) / sp * (H - 12);
+    const d = c.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(''), up = c[c.length - 1] >= c[0], col = up ? 'var(--green)' : 'var(--red)';
+    return `<svg class="cdc" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><defs><linearGradient id="cdg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${up ? '#178A5B' : '#C9473F'}" stop-opacity=".18"/><stop offset="1" stop-color="${up ? '#178A5B' : '#C9473F'}" stop-opacity="0"/></linearGradient></defs>
+    <path d="${d}L${W},${H}L0,${H}Z" fill="url(#cdg)"/><path d="${d}" fill="none" stroke="${col}" stroke-width="1.8" vector-effect="non-scaling-stroke"/>
+    <circle cx="${x(c.length - 1)}" cy="${y(c[c.length - 1])}" r="3" fill="${col}"/></svg>`;
+}
+document.addEventListener('click', e => {
+    const el = e.target.closest('.row');
+    if (!el || Date.now() - swJust < 400 || e.target.closest('button,a,.swb'))
+        return;
+    if (el.closest('.swr.open'))
+        return;
+    const c = el.querySelector('[data-coin]');
+    if (c)
+        openCoin(c.dataset.coin);
+});
 const ICON_BAD = new Set(), ICON_OK = new Set();
 // Coinin hangi paritede alınıp satıldığını gösteren küçük etiket (TRY, USDT, USDC, EUR)
 function pq(inst) { const q = String(inst).split('-')[1] || ''; return q ? `<span class="pq q-${q}">${q}</span>` : ''; }
@@ -1111,7 +1205,7 @@ function cico(inst, side, loss) {
     const b = sym(inst), t = b.slice(0, 4), lc = b.toLowerCase();
     const img = ICON_BAD.has(lc) ? '' : `<img class="${ICON_OK.has(lc) ? 'ok' : ''}" src="https://static.okx.com/cdn/oksupport/asset/currency/icon/${lc}.png" alt="" onload="ICON_OK.add('${lc}');this.classList.add('ok')" onerror="ICON_BAD.add('${lc}');this.remove()">`;
     const sd = side ? `<i class="sd ${side === 'SAT' ? 'sat' + (loss ? ' l' : '') : 'al'}">${side}</i>` : '';
-    return `<div class="coin${t.length > 3 ? ' sm' : ''}">${t}${img}${sd}</div>`;
+    return `<div class="coin${t.length > 3 ? ' sm' : ''}" data-coin="${inst}">${t}${img}${sd}</div>`;
 }
 function renderCoins(x) {
     const box = document.getElementById('coins'), sumEl = document.getElementById('coinSum');
@@ -1639,6 +1733,12 @@ const SECTIONS = [
     { t: 'Kâr hedefi', i: 'i-flag', f: [
             ['target.amount', 'Hedef kâr', () => `Bu kârda her şey satılır, bot durur`, 'TL', 500, 100, 1e8, 0]
         ] },
+    { t: 'Aktarım ve KASA', i: 'i-vault', f: [
+            ['xfer.daily_max', 'Günlük aktarım sınırı', 'Bir günde borsalardan en fazla gönderilecek', '$', 100, 10, 100000, 0],
+            ['xfer.sweep_pct', 'Kâr süpürme oranı', 'Global kârının bu kadarı KASA\'ya gider; 0 kapalı', '%', 5, 0, 100, 0],
+            ['xfer.sweep_days', 'Süpürme aralığı', 'Bu kadar günde bir', 'gün', 1, 1, 90, 0],
+            ['xfer.sweep_min', 'En az süpürme kârı', 'Kâr bundan azsa gönderilmez', '$', 5, 1, 10000, 0]
+        ] },
 ];
 // "Kasa dahil toplam" seçiliyken hedef alanı: bottaki para + kasadaki yedek
 const TGT_TOTAL = ['target.amount', 'Hedef toplam para', () => `Bot + kasa bu tutara ulaşınca her şey satılır`, 'TL', 500, 100, 1e8, 0];
@@ -1680,9 +1780,10 @@ const SUMS = {
     'Koruma': () => draft.strategy === 'grid' ? `Günlük ${pc(draft.risk.daily_loss_pct)} · acil fren ${pc(draft.risk.kill_pct)}` : `Zarar ${pc(draft.risk.stop_pct)} · günlük ${pc(draft.risk.daily_loss_pct)} · acil fren ${pc(draft.risk.kill_pct)}`,
     grid: () => `${(() => { const l = draft.budget * draft.grid.lot_pct / 100, a = (draft.grid.lot2_pct ?? 100) / 100, c = (draft.grid.lot3_pct ?? 100) / 100; return a === 1 && c === 1 ? tl(l, 0) + ' kademe' : `${nf(l, 0)} → ${nf(l * a, 0)} → ${tl(l * c, 0)}`; })()} · ${draft.grid.max_coins} coine kadar · en çok ${tl(draft.budget * (draft.grid.use_pct ?? 40) / 100, 0)}${draft.grid.instant ? ' · anlık alım' : ''}`,
     dip: () => `Düşüş ${pc(draft.dip.dip_pct)} · kâr ${pc(draft.dip.take_profit_pct)} · en çok ${draft.dip.max_hold_hours} saat`,
-    trend: () => `İz süren stop ${pc(draft.trend.trailing_pct)}`
+    trend: () => `İz süren stop ${pc(draft.trend.trailing_pct)}`,
+    'Aktarım ve KASA': () => { const x = draft.xfer || {}; return `Günde en çok $${nf(x.daily_max || 1000, 0)} · ${+x.sweep_pct > 0 ? `kârın ${pc(x.sweep_pct)}'i ${x.sweep_days} günde bir KASA'ya` : 'kâr süpürme kapalı'}`; }
 };
-const SEC_C = { 'Kasa': 'teal', 'Kasadan ekleme': 'teal', 'Koruma': 'red', 'Kâr hedefi': 'green' };
+const SEC_C = { 'Kasa': 'teal', 'Kasadan ekleme': 'teal', 'Koruma': 'red', 'Kâr hedefi': 'green', 'Aktarım ve KASA': 'amber' };
 function field([k, label, hint, u, step, min, max, dec]) {
     const v = P(draft, k), h = typeof hint === 'function' ? hint() : hint;
     return `<div class="field" data-k="${k}"><div class="lb"><b>${label}</b><span class="h">${h}</span><em></em></div>
@@ -2045,6 +2146,8 @@ async function loadSettings() {
         orig.grid.use_pct = 40;
     if (orig && orig.grid && orig.grid.vol_filter == null)
         orig.grid.vol_filter = 2;
+    if (orig)
+        orig.xfer = { daily_max: 1000, sweep_on: true, sweep_pct: 50, sweep_days: 7, sweep_min: 10, ...(orig.xfer || {}) };
     if (orig && orig.grid && orig.grid.trend_filter_pct == null)
         orig.grid.trend_filter_pct = 1;
     if (orig && !orig.notify)

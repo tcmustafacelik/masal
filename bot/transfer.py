@@ -328,7 +328,7 @@ def _poll(C, job, X, N):
 
 def _sweep(C, X, cfg, N):
     """Global kârının bir kısmını KASA'ya gönderir (aralık dolunca)."""
-    if not cfg.get("sweep_on") or not C["g"].ok:
+    if not cfg.get("sweep_on") or float(cfg.get("sweep_pct") or 0) <= 0 or not C["g"].ok:
         return
     now = time.time()
     if now - X.get("sweep_at", 0) < cfg["sweep_days"] * 86400:
