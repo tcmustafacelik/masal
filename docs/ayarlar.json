@@ -21,7 +21,7 @@
     "step_pct": 3.3,
     "lot_pct": 3.1,
     "lot_tp_pct": 5,
-    "max_lots": 5,
+    "max_lots": 4,
     "max_coins": 5,
     "stop_pct": 50,
     "use_pct": 99,
