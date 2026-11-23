@@ -55,7 +55,7 @@
     "alerts": true,
     "daily": true,
     "daily_hour": 20,
-    "cleared": 1795450286
+    "cleared": 1795452175
   },
   "sell": {
     "ts": 1795451203685,
@@ -150,61 +150,7 @@
     }
   },
   "theme": "auto",
-  "xfer_req": [
-    {
-      "id": "x1a2091d8f96",
-      "ts": 1795449261974,
-      "dir": "tr2g",
-      "amt": 10,
-      "src": "bot"
-    },
-    {
-      "id": "x1a209258082",
-      "ts": 1795449782402,
-      "dir": "tr2g",
-      "amt": 10,
-      "src": "bot"
-    },
-    {
-      "id": "x1a209317195",
-      "ts": 1795450565013,
-      "dir": "tr2g",
-      "amt": 10,
-      "src": "bot"
-    },
-    {
-      "id": "x1a2093f5b3a",
-      "ts": 1795451476794,
-      "dir": "tr2g",
-      "amt": 10,
-      "src": "bos"
-    },
-    {
-      "id": "x1a209423308",
-      "ts": 1795451663112,
-      "dir": "tr2g",
-      "amt": 10,
-      "src": "bos"
-    }
-  ],
-  "xfer_cancel": [
-    "x1a208f30987",
-    "x1a208f77851",
-    "xmwtfgj1u",
-    "xmwtfj3pz",
-    "xmwtfj3pz",
-    "x1a208f30987",
-    "x1a208f77851",
-    "xmwtfgj1u",
-    "xmwtfj3pz",
-    "xmwtfl3i9",
-    "x1a20910b145",
-    "x1a20919df66",
-    "x1a2093f5b3a",
-    "x1a2091d8f96",
-    "x1a209258082",
-    "x1a209317195",
-    "x1a2093f5b3a",
-    "x1a209423308"
-  ]
+  "xfer_req": [],
+  "xfer_cancel": [],
+  "clear": 1795452174725
 }

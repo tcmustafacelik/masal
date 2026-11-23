@@ -1,7 +1,7 @@
 {
-  "version": "1.50.0",
+  "version": "1.51.0",
   "date": "2026-11-23",
   "notes": [
-    "Coin ayrıntısında mum grafiği (hacim, fiyat ölçeği, canlı son fiyat); OKX TR çıkışları uygulamadan yönlendirilir"
+    "Bölümler ayrıldı: Spot, Futures, Memecoin ve Kasalar ayrı ekranlarda; eski kayıtları temizle düğmesi"
   ]
 }

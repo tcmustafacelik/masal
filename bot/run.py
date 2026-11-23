@@ -215,6 +215,25 @@ def check_target(p, S, N):
           "Devam etmek için Ayarlar'dan hedefi kapat ya da yükselt.", 5, ["trophy"])
 
 
+def clear_old(state, S):
+    """Uygulamadan "Eski kayıtları temizle": işlem geçmişi ve kâr/zarar hesabı korunur; günlükler ve biten işler silinir."""
+    ts = int(S.get("clear") or 0)
+    if not ts or ts <= state.get("cleared_at", 0):
+        return
+    state["cleared_at"] = ts
+    L = state.get("live") or {}
+    L["log"] = L.get("log", [])[-5:]
+    L["notifs"] = []
+    X = state.get("xfer") or {}
+    X["jobs"] = [j for j in X.get("jobs", []) if j.get("stage") not in ("done", "failed")]
+    X["log"] = []
+    for k in ("meme", "lev"):
+        d = state.get(k) or {}
+        if d:
+            d["log"] = d.get("log", [])[-5:]
+    print("Eski kayıtlar temizlendi")
+
+
 def sell_selected(p, S):
     """Uygulamadan/ayarlardan istenen coinleri bir kez satar (zaman damgası yeniyse)."""
     L, req = p.s, S.get("sell") or {}
@@ -476,6 +495,7 @@ def main():
     run_bars([live], live_events, live_series)
     liquidate(live, S)
     sell_selected(live, S)
+    clear_old(state, S)
     check_target(live, S, N)
     convert_request(live, S, N)
     topup(live, S, N if L["armed"] else None)

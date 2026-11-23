@@ -143,6 +143,14 @@ h2 svg.i{width:15px;height:15px}
 .tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 6px 10px;text-align:center;cursor:pointer;
   display:flex;flex-direction:column;align-items:center;gap:5px;min-height:96px;justify-content:center;font:inherit;color:inherit;transition:background .15s,border-color .15s}
 .tile{text-decoration:none}
+.deck{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;padding-top:10px;padding-bottom:2px}
+.deck button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px 7px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--text);font:inherit;-webkit-tap-highlight-color:transparent;user-select:none;cursor:pointer;min-width:0}
+.deck .dic{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:9px;margin-bottom:2px}.deck .dic svg{width:17px;height:17px}
+.deck .d1{background:#E8F0FD;color:#2F6FDB}.deck .d2{background:#F1ECFB;color:#7A52C7}.deck .d3{background:#E6F6EF;color:#178A5B}.deck .d4{background:#FCF1E3;color:#C27A12}
+.deck b{font-size:12px;font-weight:650}.deck small{font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.deck button.on{border-color:#D99A3A;background:#FDF5EA}.deck button.on b{color:#A8650C}
+#futv,#memev,#kasav{padding-top:4px}
+.clr{margin-top:14px}.clr .xsync{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;color:var(--red)}.clr .xsync svg{width:16px;height:16px}.clr .hint{font-size:11.5px;color:var(--muted);margin:6px 2px 0;line-height:1.45}
 .row:has([data-coin]){cursor:pointer}
 .qpair{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:2px 0 10px}.qpair.sm{margin:8px 0 4px}
 .qpair button{padding:7px 0;border:1px solid var(--line2);border-radius:8px;background:transparent;color:var(--text);font:inherit;font-size:12.5px;font-weight:600;-webkit-tap-highlight-color:transparent}
@@ -610,12 +618,21 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 </header>
 
 <div class="upbar" id="upbar" hidden></div>
+<nav class="deck wrap" id="deck">
+  <button data-v="spot" class="on"><span class="dic d1"><svg class="i"><use href="#i-coins"/></svg></span><b>Spot</b><small id="dkSpot">OKX TR</small></button>
+  <button data-v="fut"><span class="dic d2"><svg class="i"><use href="#i-layers"/></svg></span><b>Futures</b><small id="dkFut">deneme</small></button>
+  <button data-v="meme"><span class="dic d3"><svg class="i"><use href="#i-flask"/></svg></span><b>Memecoin</b><small id="dkMeme">deneme</small></button>
+  <button data-v="kasa"><span class="dic d4"><svg class="i"><use href="#i-vault"/></svg></span><b>Kasalar</b><small id="dkKasa">aktarım</small></button>
+</nav>
+<main class="wrap" id="futv" hidden><div id="futBody"></div></main>
+<main class="wrap" id="memev" hidden><div id="memeBody"></div></main>
+<main class="wrap" id="kasav" hidden><div class="card xf" id="xfer" hidden></div></main>
 <main class="wrap" id="mainv">
   <div id="homeChk"></div>
   <div class="err" id="err"></div>
   <div class="cols">
   <div class="colA">
-  <section id="heroSec"><div class="hero" id="hero"></div><div class="card assets" id="assets" hidden></div><div class="card xf" id="xfer" hidden></div><div id="alerts"></div></section>
+  <section id="heroSec"><div class="hero" id="hero"></div><div class="card assets" id="assets" hidden></div><div id="alerts"></div></section>
 
   <section id="nowSec">
     <h2><svg class="i"><use href="#i-target"/></svg>Bot şimdi ne yapıyor<button class="qm" data-q="nasil" aria-label="Açıklama">?</button></h2>
@@ -731,6 +748,6 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 <div class="toast" id="toast" hidden></div>
 <div class="qsh" id="qsh" hidden><div class="qb"><div class="gr"></div><h3><span><svg class="i" id="qIco"><use href="#i-info"/></svg></span><b id="qTitle"></b></h3><div class="qt" id="qText"></div><button class="btn primary" id="qOk">Anladım</button></div></div>
 
-<script src="app.js?v=1.50.0"></script>
+<script src="app.js?v=1.51.0"></script>
 </body>
 </html>

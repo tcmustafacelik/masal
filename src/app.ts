@@ -1,4 +1,4 @@
-const APP_VERSION='1.50.0';
+const APP_VERSION='1.51.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -151,7 +151,7 @@ async function load(quiet?: boolean) {lastLoad=Date.now();offlineData=false;clea
 }
 
 function render(){
-  updLine();homeChecks();renderMasa();
+  updLine();homeChecks();renderMasa();renderDeck();
   const L=S.strategies.live;
   {const m=document.getElementById('mode'),halt=L&&L.halted,real=L&&L.armed,want=orig?orig.live:S.settings?.live;
    const pending=L&&!halt&&want!==undefined&&!!want!==!!real;
@@ -243,7 +243,7 @@ function gloss(k: string): [string, string] {
    Veriler botun gerçek kaydından gelir (izlenen coinler, koruma durumu, işlemler, bot kayıtları); uydurma rakam yok. */
 let masaOn = false;
 function showMasa(on: boolean) {
-  masaOn = on; document.getElementById('mainv').hidden = on; document.getElementById('masav').hidden = !on;
+  masaOn = on; overlayView(on); document.getElementById('mainv').hidden = on; document.getElementById('masav').hidden = !on;
   document.querySelector('header').hidden = on; scrollTo(0, 0); if (on) renderMasa(); else pollMarket();
 }
 function masaClock(ts: number) { const d = new Date(ts), p = (n: number) => String(n).padStart(2, '0'); return `${p(d.getHours())}:${p(d.getMinutes())}`; }
@@ -292,8 +292,6 @@ function renderMasa() {
       <div><span>İşlem</span><b>${x.trades}</b></div><div><span>Kazanma</span><b>${x.win_rate == null ? '—' : '%' + nf(x.win_rate, 0)}</b></div></div>
     <div class="mflow">${['Gözcü', 'Bekçi', 'Alıcı', 'Çıkışçı'].map((n, i) => `<span>${n}</span>${i < 3 ? ic('i-chev') : ''}`).join('')}</div>
     <div class="agrid">${agents.map(([k, i, n, r, s, body]) => `<div class="agent a-${k}"><div class="ah2"><span class="aic">${ic(i as string)}</span><b>${n}</b></div>${s}<small class="arole">${r}</small>${body}</div>`).join('')}</div>
-    ${renderLev()}
-    ${renderMeme()}
     <h2 class="mh">${ic('i-list')}Canlı akış<span class="hsum">her işlem sebebiyle</span></h2>
     <div class="card mfeed">${feed.length ? feed.slice(0, 30).map(([ts, k, tag, txt]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k}">${tag}</em><div>${txt}</div></div>`).join('') : `<div class="empty">${ic('i-list')}<div>Henüz kayıt yok</div></div>`}</div>`;
 }
@@ -741,6 +739,28 @@ document.addEventListener('click',e=>{
   if(el.closest('.swr.open'))return;
   const c=el.querySelector<HTMLElement>('[data-coin]');if(c)openCoin(c.dataset.coin);
 });
+
+/* ---------- Bölümler: Spot (OKX TR botu), Futures (kaldıraç masası), Memecoin, Kasalar — her biri ayrı ekranda ---------- */
+let VIEW='spot';
+/** Tam ekran bir pencere (ayarlar, geçmiş, ajan masası) açılınca bölümler ve sekmeler gizlenir; kapanınca kalınan bölüme dönülür */
+function overlayView(on: boolean){document.getElementById('deck').hidden=on;for(const id of ['futv','memev','kasav'])document.getElementById(id).hidden=true;
+  if(!on&&VIEW!=='spot')setTimeout(()=>showView(VIEW),0)}
+function showView(v: string){
+  VIEW=v;const m: Record<string,string>={spot:'mainv',fut:'futv',meme:'memev',kasa:'kasav'};
+  for(const [k,id] of Object.entries(m))document.getElementById(id).hidden=k!==v;
+  document.querySelectorAll<HTMLElement>('#deck button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  scrollTo(0,0);renderDeck();
+}
+document.querySelectorAll<HTMLElement>('#deck button').forEach(b=>b.onclick=()=>showView(b.dataset.v));
+function renderDeck(){
+  if(!S)return;const L: any=(S as any).lev,M: any=(S as any).meme,X: any=(S as any).xfer,sp=S.strategies?.live;
+  const set=(id: string,t: string)=>{const e=document.getElementById(id);if(e&&e.textContent!==t)e.textContent=t};
+  if(sp&&!sp.locked){const p=liveEquity(sp)-sp.start_cash;set('dkSpot',(p>=0?'+':'−')+nf(Math.abs(p),0)+' TL')}
+  if(L)set('dkFut','$'+nf(L.equity,2));if(M)set('dkMeme','$'+nf(M.equity,2));
+  if(X){const a=[X.tr_total,X.g_val,X.kasa?.usd];if(a.every((v: any)=>v!=null))set('dkKasa','$'+nf(a.reduce((x: number,y: number)=>x+y,0),0))}
+  if(VIEW==='fut'){const b=document.getElementById('futBody');setH(b,renderLev()||`<div class="empty">${ic('i-layers')}<div>Kaldıraç masası verisi bekleniyor</div></div>`)}
+  if(VIEW==='meme'){const b=document.getElementById('memeBody');setH(b,renderMeme()||`<div class="empty">${ic('i-flask')}<div>Memecoin masası verisi bekleniyor</div></div>`)}
+}
 
 const ICON_BAD = new Set<string>(), ICON_OK = new Set<string>();
 // Coinin hangi paritede alınıp satıldığını gösteren küçük etiket (TRY, USDT, USDC, EUR)
@@ -1217,7 +1237,12 @@ function renderForm(){
   h+=accOpen('strat',SNAMES[draft.strategy]+' ayarları',ICON[draft.strategy],'blue',SUMS[draft.strategy](),secDirty([...sf.map(x=>x[0]),...(grid?['grid.instant']:[])]))+`<div class="card">${sf.map(field).join('')}`
     +(grid?`<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line2)">${swRow('instSw',!!draft.grid.instant,'Anlık alım','Fiyat değince hemen alır')}</div>`:'')+`</div>`+ACC_END;
   h+=installSection();
+  h+=`<section class="clr"><button class="btn xsync" type="button" id="clrOld">${ic('i-trash')}Eski kayıtları temizle</button><p class="hint">Canlı akış, aktarım geçmişi, masa günlükleri ve bildirimler silinir; işlem geçmişi ve kâr/zarar hesabı korunur.</p></section>`;
   const f=document.getElementById('setForm');f.innerHTML=h;
+  document.getElementById('clrOld').onclick=async()=>{const t=Date.now(),top=Math.ceil(t/1000);
+    localStore('masal_nclr',String(top));NOTES.length=0;nBadge();
+    const ok=await cloudPatch(o=>{(o as any).clear=t;o.notify={...(o.notify||{} as any),cleared:top}},'Eski kayıtlar temizlendi');
+    toast(ok?'Eski kayıtlar temizleniyor; bot birkaç saniyede uygular':'Temizleme isteği gönderilemedi')};
   f.querySelectorAll<HTMLElement>('.acch').forEach(b=>b.onclick=()=>{const sec=b.parentElement,id=sec.dataset.acc;sec.classList.toggle('open');
     if(sec.classList.contains('open'))OPEN.add(id);else{OPEN.delete(id);renderForm()}});
   f.querySelectorAll<HTMLElement>('[data-g=mode] .tile').forEach(b=>b.onclick=()=>{draft.live=b.dataset.t==='real';renderForm()});
@@ -1310,7 +1335,7 @@ async function save(obj?: Settings, msg?: string, keepDraft?: boolean, retry = t
 
 let toastT;function toast(t){const el=document.getElementById('toast');el.textContent=t;el.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>el.hidden=true,3800)}
 let HIST: Trade[] = null, hCoin = '', hSide: '' | Side = '';
-function showHist(on){document.getElementById('mainv').hidden=on;document.getElementById('histv').hidden=!on;
+function showHist(on){overlayView(on);document.getElementById('mainv').hidden=on;document.getElementById('histv').hidden=!on;
   document.querySelector('header').hidden=on;scrollTo(0,0);if(!on)pollMarket()}
 async function openHistory(){hCoin='';hSide='';showHist(true);
   const body=document.getElementById('histBody');body.innerHTML=`<div class="empty">${ic('i-refresh')}<div>Yükleniyor…</div></div>`;
@@ -1344,7 +1369,7 @@ function renderHist(){const body=document.getElementById('histBody');const all=H
 }
 document.getElementById('histBtn').onclick=openHistory;
 document.getElementById('closeHist').onclick=()=>showHist(false);
-function showSettings(on){document.getElementById('mainv').hidden=on;document.getElementById('setv').hidden=!on;
+function showSettings(on){overlayView(on);document.getElementById('mainv').hidden=on;document.getElementById('setv').hidden=!on;
   document.querySelector('header').hidden=on;scrollTo(0,0);if(on)loadSettings();else pollMarket()}
 document.getElementById('openSet').onclick=()=>showSettings(true);
 document.getElementById('closeSet').onclick=()=>{if(draft&&JSON.stringify(orig)!==JSON.stringify(clean(draft))&&!confirmLeave())return;showSettings(false)};
@@ -1465,6 +1490,7 @@ function backLayer(): boolean {
   if (!document.getElementById('setv').hidden) { document.getElementById('closeSet').click(); return true; }
   if (!document.getElementById('histv').hidden) { showHist(false); return true; }
   if (!document.getElementById('masav').hidden) { showMasa(false); return true; }
+  if (VIEW !== 'spot') { showView('spot'); return true; }
   return false;
 }
 history.pushState({masal: 1}, '');
