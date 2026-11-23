@@ -39,7 +39,7 @@ def check(name, base, pre):
             n = [x["ccy"] for x in rows if float(x.get("bal") or x.get("eq") or 0) > 0]
             usdt = sum(float(x.get("availBal") or 0) for x in rows if x["ccy"] == "USDT")
             if lbl == "Fon hesabı":
-                print("  fon ayrıntı:", [(x["ccy"], x.get("bal"), x.get("frozenBal")) for x in rows])
+                print("  fon ayrıntı:", [x for x in rows if x["ccy"] == "USDT"])
             print(f"{lbl}: okunuyor · {len(n)} varlık var · boş USDT {usdt:.2f}")
         except Exception as e:
             print(f"{lbl}: HATA {e}")
