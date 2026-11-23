@@ -1,4 +1,4 @@
-const APP_VERSION='1.45.0';
+const APP_VERSION='1.45.1';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -581,7 +581,7 @@ function renderXfer(){
   if(sel!=='live'||!S?.strategies?.live||S.strategies.live.locked){box.hidden=true;return}
   box.hidden=false;
   const jobs=(X?.jobs||[]).slice(0,4).map((j: any)=>`<div><time>${masaClock(j.ts)}</time><span>${XDIR[j.dir]?.[0]||j.dir} · <b>${nf(j.amt,2)} $</b><em class="${j.stage==='done'?'ok':j.stage==='failed'?'bad':''}">${XST[j.stage]||j.stage}${j.stage!=='done'&&j.msg?' · '+j.msg:''}</em></span></div>`).join('');
-  box.innerHTML=`<div class="ah">${ic('i-refresh')}<b>Para aktarımı</b><span>USDT · Arbitrum</span></div>
+  box.innerHTML=`<div class="ah">${ic('i-refresh')}<b>Para aktarımı</b><span>USDT</span></div>
     <div class="xb"><span>TR'de boşta <b>${X?.free_tl!=null?tl(Math.max(0,X.free_tl),0):'—'}</b></span><span>Global'de <b>${X?.g_val!=null?'$'+nf(X.g_val,2):'—'}</b></span><span>Bugün gönderilen <b>$${nf(X?.day_sum||0,0)} / ${nf(X?.daily_max||1000,0)}</b></span></div>
     <div class="xt">${Object.entries(XDIR).map(([k,v])=>`<button class="${v[3]}" data-x="${k}">${ic(v[2])}${v[0]}<small>${v[1]}</small></button>`).join('')}</div>
     ${jobs?`<div class="xj">${jobs}</div>`:''}`;
@@ -596,7 +596,7 @@ function openXfer(dir: string){
     t.innerHTML=`<div class="xfs">${fromTr?`<div class="seg"><button data-s="bos" class="${xfSrc==='bos'?'on':''}">Boştaki paradan</button><button data-s="bot" class="${xfSrc==='bot'?'on':''}">Bottan al</button></div>`:''}
       <input id="xfAmt" type="number" inputmode="decimal" min="1" step="1" placeholder="Tutar (USDT)" value="${(document.getElementById('xfAmt') as HTMLInputElement)?.value||''}">
       <div class="hint">${fromTr?(xfSrc==='bos'?`TR'de bota ait olmayan boş para kullanılır (şu an ~${X.free_tl!=null?tl(Math.max(0,X.free_tl),0):'—'}). Gerekirse TL USDT'ye çevrilir.`:'Bottaki paradan alınır; bütçe ve kasa bu tutar kadar düşürülür.'):'Global\'deki USDT gönderilir.'}
-      ${dir==='g2tr'?' TR\'ye gelince TL\'ye çevrilip Nakit\'e konur; bankaya çekimi sen yaparsın.':''}${dir.endsWith('k')?' Soğuk cüzdan (KASA) adresi sabittir: 0x0113…7db7.':''} Ağ ücreti ~0,003 $. Günlük sınır ${nf(X.daily_max||1000,0)} $.</div>
+      ${dir==='g2tr'?' TR\'ye gelince TL\'ye çevrilip Nakit\'e konur; bankaya çekimi sen yaparsın.':''}${dir.endsWith('k')?' Soğuk cüzdan (KASA) adresi sabittir: 0x0113…7db7.':''} ${dir.endsWith('k')?'Ağ ücreti ~0,003 $.':'OKX iç transferi: ücretsiz ve anında.'} Günlük sınır ${nf(X.daily_max||1000,0)} $.</div>
       <button class="btn primary" id="xfGo" style="width:100%;margin-top:12px">Gönder</button></div>`;
     t.querySelectorAll<HTMLElement>('[data-s]').forEach(b=>b.onclick=()=>{xfSrc=b.dataset.s;draw()});
     document.getElementById('xfGo').onclick=()=>sendXfer(dir);};

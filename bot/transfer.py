@@ -141,39 +141,47 @@ def _prepare(ex, side, amt, job):
     return True
 
 
+def _uid(cl):
+    return str(cl.req("GET", "/api/v5/account/config")[0].get("uid") or "")
+
+
 def _send(ex, side, addr, dest, amt, job, X):
-    chain, fee, min_wd = ex.chain()
-    if amt < min_wd:
-        raise RuntimeError(f"en az {min_wd} USDT gönderilebilir")
-    if dest:  # karşı borsanın adresi API'den teyit edilir
+    """Borsalar arası (TR ↔ Global): OKX iç transferi, ücretsiz ve anında; alıcı UID'si karşı hesabın kendi anahtarıyla okunur.
+    KASA: Arbitrum One ağıyla, sabit adrese."""
+    nm = os.environ.get("OKX_ALICI", "").split()
+    if dest:
         cl = _clients()[dest]
         if not cl.ok:
             raise RuntimeError(f"{NAMES[dest]} anahtarı tanımlı değil")
-        if addr.lower() not in cl.dep_addr():
-            raise RuntimeError(f"{NAMES[dest]} yatırma adresi kayıtlı adresle tutmuyor; güvenlik için gönderilmedi")
-    body = {"ccy": "USDT", "amt": f"{amt:.2f}", "dest": "4", "toAddr": addr, "chain": chain, "fee": f"{fee:f}".rstrip("0").rstrip(".") or "0",
-            "clientId": job["id"][:32]}
+        uid = _uid(cl)
+        if not uid or uid == _uid(ex):
+            raise RuntimeError(f"{NAMES[dest]} hesap numarası okunamadı; güvenlik için gönderilmedi")
+        body = {"ccy": "USDT", "amt": f"{amt:.2f}", "dest": "3", "toAddr": uid, "toAddrType": "2", "clientId": job["id"][:32]}
+        fee, chain = 0.0, "OKX iç transfer"
+        info = {"walletType": "exchange", "exchId": "okx"}
+        if len(nm) >= 2:
+            info.update(rcvrFirstName=" ".join(nm[:-1]), rcvrLastName=nm[-1])
+    else:
+        chain, fee, min_wd = ex.chain()
+        if amt < min_wd:
+            raise RuntimeError(f"en az {min_wd} USDT gönderilebilir")
+        body = {"ccy": "USDT", "amt": f"{amt:.2f}", "dest": "4", "toAddr": addr, "chain": chain,
+                "fee": f"{fee:f}".rstrip("0").rstrip(".") or "0", "clientId": job["id"][:32]}
+        info = {"walletType": "private"}
     try:
         res = ex.req("POST", "/api/v5/asset/withdrawal", body)[0]
     except RuntimeError as e:
         s = str(e).lower()
-        if not any(k in s for k in ("rcvr", "travel", "receiver", "recipient", "beneficiary", "wallet type", "exchange")):
+        if not any(k in s for k in ("rcvr", "travel", "receiver", "recipient", "beneficiary", "wallet type", "local laws")):
             raise
-        # Seyahat kuralı (alıcı bilgisi) isteniyorsa bilgiyle tekrar dene
-        info = {"walletType": "private"} if dest is None else {"walletType": "exchange", "exchId": "okx"}
-        nm = os.environ.get("OKX_ALICI", "").split()
-        if dest and len(nm) >= 2:
-            info.update(rcvrFirstName=" ".join(nm[:-1]), rcvrLastName=nm[-1])
+        # Seyahat kuralı: alıcı bilgisiyle tekrar dene
+        if dest and len(nm) < 2:
+            raise RuntimeError(f"OKX alıcı adı istiyor; GitHub'a OKX_ALICI (ad soyad) eklenmeli · {e}")
         body["rcvrInfo"] = info
-        try:
-            res = ex.req("POST", "/api/v5/asset/withdrawal", body)[0]
-        except RuntimeError as e2:
-            if dest and len(nm) < 2:
-                raise RuntimeError(f"OKX alıcı adı istiyor; GitHub'a OKX_ALICI (ad soyad) eklenmeli · {e2}")
-            raise
+        res = ex.req("POST", "/api/v5/asset/withdrawal", body)[0]
     job.update(stage="sent", wdId=res.get("wdId"), fee=fee, chain=chain, sent_ts=int(time.time() * 1000))
     X["day_sum"] = round(X.get("day_sum", 0) + amt, 2)
-    _note(X, f"{NAMES[side]} → {NAMES[dest]}: {amt:.2f} USDT gönderildi (ücret {fee:g})")
+    _note(X, f"{NAMES[side]} → {NAMES[dest]}: {amt:.2f} USDT gönderildi ({chain}, ücret {fee:g})")
 
 
 WD_STATE = {"-3": "iptal ediliyor", "-2": "iptal edildi", "-1": "başarısız", "0": "sırada", "1": "zincire gönderiliyor",
@@ -204,6 +212,12 @@ def _poll(C, job, X, N):
         dex = C[dest]
         rows = dex.req("GET", "/api/v5/asset/deposit-history?ccy=USDT")
         hit = next((d for d in rows if job.get("txId") and d.get("txId") == job["txId"]), None)
+        if not hit:  # iç transferde zincir kaydı olmaz: tutar ve zamanla eşleştirilir
+            used = set(X.get("used_dep", []))
+            hit = next((d for d in rows if d.get("depId") not in used and abs(float(d.get("amt") or 0) - job["amt"]) < 0.02
+                        and int(d.get("ts") or 0) >= job.get("sent_ts", 0) - 120_000), None)
+            if hit:
+                X["used_dep"] = (X.get("used_dep", []) + [hit.get("depId")])[-50:]
         if not hit:
             job["msg"] = f"{NAMES[dest]}'e ulaşması bekleniyor"
             return

@@ -1,7 +1,7 @@
 {
-  "version": "1.45.0",
+  "version": "1.45.1",
   "date": "2026-11-23",
   "notes": [
-    "Para aktarımı (TR ↔ Global ↔ KASA), kâr süpürme, borsayla eşleştir; bot olmayan parayı kullanmaz"
+    "TR ↔ Global aktarımı OKX iç transferiyle: ücretsiz ve anında"
   ]
 }
