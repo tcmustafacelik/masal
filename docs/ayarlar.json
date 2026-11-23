@@ -58,10 +58,11 @@
     "cleared": 1795446339
   },
   "sell": {
-    "ts": 1795447031811,
+    "ts": 1795447033862,
     "insts": [
       "PEPE-USDT",
-      "WIF-USDT"
+      "WIF-USDT",
+      "WLD-USDT"
     ]
   },
   "quote": "USDT",
