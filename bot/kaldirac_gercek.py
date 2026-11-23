@@ -19,7 +19,7 @@ from . import transfer
 
 DEFAULT = {"real": False, "real_budget": 30.0, "real_lev": 2, "max_loss": 10.0, "real_reset": 0}
 TITLE = "Futures"
-SYNC = 20
+SYNC = 10
 _Q = queue.Queue()
 _LOCK = threading.Lock()
 _W = {"t": None, "R": None, "cfg": {}}

@@ -28,7 +28,7 @@ DEFAULT = {
     "slip_pct": 0.05,
     "coins": ["BTC", "ETH", "SOL", "XRP", "DOGE", "HYPE", "ZEC", "PEPE"],
 }
-EVERY = 20       # fiyat kontrolü (sn)
+EVERY = 5        # fiyat kontrolü (sn)
 CANDLE_EVERY = 300  # mum yenileme (sn); karar kapanmış saatlik mumla verilir
 
 _SNAP = {"ts": 0, "px": {}, "c": {}, "err": ""}
@@ -123,7 +123,8 @@ def step(state, S):
     now = time.time()
     th = _TH["t"]
     if (th is None or not th.is_alive()) and now - _TH["last"] >= EVERY:
-        need_c = now - _TH["clast"] >= CANDLE_EVERY or not _SNAP["c"]
+        hour0 = now - now % 3600 + 4  # saat başı mum kapanır: 4 sn sonra hemen çekilir (karar beklemeden verilir)
+        need_c = now - _TH["clast"] >= CANDLE_EVERY or not _SNAP["c"] or (now >= hour0 and _TH["clast"] < hour0)
         _TH["last"] = now
         if need_c:
             _TH["clast"] = now

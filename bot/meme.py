@@ -35,7 +35,7 @@ DEFAULT = {
     "slip_pct": 1.0,     # varsayılan kayma (her yön)
     "fee_pct": 0.5,      # DEX + işlem ücreti (her yön)
 }
-EVERY = 20  # saniye
+EVERY = 10  # saniye
 
 _SNAP = {"ts": 0, "pairs": {}, "cands": [], "rug": {}, "err": ""}
 _LOCK = threading.Lock()
