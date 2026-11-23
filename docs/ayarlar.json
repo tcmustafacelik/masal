@@ -22,7 +22,7 @@
     "lot_pct": 3.1,
     "lot_tp_pct": 5,
     "max_lots": 10,
-    "max_coins": 3,
+    "max_coins": 2,
     "stop_pct": 50,
     "use_pct": 85,
     "trend_filter_pct": 0,
@@ -160,5 +160,12 @@
     }
   ],
   "xfer_cancel": [],
-  "clear": 1795452174725
+  "clear": 1795452174725,
+  "xfer": {
+    "daily_max": 1000,
+    "sweep_on": true,
+    "sweep_pct": 50,
+    "sweep_days": 7,
+    "sweep_min": 15
+  }
 }
