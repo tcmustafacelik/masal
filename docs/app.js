@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.70.2';
+const APP_VERSION = '1.71.0';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -459,10 +459,10 @@ function gloss(k) {
       <p>Aynı anda en fazla <b>${mc}</b> coin tutulur ve bütçenin en fazla <b>${use}</b>'ı coine yatırılır; kalanı güvenlik payıdır.</p>`],
         yakin: ['Alıma yakın coinler', `<p>Her satır bir coinin <b>alım fiyatına ne kadar uzak</b> olduğunu gösterir.</p>
       <ul><li><span class="chip m">%0,8 düşerse</span> fiyat bu kadar daha inerse bot alır.</li>
-      <li><span class="chip g">Alım şartında</span> fiyat alım seviyesinde; ${c?.instant ? 'bot birkaç saniye içinde alır' : '15 dakikalık mum bu seviyede kapanırsa bot alır'}.</li>
+      <li><span class="chip g st"><b>Şartta</b><small>alım hazır</small></span> fiyat alım seviyesinde; ${c?.instant ? 'bot birkaç saniye içinde alır' : '15 dakikalık mum bu seviyede kapanırsa bot alır'}.</li>
       <li><span class="chip a">Düşüş filtresi</span> coin hızlı düşüyor ya da hacmi aniden patladı (panik satışı); sakinleşene kadar alım bekletiliyor.</li>
-      <li><span class="chip a">Şartta · bütçe dolu</span> fiyat uygun ama coinlere ayrılan para dolu; bir kademe satılınca alır.</li>
-      <li><span class="chip a">Şartta · coin sınırı dolu</span> fiyat uygun ama aynı anda tutulabilecek coin sayısı dolu; elindeki bir coin satılınca alır.</li>
+      <li><span class="chip a st"><b>Şartta</b><small>bütçe dolu</small></span> fiyat uygun ama coinlere ayrılan para dolu; bir kademe satılınca alır.</li>
+      <li><span class="chip a st"><b>Şartta</b><small>coin sınırı dolu</small></span> fiyat uygun ama aynı anda tutulabilecek coin sayısı dolu; elindeki bir coin satılınca alır.</li>
       <li><b>Alım</b> fiyatı bir eşiktir: fiyat bunun altına inince bot <b>o anki (daha düşük) fiyattan</b> alır.</li>
       <li><i class="kd">1 kademe</i> coin zaten elde; mavi yüzde kadar daha düşerse bir sonraki kademe alınır (<b>2. alım</b> fiyatı).</li></ul>
       <p>Şartta görünüp alınmıyorsa: ${c?.instant ? '' : 'mum henüz kapanmamıştır, ya da '}bütçe sınırı / coin sayısı dolmuştur.</p>`],
@@ -594,6 +594,7 @@ function levWatch() {
     const L = S?.lev;
     if (!L)
         return '';
+    const lv = (orig || S?.settings)?.lev || {};
     const pf = (v) => nf(v, v >= 100 ? 2 : v >= 1 ? 4 : Math.min(8, 2 - Math.floor(Math.log10(v || 1))));
     const w = (L.watch || []).map((r) => {
         const d = Math.abs(r.dist || 0), up = r.side === 'UZUN', near = Math.max(4, Math.min(100, 100 - d * 12));
@@ -602,7 +603,7 @@ function levWatch() {
     const lg = (L.log || []).slice(0, 8).map(([ts, k, t]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : 'not'}">${k === 'buy' ? 'SİNYAL' : k === 'exit' ? 'ÇIKIŞ' : 'ENGEL'}</em><div>${String(t).replace(/^(AÇ|KAPAT|ENGEL) /, '').replace(/</g, '&lt;')}</div></div>`).join('');
     return `<h2 class="mh">${ic('i-eye')}İzlenen coinler<span class="hsum">sinyale uzaklık · saatlik</span></h2>
     <div class="card"><div class="wgrid">${w || `<div class="empty">${ic('i-refresh')}<div>Mumlar yükleniyor</div></div>`}</div>
-    <p class="hint">Çubuk dolu = sinyale yakın. Fiyat son 20 saatin zirvesini aşınca UZUN, dibini kırınca KISA açılır (200 saatlik ortalamanın yönünde).</p></div>
+    <p class="hint">Çubuk dolu = sinyale yakın. Fiyat son ${lv.brk_h ?? 20} saatin zirvesini aşınca UZUN, dibini kırınca KISA açılır (${lv.trend_on === false ? 'eğilim filtresi kapalı' : `${lv.trend_h ?? 200} saatlik ortalamanın yönünde`}).</p></div>
     ${lg ? `<h2 class="mh">${ic('i-list')}Son kararlar<span class="hsum">${L.stats?.signals || 0} sinyal · ${L.stats?.entered || 0} giriş</span></h2><div class="card mfeed">${lg}</div>` : ''}`;
 }
 /** Futures/Memecoin pozisyonunu elle kapatma düğmesi: istek ayarlara yazılır, bot birkaç saniyede uygular */
@@ -626,10 +627,12 @@ document.addEventListener('click', async (e) => {
     const req = { id: 'c' + Date.now().toString(36), ts: Date.now(), desk, act: desk === 'lev' ? 'close' : 'sell', sym };
     const ok = await cloudPatch(o => { o.desk_cmd = [...(o.desk_cmd || []).filter((r) => r.id !== req.id && Date.now() - (r.ts || 0) < 600000), req]; }, 'Masa komutu: ' + desk + ' ' + sym);
     toast(ok ? 'İstek gönderildi; bot birkaç saniyede piyasa fiyatından kapatır' : 'İstek gönderilemedi, tekrar dene');
+    // liste bu arada yeniden çizilmiş olabilir (eski düğme ekranda değil): durum kayıttan silinir ve masa yeniden çizilir
     if (!ok) {
         delete DESK_BUSY[desk + ':' + sym];
         b.disabled = false;
         b.textContent = lbl;
+        renderDeck();
     }
 });
 /** Memecoin: tarama özeti ve son kararlar (hangi token neden alındı / engellendi) */
@@ -876,7 +879,7 @@ function renderNow(x) {
                 chip = `<span class="chip a">${ic('i-pause')}Düşüş filtresi</span>`;
             else if (it.gap <= 0) {
                 const r = why(it);
-                chip = r ? `<span class="chip a">${ic('i-layers')}Şartta · ${r}</span>` : `<span class="chip g">${ic('i-check')}Alım şartında</span>`;
+                chip = r ? `<span class="chip a st"><b>${ic('i-check')}Şartta</b><small>${r}</small></span>` : `<span class="chip g st"><b>${ic('i-check')}Şartta</b><small>alım hazır</small></span>`;
             }
             else
                 chip = `<span class="chip ${it.h ? 'b' : 'm'}">%${nf(it.gap, it.gap < 10 ? 1 : 0)} düşerse</span>`;
@@ -905,7 +908,7 @@ function updLine() {
         bot = sec <= 180 ? `Bot çalışıyor · son tur ${sec < 60 ? sec + ' sn' : Math.round(sec / 60) + ' dk'} önce`
             : `<b class="dn">Bot sessiz · ${ago(S.updated)}</b>`;
     }
-    document.getElementById('updated').innerHTML = live + bot;
+    setH(document.getElementById('updated'), live + bot);
 }
 function volTxt(inst) { const v = LP[inst]?.vol; return v == null ? '' : v >= 1e9 ? nf(v / 1e9, 1) + '\u00a0Mr\u00a0TL' : v >= 1e6 ? nf(v / 1e6, 1) + '\u00a0Mn\u00a0TL' : nf(v / 1e3, 0) + '\u00a0B\u00a0TL'; }
 function livePrice(inst, fallback) { return LP[inst]?.last ?? fallback; }
@@ -939,11 +942,6 @@ function renderMetrics(x) {
         const sb = document.getElementById('syncBtn');
         if (sb)
             sb.onclick = () => syncReal();
-    }
-    {
-        const ab = document.getElementById('assets');
-        if (ab)
-            ab.hidden = true;
     }
     renderXfer();
 }
@@ -1515,8 +1513,11 @@ function renderDeck() {
     if (!S)
         return;
     const X = S.xfer, sp = S.strategies?.live;
-    const set = (id, t) => { const e = document.getElementById(id); if (e && e.textContent !== t)
-        e.textContent = t; };
+    // son yazılan Türkçe metin saklanır: İngilizcede ekrandaki yazı çevrildiği için ekranla karşılaştırmak her turda yeniden yazdırırdı
+    const set = (id, t) => { const e = document.getElementById(id); if (e && e._t !== t) {
+        e.textContent = t;
+        e._t = t;
+    } };
     if (sp && !sp.locked) {
         const p = liveEquity(sp) - sp.start_cash;
         set('dkSpot', Math.abs(p) < 0.5 ? '0 TL' : (p >= 0 ? '+' : '−') + nf(Math.abs(p), 0) + ' TL');
@@ -1786,7 +1787,7 @@ function renderRules(R, c) {
         ['i-power', tl(R.kill_switch, 0), 'Altına inerse acil fren']
     ];
     rows.push(['i-info', '%' + nf((S.fee + S.slippage) * 100, 2), 'Komisyon + kayma (tek yön)']);
-    document.getElementById('rules').innerHTML = rows.map(([i, b, s]) => `<div class="rule"><div class="ic">${ic(i)}</div><div><b>${b}</b><span>${s}</span></div></div>`).join('');
+    setH(document.getElementById('rules'), rows.map(([i, b, s]) => `<div class="rule"><div class="ic">${ic(i)}</div><div><b>${b}</b><span>${s}</span></div></div>`).join(''));
     document.getElementById('rulesSum').textContent = c ? `Zarar kes ${pp(c.stop)} · acil fren ${tl(R.kill_switch, 0)} · günlük sınır ${tl(R.daily_loss_limit, 0)}` : `Zarar kes %${nf(R.stop_loss * 100, 1)} · acil fren ${tl(R.kill_switch, 0)}`;
 }
 /* ---------- anlık piyasa: uygulama açıkken OKX TR'den doğrudan ---------- */
@@ -1820,7 +1821,7 @@ async function pollMarket() {
             okxDown = !rows.length;
             if (okxDown && !lastTick) {
                 const tg = document.getElementById('liveTag');
-                tg.innerHTML = '<i></i>Erişilemiyor';
+                setH(tg, '<i></i>Erişilemiyor');
                 tg.classList.remove('on');
             }
             rows.forEach(t => {
@@ -1835,7 +1836,7 @@ async function pollMarket() {
             const tag = document.getElementById('liveTag');
             if (lastTick) {
                 const d = new Date(lastTick), p = (n, l = 2) => String(n).padStart(l, '0');
-                tag.innerHTML = `<i></i>Canlı · ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+                setH(tag, `<i></i>Canlı · ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`);
                 tag.classList.add('on');
             }
             const x = S.strategies[sel];
@@ -1888,7 +1889,7 @@ function okxLine() {
     const o = S.okx;
     if (!o)
         return '';
-    return `<div class="okx ${o.ok ? 'ok' : 'bad'}">${ic(o.ok ? 'i-check' : 'i-info')}<span>OKX TR: ${o.status}${o.ok ? ` · boşta ${tl(o.try)}${o.usdt_tl ? ` + ${tl(o.usdt_tl)} (${o.quote || 'USDT'})` : ''}` : ''}</span></div>`;
+    return `<div class="okx ${o.ok ? 'ok' : 'bad'}">${ic(o.ok ? 'i-check' : 'i-info')}<span>OKX TR: ${o.status || (o.ok ? 'bağlı' : 'bağlanamadı')}${o.ok ? ` · boşta ${tl(o.try)}${o.usdt_tl ? ` + ${tl(o.usdt_tl)} (${o.quote || 'USDT'})` : ''}` : ''}</span></div>`;
 }
 function renderKasa(x) {
     const box = document.getElementById('kasa');
@@ -2075,7 +2076,7 @@ function homeChecks() {
         return;
     const st = S?.settings;
     if (!st || !st.grid) {
-        el.innerHTML = '';
+        setH(el, '');
         return;
     }
     let list = [];
@@ -2083,8 +2084,8 @@ function homeChecks() {
         list = checks(st, st, false).filter(c => c.lv === 'bad' || c.lv === 'warn2');
     }
     catch (e) { }
-    el.innerHTML = list.length ? `<section style="margin-top:12px"><div class="card chk">${list.map(c => `<div class="ck ${c.lv}"><span class="ci">${ic(c.lv === 'bad' ? 'i-stop' : 'i-info')}</span><div><b class="t">${c.t}</b><span class="d">${c.dsc}</span></div></div>`).join('')}
-    <button class="btn sm" style="margin:2px 0 10px" onclick="document.getElementById('openSet').click()">${ic('i-gear')}Ayarlara git</button></div></section>` : '';
+    setH(el, list.length ? `<section style="margin-top:12px"><div class="card chk">${list.map(c => `<div class="ck ${c.lv}"><span class="ci">${ic(c.lv === 'bad' ? 'i-stop' : 'i-info')}</span><div><b class="t">${c.t}</b><span class="d">${c.dsc}</span></div></div>`).join('')}
+    <button class="btn sm" style="margin:2px 0 10px" onclick="document.getElementById('openSet').click()">${ic('i-gear')}Ayarlara git</button></div></section>` : '');
 }
 function testInfo() {
     const req = orig?.test_req, cu = B?.custom;
@@ -2134,12 +2135,14 @@ const SECTIONS = [
     { t: 'Kâr hedefi', i: 'i-flag', f: [
             ['target.amount', 'Hedef kâr', () => `Bu kârda her şey satılır, bot durur`, 'TL', 500, 100, 1e8, 0]
         ] },
-    { t: 'Futures', i: 'i-layers', sw: [['lev.real', 'Gerçek parayla işlem', 'Kararlar OKX Global\'de gerçek parayla uygulanır']], f: [
+    { t: 'Futures', i: 'i-layers', sw: [['lev.real', 'Gerçek parayla işlem', 'Kararlar OKX Global\'de gerçek parayla uygulanır'], ['lev.trend_on', 'Eğilim filtresi', 'Kapalıysa yalnız kırılım yönü karar verir (daha çok işlem, daha riskli)']], f: [
             ['lev.real_budget', 'Bütçe', 'Global fon hesabından futures\'a geçecek para', '$', 5, 5, 10000, 0],
             ['lev.max_loss', 'En fazla kayıp', 'Toplam zarar buna ulaşınca masa tamamen durur', '$', 5, 1, 10000, 0],
             ['lev.real_lev', 'Kaldıraç', 'İzole marjin; güvenlik için en fazla 3x', 'x', 1, 1, 3, 0],
             ['lev.risk_pct', 'İşlem başına risk', 'Zarar durdurmaya kadar kaybedilecek; kasanın', '%', .5, .5, 5, 1],
             ['lev.max_pos', 'En fazla pozisyon', 'Aynı anda açık', 'adet', 1, 1, 5, 0],
+            ['lev.brk_h', 'Kırılım süresi', 'Fiyat son bu kadar saatin zirvesini/dibini kırınca işlem açılır; kısa = daha sık işlem', 'saat', 1, 4, 48, 0],
+            ['lev.trend_h', 'Eğilim ortalaması', 'İşlem bu ortalamanın yönünde açılır', 'saat', 10, 50, 280, 0],
             ['lev.daily_loss_pct', 'Günlük zarar sınırı', 'Aşılırsa pozisyonlar kapanır, o gün işlem yok', '%', 1, 1, 20, 0],
             ['lev.sl_atr', 'Zarar durdur mesafesi', 'Saatlik oynaklığın (ATR) katı', 'kat', .5, 1, 5, 1],
             ['lev.tp_atr', 'Kâr al mesafesi', 'Saatlik oynaklığın (ATR) katı', 'kat', .5, 1, 10, 1]
@@ -2447,7 +2450,7 @@ function renderForm() {
    <div class="tiles two" data-g="mode">${tile(!live, 'demo', 'i-flask', 'Deneme', 'Emir gönderilmez')}${tile(live, 'real', 'i-coins', 'Gerçek', 'OKX TR hesabında')}</div>
    ${live && !orig.live ? `<div class="warn">${ic('i-info')}<div>Kaydedince bot OKX TR hesabında <b>gerçek emir</b> vermeye başlar. API anahtarı GitHub Secrets'ta olmalı.</div></div>` : ''}
    ${!live && orig.live ? `<div class="warn">${ic('i-info')}<div>Denemeye geçince hesaptaki coinler bot tarafından satılmaz. Gerekirse önce aşağıdan <b>Hepsini sat</b>.</div></div>` : ''}
-   <div class="card" style="margin-top:8px"><div class="sw ${draft.paused ? 'on' : ''}" id="pauseSw"><div class="lb"><b style="font-size:13.5px">Botu durdur</b><span style="font-size:11.5px;color:var(--muted);display:block">Yeni alım yapılmaz; açık pozisyonların zarar sınırı çalışmaya devam eder</span></div><div class="track"><i></i></div></div>
+   <div class="card" style="margin-top:8px"><div class="sw ${draft.paused ? 'on' : ''}" id="pauseSw"><div class="lb"><b>Botu durdur</b><span>Yeni alım yapılmaz; açık pozisyonların zarar sınırı çalışmaya devam eder</span></div><div class="track"><i></i></div></div>
    <div class="field" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line2)"><div class="lb"><b>Hepsini sat ve dur</b><span>Gerçek hesaptaki tüm coinleri hemen satar, botu durdurur</span></div>
    <button class="btn danger ${sellArm ? 'arm' : ''}" id="sellAll">${ic('i-sell')}${sellArm ? 'Emin misin? Dokun' : 'Hepsini sat'}</button></div></div></section>
    <div class="hint" style="margin:8px 2px 4px">Bot kesintisiz çalışır: yaklaşık 5 saniyede bir piyasayı, borsadaki korumaları ve para hareketlerini kontrol eder. Uygulama kapalı olsa da çalışır.</div>
@@ -2471,7 +2474,7 @@ function renderForm() {
         }
         const tg = sec.t === 'Kâr hedefi', ff = tg && draft.target.mode === 'total' ? [TGT_TOTAL] : secFields(sec);
         h += accOpen(sec.t, sec.t, sec.i, SEC_C[sec.t], SUMS[sec.t](), secDirty([...ff.map(x => x[0]), ...(tg ? ['target.on', 'target.mode'] : []), ...(sec.sw || []).map(x => x[0])])) + `<div class="card">`
-            + (sec.sw || []).map(([k, a, b]) => `<div style="margin-bottom:4px">${swRow('sw_' + k.replace('.', '_'), !!P(draft, k), a, b)}</div>`).join('')
+            + (sec.sw || []).map(([k, a, b]) => `<div style="margin-bottom:8px">${swRow('sw_' + k.replace('.', '_'), !!P(draft, k), a, b)}</div>`).join('')
             + (sec.t === 'Futures' ? futExtra() : '')
             + (sec.t === 'Memecoin' ? memeExtra() : '')
             + (tg ? `<div style="margin-bottom:4px">${swRow('tgtSw', !!draft.target.on, 'Hedefte dur', 'Hedefte her şey satılır, bot durur')}</div>
@@ -2610,7 +2613,7 @@ function memeExtra() {
     else if (R && !R.addr && R.err)
         h += `<div class="warn">${ic('i-info')}<div>${String(R.err).replace(/</g, '&lt;')}</div></div>`;
     else
-        h += `<div class="hint" style="margin:2px 2px 10px">MEME cüzdanı ${m.wallet.slice(0, 4)}…${m.wallet.slice(-4)}${R?.addr ? ' · bağlı' : ''}. Yalnız bu cüzdandaki parayla işlem yapılır; KASA'ya dokunulmaz.</div>`;
+        h += `<div class="hint" style="margin:2px 2px 10px">MEME cüzdanı <b>${m.wallet.slice(0, 4)}…${m.wallet.slice(-4)}</b>${R?.addr ? ' · bağlı' : ''}. Yalnız bu cüzdandaki parayla işlem yapılır; KASA'ya dokunulmaz.</div>`;
     if (m.real && !orig?.meme?.real)
         h += `<div class="warn">${ic('i-info')}<div>Kaydedince MEME cüzdanındaki SOL ile gerçek alım-satım başlar. Her girişte boş SOL'un %${m.size_pct}'i kullanılır; en fazla $${nf(m.max_loss, 0)} kayıpta durur.</div></div>`;
     if (R?.dead)
@@ -2685,7 +2688,7 @@ async function loadSettings() {
     if (orig && orig.grid && orig.grid.vol_filter == null)
         orig.grid.vol_filter = 2;
     if (orig)
-        orig.lev = { on: true, bank: 100, lev: 3, risk_pct: 1, max_pos: 3, sl_atr: 2, tp_atr: 4, daily_loss_pct: 5, fee_pct: .05, slip_pct: .05, coins: ['BTC', 'ETH', 'SOL', 'XRP', 'DOGE', 'HYPE', 'ZEC', 'PEPE'], real: false, real_budget: 30, real_lev: 2, max_loss: 10, real_reset: 0, ...(orig.lev || {}) };
+        orig.lev = { on: true, bank: 100, lev: 3, risk_pct: 1, max_pos: 3, sl_atr: 2, tp_atr: 4, daily_loss_pct: 5, fee_pct: .05, slip_pct: .05, coins: ['BTC', 'ETH', 'SOL', 'XRP', 'DOGE', 'HYPE', 'ZEC', 'PEPE'], real: false, real_budget: 30, real_lev: 2, max_loss: 10, real_reset: 0, brk_h: 20, trend_h: 200, trend_on: true, ...(orig.lev || {}) };
     if (orig)
         orig.meme = { on: true, bank: 100, size_pct: 10, max_pos: 5, min_liq: 20000, max_fdv: 5000000, min_age_min: 10, max_age_h: 72, tp_pct: 30, tp_part: 100, trail_from: 15, trail_pct: 12, sl_pct: 15, max_hold_h: 4, slip_pct: 1, fee_pct: .5, max_m5: 8, wallet: '', real: false, max_loss: 10, max_slip: 2, real_reset: 0, ...(orig.meme || {}) };
     if (orig)
@@ -2898,7 +2901,7 @@ function confirmLeave() { if (leaveArm)
     return true; leaveArm = 1; toast('Kaydedilmemiş değişiklik var. Çıkmak için geri tuşuna tekrar dokun.'); setTimeout(() => leaveArm = 0, 3500); return false; }
 /* ---------- bildirimler ---------- */
 let topicPlain = '';
-const swRow = (id, on, title, sub) => `<div class="sw ${on ? 'on' : ''}" id="${id}"><div class="lb"><b style="font-size:13px">${title}</b><span style="font-size:11px;color:var(--muted);display:block">${sub}</span></div><div class="track"><i></i></div></div>`;
+const swRow = (id, on, title, sub) => `<div class="sw ${on ? 'on' : ''}" id="${id}"><div class="lb"><b>${title}</b><span>${sub}</span></div><div class="track"><i></i></div></div>`;
 function notifySection() {
     const N = draft.notify || (draft.notify = { enabled: false, topic: '', trades: true, alerts: true, daily: true, money: true });
     const nOn = [N.money !== false, N.trades, N.alerts, N.daily].filter(Boolean).length;
@@ -3216,7 +3219,8 @@ function clipList(id, n) {
     const rows = [...el.children].filter(c => c.classList.contains('row'));
     let b = el.querySelector(':scope>.clipb');
     const open = CLIP_OPEN.has(id);
-    rows.forEach((r, i) => r.hidden = !open && i >= n);
+    rows.forEach((r, i) => { const h = !open && i >= n; if (r.hidden !== h)
+        r.hidden = h; });
     if (rows.length <= n) {
         b?.remove();
         return;

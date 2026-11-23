@@ -1,10 +1,21 @@
 {
-  "version": "1.70.2",
-  "date": "2026-11-23",
+  "version": "1.71.0",
+  "date": "2026-11-24",
   "notes": [
-    "Varlık özeti ayrı kart olmaktan çıktı, Gerçek hesap kartına katıldı (aynı rakamlar iki kez gösterilmiyor)"
+    "Bot turu daha hızlı (~0,24 sn); emirlerde ve aktarımlarda tekrar gönderim koruması",
+    "Futures: kırılım süresi, eğilim ortalaması ve eğilim filtresi ayarlardan değiştirilebilir",
+    "'Şartta' kutuları küçük ve tek tip; stiller sadeleştirildi, koyu tema renkleri ve İngilizce çeviriler tamamlandı"
   ],
   "history": [
+    {
+      "version": "1.71.0",
+      "date": "2026-11-24",
+      "notes": [
+        "Bot turu daha hızlı (~0,24 sn); emirlerde ve aktarımlarda tekrar gönderim koruması",
+        "Futures: kırılım süresi, eğilim ortalaması ve eğilim filtresi ayarlardan değiştirilebilir",
+        "'Şartta' kutuları küçük ve tek tip; stiller sadeleştirildi, koyu tema renkleri ve İngilizce çeviriler tamamlandı"
+      ]
+    },
     {
       "version": "1.70.2",
       "date": "2026-11-23",
@@ -112,15 +123,6 @@
       "notes": [
         "Spot: bankadan gelen TL Fonlama hesabında kalıyordu, bot kullanamıyordu; artık kendiliğinden Alım-satım hesabına alınıyor ve bildirim geliyor",
         "Gizlilik: kasa, futures ve memecoin kayıtları da herkese açık depoda şifreli tutuluyor"
-      ]
-    },
-    {
-      "version": "1.66.0",
-      "date": "2026-11-23",
-      "notes": [
-        "5 renk seçeneği: Kehribar, Okyanus, Zümrüt, Ametist, Grafit (Ayarlar → Uygulama → Renk); seçili öğeler, sekmeler ve anahtarlar seçtiğin renkte",
-        "Ayar sekmeleri artık kaymıyor; üstte kesik ya da arkada kutu görünmüyor",
-        "Küçük bakiye sonuçları Türkçe ve hangi coinin neden çevrilmediği yazıyor"
       ]
     }
   ]
