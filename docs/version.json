@@ -1,7 +1,7 @@
 {
-  "version": "1.51.0",
+  "version": "1.51.1",
   "date": "2026-11-23",
   "notes": [
-    "Bölümler ayrıldı: Spot, Futures, Memecoin ve Kasalar ayrı ekranlarda; eski kayıtları temizle düğmesi"
+    "Fable test düzeltmeleri: aktarım çift gönderim koruması, yedek yol ücreti, koyu tema sekmesi, grafik etiketi, gönderim penceresi"
   ]
 }

@@ -429,6 +429,7 @@ EN = {
     "OKX TR uygulamasından": "Via OKX TR app", "OKX TR'yi aç": "Open OKX TR", "Gelince bot kasalarda gösterir": "The bot shows it when it arrives",
     "Eski kayıtları temizle": "Clear old records", "Canlı akış, aktarım geçmişi, masa günlükleri ve bildirimler silinir; işlem geçmişi ve kâr/zarar hesabı korunur.": "Live feed, transfer history, desk logs and notifications are deleted; trade history and P/L are kept.",
     "Kasalar": "Balances", "aktarım": "transfers", "deneme": "paper", "Kaldıraç masası verisi bekleniyor": "Waiting for leverage desk data", "Memecoin masası verisi bekleniyor": "Waiting for memecoin desk data",
+    "Kasalar için önce kilidi aç (Spot sekmesi)": "Unlock first to see balances (Spot tab)", "Filtrede": "Filtered",
     "Memecoin masası": "Memecoin desk", "deneme · sanal para": "test · virtual money", "Sanal kasa": "Virtual bank", "Sonuç": "Result",
     "İşlem": "Trades", "Kazanma": "Win rate", "AÇIK": "OPEN", "ENGEL": "BLOCK", "Gözcü {0} kontrol": "Scout {0} checks", "Bekçi {0} engel": "Guard {0} blocks", "Giriş {0}": "Entries {0}",
     "Solana'daki yeni tokenler DexScreener ve RugCheck verisiyle 20 sn'de bir taranır. Gerçek para, cüzdan ya da anahtar yok; sonuçlar birkaç gün izlenip karar verilecek.": "New Solana tokens are scanned every 20 s with DexScreener and RugCheck data. No real money, wallet or keys; results will be watched for a few days before deciding.",

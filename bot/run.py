@@ -222,7 +222,8 @@ def clear_old(state, S):
         return
     state["cleared_at"] = ts
     L = state.get("live") or {}
-    L["log"] = L.get("log", [])[-5:]
+    if L.get("log"):
+        del L["log"][:-5]  # aynı liste (portföy de bu listeye yazıyor)
     L["notifs"] = []
     X = state.get("xfer") or {}
     X["jobs"] = [j for j in X.get("jobs", []) if j.get("stage") not in ("done", "failed")]

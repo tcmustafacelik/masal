@@ -185,7 +185,7 @@ def _already(ex, job, X):
     try:
         rows = ex.req("GET", f"/api/v5/asset/withdrawal-history?clientId={job['id'][:32]}")
     except Exception:
-        return False
+        return None  # bilinmiyor: bu tur gönderme
     rows = [r for r in rows if r.get("clientId") == job["id"][:32]]
     if not rows:
         return False
@@ -231,6 +231,10 @@ def _send(ex, side, addr, dest, amt, job, X):
         if addr.lower() not in _clients()[dest].dep_addr():
             raise RuntimeError(f"{NAMES[dest]} yatırma adresi kayıtlı adresle tutmuyor; güvenlik için gönderilmedi")
         chain, fee, min_wd = ex.chain()
+        if amt < min_wd:
+            raise RuntimeError(f"en az {min_wd} USDT gönderilebilir")
+        if not _prepare(ex, side, amt + fee, job):
+            raise RuntimeError("zincir ücreti için yeterli USDT yok")
         body = {"ccy": "USDT", "amt": f"{amt:.2f}", "dest": "4", "toAddr": addr, "chain": chain,
                 "fee": f"{fee:f}".rstrip("0").rstrip(".") or "0", "clientId": job["id"][:32]}
         res = _wd(ex, body, info, nm, dest)
@@ -430,13 +434,18 @@ def step(state, S, N):
                         if now * 1000 - job["ts"] > 86400_000:
                             raise RuntimeError("24 saat içinde boş para oluşmadı")
                         continue
+                    done = _already(ex, job, X)
+                    if done is None:
+                        job["msg"] = "gönderim kontrolü yapılamadı; tekrar denenecek"
+                        continue
+                    if done:
+                        continue
                     need = job["amt"] + (ex.chain()[1] if dest is None else 0)
                     if not _prepare(ex, src, need, job):
                         if now * 1000 - job["ts"] > (7 if job.get("locked") else 1) * 86400_000:
                             raise RuntimeError(job["msg"])
                         continue
-                    if not _already(ex, job, X):
-                        _send(ex, src, addr, dest, job["amt"], job, X)
+                    _send(ex, src, addr, dest, job["amt"], job, X)
                 else:
                     _poll(C, job, X, N)
             except Exception as e:

@@ -1,4 +1,4 @@
-const APP_VERSION='1.51.0';
+const APP_VERSION='1.51.1';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -179,7 +179,9 @@ function render(){
     ['positions','trades','coins'].forEach(id=>document.getElementById(id).innerHTML=`<div class="empty">${ic('i-lock')}<div>Kilitli</div></div>`);
     document.getElementById('nowSec').hidden=true;document.getElementById('kasa').innerHTML='';
     document.getElementById('logSec').hidden=true;
-    renderBacktest();renderRules(x.risk||S.risk,null);renderMarket();return;
+    renderBacktest();renderRules(x.risk||S.risk,null);renderMarket();
+    {const k=document.getElementById('xfer');k.hidden=false;setH(k,`<div class="empty">${ic('i-lock')}<div>Kasalar için önce kilidi aç (Spot sekmesi)</div></div>`)}
+    return;
   }
   let al='';
   if(x.halted)al+=`<div class="alert red">${ic('i-power')}<div><b>Acil fren devrede.</b> ${x.halt_reason}. Bot bu stratejide yeni işlem açmıyor.</div></div>`;
@@ -269,7 +271,7 @@ function renderMasa() {
       ln('İzlenen', `${items.length} coin`) + ln('Şartta', `${inCond} coin`) +
       (near.length ? `<div class="ach">${near.map(i => `<span>${sym(i.i)} <b class="${i.gap <= 0 ? 'up' : ''}">${i.gap <= 0 ? 'şartta' : '%' + nf(i.gap, 1)}</b></span>`).join('')}</div>` : '')],
     ['risk', 'i-shield', 'Bekçi', 'Riskli alımı durdurur', st(!blocks.length, 'GEÇİRİYOR', 'ENGELLİYOR'),
-      ln('Filtrede (düşüş/hacim)', `${filtered} coin`) + ln('Engel', blocks.length ? blocks.join(', ') : 'yok') +
+      ln('Filtrede', `${filtered} coin`) + ln('Engel', blocks.length ? blocks.join(', ') : 'yok') +
       ln('Acil fren', kill ? `${tl(kill, 0)} altı` : '—')],
     ['buy', 'i-coins', 'Alıcı', 'Şart oluşunca anında alır', st(!blocks.length && !!x.armed, 'HAZIR', x.armed ? 'BEKLİYOR' : 'DENEME'),
       ln('Alım tutarı', c ? tl(c.lot, 0) : '—') + ln('Son alım', buys[0] ? `${sym(buys[0].inst)} · ${ago(buys[0].ts)}` : '—') +
@@ -610,7 +612,7 @@ function openXfer(dir: string){
       <div class="xinfo"><div>${ic('i-bank')}<span>1</span><b>OKX TR → Varlıklar → Çek → USDT</b></div><div>${ic(dir==='tr2g'?'i-globe':'i-vault')}<span>2</span><b>${dir==='tr2g'?'OKX kullanıcıları → OKX Global hesabın':'Adres defterinden KASA (Arbitrum)'}</b></div><div>${ic('i-check')}<span>3</span><b>Gelince bot kasalarda gösterir</b></div></div>
       <a class="btn primary xgo" href="https://tr.okx.com/balance/withdrawal" target="_blank" rel="noopener">${ic('i-out')}OKX TR'yi aç</a></div>`;q.hidden=false;return}
   const X: any=(S as any)?.xfer||{},[f,t]=XDIR[dir],q=document.getElementById('qsh'),fromTr=f==='tr',r=+(X.usdtry||USDTTRY||0);
-  q.dataset.n='';qHead(XEND[t][1],'Vazgeç');document.getElementById('qOk').hidden=true;document.getElementById('qTitle').textContent='Para gönder';
+  q.dataset.n='';qHead(XEND[t][1],'Vazgeç');document.getElementById('qTitle').textContent='Para gönder';
   const freeUsd=X.free_tl!=null&&r?Math.max(0,X.free_tl)/r:0,botTl=+(S?.strategies?.live?.cash||0);
   xfSrc=fromTr&&freeUsd<1?'bot':'bos';xfId='x'+Date.now().toString(36);
   const bal=(k: string)=>{const o: any=S?.okx||{};const u=k==='tr'?(X.tr_total??(o.total_tl&&r?o.total_tl/r:null)):k==='g'?X.g_val:X.kasa?.usd;return u==null?'—':'$'+nf(u,2)};
@@ -660,6 +662,7 @@ async function sendXfer(dir: string, retry = true){
   const amt=Math.round((+(document.getElementById('xfAmt') as HTMLInputElement)?.value||0)*100)/100;
   if(!(amt>=1)){toast('Tutarı yaz (en az 1 USDT)');return}
   {const X: any=(S as any)?.xfer||{},freeUsd=X.free_tl!=null&&USDTTRY?Math.max(0,X.free_tl)/USDTTRY:null;
+   if(dir.startsWith('g')&&X.g_val!=null&&amt>+X.g_val){toast(`OKX Global'de ~$${nf(+X.g_val,2)} var; daha fazlası gönderilemez`);return}
    if(dir.startsWith('tr')&&xfSrc==='bot'&&USDTTRY&&amt*USDTTRY*1.01>+(S?.strategies?.live?.cash||0)){toast('Botta bu kadar boş nakit yok; önce bazı coinler satılmalı');return}
    if(dir.startsWith('tr')&&xfSrc==='bos'&&freeUsd!=null&&freeUsd<amt){toast(`TR'de boşta sadece ~${nf(freeUsd,2)} USDT var. "Bottan al"ı seç ya da önce bankadan TL yatır.`);return}}
   if(!token){toast('Önce Ayarlar\'dan GitHub bağlantısını kur');return}
@@ -712,7 +715,7 @@ async function drawCoin(live=false){
       <div class="cdk"><div><span>En yüksek</span><b>${nf(+t.high24h,dec)}</b></div><div><span>En düşük</span><b>${nf(+t.low24h,dec)}</b></div><div><span>Hacim · ${q}</span><b>${+t.volCcy24h>=1e6?nf(+t.volCcy24h/1e6,1)+' Mn':+t.volCcy24h>=1e3?nf(+t.volCcy24h/1e3,1)+' B':nf(+t.volCcy24h,0)}</b></div></div>
       ${coinSvg(rows)}
       <div class="qpair sm">${CBAR.map(([b,l])=>`<button data-cb="${b}" class="${b===bar?'on':''}">${l}</button>`).join('')}</div>
-      ${pos?`<div class="cdb"><div>${ic('i-coins')}<span>Botta</span><b>${pos.lots||1} kademe · ${tl(pos.cost||0,0)} · ${sgn(pos.pnl||0)} TL</b></div><div>${ic('i-pnl')}<span>Ortalama alış</span><b>${nf(pos.avg||0,dec)}</b></div></div>`:''}
+      ${pos?`<div class="cdb"><div>${ic('i-coins')}<span>Botta</span><b>${pos.lots||1} kademe · ${tl(pos.cost||0,0)} · ${sgn(pos.pnl||0)} TL</b></div><div>${ic('i-pnl')}<span>Ortalama alış</span><b>${tl(pos.avg||0,dec)}</b></div></div>`:''}
       ${coin?`<div class="cdb"><div>${ic('i-chart')}<span>Bu coinden toplam</span><b class="${cls(coin.realized)}">${sgn(coin.realized)} TL · ${coin.sells} satış</b></div></div>`:''}
       <div class="cdn">Canlı · 5 sn'de bir · OKX TR</div>`;
     bindCoin();
@@ -727,8 +730,8 @@ function coinSvg(rows: number[][]): string {
   // Mum grafiği: yeşil = kapanış açılıştan yüksek, kırmızı = düşük; altta hacim çubukları; sağda fiyat ölçeği
   const W=340,H=170,VH=26,PW=W-44,n=rows.length,hi=Math.max(...rows.map(r=>r[2])),lo=Math.min(...rows.map(r=>r[3])),sp=(hi-lo)||1,vmax=Math.max(...rows.map(r=>r[5]))||1;
   const cw=PW/n,y=(v: number)=>4+(hi-v)/sp*(H-VH-12),dec=hi>=100?2:hi>=1?4:Math.min(8,3-Math.floor(Math.log10(hi||1)));
-  let g='';
-  for(let k=0;k<=3;k++){const v=lo+sp*k/3,yy=y(v);g+=`<line x1="0" x2="${PW}" y1="${yy.toFixed(1)}" y2="${yy.toFixed(1)}" class="gl"/><text x="${PW+4}" y="${(yy+3).toFixed(1)}" class="gt">${nf(v,dec)}</text>`}
+  let g='';const ly0=y(rows[n-1][4]);
+  for(let k=0;k<=3;k++){const v=lo+sp*k/3,yy=y(v);if(Math.abs(yy-ly0)<11){g+=`<line x1="0" x2="${PW}" y1="${yy.toFixed(1)}" y2="${yy.toFixed(1)}" class="gl"/>`;continue}g+=`<line x1="0" x2="${PW}" y1="${yy.toFixed(1)}" y2="${yy.toFixed(1)}" class="gl"/><text x="${PW+4}" y="${(yy+3).toFixed(1)}" class="gt">${nf(v,dec)}</text>`}
   const c=rows.map((r,i)=>{const [,o,h,l,cl,v]=r,up=cl>=o,x=i*cw+cw/2,bw=Math.max(1.2,cw*.62),t=y(Math.max(o,cl)),bh=Math.max(1,Math.abs(y(o)-y(cl))),col=up?'#178A5B':'#C9473F',vh=v/vmax*VH;
     return `<line x1="${x.toFixed(1)}" x2="${x.toFixed(1)}" y1="${y(h).toFixed(1)}" y2="${y(l).toFixed(1)}" stroke="${col}" stroke-width="1"/><rect x="${(x-bw/2).toFixed(1)}" y="${t.toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" fill="${col}" rx=".6"/><rect x="${(x-bw/2).toFixed(1)}" y="${(H-vh).toFixed(1)}" width="${bw.toFixed(1)}" height="${vh.toFixed(1)}" fill="${col}" opacity=".25"/>`}).join('');
   const last=rows[n-1][4],ly=y(last),lc=last>=rows[n-1][1]?'#178A5B':'#C9473F';
@@ -1239,10 +1242,10 @@ function renderForm(){
   h+=installSection();
   h+=`<section class="clr"><button class="btn xsync" type="button" id="clrOld">${ic('i-trash')}Eski kayıtları temizle</button><p class="hint">Canlı akış, aktarım geçmişi, masa günlükleri ve bildirimler silinir; işlem geçmişi ve kâr/zarar hesabı korunur.</p></section>`;
   const f=document.getElementById('setForm');f.innerHTML=h;
-  document.getElementById('clrOld').onclick=async()=>{const t=Date.now(),top=Math.ceil(t/1000);
-    localStore('masal_nclr',String(top));NOTES.length=0;nBadge();
+  document.getElementById('clrOld').onclick=async()=>{if(!token){toast('Önce GitHub bağlantısını kur');return}const t=Date.now(),top=Math.ceil(t/1000);
     const ok=await cloudPatch(o=>{(o as any).clear=t;o.notify={...(o.notify||{} as any),cleared:top}},'Eski kayıtlar temizlendi');
-    toast(ok?'Eski kayıtlar temizleniyor; bot birkaç saniyede uygular':'Temizleme isteği gönderilemedi')};
+    if(ok){localStore('masal_nclr',String(top));NOTES.length=0;nBadge()}
+    toast(ok?'Eski kayıtlar temizleniyor; bot birkaç saniyede uygular':'Temizleme isteği gönderilemedi, tekrar dene')};
   f.querySelectorAll<HTMLElement>('.acch').forEach(b=>b.onclick=()=>{const sec=b.parentElement,id=sec.dataset.acc;sec.classList.toggle('open');
     if(sec.classList.contains('open'))OPEN.add(id);else{OPEN.delete(id);renderForm()}});
   f.querySelectorAll<HTMLElement>('[data-g=mode] .tile').forEach(b=>b.onclick=()=>{draft.live=b.dataset.t==='real';renderForm()});

@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.51.0';
+const APP_VERSION = '1.51.1';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -392,6 +392,11 @@ function render() {
         renderBacktest();
         renderRules(x.risk || S.risk, null);
         renderMarket();
+        {
+            const k = document.getElementById('xfer');
+            k.hidden = false;
+            setH(k, `<div class="empty">${ic('i-lock')}<div>Kasalar için önce kilidi aç (Spot sekmesi)</div></div>`);
+        }
         return;
     }
     let al = '';
@@ -505,7 +510,7 @@ function renderMasa() {
             ln('İzlenen', `${items.length} coin`) + ln('Şartta', `${inCond} coin`) +
                 (near.length ? `<div class="ach">${near.map(i => `<span>${sym(i.i)} <b class="${i.gap <= 0 ? 'up' : ''}">${i.gap <= 0 ? 'şartta' : '%' + nf(i.gap, 1)}</b></span>`).join('')}</div>` : '')],
         ['risk', 'i-shield', 'Bekçi', 'Riskli alımı durdurur', st(!blocks.length, 'GEÇİRİYOR', 'ENGELLİYOR'),
-            ln('Filtrede (düşüş/hacim)', `${filtered} coin`) + ln('Engel', blocks.length ? blocks.join(', ') : 'yok') +
+            ln('Filtrede', `${filtered} coin`) + ln('Engel', blocks.length ? blocks.join(', ') : 'yok') +
                 ln('Acil fren', kill ? `${tl(kill, 0)} altı` : '—')],
         ['buy', 'i-coins', 'Alıcı', 'Şart oluşunca anında alır', st(!blocks.length && !!x.armed, 'HAZIR', x.armed ? 'BEKLİYOR' : 'DENEME'),
             ln('Alım tutarı', c ? tl(c.lot, 0) : '—') + ln('Son alım', buys[0] ? `${sym(buys[0].inst)} · ${ago(buys[0].ts)}` : '—') +
@@ -992,7 +997,6 @@ function openXfer(dir) {
     const X = S?.xfer || {}, [f, t] = XDIR[dir], q = document.getElementById('qsh'), fromTr = f === 'tr', r = +(X.usdtry || USDTTRY || 0);
     q.dataset.n = '';
     qHead(XEND[t][1], 'Vazgeç');
-    document.getElementById('qOk').hidden = true;
     document.getElementById('qTitle').textContent = 'Para gönder';
     const freeUsd = X.free_tl != null && r ? Math.max(0, X.free_tl) / r : 0, botTl = +(S?.strategies?.live?.cash || 0);
     xfSrc = fromTr && freeUsd < 1 ? 'bot' : 'bos';
@@ -1071,6 +1075,10 @@ async function sendXfer(dir, retry = true) {
     }
     {
         const X = S?.xfer || {}, freeUsd = X.free_tl != null && USDTTRY ? Math.max(0, X.free_tl) / USDTTRY : null;
+        if (dir.startsWith('g') && X.g_val != null && amt > +X.g_val) {
+            toast(`OKX Global'de ~$${nf(+X.g_val, 2)} var; daha fazlası gönderilemez`);
+            return;
+        }
         if (dir.startsWith('tr') && xfSrc === 'bot' && USDTTRY && amt * USDTTRY * 1.01 > +(S?.strategies?.live?.cash || 0)) {
             toast('Botta bu kadar boş nakit yok; önce bazı coinler satılmalı');
             return;
@@ -1194,7 +1202,7 @@ async function drawCoin(live = false) {
       <div class="cdk"><div><span>En yüksek</span><b>${nf(+t.high24h, dec)}</b></div><div><span>En düşük</span><b>${nf(+t.low24h, dec)}</b></div><div><span>Hacim · ${q}</span><b>${+t.volCcy24h >= 1e6 ? nf(+t.volCcy24h / 1e6, 1) + ' Mn' : +t.volCcy24h >= 1e3 ? nf(+t.volCcy24h / 1e3, 1) + ' B' : nf(+t.volCcy24h, 0)}</b></div></div>
       ${coinSvg(rows)}
       <div class="qpair sm">${CBAR.map(([b, l]) => `<button data-cb="${b}" class="${b === bar ? 'on' : ''}">${l}</button>`).join('')}</div>
-      ${pos ? `<div class="cdb"><div>${ic('i-coins')}<span>Botta</span><b>${pos.lots || 1} kademe · ${tl(pos.cost || 0, 0)} · ${sgn(pos.pnl || 0)} TL</b></div><div>${ic('i-pnl')}<span>Ortalama alış</span><b>${nf(pos.avg || 0, dec)}</b></div></div>` : ''}
+      ${pos ? `<div class="cdb"><div>${ic('i-coins')}<span>Botta</span><b>${pos.lots || 1} kademe · ${tl(pos.cost || 0, 0)} · ${sgn(pos.pnl || 0)} TL</b></div><div>${ic('i-pnl')}<span>Ortalama alış</span><b>${tl(pos.avg || 0, dec)}</b></div></div>` : ''}
       ${coin ? `<div class="cdb"><div>${ic('i-chart')}<span>Bu coinden toplam</span><b class="${cls(coin.realized)}">${sgn(coin.realized)} TL · ${coin.sells} satış</b></div></div>` : ''}
       <div class="cdn">Canlı · 5 sn'de bir · OKX TR</div>`;
         bindCoin();
@@ -1221,8 +1229,13 @@ function coinSvg(rows) {
     const W = 340, H = 170, VH = 26, PW = W - 44, n = rows.length, hi = Math.max(...rows.map(r => r[2])), lo = Math.min(...rows.map(r => r[3])), sp = (hi - lo) || 1, vmax = Math.max(...rows.map(r => r[5])) || 1;
     const cw = PW / n, y = (v) => 4 + (hi - v) / sp * (H - VH - 12), dec = hi >= 100 ? 2 : hi >= 1 ? 4 : Math.min(8, 3 - Math.floor(Math.log10(hi || 1)));
     let g = '';
+    const ly0 = y(rows[n - 1][4]);
     for (let k = 0; k <= 3; k++) {
         const v = lo + sp * k / 3, yy = y(v);
+        if (Math.abs(yy - ly0) < 11) {
+            g += `<line x1="0" x2="${PW}" y1="${yy.toFixed(1)}" y2="${yy.toFixed(1)}" class="gl"/>`;
+            continue;
+        }
         g += `<line x1="0" x2="${PW}" y1="${yy.toFixed(1)}" y2="${yy.toFixed(1)}" class="gl"/><text x="${PW + 4}" y="${(yy + 3).toFixed(1)}" class="gt">${nf(v, dec)}</text>`;
     }
     const c = rows.map((r, i) => {
@@ -2128,12 +2141,18 @@ function renderForm() {
     const f = document.getElementById('setForm');
     f.innerHTML = h;
     document.getElementById('clrOld').onclick = async () => {
+        if (!token) {
+            toast('Önce GitHub bağlantısını kur');
+            return;
+        }
         const t = Date.now(), top = Math.ceil(t / 1000);
-        localStore('masal_nclr', String(top));
-        NOTES.length = 0;
-        nBadge();
         const ok = await cloudPatch(o => { o.clear = t; o.notify = { ...(o.notify || {}), cleared: top }; }, 'Eski kayıtlar temizlendi');
-        toast(ok ? 'Eski kayıtlar temizleniyor; bot birkaç saniyede uygular' : 'Temizleme isteği gönderilemedi');
+        if (ok) {
+            localStore('masal_nclr', String(top));
+            NOTES.length = 0;
+            nBadge();
+        }
+        toast(ok ? 'Eski kayıtlar temizleniyor; bot birkaç saniyede uygular' : 'Temizleme isteği gönderilemedi, tekrar dene');
     };
     f.querySelectorAll('.acch').forEach(b => b.onclick = () => {
         const sec = b.parentElement, id = sec.dataset.acc;
