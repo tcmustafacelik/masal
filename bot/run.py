@@ -235,6 +235,8 @@ def clear_old(state, S):
     try:
         from . import kaldirac_gercek
         kaldirac_gercek.trim_log()
+        from . import meme_gercek
+        meme_gercek.trim_log()
     except Exception:
         pass
     print("Eski kayıtlar temizlendi")
@@ -423,6 +425,9 @@ def signature(state, S):
     lr = state.get("levr") or {}
     parts.append([len(lr.get("trades", [])), sorted(lr.get("pos", {})), len(lr.get("log", [])), lr.get("err"),
                   round(lr.get("eq", 0), 2), lr.get("halt"), lr.get("dead"), lr.get("on")])
+    mr = state.get("memer") or {}
+    parts.append([len(mr.get("trades", [])), sorted(mr.get("pos", {})), len(mr.get("log", [])), mr.get("err"),
+                  round(mr.get("value", 0), 2), mr.get("dead"), mr.get("on")])
     parts.append(json.dumps(S, sort_keys=True, default=str))
     return json.dumps(parts, default=str)
 
@@ -556,6 +561,11 @@ def main():
         meme.step(state, S)  # memecoin deneme masası (sanal para; ağ işi arka planda)
     except Exception as e:
         print("Memecoin masası hatası:", e)
+    try:
+        from . import meme, meme_gercek
+        meme_gercek.step(state, S, {**meme.DEFAULT, **(S.get("meme") or {})})  # aynı kararlar MEME cüzdanında
+    except Exception as e:
+        print("Gerçek memecoin masası hatası:", e)
     try:
         from . import transfer
         if L["armed"]:

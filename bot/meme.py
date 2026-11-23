@@ -203,6 +203,7 @@ def step(state, S):
                                 "pnl": round(pnl, 2), "pct": round(pnl / pos["cost"] * 100, 1), "reason": reason})
             _note(M, ts, "exit", f"SAT {pos['sym']} ${got:.2f} · {'+' if pnl >= 0 else ''}{pnl:.2f}$ · {reason}")
             del M["positions"][m]
+            M.setdefault("ev", []).append(["sell", m, reason])  # gerçek masa aynı kararı uygular
 
     # Gözcü + Bekçi + Ölçücü: yeni girişler
     for m in snap["cands"]:
@@ -239,6 +240,7 @@ def step(state, S):
         M["stats"]["entered"] += 1
         M["trades"].append({"ts": ts, "sym": sym, "mint": m, "side": "AL", "usd": round(size, 2), "reason": sig})
         _note(M, ts, "buy", f"AL {sym} ${size:.2f} · {sig}")
+        M.setdefault("ev", []).append(["buy", m, sym, sig])
 
     # temizlik ve kasa seyri
     M["seen"] = {k: v for k, v in M["seen"].items() if ts - v < 6 * 3600_000}

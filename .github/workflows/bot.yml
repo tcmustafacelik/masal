@@ -46,6 +46,8 @@ jobs:
           OKXG_API_PASSPHRASE: ${{ secrets.OKXG_API_PASSPHRASE }}
           OKX_ALICI: ${{ secrets.OKX_ALICI }}
           OKX_ALICI_ADRES: ${{ secrets.OKX_ALICI_ADRES }}
+          MEME_SOL_SEED: ${{ secrets.MEME_SOL_SEED }}
+          MEME_SOL_KEY: ${{ secrets.MEME_SOL_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PYTHONUNBUFFERED: "1"
         run: python -m bot.loop

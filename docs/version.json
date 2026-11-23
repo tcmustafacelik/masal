@@ -1,7 +1,7 @@
 {
-  "version": "1.52.0",
+  "version": "1.53.0",
   "date": "2026-11-23",
   "notes": [
-    "Gerçek futures masası (OKX Global, borsada zarar durdur, bütçe ve en fazla kayıp sınırı); Ayarlar'a Futures ve Memecoin bölümleri"
+    "Gerçek memecoin masası (MEME sıcak cüzdanı, Jupiter, %2 fiyat etkisi sınırı, en fazla kayıp)"
   ]
 }
