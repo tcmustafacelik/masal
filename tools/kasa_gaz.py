@@ -23,8 +23,11 @@ print(f"Ağ {chain} · en az {mn} · ücret {fee} ETH · yaklaşık ${need * px:
 have = g.funding("ETH") + g.trading("ETH")
 if have < need:
     usd = max(1.0, (need - have) * px * 1.06)
-    if g.funding("USDT") >= usd:
-        g.move("USDT", usd, transfer.FUNDING, transfer.TRADING)
+    tr, fu = g.trading("USDT"), g.funding("USDT")
+    print("USDT işlem hesabında yeterli:", tr >= usd, "· fon hesabında yeterli:", fu >= usd - tr)
+    if tr < usd:
+        g.move("USDT", min(fu, usd - tr + 0.01), transfer.FUNDING, transfer.TRADING)
+        time.sleep(1)
     o = g.market("ETH-USDT", "buy", f"{usd:.2f}", quote=True)
     print("ETH alındı:", o.get("sCode"))
     time.sleep(3)
