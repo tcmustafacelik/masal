@@ -3,8 +3,8 @@
   "paused": false,
   "liquidate": 0,
   "strategy": "grid",
-  "budget": 20443,
-  "kasa": 20443,
+  "budget": 19933,
+  "kasa": 19933,
   "topup": {
     "amount": 100,
     "profit_pct": 3.3,
@@ -156,53 +156,11 @@
   "theme": "auto",
   "xfer_req": [
     {
-      "id": "x1a208f30987",
-      "ts": 1795446475143,
-      "dir": "tr2g",
-      "amt": 5,
-      "src": "bot"
-    },
-    {
-      "id": "x1a208f77851",
-      "ts": 1795446765649,
-      "dir": "tr2g",
-      "amt": 5,
-      "src": "bos"
-    },
-    {
-      "id": "xmwtfgj1u",
-      "ts": 1795448129394,
-      "dir": "tr2g",
-      "amt": 20,
-      "src": "bos"
-    },
-    {
-      "id": "xmwtfj3pz",
-      "ts": 1795448249495,
-      "dir": "tr2g",
-      "amt": 15,
-      "src": "bos"
-    },
-    {
-      "id": "xmwtfl3i9",
-      "ts": 1795448342529,
+      "id": "x1a2091d8f96",
+      "ts": 1795449261974,
       "dir": "tr2g",
       "amt": 10,
       "src": "bot"
-    },
-    {
-      "id": "x1a20910b145",
-      "ts": 1795448418629,
-      "dir": "tr2g",
-      "amt": 10,
-      "src": "bos"
-    },
-    {
-      "id": "x1a20919df66",
-      "ts": 1795449020262,
-      "dir": "tr2g",
-      "amt": 10,
-      "src": "bos"
     }
   ],
   "xfer_cancel": [
@@ -210,6 +168,13 @@
     "x1a208f77851",
     "xmwtfgj1u",
     "xmwtfj3pz",
-    "xmwtfj3pz"
+    "xmwtfj3pz",
+    "x1a208f30987",
+    "x1a208f77851",
+    "xmwtfgj1u",
+    "xmwtfj3pz",
+    "xmwtfl3i9",
+    "x1a20910b145",
+    "x1a20919df66"
   ]
 }
