@@ -89,6 +89,31 @@ class Ex:
         return self.req("POST", "/api/v5/trade/order", body)[0]
 
 
+USDT_ARB = "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9"  # Arbitrum'daki USDT (USDT0) sözleşmesi
+RPC = "https://arb1.arbitrum.io/rpc"
+
+
+def _rpc(method, params):
+    body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": params}).encode()
+    r = urllib.request.Request(RPC, data=body, headers={"Content-Type": "application/json", "User-Agent": "masal/1.0"})
+    with urllib.request.urlopen(r, timeout=10) as f:
+        return json.load(f)["result"]
+
+
+def kasa_balance():
+    """Soğuk cüzdandaki USDT ve ETH (Arbitrum). Sadece okunur; cüzdanın anahtarı sistemde yoktur."""
+    data = "0x70a08231" + KASA[2:].lower().rjust(64, "0")
+    usdt = int(_rpc("eth_call", [{"to": USDT_ARB, "data": data}, "latest"]), 16) / 1e6
+    eth = int(_rpc("eth_getBalance", [KASA, "latest"]), 16) / 1e18
+    try:
+        r = urllib.request.Request("https://www.okx.com/api/v5/market/ticker?instId=ETH-USDT", headers={"User-Agent": "masal/1.0"})
+        with urllib.request.urlopen(r, timeout=10) as f:
+            px = float(json.load(f)["data"][0]["last"])
+    except Exception:
+        px = 0.0
+    return {"usdt": round(usdt, 2), "eth": round(eth, 6), "usd": round(usdt + eth * px, 2), "ts": int(time.time() * 1000)}
+
+
 def _clients():
     return {"tr": Ex("https://tr.okx.com", "OKX"), "g": Ex("https://www.okx.com", "OKXG")}
 
@@ -312,7 +337,8 @@ def step(state, S, N):
                     if X.get("day_sum", 0) + job["amt"] > float(cfg["daily_max"]):
                         job["msg"] = f"günlük sınır ({cfg['daily_max']} $) dolu; yarın gönderilecek"
                         continue
-                    if src == "tr" and job["src"] != "bot" and _free_tr(ex, state) < job["amt"] * _rate() * 0.995:
+                    if (src == "tr" and job["src"] != "bot" and ex.funding("USDT") < job["amt"] - 0.01
+                            and _free_tr(ex, state) < job["amt"] * _rate() * 0.97):
                         job["msg"] = "TR'de boşta yeterli para yok (botun parasına dokunulmaz); bekleniyor"
                         if now * 1000 - job["ts"] > 86400_000:
                             raise RuntimeError("24 saat içinde boş para oluşmadı")
@@ -342,6 +368,15 @@ def step(state, S, N):
                 X["g_val"] = round(float(C["g"].req("GET", "/api/v5/asset/asset-valuation?ccy=USDT")[0].get("totalBal") or 0), 2)
             except Exception as e:
                 print("Global bakiye okunamadı:", e)
+        try:
+            X["kasa"] = kasa_balance()
+        except Exception as e:
+            print("KASA bakiyesi okunamadı:", e)
+        try:
+            X["tr_total"] = round(float(C["tr"].req("GET", "/api/v5/asset/asset-valuation?ccy=USDT")[0].get("totalBal") or 0), 2)
+        except Exception as e:
+            print("TR toplamı okunamadı:", e)
+        X["usdtry"] = round(_rate(), 4)
 
 
 def public(state, S=None):
@@ -350,6 +385,7 @@ def public(state, S=None):
         return None
     cfg = {**DEFAULT, **((S or {}).get("xfer") or {})}
     return {"jobs": [{k: j.get(k) for k in ("id", "dir", "amt", "src", "ts", "stage", "msg", "got", "tl")} for j in X["jobs"]][::-1][:10],
-            "log": X.get("log", [])[:20], "free_tl": X.get("free_tl"), "g_val": X.get("g_val"), "g_base": X.get("g_base", 0),
+            "log": X.get("log", [])[:20], "free_tl": X.get("free_tl"), "g_val": X.get("g_val"), "kasa": X.get("kasa"),
+            "tr_total": X.get("tr_total"), "usdtry": X.get("usdtry"), "g_base": X.get("g_base", 0),
             "day_sum": X.get("day_sum", 0), "daily_max": cfg["daily_max"], "sweep": {k: cfg[k] for k in ("sweep_on", "sweep_pct", "sweep_days")},
             "sweep_at": int(X.get("sweep_at", 0) * 1000)}

@@ -1,7 +1,7 @@
 {
-  "version": "1.45.1",
+  "version": "1.46.0",
   "date": "2026-11-23",
   "notes": [
-    "TR ↔ Global aktarımı OKX iç transferiyle: ücretsiz ve anında"
+    "Kasalar: OKX TR, OKX Global ve KASA bakiyesi yan yana; fon hesabında hazır para aktarımı bekletmez"
   ]
 }

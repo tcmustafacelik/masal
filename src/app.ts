@@ -1,4 +1,4 @@
-const APP_VERSION='1.45.1';
+const APP_VERSION='1.46.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -581,13 +581,23 @@ function renderXfer(){
   if(sel!=='live'||!S?.strategies?.live||S.strategies.live.locked){box.hidden=true;return}
   box.hidden=false;
   const jobs=(X?.jobs||[]).slice(0,4).map((j: any)=>`<div><time>${masaClock(j.ts)}</time><span>${XDIR[j.dir]?.[0]||j.dir} · <b>${nf(j.amt,2)} $</b><em class="${j.stage==='done'?'ok':j.stage==='failed'?'bad':''}">${XST[j.stage]||j.stage}${j.stage!=='done'&&j.msg?' · '+j.msg:''}</em></span></div>`).join('');
-  box.innerHTML=`<div class="ah">${ic('i-refresh')}<b>Para aktarımı</b><span>USDT</span></div>
-    <div class="xb"><span>TR'de boşta <b>${X?.free_tl!=null?tl(Math.max(0,X.free_tl),0):'—'}</b></span><span>Global'de <b>${X?.g_val!=null?'$'+nf(X.g_val,2):'—'}</b></span><span>Bugün gönderilen <b>$${nf(X?.day_sum||0,0)} / ${nf(X?.daily_max||1000,0)}</b></span></div>
+  box.innerHTML=`<div class="ah">${ic('i-refresh')}<b>Kasalar ve aktarım</b><span>dakikada bir</span></div>
+    ${xKasalar(X)}
+    <div class="xb"><span>TR'de boşta <b>${X?.free_tl!=null?tl(Math.max(0,X.free_tl),0):'—'}</b></span><span>Bugün gönderilen <b>$${nf(X?.day_sum||0,0)} / ${nf(X?.daily_max||1000,0)}</b></span></div>
     <div class="xt">${Object.entries(XDIR).map(([k,v])=>`<button class="${v[3]}" data-x="${k}">${ic(v[2])}${v[0]}<small>${v[1]}</small></button>`).join('')}</div>
     ${jobs?`<div class="xj">${jobs}</div>`:''}`;
   box.querySelectorAll<HTMLElement>('[data-x]').forEach(b=>b.onclick=()=>openXfer(b.dataset.x));
 }
 let xfSrc='bos',USDTTRY=0;
+/** Üç kasa yan yana: OKX TR, OKX Global, KASA (soğuk cüzdan); dolar ve TL karşılığı, dakikada bir borsadan/zincirden. */
+function xKasalar(X: any): string {
+  const r=+(X?.usdtry||USDTTRY||0),o: any=S?.okx||{};
+  const trUsd=X?.tr_total!=null?+X.tr_total:(o.total_tl&&r?o.total_tl/r:null),gUsd=X?.g_val!=null?+X.g_val:null,kUsd=X?.kasa?.usd!=null?+X.kasa.usd:null;
+  const all=[trUsd,gUsd,kUsd].every(v=>v!=null)?trUsd+gUsd+kUsd:null;
+  const cell=(n: string,i: string,u: number|null,sub='')=>`<div>${ic(i)}<span>${n}</span><b>${u==null?'—':'$'+nf(u,2)}</b><small>${u!=null&&r?tl(u*r,0):''}${sub}</small></div>`;
+  return `<div class="xk">${cell('OKX TR','i-wallet',trUsd)}${cell('OKX Global','i-link',gUsd)}${cell('KASA','i-lock',kUsd)}</div>
+    ${all!=null?`<div class="xb"><span>Hepsi birlikte <b>$${nf(all,2)}</b>${r?` · <b>${tl(all*r,0)}</b>`:''}</span>${X?.kasa?`<span>KASA'da komisyon için <b>${nf(X.kasa.eth||0,4)} ETH</b></span>`:''}</div>`:''}`;
+}
 function openXfer(dir: string){
   const X: any=(S as any)?.xfer||{},v=XDIR[dir],q=document.getElementById('qsh'),fromTr=dir.startsWith('tr');
   q.dataset.n='';qHead(v[2],'Vazgeç');document.getElementById('qOk').hidden=true;document.getElementById('qTitle').textContent=v[0];
