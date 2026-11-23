@@ -1,4 +1,4 @@
-const APP_VERSION='1.44.0';
+const APP_VERSION='1.44.1';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -1240,3 +1240,24 @@ document.getElementById('save').onclick=()=>save();
 document.getElementById('undo').onclick=()=>{draft=JSON.parse(JSON.stringify(orig));renderForm()};
 
 (async()=>{await initLang();await openLink();load()})();
+/* ---------- telefonun geri tuşu / geri kaydırma ----------
+   Uygulama tek sayfa: geri tuşu tarayıcı geçmişinde geri gider ve uygulama kapanırdı. Her zaman bir "nöbetçi" geçmiş kaydı
+   tutulur; geri basılınca en üstteki açık katman (PIN, alt pencere, açık satır, ayarlar, geçmiş, ajan masası) kapanır.
+   Ana ekrandayken ilk geri bir uyarı gösterir, 2 sn içinde ikinci geri uygulamadan çıkar. */
+let backExit = 0;
+function backLayer(): boolean {
+  const pin = document.querySelector<HTMLElement>('.pinv:not(.out) [data-k="x"]');
+  if (document.querySelector('.pinv:not(.out)')) { if (pin && pin.textContent) pin.click(); return true; }
+  const q = document.getElementById('qsh'); if (!q.hidden) { q.hidden = true; return true; }
+  const sw = document.querySelectorAll('.swr.open'); if (sw.length) { swOpen = ''; sw.forEach(w => w.classList.remove('open')); return true; }
+  if (!document.getElementById('setv').hidden) { document.getElementById('closeSet').click(); return true; }
+  if (!document.getElementById('histv').hidden) { showHist(false); return true; }
+  if (!document.getElementById('masav').hidden) { showMasa(false); return true; }
+  return false;
+}
+history.pushState({masal: 1}, '');
+addEventListener('popstate', () => {
+  if (backLayer()) { history.pushState({masal: 1}, ''); return; }
+  if (Date.now() - backExit < 2000) { history.back(); return; }
+  backExit = Date.now(); toast('Çıkmak için geri tuşuna tekrar bas'); history.pushState({masal: 1}, '');
+});

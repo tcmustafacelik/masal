@@ -1,7 +1,7 @@
 {
-  "version": "1.44.0",
+  "version": "1.44.1",
   "date": "2026-11-23",
   "notes": [
-    "Kaldıraç masası (deneme): OKX Global vadeli, sanal parayla, en fazla 3x"
+    "Geri tuşu artık uygulamayı kapatmıyor; açık ekranı kapatır, ana ekranda iki kez basınca çıkar"
   ]
 }

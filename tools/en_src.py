@@ -405,6 +405,7 @@ EN = {
     "OKX Global vadeli piyasası gerçek fiyatlarla izlenir; işlem sanal parayla yapılır. İzole marjin, en fazla 3x, işlem başına kasanın %1'i riske edilir, günlük %5 zararda masa o gün kapanır.": "OKX Global futures are tracked with real prices; trades use virtual money. Isolated margin, at most 3x, 1% of the bank at risk per trade; the desk stops for the day at a 5% daily loss.",
     "Henüz sinyal yok; saatlik mumlar kapandıkça bakılıyor": "No signal yet; checked as hourly candles close",
     "Bugün durduruldu: günlük zarar sınırı.": "Stopped today: daily loss limit.",
+    "Çıkmak için geri tuşuna tekrar bas": "Press back again to exit",
     "Memecoin masası": "Memecoin desk", "deneme · sanal para": "test · virtual money", "Sanal kasa": "Virtual bank", "Sonuç": "Result",
     "İşlem": "Trades", "Kazanma": "Win rate", "AÇIK": "OPEN", "ENGEL": "BLOCK", "Gözcü {0} kontrol": "Scout {0} checks", "Bekçi {0} engel": "Guard {0} blocks", "Giriş {0}": "Entries {0}",
     "Solana'daki yeni tokenler DexScreener ve RugCheck verisiyle 20 sn'de bir taranır. Gerçek para, cüzdan ya da anahtar yok; sonuçlar birkaç gün izlenip karar verilecek.": "New Solana tokens are scanned every 20 s with DexScreener and RugCheck data. No real money, wallet or keys; results will be watched for a few days before deciding.",
