@@ -41,6 +41,9 @@ def is_sealed(x):
     return isinstance(x, dict) and x.get("enc") == 1 and "ct" in x
 
 
+_OPEN = {}
+
+
 def unseal(box, pw=None):
     """Şifreli değilse olduğu gibi döner; çözülemezse ValueError."""
     if not is_sealed(box):
@@ -50,8 +53,11 @@ def unseal(box, pw=None):
         raise ValueError("Şifre yok")
     from cryptography.hazmat.primitives.ciphers.aead import AESGCM
     d = lambda k: base64.b64decode(box[k])
+    ck = (pw, box["salt"], box.get("iter", ITER))
+    if ck not in _OPEN:  # aynı tuzla anahtar bir kez türetilir (her tur 150 bin PBKDF2 turu yapılmasın)
+        _OPEN[ck] = hashlib.pbkdf2_hmac("sha256", pw.encode(), d("salt"), box.get("iter", ITER), 32)
     try:
-        raw = AESGCM(hashlib.pbkdf2_hmac("sha256", pw.encode(), d("salt"), box.get("iter", ITER), 32)).decrypt(d("iv"), d("ct"), None)
+        raw = AESGCM(_OPEN[ck]).decrypt(d("iv"), d("ct"), None)
     except Exception:
         raise ValueError("Şifre uyuşmuyor")
     return json.loads(raw)

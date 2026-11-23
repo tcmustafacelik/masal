@@ -1,12 +1,19 @@
 {
-  "version": "1.66.0",
+  "version": "1.66.1",
   "date": "2026-11-23",
   "notes": [
-    "5 renk seçeneği: Kehribar, Okyanus, Zümrüt, Ametist, Grafit (Ayarlar → Uygulama → Renk); seçili öğeler, sekmeler ve anahtarlar seçtiğin renkte",
-    "Ayar sekmeleri artık kaymıyor; üstte kesik ya da arkada kutu görünmüyor",
-    "Küçük bakiye sonuçları Türkçe ve hangi coinin neden çevrilmediği yazıyor"
+    "Spot: bankadan gelen TL Fonlama hesabında kalıyordu, bot kullanamıyordu; artık kendiliğinden Alım-satım hesabına alınıyor ve bildirim geliyor",
+    "Gizlilik: kasa, futures ve memecoin kayıtları da herkese açık depoda şifreli tutuluyor"
   ],
   "history": [
+    {
+      "version": "1.66.1",
+      "date": "2026-11-23",
+      "notes": [
+        "Spot: bankadan gelen TL Fonlama hesabında kalıyordu, bot kullanamıyordu; artık kendiliğinden Alım-satım hesabına alınıyor ve bildirim geliyor",
+        "Gizlilik: kasa, futures ve memecoin kayıtları da herkese açık depoda şifreli tutuluyor"
+      ]
+    },
     {
       "version": "1.66.0",
       "date": "2026-11-23",
@@ -128,14 +135,6 @@
       "notes": [
         "Kasalar: Küçük bakiyeleri çevir (OKX TR → TL, OKX Global → USDT, MEME token artıkları → SOL); botun açık coinlerine dokunulmaz",
         "Kasalar'da son aktarım ve çevirme kayıtları görünür"
-      ]
-    },
-    {
-      "version": "1.55.0",
-      "date": "2026-11-23",
-      "notes": [
-        "Kasalar: OKX Global ↔ MEME aktarımı (Global'de SOL alınıp MEME'ye gider; MEME'den gelen SOL satılıp USDT olur)",
-        "Yenilikler ekranı: her yeni sürümde neyin eklendiği uygulama açılınca gösterilir"
       ]
     }
   ]

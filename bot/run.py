@@ -19,13 +19,16 @@ def tr(v):
     return f"{v:,.0f}".replace(",", ".")
 
 
+SEALED = ("live", "okx", "xfer", "levr", "memer")  # herkese açık depoda bakiye ve cüzdan bilgisi şifreli durur
+
+
 def load_state():
     if not os.path.exists(STATE_FILE):
         return {"created": int(time.time() * 1000),
                 "portfolios": {k: new_state(k) for k in config.STRATEGIES} if config.VIRTUAL else {}}
     with open(STATE_FILE, encoding="utf-8") as f:
         state = json.load(f)
-    for k in ("live", "okx"):
+    for k in SEALED:
         if vault.is_sealed(state.get(k)):
             try:
                 state[k] = vault.unseal(state[k])
@@ -39,7 +42,7 @@ def load_state():
 def save_state(state):
     os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
     out = dict(state)
-    for k in ("live", "okx"):
+    for k in SEALED:
         if out.get(k) is not None:
             out[k] = vault.seal(out[k])
     tmp = STATE_FILE + ".tmp"  # yarım yazılmış dosya kalmasın: önce geçici dosya, sonra tek adımda yer değiştir
@@ -294,6 +297,29 @@ def daily_summary(L, p, N):
     N.add("daily", "Masal · günün özeti",
           f"Bugün {sg(day_pnl)} TL · toplam {sg(tot)} TL\nBottaki para {tr(eq)} TL · bugün {n_tr} işlem · "
           f"{len(L['positions'])} açık pozisyon", 2, ["bar_chart"])
+
+
+def fund_to_trading(state, N):
+    """OKX TR'de bankadan gelen TL (ve USDT) Fonlama hesabına düşer; bot yalnız Alım-satım hesabını kullanabilir.
+    Fonlamadaki para kendiliğinden Alım-satım'a alınır (dışarı aktarım işi beklerken dokunulmaz)."""
+    X = state.get("xfer") or {}
+    if any(j.get("stage") not in ("done", "failed") and j.get("dir", "").startswith("tr") for j in X.get("jobs", [])):
+        return
+    try:
+        from . import transfer
+        ex = transfer.Ex("https://tr.okx.com", "OKX")
+        moved = []
+        for ccy in ("TRY", "USDT"):
+            amt = ex.funding(ccy)
+            if amt >= (10 if ccy == "TRY" else 0.5):
+                ex.move(ccy, amt, transfer.FUNDING, transfer.TRADING)
+                moved.append(f"{amt:,.2f} {ccy}".replace(",", "X").replace(".", ",").replace("X", "."))
+        if moved:
+            state["okx"]["fund_tl"] = 0
+            N.add("money", "Para bota hazırlandı", f"{' ve '.join(moved)} Fonlama'dan Alım-satım hesabına alındı; bot artık kullanabilir.", 3, ["inbox_tray"])
+            print("Fonlamadan alım-satıma:", moved)
+    except Exception as e:
+        print("Fonlama aktarımı:", e)
 
 
 def check_okx():
@@ -553,6 +579,8 @@ def main():
     # Hesap kontrolü (6 istek) dakikada bir yeter; araya giren turlar önceki sonucu kullanır
     if not prev or time.time() * 1000 - (prev.get("ts") or 0) > 60_000 or not prev.get("ok"):
         state["okx"] = check_okx()
+        if L["armed"] and float(state["okx"].get("fund_tl") or 0) >= 10:
+            fund_to_trading(state, N)
     if "quote_ok" in state["okx"] and state["okx"]["quote_ok"] != prev.get("quote_ok"):
         print(f"{config.QUOTE} paritesi işlem izni: {'var' if state['okx']['quote_ok'] else 'YOK - ' + state['okx'].get('quote_err', '')}"
               f" · USDT bakiyesi {state['okx'].get('usdt')}")
