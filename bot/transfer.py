@@ -364,6 +364,28 @@ def _sweep(C, X, cfg, N, state):
     X["swept"] = round(float(X.get("swept", 0)) + profit, 4)  # kârın tamamı sayılır, yüzdesi gönderilir (aynı kâr iki kez süpürülmez)
 
 
+def _sweep_meme(X, cfg, state):
+    """Memecoin kârı: MEME cüzdanı başlangıç tutarının üstüne çıktıysa kârın yüzdesi Global üzerinden KASA'ya gider.
+    Açık token varken yapılmaz (kâr henüz kesin değil)."""
+    if not cfg.get("sweep_on") or float(cfg.get("sweep_pct") or 0) <= 0:
+        return
+    R = state.get("memer") or {}
+    if not R.get("addr") or not R.get("start") or R.get("pos"):
+        return
+    now = time.time()
+    if now - X.get("msweep_at", 0) < cfg["sweep_days"] * 86400:
+        return
+    X["msweep_at"] = now
+    profit = float(R.get("value") or 0) - float(R["start"]) - float(X.get("mswept", 0))
+    if profit < cfg["sweep_min"]:
+        _note(X, f"Memecoin kâr süpürme: yeni kâr {max(0, profit):.2f} $; gönderilecek kâr yok")
+        return
+    amt = math.floor(profit * cfg["sweep_pct"] / 100 * 100) / 100
+    X["jobs"].append({"id": f"msweep{int(now)}", "dir": "m2g", "amt": amt, "src": "kar", "then": "k", "ts": int(now * 1000),
+                      "stage": "new", "msg": "memecoin kâr süpürme (MEME → Global → KASA)"})
+    X["mswept"] = round(float(X.get("mswept", 0)) + profit, 4)
+
+
 def step(state, S, N):
     cfg = {**DEFAULT, **(S.get("xfer") or {})}
     X = state.setdefault("xfer", {"jobs": [], "seen": [], "log": [], "g_base": 0})
@@ -413,6 +435,7 @@ def step(state, S, N):
         N.add("money", "Aktarım iptal edildi", job["msg"], 3, ["x"])
     try:
         _sweep(C, X, cfg, N, state)
+        _sweep_meme(X, cfg, state)
     except Exception as e:
         print("Kâr süpürme hatası:", e)
     # işler (en fazla 15 sn'de bir dokunulur)

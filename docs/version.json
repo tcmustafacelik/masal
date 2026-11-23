@@ -1,10 +1,17 @@
 {
-  "version": "1.64.0",
+  "version": "1.65.0",
   "date": "2026-11-23",
   "notes": [
-    "Ayar ekranları inceldi: satırlar, değer kutuları, açılır bölümler, sekmeler ve seçim kutuları daha küçük ve sade"
+    "Memecoin kâr süpürme: MEME cüzdanı başlangıç tutarının üstüne çıkınca kârın %50'si haftada bir MEME → Global → KASA yolunu otomatik izler (açık token varken yapılmaz); oran ve aralık Ayarlar → Kasalar'da futures ile ortak"
   ],
   "history": [
+    {
+      "version": "1.65.0",
+      "date": "2026-11-23",
+      "notes": [
+        "Memecoin kâr süpürme: MEME cüzdanı başlangıç tutarının üstüne çıkınca kârın %50'si haftada bir MEME → Global → KASA yolunu otomatik izler (açık token varken yapılmaz); oran ve aralık Ayarlar → Kasalar'da futures ile ortak"
+      ]
+    },
     {
       "version": "1.64.0",
       "date": "2026-11-23",
@@ -127,15 +134,6 @@
         "Gerçek futures ve gerçek memecoin masaları açıldı",
         "Kasalar'a MEME cüzdanı eklendi (4 kasa yan yana)",
         "Deneme masaları ekrandan kalktı; arka planda karar vermeye devam ediyor"
-      ]
-    },
-    {
-      "version": "1.53.0",
-      "date": "2026-11-23",
-      "notes": [
-        "Gerçek memecoin masası: MEME cüzdanında Jupiter ile alım-satım",
-        "Fiyat etkisi %2'yi aşan alım reddedilir, nedeni yazılır",
-        "Ayarlar → Memecoin: gerçek mod anahtarı, en fazla kayıp, en fazla fiyat etkisi"
       ]
     }
   ]

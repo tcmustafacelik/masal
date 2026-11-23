@@ -177,6 +177,9 @@ def _m2g(g, job, X, N, note):
                     usd = job["usd"]
                     g.move("USDT", math.floor(usd * 100) / 100, transfer.TRADING, transfer.FUNDING)
                     job.update(stage="done", msg=f"Global'e ulaştı; {usd:.2f} USDT olarak fon hesabında")
+                    if job.get("then") == "k" and usd >= 1:  # kâr süpürme: Global'den KASA'ya devam
+                        X["jobs"].append({"id": job["id"] + "k", "dir": "g2k", "amt": math.floor(usd * 100) / 100, "src": "kar",
+                                          "ts": int(time.time() * 1000), "stage": "new", "msg": "memecoin kârı KASA'ya"})
                     X["g_base"] = round(X.get("g_base", 0) + usd, 2)
                     note(X, f"Global'e ulaştı: {usd:.2f} USDT")
                     N.add("money", "MEME'den Global'e ulaştı", f"{usd:.2f} USDT", 3, ["x"])

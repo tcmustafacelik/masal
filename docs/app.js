@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.64.0';
+const APP_VERSION = '1.65.0';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -2082,7 +2082,7 @@ const SECTIONS = [
         ] },
     { t: 'Aktarım ve KASA', i: 'i-vault', f: [
             ['xfer.daily_max', 'Günlük aktarım sınırı', 'Bir günde borsalardan en fazla gönderilecek', '$', 100, 10, 100000, 0],
-            ['xfer.sweep_pct', 'Kâr süpürme oranı', 'Global kârının bu kadarı KASA\'ya gider; 0 kapalı', '%', 5, 0, 100, 0],
+            ['xfer.sweep_pct', 'Kâr süpürme oranı', 'Futures ve memecoin kârının bu kadarı KASA\'ya gider; 0 kapalı', '%', 5, 0, 100, 0],
             ['xfer.sweep_days', 'Süpürme aralığı', 'Bu kadar günde bir', 'gün', 1, 1, 90, 0],
             ['xfer.sweep_min', 'En az süpürme kârı', 'Kâr bundan azsa gönderilmez', '$', 5, 1, 10000, 0]
         ] },
