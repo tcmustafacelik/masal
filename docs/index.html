@@ -429,6 +429,7 @@ details.setup summary::-webkit-details-marker{display:none}
 .stabs{grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:6px;margin:4px 0 14px;position:sticky;top:0;z-index:5;background:var(--bg);padding:6px 0}.stabs .tile{padding:9px 2px 8px;min-height:0;position:relative}.stabs .tile .ic{width:30px;height:30px}.stabs .tile .nm{font-size:11px}.stabs .dot{position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--amber)}
 .mh .mset{margin-left:8px;display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:9px;padding:4px 9px;font-size:11.5px;font-weight:600;letter-spacing:0;text-transform:none;-webkit-tap-highlight-color:transparent}.mh .mset .i{width:13px;height:13px}.mh .hsum{display:inline-flex;align-items:center;white-space:nowrap}
 .seg.dto{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;margin-bottom:12px}.seg.dto button{justify-content:center}
+.xcp{display:inline-flex;align-items:center;gap:3px;margin-left:6px;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:7px;padding:2px 7px;font-size:11px;font-weight:600;-webkit-tap-highlight-color:transparent}.xcp .i{width:12px;height:12px}
 .dtop{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-bottom:8px}.dall{margin-left:auto;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:9px;padding:5px 10px;font-size:12px;font-weight:600;-webkit-tap-highlight-color:transparent}
 .dlist{display:grid;gap:6px;max-height:46vh;overflow:auto;margin-bottom:10px}.drow{display:grid;grid-template-columns:26px 1fr auto auto;align-items:center;gap:8px;border:1px solid var(--line2);background:var(--card);border-radius:11px;padding:9px 10px;text-align:left;color:var(--text);-webkit-tap-highlight-color:transparent;user-select:none}.drow small{color:var(--muted);font-size:11.5px;font-variant-numeric:tabular-nums}.drow em{font-style:normal;font-weight:600;font-size:12.5px;font-variant-numeric:tabular-nums;min-width:52px;text-align:right}.dck{width:22px;height:22px;border-radius:7px;border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;color:transparent}.dck .i{width:14px;height:14px}.drow.on{border-color:var(--amber);background:var(--amber-bg)}.drow.on .dck{background:var(--amber);border-color:var(--amber);color:#fff}
 .xe.e3{background:#FCF1E3;color:#C27A12}.xe.e4{background:#F1ECFB;color:#7A52C7}.xf .xk.x4{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -565,6 +566,48 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 .pv{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:3px;font-size:12.5px;font-variant-numeric:tabular-nums}
 .pv span{display:inline-flex!important;align-items:baseline;gap:4px;color:var(--text)!important;font-weight:600;white-space:nowrap;margin:0!important}
 .pv em{font-style:normal;font-weight:500;color:var(--muted);font-size:11.5px}
+
+/* ===== Sıkı, ikonlu düzen (1.59): bütün sistemde aynı ölçüler ===== */
+section{margin-top:16px}
+.card{padding:12px}
+h2{margin:0 2px 7px}
+.hint{font-size:11px;margin-top:7px}
+.tile{min-height:0;padding:9px 4px 8px;gap:4px}
+.tile .ic{width:28px;height:28px;border-radius:8px}.tile .ic svg{width:16px;height:16px}
+.tile .nm{font-size:12px}
+.tile .pc{font-size:10.5px!important;line-height:1.2}
+/* iki seçenekli kutular yatay: simge solda, yazı sağda */
+.tiles.two .tile{display:grid;grid-template-columns:30px 1fr;grid-template-rows:auto auto;column-gap:10px;row-gap:1px;text-align:left;justify-items:start;align-items:center;padding:9px 11px}
+.tiles.two .tile .ic{grid-row:1/3;width:30px;height:30px}
+.tiles.two .tile .nm{align-self:end;font-size:13px}.tiles.two .tile .pc{align-self:start;text-align:left}
+.tiles.two .tile:not(:has(.pc)) .ic{grid-row:auto}
+.qtiles .tile{padding:8px 2px 7px}
+/* ayar sekmeleri ve bölüm kutuları */
+.stabs{gap:5px;margin:2px 0 10px;padding:4px 0}.stabs .tile{padding:7px 2px 6px;gap:3px}.stabs .tile .ic{width:26px;height:26px}.stabs .tile .ic svg{width:15px;height:15px}.stabs .tile .nm{font-size:10.5px}
+.acc{margin-top:8px}
+.acch{padding:8px 10px;gap:9px}.acch .aic{width:28px;height:28px}.acch .aic svg{width:15px;height:15px}
+.acch .att b{font-size:13px}.acch .att small{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.field{padding:9px 0;gap:8px}.field .lb b{font-size:13px}.field .lb span{font-size:11px}
+.step button,#setv .step button{height:32px;width:28px}.step input,#setv .step input{height:32px;width:52px;font-size:13.5px}.step .u{width:30px;font-size:11.5px}
+/* üst bölüm düğmeleri */
+.deck{gap:6px;padding-top:8px}.deck button{padding:7px 3px 6px;gap:1px}.deck .dic{width:26px;height:26px;margin-bottom:1px}.deck .dic svg{width:15px;height:15px}.deck b{font-size:11.5px}
+/* kasalar: simge solda, ad ve tutar sağda */
+.xf .xk{gap:6px;margin-top:9px}
+.xf .xk div{display:grid;grid-template-columns:28px 1fr;grid-template-rows:auto auto auto;column-gap:8px;text-align:left;justify-items:start;align-items:center;padding:8px 9px}
+.xf .xk div .xe{grid-row:1/4;width:28px;height:28px}
+.xf .xk span:not(.xe){margin-top:0;font-size:10.5px}.xf .xk b{font-size:13.5px;margin-top:0}.xf .xk small{font-size:10px}
+/* aktarım yolları: küçük simgeler, tek satır başlık */
+.xf .xt{gap:6px;margin-top:10px}
+.xf .xt button{min-height:0;padding:8px 6px 7px;gap:2px;border-radius:11px}
+.xf .xt .xe{width:24px;height:24px;border-radius:7px}.xf .xt .xe svg{width:14px;height:14px}.xf .xt .xe.e5{min-width:26px;font-size:9.5px}
+.xf .xt b{font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}.xf .xt small{font-size:10px}
+.xdh{margin:12px 2px 6px}
+/* masa kartları */
+.mtop{padding:8px 4px}.mtop b{font-size:14px}.mnote{font-size:11px;margin:2px 4px 6px}
+.mh{margin-top:12px}
+.clipb{display:flex;align-items:center;justify-content:center;gap:5px;width:100%;border:0;border-top:1px solid var(--line2);background:transparent;color:var(--muted);font:inherit;font-size:12px;font-weight:600;padding:9px 0 2px;-webkit-tap-highlight-color:transparent}.clipb svg{width:13px;height:13px;transform:rotate(90deg)}
+.xf .xt button{padding:7px 6px 6px}.xf .xt .xrt{margin-bottom:1px;gap:3px}.xf .xt .xe{width:21px;height:21px;border-radius:6px}.xf .xt .xe svg{width:12px;height:12px}
+.chk .ck{font-size:12px!important;line-height:1.4}.chk .ck b.t{font-size:12.5px}.chk .ck .d{font-size:11.5px}
 </style>
 </head>
 <body>
@@ -760,6 +803,6 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 <div class="toast" id="toast" hidden></div>
 <div class="qsh" id="qsh" hidden><div class="qb"><div class="gr"></div><h3><span><svg class="i" id="qIco"><use href="#i-info"/></svg></span><b id="qTitle"></b></h3><div class="qt" id="qText"></div><button class="btn primary" id="qOk">Anladım</button></div></div>
 
-<script src="app.js?v=1.58.0"></script>
+<script src="app.js?v=1.59.0"></script>
 </body>
 </html>

@@ -329,7 +329,9 @@ def _dust(key, R, only=None):
         k = close_empty(key, R["addr"])
     except Exception:
         k = 0
-    _note(R, "info", f"Küçük token artıkları: {n} tanesi SOL'a çevrildi" + (f"; {k} boş hesap kapatılıp kirası geri alındı" if k else ""))
+    t = f"Küçük token artıkları: {n} tanesi SOL'a çevrildi" + (f"; {k} boş hesap kapatılıp kirası geri alındı" if k else "")
+    _note(R, "info", t)
+    R.setdefault("out", []).append(["dust", t])
 
 
 def _loop():
@@ -413,7 +415,8 @@ def step(state, S, paper_cfg, N=None):
         for kind, text in R.pop("out", []):
             if N:
                 t = text.replace("GERÇEK ", "")
-                N.add("trades" if kind != "risk" else "alerts", f"{TITLE} · {t.split(' ')[0].capitalize()}", t, 4,
+                N.add("money" if kind == "dust" else "trades" if kind != "risk" else "alerts",
+                      f"{TITLE} · küçük bakiyeler" if kind == "dust" else f"{TITLE} · {t.split(' ')[0].capitalize()}", t, 4,
                       ["chart_with_upwards_trend" if kind == "buy" else "moneybag" if "+" in t else "warning"])
         state["memer"] = json.loads(json.dumps(R))
 

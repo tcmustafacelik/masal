@@ -571,7 +571,7 @@ def main():
         if L["armed"]:
             transfer.step(state, S, N)
             from . import dust
-            dust.step(state, S)  # küçük bakiyeleri çevirme istekleri
+            dust.step(state, S, N)  # küçük bakiyeleri çevirme istekleri
     except Exception as e:
         print("Aktarım hatası:", e)
     try:

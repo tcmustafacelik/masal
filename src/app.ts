@@ -1,4 +1,4 @@
-const APP_VERSION='1.58.0';
+const APP_VERSION='1.59.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -192,6 +192,7 @@ function render(){
   renderChart();
   renderPositions(x);renderCoins(x);
   const tr=x.recent.slice(0,12);
+  setTimeout(()=>{clipList('trades',4);clipList('coins',5)},0);
   document.getElementById('trades').innerHTML=tr.length?tr.map(t=>{const sell=t.side==='SAT';
     return `<div class="row">${cico(t.inst,t.side,t.pnl<0)}
       <div class="mid"><b>${sym(t.inst)}${pq(t.inst)} ${sell?'satıldı':'alındı'}</b><span>${dt(t.ts)} · ${t.reason} · ${px(t.price)}</span></div>
@@ -578,7 +579,7 @@ async function syncReal(retry = true){
 /* ---------- Para aktarımı: TR ↔ Global ↔ KASA (USDT, Arbitrum One). İstek bulut ayar dosyasına yazılır, bot gönderir. ---------- */
 /* Uçlar: her kasanın simgesi, rengi ve kısa adı (kartlarda ve pencerede aynı standart) */
 const XEND: Record<string, [string, string, string]> = {tr:['OKX TR','i-bank','e1'], g:['OKX Global','i-globe','e2'], k:['KASA','i-vault','e3'], m:['MEME','i-flask','e4']};
-const XDIR: Record<string, [string, string, string]> = {tr2g:['tr','g','OKX TR uygulamasından'], g2tr:['g','tr','TL\'ye çevrilir'], tr2k:['tr','k','OKX TR uygulamasından'], g2k:['g','k','Soğuk cüzdana'], g2m:['g','m','SOL alınıp gönderilir'], m2g:['m','g','SOL satılıp USDT olur']};
+const XDIR: Record<string, [string, string, string]> = {tr2g:['tr','g','OKX TR uygulamasından'], g2tr:['g','tr','TL\'ye çevrilir'], tr2k:['tr','k','OKX TR uygulamasından'], g2k:['g','k','Soğuk cüzdana'], g2m:['g','m','SOL alınıp gönderilir'], m2g:['m','g','SOL satılıp USDT olur'], k2g:['k','g','Trust Wallet\'tan'], k2tr:['k','tr','Trust Wallet\'tan']};
 const xName=(d: string)=>`${XEND[XDIR[d][0]][0]} → ${XEND[XDIR[d][1]][0]}`;
 const XST: Record<string, [string, string, string]> = {new:['Sırada','i-clock','w'],sent:['Yolda','i-out','w'],arriving:['Ulaşıyor','i-in','w'],done:['Tamam','i-check','ok'],failed:['Olmadı','i-stop','bad']};
 function xEnd(k: string){const e=XEND[k];return `<span class="xe ${e[2]}">${ic(e[1])}</span>`}
@@ -645,7 +646,31 @@ function xKasalar(X: any): string {
   return `<div class="xk${mUsd!=null?' x4':''}">${cell('tr',trUsd)}${cell('g',gUsd)}${cell('k',kUsd)}${mUsd!=null?cell('m',mUsd):''}</div>
     ${all!=null?`<div class="xb"><span>Hepsi birlikte <b>$${nf(all,2)}</b>${r?` · <b>${tl(all*r,0)}</b>`:''}</span>${X?.kasa?`<span>KASA'da komisyon için <b>${nf(X.kasa.eth||0,4)} ETH</b></span>`:''}</div>`:''}`;
 }
+/** KASA'nın anahtarı sistemde yok: gönderimi Trust Wallet'ta sen onaylarsın. Bu sayfa tutarı ve adresi hazırlar. */
+const KDEST: Record<string,[string,string]>={k2g:['OKX Global','0x74877903737257289dc07e7baf1f4b078c2a82a3'],k2tr:['OKX TR','0x1e194face9b26c78f75d854d741cf6547730b705']};
+function openKasaSend(dir: string){
+  const X: any=(S as any)?.xfer||{},[nm,addr]=KDEST[dir],q=document.getElementById('qsh'),have=+(X.kasa?.usd||0),eth=+(X.kasa?.eth||0),sh=addr.slice(0,6)+'…'+addr.slice(-4);
+  q.dataset.n='';qHead('i-vault','Kapat');document.getElementById('qTitle').textContent=`KASA → ${nm}`;
+  const draw=()=>{const a=(document.getElementById('kAmt') as HTMLInputElement)?.value||(have?String(Math.floor(have*100)/100):'');
+    const link=`https://link.trustwallet.com/send?asset=c10042221_t0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9&address=${addr}${+a?`&amount=${+a}`:''}`;
+    document.getElementById('qText').innerHTML=`<div class="xfs">
+      <div class="xroute"><div>${xEnd('k')}<b>KASA</b><small>$${nf(have,2)}</small></div><span class="xar">${ic('i-chev')}</span><div>${xEnd(dir==='k2g'?'g':'tr')}<b>${nm}</b><small>Arbitrum</small></div></div>
+      <p class="xnote">KASA'nın anahtarı güvenlik için sistemde yok; gönderimi <b>Trust Wallet'ta sen onaylarsın</b>. Tutar ve adres hazır gelir.</p>
+      <div class="xlab">Tutar</div><div class="xamt"><input id="kAmt" type="number" inputmode="decimal" min="1" step="1" value="${a}"><span>USDT</span></div>
+      <div class="xinfo">
+        <div>${ic('i-lock')}<span>Adres</span><b>${sh} <button class="xcp" type="button" data-cp="${addr}">${ic('i-copy')}Kopyala</button></b></div>
+        <div>${ic('i-globe')}<span>Ağ</span><b>Arbitrum One · USDT</b></div>
+        <div>${ic('i-shield')}<span>Ücret</span><b>~0,01 $ ETH${eth<0.00005?' · <span class="dn">ETH yok!</span>':''}</b></div>
+        <div>${ic('i-info')}<span>Önce</span><b>Trust Wallet'ta üstte KASA seçili olsun</b></div>
+      </div>
+      <a class="btn primary xgo" href="${link}" target="_blank" rel="noopener">${ic('i-out')}Trust Wallet'ta gönderimi aç</a>
+      <p class="hint">Açılmazsa: Trust Wallet → KASA → USDT (Arbitrum) → Gönder → adres defterinden ${nm} ARB. Ulaşınca Kasalar'da görünür.</p></div>`;
+    const inp=document.getElementById('kAmt') as HTMLInputElement;inp.onchange=draw;
+    document.querySelectorAll<HTMLElement>('[data-cp]').forEach(b=>b.onclick=async()=>{try{await navigator.clipboard.writeText(b.dataset.cp);toast('Adres kopyalandı')}catch(e){toast(b.dataset.cp)}})};
+  document.getElementById('qText').innerHTML='';draw();q.hidden=false;
+}
 function openXfer(dir: string){
+  if(dir.startsWith('k')){openKasaSend(dir);return}
   if(dir.startsWith('tr')){const q=document.getElementById('qsh');q.dataset.n='';qHead('i-bank','Anladım');document.getElementById('qTitle').textContent=xName(dir);
     document.getElementById('qText').innerHTML=`<div class="xfs"><p class="xnote">OKX TR, Türkiye kuralı gereği API'den (bottan) yapılan para çıkışlarını kabul etmiyor (hata 58380). Bu yönü <b>OKX TR uygulamasından</b> yap; ücretsiz ve anında:</p>
       <div class="xinfo"><div>${ic('i-bank')}<span>1</span><b>OKX TR → Varlıklar → Çek → USDT</b></div><div>${ic(dir==='tr2g'?'i-globe':'i-vault')}<span>2</span><b>${dir==='tr2g'?'OKX kullanıcıları → OKX Global hesabın':'Adres defterinden KASA (Arbitrum)'}</b></div><div>${ic('i-check')}<span>3</span><b>Gelince bot kasalarda gösterir</b></div></div>
@@ -937,7 +962,7 @@ async function pollMarket(){
       if(lastTick){const d=new Date(lastTick),p=(n,l=2)=>String(n).padStart(l,'0');
         tag.innerHTML=`<i></i>Canlı · ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;tag.classList.add('on')}
       const x=S.strategies[sel];
-      if(x&&!x.locked){renderMetrics(x);renderPositions(x);renderCoins(x);renderNow(x)}
+      if(x&&!x.locked){renderMetrics(x);renderPositions(x);renderCoins(x);renderNow(x);clipList('coins',5)}
       renderMarket();updLine();
     }catch(e){document.getElementById('liveTag').classList.remove('on')}
     mkBusy=false}
@@ -1625,3 +1650,16 @@ function navSave(){if(!navReady)return;try{sessionStorage.setItem('masal_nav',JS
     navReady=true;let k=0;const go=()=>{scrollTo(0,n.y||0);if(++k<6&&Math.abs(scrollY-(n.y||0))>4)setTimeout(go,400)};setTimeout(go,300);
   },60);
 })();
+
+/** Uzun listeler kısa görünür (ilk n satır); "Tümünü göster" ile açılır, tercih bu oturumda hatırlanır. */
+const CLIP_OPEN=new Set<string>();
+function clipList(id: string, n: number){
+  const el=document.getElementById(id);if(!el)return;
+  const rows=[...el.children].filter(c=>c.classList.contains('row')) as HTMLElement[];
+  el.querySelector(':scope>.clipb')?.remove();
+  const open=CLIP_OPEN.has(id);rows.forEach((r,i)=>r.hidden=!open&&i>=n);
+  if(rows.length<=n)return;
+  const b=document.createElement('button');b.type='button';b.className='clipb';
+  b.innerHTML=open?`${ic('i-chev')}Daha az göster`:`${ic('i-chev')}${rows.length-n} tane daha göster`;
+  b.onclick=()=>{open?CLIP_OPEN.delete(id):CLIP_OPEN.add(id);clipList(id,n)};el.appendChild(b);
+}

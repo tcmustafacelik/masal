@@ -116,7 +116,9 @@ def _run(req, X):
                     ok.append(f"{c}→{to}")
                 except Exception as e:
                     bad.append(f"{c} ({str(e)[:50]})")
-            note(X, f"{name}: " + (f"çevrildi {', '.join(ok)}" if ok else "çevrilen yok") + (f" · olmadı: {', '.join(bad)}" if bad else ""))
+            msg = (f"çevrildi {', '.join(ok)}" if ok else "çevrilen yok") + (f" · olmadı: {', '.join(bad)}" if bad else "")
+            note(X, f"{name}: " + msg)
+            X.setdefault("dust_out", []).append([f"{name} · küçük bakiyeler", msg])
         elif k == "m":
             from . import meme_gercek
             if not meme_gercek._W.get("key"):
@@ -128,8 +130,11 @@ def _run(req, X):
         note(X, f"{name} küçük bakiye çevirme: {str(e)[:120]}")
 
 
-def step(state, S):
+def step(state, S, N=None):
     X = state.setdefault("xfer", {"jobs": [], "seen": [], "log": [], "g_base": 0})
+    for title, msg in X.pop("dust_out", []):
+        if N:
+            N.add("money", title, msg[:300], 3, ["recycle"])
     L = state.get("live") or {}
     _HELD["tr"] = {i.split("-")[0] for i in (L.get("positions") or {})}
     seen = set(X.get("dust_seen") or [])

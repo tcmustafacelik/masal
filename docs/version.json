@@ -1,14 +1,23 @@
 {
-  "version": "1.58.0",
+  "version": "1.59.0",
   "date": "2026-11-23",
   "notes": [
-    "Bot güncellemelerinde artık yaklaşık 1 dakikalık kesinti yok; aynı oturumda birkaç saniyede yeniden başlıyor",
-    "Futures: iz süren stop borsadaki zarar durdurmaya da taşınıyor; bot yeniden başlarken açılan pozisyon kaybolmuyor, masa sahipleniyor",
-    "Futures ve Memecoin gerçek işlemleri telefona bildirim olarak geliyor",
-    "Memecoin: satıştan sonra boşalan token hesapları kapatılıp kirası (~0,15 $) geri alınıyor",
-    "Kâr süpürme yalnızca futures kârını sayıyor; dışarıdan yatırılan para kâr sayılıp KASA'ya geri gönderilmiyor"
+    "Daha sıkı, ikonlu tasarım: kutular, sekmeler, açılır bölümler, ayar satırları ve kasalar küçüldü; iki seçenekli kutular yatay",
+    "Kasalar: KASA → OKX Global ve KASA → OKX TR (tutar ve adres hazır, Trust Wallet'ta onaylanır)",
+    "Küçük bakiye çevrilince telefona bildirim gelir",
+    "Spot'ta son işlemler ve coin bazında kâr/zarar kısa görünür; 'daha fazla göster' ile açılır"
   ],
   "history": [
+    {
+      "version": "1.59.0",
+      "date": "2026-11-23",
+      "notes": [
+        "Daha sıkı, ikonlu tasarım: kutular, sekmeler, açılır bölümler, ayar satırları ve kasalar küçüldü; iki seçenekli kutular yatay",
+        "Kasalar: KASA → OKX Global ve KASA → OKX TR (tutar ve adres hazır, Trust Wallet'ta onaylanır)",
+        "Küçük bakiye çevrilince telefona bildirim gelir",
+        "Spot'ta son işlemler ve coin bazında kâr/zarar kısa görünür; 'daha fazla göster' ile açılır"
+      ]
+    },
     {
       "version": "1.58.0",
       "date": "2026-11-23",
