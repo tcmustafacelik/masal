@@ -57,9 +57,9 @@
     "cleared": 1795409509
   },
   "sell": {
-    "ts": 1795426366512,
+    "ts": 1795426369384,
     "insts": [
-      "LTC-USDT"
+      "ZRO-USDT"
     ]
   },
   "quote": "USDT",
