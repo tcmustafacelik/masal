@@ -12,16 +12,18 @@ assert g.ok and addr, "anahtar ya da cüzdan adresi yok"
 for w in g.req("GET", "/api/v5/asset/withdrawal-history?ccy=SOL"):
     if w.get("clientId") == CID:
         print("Bu gönderim zaten yapılmış; durum:", w.get("state")); sys.exit(0)
-sol0 = g.trading("SOL")
-if g.funding("USDT") >= USD:
-    g.move("USDT", USD, transfer.FUNDING, transfer.TRADING)
-o = g.market("SOL-USDT", "buy", f"{USD:.2f}", quote=True)
-print("SOL alım emri verildi:", o.get("sCode"), o.get("sMsg") or "")
-time.sleep(3)
-sol = g.trading("SOL") - sol0
-if sol <= 0:
-    sys.exit("SOL alınamadı")
-g.move("SOL", sol, transfer.TRADING, transfer.FUNDING)
+px = float(json.load(__import__("urllib.request").request.urlopen("https://www.okx.com/api/v5/market/ticker?instId=SOL-USDT"))["data"][0]["last"])
+if (g.funding("SOL") + g.trading("SOL")) * px >= USD * 0.8:
+    print("SOL zaten alınmış; yeniden alınmadı")  # önceki denemede alınıp bekleyen SOL gönderilir
+else:
+    if g.funding("USDT") >= USD:
+        g.move("USDT", USD, transfer.FUNDING, transfer.TRADING)
+    o = g.market("SOL-USDT", "buy", f"{USD:.2f}", quote=True)
+    print("SOL alım emri verildi:", o.get("sCode"), o.get("sMsg") or "")
+    time.sleep(3)
+t = g.trading("SOL")
+if t > 0:
+    g.move("SOL", t, transfer.TRADING, transfer.FUNDING)
 time.sleep(1)
 chain = fee = mn = None
 for c in g.req("GET", "/api/v5/asset/currencies?ccy=SOL"):
