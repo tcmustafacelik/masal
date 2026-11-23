@@ -1,0 +1,21 @@
+name: Anahtar kontrolü
+# Elle çalıştırılır; OKX TR ve Global anahtarlarını sadece okuyarak dener (işlem/çekim yok).
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  kontrol:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Kontrol
+        env:
+          OKX_API_KEY: ${{ secrets.OKX_API_KEY }}
+          OKX_API_SECRET: ${{ secrets.OKX_API_SECRET }}
+          OKX_API_PASSPHRASE: ${{ secrets.OKX_API_PASSPHRASE }}
+          OKXG_API_KEY: ${{ secrets.OKXG_API_KEY }}
+          OKXG_API_SECRET: ${{ secrets.OKXG_API_SECRET }}
+          OKXG_API_PASSPHRASE: ${{ secrets.OKXG_API_PASSPHRASE }}
+        run: python3 tools/kontrol.py
