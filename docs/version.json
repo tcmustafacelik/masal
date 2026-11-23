@@ -1,7 +1,7 @@
 {
-  "version": "1.42.0",
+  "version": "1.43.0",
   "date": "2026-11-23",
   "notes": [
-    "Bekçi: hacim patlaması filtresi ve alış-satış farkı kontrolü; her alımda ayrıntılı sebep"
+    "Memecoin masası (deneme): Solana yeni tokenler gerçek veriyle, sanal parayla"
   ]
 }

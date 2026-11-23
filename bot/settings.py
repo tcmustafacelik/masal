@@ -19,6 +19,7 @@ DEFAULTS = {
     "sell": {"ts": 0, "insts": []},
     "convert": {"ts": 0},
     "target": {"on": False, "amount": 20000, "mode": "profit"},  # açıksa hedefe ulaşınca her şey satılır ve bot durur
+    "meme": {"on": True, "bank": 100.0, "size_pct": 10, "max_pos": 5, "min_liq": 20000, "max_fdv": 5000000, "min_age_min": 10, "max_age_h": 72, "tp_pct": 30, "trail_from": 15, "trail_pct": 12, "sl_pct": 15, "max_hold_h": 4, "slip_pct": 1.0, "fee_pct": 0.5},  # memecoin deneme masası (sanal para)
     # mode: "profit" = toplam kâr bu tutara ulaşınca; "total" = bottaki para + kasadaki yedek toplamı bu tutara ulaşınca   # zaman damgası yeniyse alım-satım hesabındaki boş TL'nin tamamı seçili pariteye çevrilir  # seçili coinleri elle sat: zaman damgası yeniyse listedekiler bir kez satılır
     "strategy": "grid",
     "quote": "USDT",        # yeni alımların paritesi: TRY, USDT ya da USDC

@@ -349,6 +349,8 @@ def signature(state, S):
                       s.get("halted"), s.get("armed"), s.get("paused"), round(s.get("cash", 0), 2)])
     parts.append(len((state.get("money") or {}).get("seen", [])))
     parts.append((state.get("okx") or {}).get("ok"))
+    mm = state.get("meme") or {}
+    parts.append([len(mm.get("trades", [])), sorted(mm.get("positions", {})), len(mm.get("log", []))])
     parts.append(json.dumps(S, sort_keys=True, default=str))
     return json.dumps(parts, default=str)
 
@@ -476,6 +478,11 @@ def main():
         print("Para hareketleri kontrol edilemedi:", e)
 
     daily_summary(L, live, N)
+    try:
+        from . import meme
+        meme.step(state, S)  # memecoin deneme masası (sanal para; ağ işi arka planda)
+    except Exception as e:
+        print("Memecoin masası hatası:", e)
     PERF["main"] = round(time.time() - t_start, 2)
     state["perf"] = dict(PERF)
     # Gönderilen bildirimler buluta da yazılır (gerçek hesabın şifreli kaydında): uygulama her cihazda aynı listeyi görür
