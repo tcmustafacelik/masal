@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.69.4';
+const APP_VERSION = '1.69.5';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -949,7 +949,7 @@ function renderAssets(x, eq) {
     const pc = kasa ? net / kasa * 100 : 0, tot = Math.max(1, cash + inCoins + reserve);
     const parts = [['c', 'Botta nakit', cash, 'i-wallet'], ['k', 'Coinlerde', inCoins, 'i-coins'], ['r', 'Kasada yedek', reserve, 'i-vault']];
     const bar = parts.filter(p => p[2] > 0).map(p => `<i class="s${p[0]}" style="width:${(p[2] / tot * 100).toFixed(2)}%"></i>`).join('');
-    const leg = parts.map(p => `<div class="l${p[0]}"><em></em><span>${ic(p[3])}${p[1]}</span><b>${tl(p[2], 0)}</b><small>payı %${nf(p[2] / tot * 100, 0)}</small></div>`).join('');
+    const leg = parts.map(p => `<div class="vl-${p[0]}"><em></em><span>${ic(p[3])}${p[1]}</span><b>${tl(p[2], 0)}</b><small>payı %${nf(p[2] / tot * 100, 0)}</small></div>`).join('');
     const T = S?.settings?.target;
     let tgt = '';
     if (T?.on && T.amount > 0) {
