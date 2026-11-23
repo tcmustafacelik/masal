@@ -1,6 +1,6 @@
 """Tek seferlik: OKX Global'de USDT ile SOL alır ve MEME sıcak cüzdanına (Solana ağı) gönderir.
 Elle çalıştırılır. Depo herkese açık olduğu için çıktıda tutar ve adres gösterilmez."""
-import json, math, os, sys, time
+import json, math, os, sys, time, urllib.request
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from bot import transfer
 
@@ -12,7 +12,7 @@ assert g.ok and addr, "anahtar ya da cüzdan adresi yok"
 for w in g.req("GET", "/api/v5/asset/withdrawal-history?ccy=SOL"):
     if w.get("clientId") == CID:
         print("Bu gönderim zaten yapılmış; durum:", w.get("state")); sys.exit(0)
-px = float(json.load(__import__("urllib.request").request.urlopen("https://www.okx.com/api/v5/market/ticker?instId=SOL-USDT"))["data"][0]["last"])
+px = float(json.load(urllib.request.urlopen(urllib.request.Request("https://www.okx.com/api/v5/market/ticker?instId=SOL-USDT", headers={"User-Agent": "masal/1.0"})))["data"][0]["last"])
 if (g.funding("SOL") + g.trading("SOL")) * px >= USD * 0.8:
     print("SOL zaten alınmış; yeniden alınmadı")  # önceki denemede alınıp bekleyen SOL gönderilir
 else:

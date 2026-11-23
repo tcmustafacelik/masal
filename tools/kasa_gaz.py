@@ -16,7 +16,7 @@ for c in g.req("GET", "/api/v5/asset/currencies?ccy=ETH"):
         break
 if not chain:
     sys.exit("Arbitrum'da ETH çekimi kapalı")
-px = float(json.load(urllib.request.urlopen("https://www.okx.com/api/v5/market/ticker?instId=ETH-USDT"))["data"][0]["last"])
+px = float(json.load(urllib.request.urlopen(urllib.request.Request("https://www.okx.com/api/v5/market/ticker?instId=ETH-USDT", headers={"User-Agent": "masal/1.0"})))["data"][0]["last"])
 amt = max(mn, 0.0003)
 need = amt + fee
 print(f"Ağ {chain} · en az {mn} · ücret {fee} ETH · yaklaşık ${need * px:.2f}")
