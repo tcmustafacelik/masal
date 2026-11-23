@@ -231,84 +231,17 @@
   },
   "dust": [
     {
-      "id": "dtest2",
-      "ts": 1795458535325,
-      "ex": "g",
-      "ccys": [
-        "BABYDOGE"
-      ]
-    },
-    {
-      "id": "dmwtlyoju",
-      "ts": 1795459054026,
+      "id": "dmwtqohs8",
+      "ts": 1795466976776,
       "ex": "tr",
       "ccys": [
-        "VVV",
-        "LIT",
-        "GRASS",
-        "CT",
-        "PUMP",
-        "TAO",
-        "GRVT",
-        "ZRO",
-        "DOS",
-        "AI"
-      ],
-      "to": "USDT"
-    },
-    {
-      "id": "dmwtm5hob",
-      "ts": 1795459371707,
-      "ex": "tr",
-      "ccys": [
-        "CT",
-        "PUMP",
-        "TAO",
-        "GRVT",
-        "ZRO",
-        "DOS",
-        "AI",
-        "HUMA",
-        "NES",
-        "INJ"
-      ],
-      "to": "USDT"
-    },
-    {
-      "id": "dmwtm9oo7",
-      "ts": 1795459567399,
-      "ex": "tr",
-      "ccys": [
-        "TAO",
-        "ZRO",
-        "INJ",
-        "XPL",
-        "PONS",
-        "HYPE",
-        "JUP",
-        "RENDER",
-        "WLD",
-        "ENA"
-      ],
-      "to": "USDT"
-    },
-    {
-      "id": "dmwtn3rcm",
-      "ts": 1795460970550,
-      "ex": "tr",
-      "ccys": [
-        "TAO",
-        "ZRO",
-        "INJ",
-        "HYPE",
-        "WIF",
         "NIGHT",
         "SKY",
         "PROS",
         "SUI",
         "CHIP",
-        "PI",
         "OKB",
+        "PI",
         "VINE",
         "ARG",
         "AAVE",
@@ -318,24 +251,19 @@
         "BTC",
         "BCH",
         "LTC",
-        "ACE",
         "ONDO",
         "TRUMP",
         "XRP",
-        "VVV",
         "UNI",
         "ETH",
         "PEPE",
-        "SOL"
-      ],
-      "to": "USDT"
-    },
-    {
-      "id": "dmwtn3yxj",
-      "ts": 1795460980375,
-      "ex": "g",
-      "ccys": [
-        "BABYDOGE"
+        "SOL",
+        "ICP",
+        "MENGO",
+        "LIT",
+        "ADA",
+        "NEAR",
+        "GRASS"
       ],
       "to": "USDT"
     }
