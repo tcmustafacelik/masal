@@ -58,10 +58,11 @@
     "cleared": 1795449313
   },
   "sell": {
-    "ts": 1795449455817,
+    "ts": 1795449477968,
     "insts": [
       "GRASS-USDT",
-      "MMT-USDT"
+      "MMT-USDT",
+      "NES-USDT"
     ]
   },
   "quote": "USDT",
