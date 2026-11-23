@@ -280,6 +280,44 @@
         "ENA"
       ],
       "to": "USDT"
+    },
+    {
+      "id": "dmwtn3rcm",
+      "ts": 1795460970550,
+      "ex": "tr",
+      "ccys": [
+        "TAO",
+        "ZRO",
+        "INJ",
+        "HYPE",
+        "WIF",
+        "NIGHT",
+        "SKY",
+        "PROS",
+        "SUI",
+        "CHIP",
+        "PI",
+        "OKB",
+        "VINE",
+        "ARG",
+        "AAVE",
+        "DATA",
+        "BREV",
+        "APT",
+        "BTC",
+        "BCH",
+        "LTC",
+        "ACE",
+        "ONDO",
+        "TRUMP",
+        "XRP",
+        "VVV",
+        "UNI",
+        "ETH",
+        "PEPE",
+        "SOL"
+      ],
+      "to": "USDT"
     }
   ]
 }
