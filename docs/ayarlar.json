@@ -14,8 +14,8 @@
     "trade_pct": 10,
     "max_positions": 7,
     "stop_pct": 5,
-    "daily_loss_pct": 50,
-    "kill_pct": 90
+    "daily_loss_pct": 5,
+    "kill_pct": 20
   },
   "grid": {
     "step_pct": 3.3,
@@ -23,8 +23,8 @@
     "lot_tp_pct": 5,
     "max_lots": 6,
     "max_coins": 5,
-    "stop_pct": 50,
-    "use_pct": 99,
+    "stop_pct": 15,
+    "use_pct": 85,
     "trend_filter_pct": 0,
     "instant": true,
     "step3_pct": 6.6,
