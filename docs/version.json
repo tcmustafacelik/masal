@@ -1,11 +1,19 @@
 {
-  "version": "1.55.0",
+  "version": "1.56.0",
   "date": "2026-11-23",
   "notes": [
-    "Kasalar: OKX Global ↔ MEME aktarımı (Global'de SOL alınıp MEME'ye gider; MEME'den gelen SOL satılıp USDT olur)",
-    "Yenilikler ekranı: her yeni sürümde neyin eklendiği uygulama açılınca gösterilir"
+    "Kasalar: Küçük bakiyeleri çevir (OKX TR → TL, OKX Global → USDT, MEME token artıkları → SOL); botun açık coinlerine dokunulmaz",
+    "Kasalar'da son aktarım ve çevirme kayıtları görünür"
   ],
   "history": [
+    {
+      "version": "1.56.0",
+      "date": "2026-11-23",
+      "notes": [
+        "Kasalar: Küçük bakiyeleri çevir (OKX TR → TL, OKX Global → USDT, MEME token artıkları → SOL); botun açık coinlerine dokunulmaz",
+        "Kasalar'da son aktarım ve çevirme kayıtları görünür"
+      ]
+    },
     {
       "version": "1.55.0",
       "date": "2026-11-23",

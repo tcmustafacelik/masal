@@ -1,4 +1,4 @@
-const APP_VERSION='1.55.0';
+const APP_VERSION='1.56.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -596,10 +596,20 @@ function renderXfer(){
     ${xKasalar(X)}
     <div class="xt">${Object.keys(XDIR).map(k=>{const [f,t,sub]=XDIR[k];return `<button data-x="${k}"><span class="xrt">${xEnd(f)}${ic('i-chev')}${xEnd(t)}</span><b>${xName(k)}</b><small>${sub}</small></button>`}).join('')}</div>
     <div class="xb"><span>TR'de boşta <b>${X?.free_tl!=null?tl(Math.max(0,X.free_tl),0):'—'}</b></span><span>Bugün gönderilen <b>$${nf(X?.day_sum||0,0)} / ${nf(X?.daily_max||1000,0)}</b></span></div>
-    ${jobs?`<div class="xj">${jobs}</div>`:''}`))return;
+    ${jobs?`<div class="xj">${jobs}</div>`:''}
+    <div class="xdh">${ic('i-coins')}<b>Küçük bakiyeleri çevir</b><span>tek dokunuş</span></div>
+    <div class="xt x3">${DUST.map(([k,f,to,sub])=>`<button data-dust="${k}"><span class="xrt">${xEnd(f)}${ic('i-chev')}<span class="xe e5">${to}</span></span><b>${XEND[f][0]}</b><small>${sub}</small></button>`).join('')}</div>
+    ${(X?.log||[]).length?`<div class="xlog">${(X.log as any[]).slice(0,3).map(([t,m]: [number,string])=>`<div><time>${masaClock(t)}</time><span>${String(m).replace(/</g,'&lt;')}</span></div>`).join('')}</div>`:''}`))return;
   box.querySelectorAll<HTMLElement>('[data-x]').forEach(b=>b.onclick=()=>openXfer(b.dataset.x));
   box.querySelectorAll<HTMLElement>('[data-xc]').forEach(b=>b.onclick=()=>cancelXfer(b.dataset.xc,b as HTMLButtonElement));
+  box.querySelectorAll<HTMLElement>('[data-dust]').forEach(b=>b.onclick=async()=>{
+    if(!token){toast('Önce Ayarlar\'dan GitHub bağlantısını kur');return}
+    const k=b.dataset.dust,d=DUST.find(x=>x[0]===k);(b as HTMLButtonElement).disabled=true;
+    const ok=await cloudPatch(o=>{(o as any).dust=[...((o as any).dust||[]).filter((r: any)=>Date.now()-(r.ts||0)<3600000),{id:'d'+Date.now().toString(36),ts:Date.now(),ex:k}]},'Küçük bakiye çevirme: '+k);
+    (b as HTMLButtonElement).disabled=false;
+    toast(ok?`${XEND[d[1]][0]}: küçük bakiyeler ${d[2]}'ye çevriliyor; sonuç birkaç saniyede aşağıda görünür`:'İstek gönderilemedi, tekrar dene')});
 }
+const DUST: [string,string,string,string][]=[['tr','tr','TL','artıklar TL olur'],['g','g','$','artıklar USDT olur'],['m','m','SOL','artıklar SOL olur']];
 let xfSrc='bos',USDTTRY=0,xfId='';
 /** Üç kasa yan yana: OKX TR, OKX Global, KASA (soğuk cüzdan); dolar ve TL karşılığı, dakikada bir borsadan/zincirden. */
 function xKasalar(X: any): string {

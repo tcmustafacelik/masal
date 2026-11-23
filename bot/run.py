@@ -569,7 +569,9 @@ def main():
     try:
         from . import transfer
         if L["armed"]:
-            transfer.step(state, S, N)  # TR ↔ Global ↔ KASA para aktarımı ve kâr süpürme
+            transfer.step(state, S, N)
+            from . import dust
+            dust.step(state, S)  # küçük bakiyeleri çevirme istekleri
     except Exception as e:
         print("Aktarım hatası:", e)
     try:
