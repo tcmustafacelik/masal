@@ -1,4 +1,4 @@
-const APP_VERSION='1.69.0';
+const APP_VERSION='1.69.1';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -1475,7 +1475,7 @@ function ladder(){const el=document.getElementById('ladder');if(!el||!draft||dra
     cost+=amt;qty+=amt/px;const drop=(1-px)*100;
     rows+=`<div class="lr${dead?' off':''}"><em>${i+1}</em><span><b>−%${nf(drop,1)}</b><small>ortalamadan</small></span><span><b>${tl(amt,0)}</b><small>alım</small></span><span><b class="up">+%${nf(g.lot_tp_pct,1)}</b><small>${dead?'ulaşılmaz':'kârla satılır'}</small></span><i style="width:${Math.min(100,drop*2.2).toFixed(1)}%"></i></div>`}
   const avg=cost/qty,stopPx=(1-avg*(1-g.stop_pct/100))*100;
-  setH(el,`<div class="ldh">Bir coinde kademe merdiveni<span>${n} kademe · hepsi dolarsa ${tl(cost,0)}</span></div>${rows}
+  setH(el,`<div class="ldh">Kademe merdiveni<span>${n} kademe · hepsi dolarsa ${tl(cost,0)}</span></div>${rows}
     <p class="hint">Fiyat düştükçe sırayla alır; her kademe kendi fiyatından %${nf(g.lot_tp_pct,1)} yükselince ayrı satılır. Fiyat alış ortalamasının %${nf(g.stop_pct,1)} altına (ortalamadan −%${nf(stopPx,1)}) inerse hepsi satılır.${stopAt?` <b class="dn">${stopAt}. kademeden itibaren zarar sınırına önce ulaşılır; bu kademeler hiç alınmaz.</b>`:''}</p>`)}
 function clean(o){const c=JSON.parse(JSON.stringify(o,(k,v)=>k==='_bad'?undefined:v));return c}
 function refresh(){

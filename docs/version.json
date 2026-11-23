@@ -1,12 +1,17 @@
 {
-  "version": "1.69.0",
+  "version": "1.69.1",
   "date": "2026-11-23",
   "notes": [
-    "Ana sayfa, Futures ve Memecoin kartları görsel yenilendi (toplam, dağılım çubuğu, risk çubuğu, tarama hunisi, izlenen coin çubukları)",
-    "Kademeli ayarlar gruplandı; 3. ve sonraki kademeler açıkça yazıldı; kademe merdiveni önizlemesi eklendi",
-    "Fable 2. tur: aktarım ve memecoin güvenlik düzeltmeleri, daha hızlı bot turu, uygulamada veri donması ve renk geri dönmesi giderildi"
+    "Ayar grupları ve kademe merdiveni hizalandı; çift çizgiler kaldırıldı"
   ],
   "history": [
+    {
+      "version": "1.69.1",
+      "date": "2026-11-23",
+      "notes": [
+        "Ayar grupları ve kademe merdiveni hizalandı; çift çizgiler kaldırıldı"
+      ]
+    },
     {
       "version": "1.69.0",
       "date": "2026-11-23",
@@ -122,16 +127,6 @@
         "Bot daha hızlı: tur 5 sn'den 3 sn'ye indi; uygulamadan verilen emirler ve ayarlar daha çabuk uygulanır",
         "Futures: fiyat 5 sn'de bir izlenir (önce 20 sn); saatlik mum kapanınca karar 4 sn içinde verilir (önce 5 dakikaya kadar gecikebiliyordu)",
         "Memecoin: tarama ve çıkış kontrolü 10 sn'de bir (önce 20 sn); gerçek cüzdan 15 sn'de bir eşitlenir"
-      ]
-    },
-    {
-      "version": "1.59.0",
-      "date": "2026-11-23",
-      "notes": [
-        "Daha sıkı, ikonlu tasarım: kutular, sekmeler, açılır bölümler, ayar satırları ve kasalar küçüldü; iki seçenekli kutular yatay",
-        "Kasalar: KASA → OKX Global ve KASA → OKX TR (tutar ve adres hazır, Trust Wallet'ta onaylanır)",
-        "Küçük bakiye çevrilince telefona bildirim gelir",
-        "Spot'ta son işlemler ve coin bazında kâr/zarar kısa görünür; 'daha fazla göster' ile açılır"
       ]
     }
   ]

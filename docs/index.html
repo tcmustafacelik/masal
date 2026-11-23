@@ -764,6 +764,16 @@ h2{margin:0 2px 7px}
 .wgrid .wr small{flex:none;font-size:10px;color:var(--muted)}
 .wgrid .wr>i{position:absolute;left:0;bottom:0;height:3px;border-radius:0 2px 2px 0}
 .wgrid .wu>i{background:var(--green)}.wgrid .wd>i{background:var(--red)}
+
+/* 1.69.1: grup başlığı ve merdiven hizası */
+.fgh{border-bottom:0;padding:0 0 2px;margin:0}
+.fgh+.field{border-top:0!important;padding-top:6px!important}
+.fgrp{margin-top:10px;padding-top:10px;border-top:1px solid var(--line2)}.fgrp:first-child{margin-top:0;padding-top:0;border-top:0}
+.fgrp .field:last-child{padding-bottom:4px}
+.lr{grid-template-columns:24px repeat(3,minmax(0,1fr));text-align:center;gap:4px}
+.lr em{margin:0 auto}
+.lr b,.lr small{text-align:center}
+#ladder .hint{text-align:left}
 </style>
 </head>
 <body>
@@ -961,6 +971,6 @@ h2{margin:0 2px 7px}
 <div class="toast" id="toast" hidden></div>
 <div class="qsh" id="qsh" hidden><div class="qb"><div class="gr"></div><h3><span><svg class="i" id="qIco"><use href="#i-info"/></svg></span><b id="qTitle"></b></h3><div class="qt" id="qText"></div><button class="btn primary" id="qOk">Anladım</button></div></div>
 
-<script src="app.js?v=1.69.0"></script>
+<script src="app.js?v=1.69.1"></script>
 </body>
 </html>
