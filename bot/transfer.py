@@ -311,7 +311,7 @@ def step(state, S, N):
                 else:
                     _poll(C, job, X, N)
             except Exception as e:
-                job.update(stage="failed", msg=str(e)[:160])
+                job.update(stage="failed", msg=str(e)[:300])
                 _note(X, f"HATA {NAMES[src]} → {NAMES[dest]} {job['amt']} USDT: {job['msg']}")
                 N.add("alerts", "Aktarım yapılamadı", f"{NAMES[src]} → {NAMES[dest]} {job['amt']} USDT: {job['msg']}", 5, ["warning"])
         X["jobs"] = [j for j in X["jobs"] if j["stage"] not in ("done", "failed") or now * 1000 - j["ts"] < 7 * 86400_000][-30:]
