@@ -51,5 +51,19 @@ def check(name, base, pre):
     except Exception as e:
         print("Çekim ağları: HATA", e)
 
+def moves(name, base, pre):
+    key, sec, pas = (os.environ.get(pre + s, "") for s in ("_API_KEY", "_API_SECRET", "_API_PASSPHRASE"))
+    if not key:
+        return
+    for p, lbl in (("/api/v5/asset/withdrawal-history?ccy=USDT&limit=3", "Son çekimler"), ("/api/v5/asset/deposit-history?ccy=USDT&limit=3", "Son yatırmalar")):
+        try:
+            rows = req(base, key, sec, pas, p)
+            print(f"{name} {lbl}:", "; ".join(f"{x.get('amt')} USDT · {x.get('chain')} · durum {x.get('state')} · {x.get('ts')}" for x in rows) or "yok")
+        except Exception as e:
+            print(f"{name} {lbl}: HATA {e}")
+
+
 check("OKX TR", "https://tr.okx.com", "OKX")
 check("OKX Global", "https://www.okx.com", "OKXG")
+moves("OKX TR", "https://tr.okx.com", "OKX")
+moves("OKX Global", "https://www.okx.com", "OKXG")
