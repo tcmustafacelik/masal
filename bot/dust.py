@@ -11,10 +11,11 @@ import time
 
 from . import transfer
 
-MAX = 10
+MAX = 100
 SMALL = 5.0  # $; bunun altındaki bakiyeler "küçük" sayılır
 CASH = {"TRY", "USDT", "USDC", "EUR", "USD"}
 _SEEN = set()
+_OUT = []  # arka plan işinin sonuçları: ana turda kayda ve bildirime aktarılır (durum her turda diskten okunur)
 _HELD = {"tr": set()}
 
 
@@ -97,7 +98,7 @@ def _convert(ex, ccy, quotes):
 
 
 def _run(req, X):
-    note = transfer._note
+    note = lambda _x, text: _OUT.append(["note", text])
     k = req.get("ex")
     ccys = [str(c) for c in (req.get("ccys") or [])][:MAX]
     name = {"tr": "OKX TR", "g": "OKX Global", "m": "MEME"}.get(k, k)
@@ -114,27 +115,37 @@ def _run(req, X):
                     alt = [x for x in (("TRY", "USDT") if k == "tr" else ("USDT", "USDC")) if x != want]
                     to = _convert(ex, c, (want, *alt))
                     ok.append(f"{c}→{to}")
+                    time.sleep(0.25)  # borsa istek sınırına takılmasın
                 except Exception as e:
                     bad.append(f"{c} ({str(e)[:50]})")
-            msg = (f"çevrildi {', '.join(ok)}" if ok else "çevrilen yok") + (f" · olmadı: {', '.join(bad)}" if bad else "")
+            why = {}
+            for b in bad:
+                why.setdefault(b.split(" (", 1)[-1].rstrip(")"), []).append(b.split(" (")[0])
+            msg = (f"{len(ok)} coin çevrildi ({', '.join(ok[:8])}{'…' if len(ok) > 8 else ''})" if ok else "çevrilen yok") + \
+                  "".join(f" · {len(v)} coin olmadı: {k[:70]}" for k, v in list(why.items())[:2])
             note(X, f"{name}: " + msg)
-            X.setdefault("dust_out", []).append([f"{name} · küçük bakiyeler", msg])
+            _OUT.append(["push", f"{name} · küçük bakiyeler", msg])
         elif k == "m":
             from . import meme_gercek
             if not meme_gercek._W.get("key"):
                 raise RuntimeError("MEME cüzdanı bağlı değil")
             meme_gercek._Q.put(["dust", ccys])
             note(X, f"MEME: {len(ccys)} token artığı SOL'a satılıyor")
-        X["dust_at"] = 0  # liste hemen yenilensin
+        _OUT.append(["refresh"])  # liste hemen yenilensin
     except Exception as e:
         note(X, f"{name} küçük bakiye çevirme: {str(e)[:120]}")
 
 
 def step(state, S, N=None):
     X = state.setdefault("xfer", {"jobs": [], "seen": [], "log": [], "g_base": 0})
-    for title, msg in X.pop("dust_out", []):
-        if N:
-            N.add("money", title, msg[:300], 3, ["recycle"])
+    while _OUT:
+        o = _OUT.pop(0)
+        if o[0] == "note":
+            transfer._note(X, o[1])
+        elif o[0] == "push" and N:
+            N.add("money", o[1], o[2][:300], 3, ["recycle"])
+        elif o[0] == "refresh":
+            X["dust_at"] = 0
     L = state.get("live") or {}
     _HELD["tr"] = {i.split("-")[0] for i in (L.get("positions") or {})}
     seen = set(X.get("dust_seen") or [])

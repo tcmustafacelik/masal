@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.60.0';
+const APP_VERSION = '1.60.1';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -986,14 +986,14 @@ function renderXfer() {
     box.querySelectorAll('[data-xc]').forEach(b => b.onclick = () => cancelXfer(b.dataset.xc, b));
     box.querySelectorAll('[data-dust]').forEach(b => b.onclick = () => openDust(b.dataset.dust));
 }
-const DUST = [['tr', 'tr', 'TL'], ['g', 'g', 'USDT'], ['m', 'm', 'SOL']], DUST_MAX = 10;
+const DUST = [['tr', 'tr', 'TL'], ['g', 'g', 'USDT'], ['m', 'm', 'SOL']], DUST_MAX = 100;
 /** Küçük bakiyeler: tek tek ya da hepsi seçilir; tek seferde en fazla DUST_MAX coin çevrilir (fazlası uyarılır). */
 function openDust(k) {
     const X = S?.xfer || {}, d = DUST.find(x => x[0] === k), list = (X.dust || {})[k] || [], q = document.getElementById('qsh');
     q.dataset.n = '';
     qHead(XEND[d[1]][1], 'Vazgeç');
     document.getElementById('qTitle').textContent = `${XEND[d[1]][0]} · küçük bakiyeler`;
-    const pick = new Set(list.slice(0, DUST_MAX).map(x => x.ccy));
+    const pick = new Set(list.map(x => x.ccy));
     let to = k === 'tr' ? (localStore('masal_dust_to') || 'TRY') : k === 'g' ? 'USDT' : 'SOL';
     const TOS = { tr: [['TRY', 'TL'], ['USDT', 'USDT']], g: [['USDT', 'USDT'], ['USDC', 'USDC']], m: [['SOL', 'SOL']] };
     const usd = (v) => v > 0 && v < 0.01 ? '<$0,01' : '$' + nf(v, 2);
