@@ -166,20 +166,41 @@ def weekly_backtest():
 
 
 def flush_desks():
-    """Yeniden başlamadan / oturum bitmeden önce: gerçek masaların son hâli kayda yazılır (arada açılan emir kaybolmasın)."""
+    """Yeniden başlamadan / oturum bitmeden önce: aktarım işleri ve gerçek masaların son hâli kayda yazılır."""
     try:
-        from . import kaldirac_gercek, meme_gercek
+        from . import kaldirac_gercek, meme_gercek, transfer
+        transfer.quiesce()
         a, b = kaldirac_gercek.quiesce(), meme_gercek.quiesce()
-        if a is None and b is None:
-            return
         st = run.load_state()
+        if st.get("xfer") is not None:
+            q = transfer._NoteQ()
+            transfer._merge_jobs(st["xfer"], q)
         if a is not None:
             st["levr"] = a
         if b is not None:
             st["memer"] = b
         run.save_state(st)
+        if st.get("xfer") is not None and q.items:
+            n = notifier()
+            for a, k in q.items:
+                n.add(*a, **k)
+            n.flush()
     except Exception as e:
         print("Masalar kaydedilemedi:", e)
+    try:
+        from .notify import drain
+        drain()
+    except Exception as e:
+        print("Bildirimler gönderilemedi:", e)
+
+
+def resume_desks():
+    try:
+        from . import kaldirac_gercek, meme_gercek
+        kaldirac_gercek.resume()
+        meme_gercek.resume()
+    except Exception as e:
+        print("Masalar devam ettirilemedi:", e)
 
 
 def main():
@@ -202,14 +223,24 @@ def main():
                     print("İş akışı güncellendi; oturum yenisiyle değiştiriliyor.")
                     break
                 # yalnız bot kodu değişti: aynı oturumda birkaç saniyede yeniden başla (yeni oturumu 1 dk beklemeden)
-                flush_desks()
-                push_data(wait=True)
-                sh("git", "checkout", "FETCH_HEAD", "--", "bot")
-                sh("git", "reset", "-q", "bot")
-                os.environ["MASAL_T0"], os.environ["MASAL_REV"] = str(start), rev
-                print("Bot kodu güncellendi; aynı oturumda yeniden başlatılıyor.", flush=True)
                 import sys
-                os.execv(sys.executable, [sys.executable, "-m", "bot.loop"])
+                ok = sh("git", "checkout", "FETCH_HEAD", "--", "bot").returncode == 0
+                sh("git", "reset", "-q", "bot")
+                # yeni kod açılabiliyor mu? açılamıyorsa eski kodla devam (bozuk gönderim botu kilitlemesin)
+                if ok and sh(sys.executable, "-c", "import bot.loop, bot.run").returncode == 0:
+                    try:
+                        flush_desks()
+                        push_data(wait=True)
+                        os.environ["MASAL_T0"], os.environ["MASAL_REV"] = str(start), rev
+                        print("Bot kodu güncellendi; aynı oturumda yeniden başlatılıyor.", flush=True)
+                        os.execv(sys.executable, [sys.executable, "-m", "bot.loop"])
+                    except Exception:
+                        resume_desks()
+                        raise
+                else:
+                    sh("git", "checkout", "HEAD", "--", "bot")
+                    print("Yeni bot kodu açılamadı; eski kodla devam ediliyor.")
+                    start_rev = rev
             if time.time() - last_hb > 3 * 60:  # nabız 3 dk'da bir; bot 10 dk susarsa telefona uyarı düşer
                 try:
                     heartbeat(notifier())
@@ -230,13 +261,14 @@ def main():
             errors += 1
             traceback.print_exc()
             if errors >= 5:
+                flush_desks()
                 push_data(wait=True)  # bitmeden önce son kayıt mutlaka gönderilsin
                 raise  # üst üste hata: oturum biter, bir dakika sonra yenisi başlar
         took = time.time() - t0
         run.PERF["turn"] = round(took, 2)
         if took > STEP:
             print(f"Uzun tur: {took:.1f} sn")
-        time.sleep(max(1, STEP - took))
+        time.sleep(max(0.2, STEP - took))
     flush_desks()
     push_data(wait=True)
     print(f"Oturum bitti: {n} tur.")

@@ -4,6 +4,7 @@ Kullanım:  python -m bot.run
 """
 import json
 import os
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 
@@ -303,7 +304,11 @@ def fund_to_trading(state, N):
     """OKX TR'de bankadan gelen TL (ve USDT) Fonlama hesabına düşer; bot yalnız Alım-satım hesabını kullanabilir.
     Fonlamadaki para kendiliğinden Alım-satım'a alınır (dışarı aktarım işi beklerken dokunulmaz)."""
     X = state.get("xfer") or {}
-    if any(j.get("stage") not in ("done", "failed") and j.get("dir", "").startswith("tr") for j in X.get("jobs", [])):
+    now = time.time() * 1000
+    # TR'ye giden/gelen aktarım sürerken ya da Global'den gelip bankaya çekilmek üzere Nakit'e konan para varken dokunulmaz
+    if any((j.get("stage") not in ("done", "failed") and "tr" in j.get("dir", ""))
+           or (j.get("dir") == "g2tr" and now - (j.get("sent_ts") or j.get("ts") or 0) < 48 * 3600_000)
+           for j in X.get("jobs", [])):
         return
     try:
         from . import transfer
@@ -320,6 +325,9 @@ def fund_to_trading(state, N):
             print("Fonlamadan alım-satıma:", moved)
     except Exception as e:
         print("Fonlama aktarımı:", e)
+
+
+_OKXT = {}
 
 
 def check_okx():
@@ -577,10 +585,25 @@ def main():
 
     prev = state.get("okx") or {}
     # Hesap kontrolü (6 istek) dakikada bir yeter; araya giren turlar önceki sonucu kullanır
-    if not prev or time.time() * 1000 - (prev.get("ts") or 0) > 60_000 or not prev.get("ok"):
-        state["okx"] = check_okx()
+    # ilk turda beklenir; sonra arka planda yenilenir (6 istek ana turu bekletmez), sonuç bir sonraki turda kullanılır
+    due = not prev or time.time() * 1000 - (prev.get("ts") or 0) > 60_000 or not prev.get("ok")
+    fresh = _OKXT.pop("out", None)
+    if not prev:
+        fresh = check_okx()
+    elif due and not (_OKXT.get("t") and _OKXT["t"].is_alive()) and fresh is None:
+        def _bg():
+            try:
+                _OKXT["out"] = check_okx()
+            except Exception as e:
+                print("Hesap kontrolü:", e)
+        _OKXT["t"] = threading.Thread(target=_bg, daemon=True)
+        _OKXT["t"].start()
+    if fresh is not None:
+        state["okx"] = fresh
         if L["armed"] and float(state["okx"].get("fund_tl") or 0) >= 10:
             fund_to_trading(state, N)
+    else:
+        state["okx"] = prev
     if "quote_ok" in state["okx"] and state["okx"]["quote_ok"] != prev.get("quote_ok"):
         print(f"{config.QUOTE} paritesi işlem izni: {'var' if state['okx']['quote_ok'] else 'YOK - ' + state['okx'].get('quote_err', '')}"
               f" · USDT bakiyesi {state['okx'].get('usdt')}")

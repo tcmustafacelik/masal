@@ -10,6 +10,7 @@ Güvenlik kuralları (ayarla gevşetilemez):
   - Pozisyon yokken işlem hesabında bütçenin üstünde kalan kâr fon hesabına geri alınır (oradan KASA'ya süpürülür)
 Ağ işleri arka planda tek bir işçi iş parçacığında yapılır; ana tur beklemez.
 """
+import copy
 import json
 import math
 import queue
@@ -161,6 +162,7 @@ def _close_all(D, R, reason):
 
 
 def _sync(D, R, cfg):
+    R["err"] = ""  # bu eşitlemede yeniden oluşmayan eski uyarı kalmasın
     eq, avail = D.balance()
     live = D.positions()
     R["eq"], R["avail"] = round(eq, 4), round(avail, 4)
@@ -203,13 +205,15 @@ def _sync(D, R, cfg):
             pass
         if h and int(h.get("uTime") or 0) < p["ts"]:
             h = None  # eski bir pozisyonun kaydı
+        if h is None and time.time() - p.setdefault("gone_ts", time.time()) < 20:
+            continue  # borsanın kapanış kaydı birkaç saniye gecikebilir; kâr/zarar 0 yazılmasın
         pnl = float(h.get("realizedPnl") or h.get("pnl") or 0) if h else 0.0
         reason = p.get("closing") or ("borsadaki zarar durdur / kâr al" if h else "borsada kapanmış")
         _record(R, c, p, pnl, float(h.get("closeAvgPx") or 0) if h else 0, reason)
         del R["pos"][c]
     # kayıtta olmayan pozisyon (ör. bot emir verdikten hemen sonra yeniden başladı): masa sahiplenir, yönetmeye devam eder
     for c, x in live.items():
-        if c not in R["pos"] and c in cfg.get("coins", []):
+        if c not in R["pos"] and c in cfg.get("coins", []) and x.get("mgnMode", "isolated") == "isolated":  # elle açılan çapraz pozisyona dokunulmaz
             pos = float(x.get("pos") or 0)
             side = (1 if x.get("posSide") == "long" else -1) if x.get("posSide") in ("long", "short") else (1 if pos > 0 else -1)
             avg = float(x.get("avgPx") or 0)
@@ -234,7 +238,7 @@ def _sync(D, R, cfg):
         _note(R, "risk", f"MASA DURDU: {R['dead']}. Ayarlardan yeniden başlatılana kadar işlem yok")
         _close_all(D, R, "toplam zarar sınırı")
     # bütçe: fon hesabından işlem hesabına (yalnız bir kez / bütçe artınca); kâr: pozisyon yokken fona geri
-    if not R["dead"] and R["funded"] < want:
+    if cfg.get("real") and not R["dead"] and R["funded"] < want:
         free = D.ex.funding("USDT")
         base = eq if R["funded"] <= 0 else R["funded"]
         amt = min(max(0.0, want - base), free)
@@ -344,9 +348,12 @@ def step(state, S, paper_cfg, N=None):
     if not transfer.Ex("https://www.okx.com", "OKXG").ok:
         return
     if _W["R"] is None:
-        _W["R"] = state.get("levr") or _new(cfg)
+        _W["R"] = copy.deepcopy(state.get("levr")) or _new(cfg)
+        if (state.get("locked") or {}).get("levr") and not state.get("levr"):
+            _W["R"]["dead"] = "kayıt açılamadı (şifre değişmiş olabilir); ayarlardan yeniden başlat"
     R = _W["R"]
     if cfg.get("real_reset", 0) != R.get("reset", 0) and _LOCK.acquire(timeout=0.05):  # ayarlardan yeniden başlat: durma kaldırılır
+        (state.get("locked") or {}).pop("levr", None)
         try:
             R["reset"], R["dead"], R["halt"] = cfg.get("real_reset", 0), "", ""
             R["funded"], R["harvest"], R["realized"] = R["eq"], 0.0, 0.0
@@ -395,8 +402,16 @@ def quiesce(timeout=20):
         time.sleep(0.2)
     if _W["R"] is None:
         return None
-    _LOCK.acquire(timeout=timeout)  # bırakılmaz: süreç birazdan yeniden başlıyor
+    if not _LOCK.acquire(timeout=timeout):  # işçi meşgul: yarım kayıt yazılmaz, son tur kaydı geçerli
+        return None
+    _W["held"] = True  # bırakılmaz: süreç birazdan yeniden başlıyor (başlamazsa resume())
     return json.loads(json.dumps(_W["R"]))
+
+
+def resume():
+    """Yeniden başlama olmadıysa masa çalışmaya devam etsin."""
+    if _W.pop("held", None):
+        _LOCK.release()
 
 
 def public(state):

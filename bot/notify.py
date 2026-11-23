@@ -75,14 +75,43 @@ class Notifier:
                                "priority": priority, "tags": tags or []})
 
     def flush(self):
-        for m in self.queue[:15]:  # bir turda en fazla 15 bildirim
-            try:
-                req = urllib.request.Request("https://ntfy.sh/", data=json.dumps(m).encode(), method="POST",
-                                             headers={"Content-Type": "application/json", "User-Agent": "masal/1.0"})
-                urllib.request.urlopen(req, timeout=10).read()
-            except Exception as e:
-                print("Bildirim gönderilemedi:", e)
+        """Bildirimler arka planda sırayla gönderilir: ntfy yavaşsa bot turu beklemez."""
+        if self.queue:
+            _OUTQ.extend(self.queue[:15])  # bir turda en fazla 15 bildirim
+            _start_sender()
         self.queue = []
+
+
+_OUTQ = []
+_SND = {"t": None}
+
+
+def _sender():
+    while _OUTQ:
+        m = _OUTQ.pop(0)
+        try:
+            req = urllib.request.Request("https://ntfy.sh/", data=json.dumps(m).encode(), method="POST",
+                                         headers={"Content-Type": "application/json", "User-Agent": "masal/1.0"})
+            urllib.request.urlopen(req, timeout=10).read()
+        except Exception as e:
+            print("Bildirim gönderilemedi:", e)
+
+
+def _start_sender():
+    import threading
+    t = _SND["t"]
+    if t is None or not t.is_alive():
+        _SND["t"] = threading.Thread(target=_sender, daemon=True)
+        _SND["t"].start()
+
+
+def drain(timeout=15):
+    """Yeniden başlamadan önce bekleyen bildirimler gönderilsin."""
+    t = _SND["t"]
+    if t is not None and t.is_alive():
+        t.join(timeout)
+    if _OUTQ:
+        _sender()
 
 
 HB_ID = "masal-nabiz"

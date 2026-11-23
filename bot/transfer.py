@@ -355,7 +355,10 @@ def _sweep(C, X, cfg, N, state):
     if now - X.get("sweep_at", 0) < cfg["sweep_days"] * 86400:
         return
     X["sweep_at"] = now
-    harvest = float((state.get("levr") or {}).get("harvest") or 0)
+    LR = state.get("levr") or {}
+    if LR.get("reset", 0) != X.get("lev_reset", 0):  # masa yeniden başlatıldı: süpürülen kâr sayacı da sıfırlanır
+        X["lev_reset"], X["swept"] = LR.get("reset", 0), 0.0
+    harvest = float(LR.get("harvest") or 0)
     profit = harvest - float(X.get("swept", 0))
     if profit < cfg["sweep_min"]:
         _note(X, f"Kâr süpürme: futures'tan fona alınan yeni kâr {max(0, profit):.2f} $; gönderilecek kâr yok")
@@ -373,10 +376,14 @@ def _sweep_meme(X, cfg, state):
     R = state.get("memer") or {}
     if not R.get("addr") or not R.get("start") or R.get("pos"):
         return
+    if any(j["dir"] in MEME_DIRS and j["stage"] not in ("done", "failed") for j in X.get("jobs", [])):
+        return  # yoldaki para kâr sanılmasın
     now = time.time()
     if now - X.get("msweep_at", 0) < cfg["sweep_days"] * 86400:
         return
     X["msweep_at"] = now
+    if R.get("reset", 0) != X.get("meme_reset", 0):
+        X["meme_reset"], X["mswept"] = R.get("reset", 0), 0.0
     profit = float(R.get("value") or 0) - float(R["start"]) - float(X.get("mswept", 0))
     if profit < cfg["sweep_min"]:
         _note(X, f"Memecoin kâr süpürme: yeni kâr {max(0, profit):.2f} $; gönderilecek kâr yok")
@@ -408,17 +415,26 @@ def _jobs_thread(Xc, C, cfg, state, now):
     _JOBS["out"] = (Xc, q.items)
 
 
+def quiesce(timeout=90):
+    """Yeniden başlamadan önce: süren aktarım işi bitsin (yarım kalan SOL/USDT gönderimi tekrar edilmesin)."""
+    th = _JOBS.get("t")
+    if th and th.is_alive():
+        th.join(timeout)
+
+
 def _merge_jobs(X, N):
     out = _JOBS.pop("out", None)
     if not out:
         return
     Xc, notes = out
     base = _JOBS.get("base") or {}
+    ids = _JOBS.get("ids") or set()
     cur = {j["id"]: j for j in X["jobs"]}
     for j in Xc["jobs"]:
         old = cur.get(j["id"])
         if old is None:
-            X["jobs"].append(j)  # ör. kâr süpürmenin KASA adımı
+            if j["id"] not in ids:  # yalnız iş parçacığının yeni açtığı iş (ör. kâr süpürmenin KASA adımı); budananlar geri gelmez
+                X["jobs"].append(j)
         elif not (old["stage"] == "failed" and j["stage"] == "new"):  # bu arada iptal edildiyse iptal geçerli
             old.clear()
             old.update(j)
@@ -427,6 +443,8 @@ def _merge_jobs(X, N):
     X["log"] = (new + X.get("log", []))[:60]
     for k in ("day_sum", "g_base"):
         X[k] = round(float(X.get(k, 0)) + float(Xc.get(k, 0)) - float(base.get(k, 0)), 2)
+    if Xc.get("used_dep"):
+        X["used_dep"] = list(dict.fromkeys(list(X.get("used_dep", [])) + list(Xc["used_dep"])))[-50:]
     for a, k in notes:
         N.add(*a, **k)
 
@@ -444,7 +462,8 @@ def _run_jobs(X, C, cfg, state, N, now):
                     continue
                 meme_aktar.run(job, X, C, N, _note)
             except Exception as e:
-                if job["stage"] == "sent" and "reddetti" not in str(e) and "ulaşmadı" not in str(e):
+                if ((job["stage"] == "sent" and "reddetti" not in str(e) and "ulaşmadı" not in str(e))
+                        or (job.get("ordId") and not isinstance(e, RuntimeError))):  # ağ hatası: SOL alındıysa tekrar denenir
                     job["msg"] = f"kontrol edilemedi, tekrar denenecek: {str(e)[:120]}"
                 else:
                     job.update(stage="failed", msg=str(e)[:300])
@@ -554,12 +573,14 @@ def step(state, S, N):
     except Exception as e:
         print("Kâr süpürme hatası:", e)
     # işler (en fazla 15 sn'de bir; arka planda: borsa istekleri ana turu bekletmez)
-    _merge_jobs(X, N)
     th = _JOBS.get("t")
-    if now - X.get("tick", 0) >= 15 and not (th and th.is_alive()) and any(j["stage"] not in ("done", "failed") for j in X["jobs"]):
+    alive = bool(th and th.is_alive())  # önce bakılır: iş parçacığı bu arada biterse sonucu aşağıda birleşir, ikinci kez başlamaz
+    _merge_jobs(X, N)
+    if now - X.get("tick", 0) >= 15 and not alive and any(j["stage"] not in ("done", "failed") for j in X["jobs"]):
         X["tick"] = now
         snap = copy.deepcopy(X)
         _JOBS["base"] = {k: snap.get(k, 0) for k in ("day_sum", "g_base")}
+        _JOBS["ids"] = {j["id"] for j in snap["jobs"]}
         _JOBS["t"] = threading.Thread(target=_jobs_thread, args=(snap, C, cfg, state, now), daemon=True)
         _JOBS["t"].start()
         X["jobs"] = [j for j in X["jobs"] if j["stage"] not in ("done", "failed") or now * 1000 - j["ts"] < 7 * 86400_000][-30:]

@@ -52,13 +52,8 @@ def _g_sol_chain(g):
 
 
 def _adj_start(usd):
-    R = G._W.get("R")
-    if R and R.get("start"):
-        if G._LOCK.acquire(timeout=5):
-            try:
-                R["start"] = round(max(0.0, R["start"] + usd), 2)
-            finally:
-                G._LOCK.release()
+    """Masanın başlangıç değeri, masa işçisinin kendi turunda düzeltilir (kilit beklenmez, düzeltme kaybolmaz)."""
+    G._ADJ.append(float(usd))
 
 
 def run(job, X, C, N, note):
@@ -154,8 +149,12 @@ def _m2g(g, job, X, N, note):
         dep = next((x["addr"] for x in g.req("GET", "/api/v5/asset/deposit-address?ccy=SOL") if "solana" in x["chain"].lower()), None)
         if not dep:
             raise RuntimeError("Global SOL yatırma adresi alınamadı")
-        sig = _sol_transfer(key, dep, round(sol * 1e9))
-        _adj_start(-job["amt"])  # çıkan para masanın zararı sayılmasın
+        _adj_start(-job["amt"])  # çıkan para masanın zararı sayılmasın (göndermeden önce: arada eşitleme zarar sanmasın)
+        try:
+            sig = _sol_transfer(key, dep, round(sol * 1e9))
+        except Exception:
+            _adj_start(job["amt"])
+            raise
         job.update(stage="sent", txId=sig, sol=round(sol, 6), sent_ts=int(time.time() * 1000), msg=f"{sol:.4f} SOL gönderildi; ağda")
         X["day_sum"] = round(X.get("day_sum", 0) + job["amt"], 2)
         note(X, f"MEME → OKX Global: {sol:.4f} SOL (~{job['amt']:.2f} $) gönderildi")
@@ -174,11 +173,20 @@ def _m2g(g, job, X, N, note):
                     if not job.get("usd"):
                         od = g.req("GET", f"/api/v5/trade/order?instId=SOL-USDT&ordId={job['sold']}")[0]
                         job["usd"] = float(od.get("accFillSz") or 0) * float(od.get("avgPx") or 0) - abs(float(od.get("fee") or 0))
+                    if job["usd"] <= 0:  # satış henüz dolmadı: bir sonraki kontrolde tekrar bakılır
+                        job.pop("usd")
+                        job["msg"] = "SOL satışı bekleniyor"
+                        return
                     usd = job["usd"]
                     g.move("USDT", math.floor(usd * 100) / 100, transfer.TRADING, transfer.FUNDING)
                     job.update(stage="done", msg=f"Global'e ulaştı; {usd:.2f} USDT olarak fon hesabında")
-                    if job.get("then") == "k" and usd >= 1:  # kâr süpürme: Global'den KASA'ya devam
-                        X["jobs"].append({"id": job["id"] + "k", "dir": "g2k", "amt": math.floor(usd * 100) / 100, "src": "kar",
+                    try:
+                        k_fee = float(g.chain()[1])
+                    except Exception:
+                        k_fee = 1.0
+                    k_amt = math.floor((usd - k_fee) * 100) / 100  # zincir ücreti Global fonundan düşer
+                    if job.get("then") == "k" and k_amt >= 1:  # kâr süpürme: Global'den KASA'ya devam
+                        X["jobs"].append({"id": job["id"] + "k", "dir": "g2k", "amt": k_amt, "src": "kar",
                                           "ts": int(time.time() * 1000), "stage": "new", "msg": "memecoin kârı KASA'ya"})
                     X["g_base"] = round(X.get("g_base", 0) + usd, 2)
                     note(X, f"Global'e ulaştı: {usd:.2f} USDT")

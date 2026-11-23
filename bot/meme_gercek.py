@@ -13,6 +13,7 @@ Alım-satım Jupiter Ultra üzerinden (SOL ↔ token). Kurallar:
 import base64
 import hashlib
 import hmac
+import copy
 import json
 import os
 import queue
@@ -332,7 +333,7 @@ def _sync(R, cfg, prices, held_paper, key):
         _note(R, "info", f"MEME cüzdanı bağlandı ({R['how']}); başlangıç değeri ${v:.2f}")
     # deneme masasının tutmadığı ama gerçekte kalan token: satış yeniden denenir
     for m in list(R["pos"]):
-        if m not in held_paper and time.time() * 1000 - R["pos"][m]["ts"] > 60000:
+        if (m not in held_paper or R["pos"][m].get("closing")) and time.time() * 1000 - R["pos"][m]["ts"] > 60000:
             try:
                 _sell(key, R, m, R["pos"][m].get("closing") or "deneme masası sattı", cfg)
             except Exception as e:
@@ -385,6 +386,11 @@ def _loop():
                 prices = {m: float(p.get("priceUsd") or 0) for m, p in (meme._SNAP.get("pairs") or {}).items()}
             held = set(cfg.get("_held") or [])
             with _LOCK:
+                while _ADJ:  # MEME'ye gelen/çıkan para: masanın kâr-zararı sayılmasın (aktarım iş parçacığından)
+                    if R.get("start"):
+                        R["start"] = round(max(0.0, R["start"] + _ADJ.pop(0)), 2)
+                    else:
+                        _ADJ.pop(0)
                 if ev and ev[0] == "buy" and cfg.get("real"):
                     if time.time() - last > 5:
                         _sync(R, cfg, prices, held | {ev[1]}, key)
@@ -421,7 +427,9 @@ def step(state, S, paper_cfg, N=None):
     if not cfg["wallet"] or not (os.environ.get("MEME_SOL_SEED") or os.environ.get("MEME_SOL_KEY")):
         return
     if _W["R"] is None:
-        _W["R"] = state.get("memer") or _new(cfg)
+        _W["R"] = copy.deepcopy(state.get("memer")) or _new(cfg)
+        if (state.get("locked") or {}).get("memer") and not state.get("memer"):
+            _W["R"]["dead"] = "kayıt açılamadı (şifre değişmiş olabilir); ayarlardan yeniden başlat"
         k, a, how = load_key(cfg["wallet"])
         _W["key"] = k
         R = _W["R"]
@@ -434,6 +442,7 @@ def step(state, S, paper_cfg, N=None):
         state["memer"] = {**R, "on": False}
         return
     if cfg.get("real_reset", 0) != R.get("reset", 0) and _LOCK.acquire(timeout=0.05):
+        (state.get("locked") or {}).pop("memer", None)
         try:
             R["reset"], R["dead"], R["start"] = cfg.get("real_reset", 0), "", R["value"]
             _note(R, "info", "Masa ayarlardan yeniden başlatıldı")
@@ -473,6 +482,9 @@ def trim_log():
             _LOCK.release()
 
 
+_ADJ = []
+
+
 def quiesce(timeout=20):
     """Yeniden başlamadan önce: sıradaki emirler bitsin, işçi yeni emir başlatmasın; son kayıt döner."""
     t = time.time()
@@ -480,8 +492,16 @@ def quiesce(timeout=20):
         time.sleep(0.2)
     if _W["R"] is None:
         return None
-    _LOCK.acquire(timeout=timeout)  # bırakılmaz: süreç birazdan yeniden başlıyor
+    if not _LOCK.acquire(timeout=timeout):  # işçi meşgul: yarım kayıt yazılmaz, son tur kaydı geçerli
+        return None
+    _W["held"] = True  # bırakılmaz: süreç birazdan yeniden başlıyor (başlamazsa resume())
     return json.loads(json.dumps(_W["R"]))
+
+
+def resume():
+    """Yeniden başlama olmadıysa masa çalışmaya devam etsin."""
+    if _W.pop("held", None):
+        _LOCK.release()
 
 
 def public(state):
