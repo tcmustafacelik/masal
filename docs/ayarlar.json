@@ -261,6 +261,24 @@
         "INJ"
       ],
       "to": "USDT"
+    },
+    {
+      "id": "dmwtm9oo7",
+      "ts": 1795459567399,
+      "ex": "tr",
+      "ccys": [
+        "TAO",
+        "ZRO",
+        "INJ",
+        "XPL",
+        "PONS",
+        "HYPE",
+        "JUP",
+        "RENDER",
+        "WLD",
+        "ENA"
+      ],
+      "to": "USDT"
     }
   ]
 }
