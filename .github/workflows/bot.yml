@@ -41,6 +41,9 @@ jobs:
           OKX_API_KEY: ${{ secrets.OKX_API_KEY }}
           OKX_API_SECRET: ${{ secrets.OKX_API_SECRET }}
           OKX_API_PASSPHRASE: ${{ secrets.OKX_API_PASSPHRASE }}
+          OKXG_API_KEY: ${{ secrets.OKXG_API_KEY }}
+          OKXG_API_SECRET: ${{ secrets.OKXG_API_SECRET }}
+          OKXG_API_PASSPHRASE: ${{ secrets.OKXG_API_PASSPHRASE }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PYTHONUNBUFFERED: "1"
         run: python -m bot.loop
