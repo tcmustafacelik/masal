@@ -22,8 +22,11 @@ else:
     print("SOL alım emri verildi:", o.get("sCode"), o.get("sMsg") or "")
     time.sleep(3)
 t = g.trading("SOL")
-if t > 0:
-    g.move("SOL", t, transfer.TRADING, transfer.FUNDING)
+if t >= 0.0001:
+    try:
+        g.move("SOL", t, transfer.TRADING, transfer.FUNDING)
+    except RuntimeError as e:
+        print("Aktarım atlandı:", e)
 time.sleep(1)
 chain = fee = mn = None
 for c in g.req("GET", "/api/v5/asset/currencies?ccy=SOL"):

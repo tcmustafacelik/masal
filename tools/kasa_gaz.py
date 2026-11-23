@@ -32,8 +32,11 @@ if have < need:
     print("ETH alındı:", o.get("sCode"))
     time.sleep(3)
 t = g.trading("ETH")
-if t > 0:
-    g.move("ETH", t, transfer.TRADING, transfer.FUNDING)
+if t >= 0.0001:
+    try:
+        g.move("ETH", t, transfer.TRADING, transfer.FUNDING)
+    except RuntimeError as e:
+        print("Aktarım atlandı:", e)
 time.sleep(1)
 amt = math.floor((g.funding("ETH") - fee) * 1e6) / 1e6
 body = {"ccy": "ETH", "amt": f"{amt:f}", "dest": "4", "toAddr": transfer.KASA, "chain": chain,
