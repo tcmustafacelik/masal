@@ -178,6 +178,7 @@
     "min_age_min": 10,
     "max_age_h": 168,
     "tp_pct": 100,
+    "tp_part": 50,
     "trail_from": 25,
     "trail_pct": 20,
     "sl_pct": 15,

@@ -649,7 +649,7 @@ function renderMemeR() {
     const mm = (orig || S?.settings)?.meme || {}, ml = +mm.max_loss || 10, left = Math.max(0, ml + Math.min(0, R.pnl));
     const pos = (R.positions || []).map((p) => {
         const g = p.cost ? (p.val / p.cost - 1) * 100 : 0;
-        return `<div class="fr"><time>${masaClock(p.ts)}</time><em class="ft al">AÇIK</em><div><b>${esc(p.sym)}</b> ${usd(p.val)} · <span class="${cls(g)}">${spc(g, 1)}</span><small>giriş ${usd(p.cost)} · ${esc(p.why)}</small></div>${deskBtn('meme', p.mint, 'Sat')}</div>`;
+        return `<div class="fr"><time>${masaClock(p.ts)}</time><em class="ft al">${p.part ? 'KALAN' : 'AÇIK'}</em><div><b>${esc(p.sym)}</b> ${usd(p.val)} · <span class="${cls(g)}">${spc(g, 1)}</span><small>giriş ${usd(p.cost)} · ${esc(p.why)}</small></div>${deskBtn('meme', p.mint, 'Sat')}</div>`;
     }).join('');
     const feed = (R.log || []).slice(0, 15).map(([ts, k, t]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : 'not'}">${k === 'buy' ? 'AL' : k === 'exit' ? 'SAT' : k === 'risk' ? 'ENGEL' : 'BİLGİ'}</em><div>${esc(t).replace(/^GERÇEK (AL|SAT|ENGEL) ?/, '')}</div></div>`).join('');
     const st = R.dead ? `<b class="dn">Durdu: ${esc(R.dead)}. Ayarlar → Memecoin → Yeniden başlat.</b>` : !R.on ? '<b>Kapalı.</b> Ayarlar → Memecoin\'den açılır.' : '';
@@ -2091,7 +2091,8 @@ const SECTIONS = [
             ['meme.size_pct', 'İşlem büyüklüğü', 'Kasanın', '%', 1, 1, 50, 0],
             ['meme.max_pos', 'En fazla pozisyon', 'Aynı anda tutulan token', 'adet', 1, 1, 10, 0],
             ['meme.min_liq', 'En az likidite', 'Havuzu bundan küçük token alınmaz', '$', 5000, 5000, 1e7, 0],
-            ['meme.tp_pct', 'Kâr al', 'Bu kârda satılır', '%', 5, 5, 500, 0],
+            ['meme.tp_pct', 'Kâr al', 'Bu kâra ulaşınca satış başlar', '%', 5, 5, 1000, 0],
+            ['meme.tp_part', 'Kâr alda satılan kısım', 'Kalanı iz süren stopla yükselişte tutulur; 100 = hepsi satılır', '%', 10, 10, 100, 0],
             ['meme.sl_pct', 'Zarar durdur', 'Bu zararda satılır', '%', 1, 3, 50, 0],
             ['meme.trail_from', 'İz süren stop başlangıcı', 'Bu kâra ulaşınca devreye girer', '%', 5, 5, 200, 0],
             ['meme.trail_pct', 'İz süren stop', 'Zirveden bu kadar düşünce satılır', '%', 1, 3, 50, 0],
@@ -2147,7 +2148,7 @@ const SUMS = {
     dip: () => `Düşüş ${pc(draft.dip.dip_pct)} · kâr ${pc(draft.dip.take_profit_pct)} · en çok ${draft.dip.max_hold_hours} saat`,
     trend: () => `İz süren stop ${pc(draft.trend.trailing_pct)}`,
     'Futures': () => { const l = draft.lev || {}; return `${l.real ? 'Gerçek açık' : 'Gerçek kapalı'} · bütçe $${nf(l.real_budget ?? 30, 0)} · en fazla $${nf(l.max_loss ?? 10, 0)} kayıp · ${l.real_lev ?? 2}x`; },
-    'Memecoin': () => { const m = draft.meme || {}; return `${m.real ? 'Gerçek açık' : 'Gerçek kapalı'} · kasanın ${pc(m.size_pct ?? 10)}'u · kâr ${pc(m.tp_pct ?? 30)} · zarar ${pc(m.sl_pct ?? 15)}`; },
+    'Memecoin': () => { const m = draft.meme || {}; return `${m.real ? 'Gerçek açık' : 'Gerçek kapalı'} · kasanın ${pc(m.size_pct ?? 10)}'u · kâr ${pc(m.tp_pct ?? 30)}${(m.tp_part ?? 100) < 100 ? ` (${pc(m.tp_part)}'i)` : ''} · zarar ${pc(m.sl_pct ?? 15)}`; },
     'Aktarım ve KASA': () => { const x = draft.xfer || {}; return `Günde en çok $${nf(x.daily_max || 1000, 0)} · ${+x.sweep_pct > 0 ? `kârın ${pc(x.sweep_pct)}'i ${x.sweep_days} günde bir KASA'ya` : 'kâr süpürme kapalı'}`; }
 };
 const SEC_C = { 'Futures': 'red', 'Memecoin': 'violet', 'Kasa': 'teal', 'Kasadan ekleme': 'teal', 'Koruma': 'red', 'Kâr hedefi': 'green', 'Aktarım ve KASA': 'amber' };

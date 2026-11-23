@@ -28,6 +28,7 @@ DEFAULT = {
     "min_age_min": 10,   # en az bu kadar dakikalık havuz (ilk dakikaların tuzaklarından kaçın)
     "max_age_h": 72,
     "tp_pct": 30,        # kâr al
+    "tp_part": 50,       # kâr alda satılan oran (%); kalanı iz süren stopla tutulur. 100 = hepsi satılır
     "trail_from": 15,    # bu kârdan sonra iz süren stop devreye girer
     "trail_pct": 12,     # zirveden bu kadar geri çekilirse sat
     "sl_pct": 15,        # zarar kes
@@ -188,7 +189,7 @@ def step(state, S):
         reason = None
         if liq < pos["liq0"] * 0.6:
             reason = f"likidite çekildi (${pos['liq0']:,.0f} → ${liq:,.0f})"
-        elif gain >= cfg["tp_pct"]:
+        elif gain >= cfg["tp_pct"] and not pos.get("part"):
             reason = f"kâr al %{gain:.0f}"
         elif gain <= -cfg["sl_pct"]:
             reason = f"zarar kes %{gain:.0f}"
@@ -196,6 +197,22 @@ def step(state, S):
             reason = f"iz süren stop (zirveden %{(1 - price / pos['peak']) * 100:.0f} geri)"
         elif ts - pos["ts"] > cfg["max_hold_h"] * 3600_000:
             reason = f"süre doldu ({cfg['max_hold_h']} sa)"
+        frac = max(1.0, min(100.0, float(cfg.get("tp_part", 100)))) / 100
+        if reason and reason.startswith("kâr al") and frac < 1:
+            # kademeli kâr al: bir kısmı satılır (ana para kurtarılır), kalanı iz süren stopla yükselişte tutulur
+            got = pos["qty"] * frac * price * (1 - slip) * (1 - fee)
+            c = pos["cost"] * frac
+            pnl = got - c
+            M["cash"] += got
+            pos["qty"] *= 1 - frac
+            pos["cost"] -= c
+            pos["part"] = True
+            reason = f"{reason} · %{frac * 100:.0f}'i satıldı, kalanı iz süren stopla tutuluyor"
+            M["trades"].append({"ts": ts, "sym": pos["sym"], "mint": m, "side": "SAT", "usd": round(got, 2),
+                                "pnl": round(pnl, 2), "pct": round(pnl / c * 100, 1) if c else 0, "reason": reason})
+            _note(M, ts, "exit", f"SAT {pos['sym']} ${got:.2f} · {'+' if pnl >= 0 else ''}{pnl:.2f}$ · {reason}")
+            M.setdefault("ev", []).append(["sell", m, reason, frac])  # gerçek masa aynı oranı satar
+            continue
         if reason:
             got = pos["qty"] * price * (1 - slip) * (1 - fee)
             pnl = got - pos["cost"]

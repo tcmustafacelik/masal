@@ -26,7 +26,7 @@ DEFAULTS = {
     "xfer_req": [],  # uygulamadan aktarım istekleri [{id, ts, dir, amt, src}]; her biri bir kez işlenir
     "convert": {"ts": 0},
     "target": {"on": False, "amount": 20000, "mode": "profit"},  # açıksa hedefe ulaşınca her şey satılır ve bot durur
-    "meme": {"on": True, "bank": 100.0, "size_pct": 10, "max_pos": 5, "min_liq": 20000, "max_fdv": 5000000, "min_age_min": 10, "max_age_h": 72, "tp_pct": 30, "trail_from": 15, "trail_pct": 12, "sl_pct": 15, "max_hold_h": 4, "slip_pct": 1.0, "fee_pct": 0.5, "max_m5": 8, "wallet": "", "real": False, "max_loss": 10.0, "max_slip": 2.0, "real_reset": 0},  # memecoin deneme masası (sanal para)
+    "meme": {"on": True, "bank": 100.0, "size_pct": 10, "max_pos": 5, "min_liq": 20000, "max_fdv": 5000000, "min_age_min": 10, "max_age_h": 72, "tp_pct": 30, "tp_part": 100, "trail_from": 15, "trail_pct": 12, "sl_pct": 15, "max_hold_h": 4, "slip_pct": 1.0, "fee_pct": 0.5, "max_m5": 8, "wallet": "", "real": False, "max_loss": 10.0, "max_slip": 2.0, "real_reset": 0},  # memecoin deneme masası (sanal para)
     "lev": {"on": True, "bank": 100.0, "lev": 3, "risk_pct": 1.0, "max_pos": 3, "sl_atr": 2.0, "tp_atr": 4.0, "daily_loss_pct": 5, "fee_pct": 0.05, "slip_pct": 0.05, "coins": ["BTC", "ETH", "SOL", "XRP", "DOGE", "HYPE", "ZEC", "PEPE"], "real": False, "real_budget": 30.0, "real_lev": 2, "max_loss": 10.0, "real_reset": 0},  # kaldıraç deneme masası (sanal para, en fazla 3x)
     # mode: "profit" = toplam kâr bu tutara ulaşınca; "total" = bottaki para + kasadaki yedek toplamı bu tutara ulaşınca   # zaman damgası yeniyse alım-satım hesabındaki boş TL'nin tamamı seçili pariteye çevrilir  # seçili coinleri elle sat: zaman damgası yeniyse listedekiler bir kez satılır
     "strategy": "grid",

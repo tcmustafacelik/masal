@@ -241,8 +241,9 @@ def _value(R, prices):
     return v
 
 
-def _sell(key, R, m, reason, cfg):
+def _sell(key, R, m, reason, cfg, frac=1.0):
     p = R["pos"][m]
+    frac = 1.0 if not frac or frac >= 0.999 else max(0.01, float(frac))
     try:
         h = _holdings(R["addr"]).get(m)
     except Exception:
@@ -253,15 +254,27 @@ def _sell(key, R, m, reason, cfg):
         del R["pos"][m]
         _note(R, "info", f"{p['sym']} cüzdanda yok; kayıttan çıkarıldı")
         return
-    o = _swap(key, R["addr"], m, SOL, h["raw"])
+    amt = int(h["raw"]) if frac >= 1 else int(int(h["raw"]) * frac)
+    if amt <= 0:
+        return
+    o = _swap(key, R["addr"], m, SOL, amt)
     r = _execute(key, o)
     got = int(r.get("outputAmountResult") or o.get("outAmount") or 0) / 1e9
     usd = got * R["solpx"]
-    pnl = usd - p["cost"]
+    cost = p["cost"] * frac
+    pnl = usd - cost
     R["trades"].append({"ts": int(time.time() * 1000), "sym": p["sym"], "mint": m, "side": "SAT", "usd": round(usd, 2),
-                        "pnl": round(pnl, 2), "pct": round(pnl / p["cost"] * 100, 1) if p["cost"] else 0, "reason": reason,
+                        "pnl": round(pnl, 2), "pct": round(pnl / cost * 100, 1) if cost else 0, "reason": reason,
                         "sig": r.get("signature"), "real": True})
     R["trades"] = R["trades"][-300:]
+    if frac < 1:  # kademeli kâr al: kalan token tutulmaya devam eder
+        p["cost"] -= cost
+        p["sol_in"] = p.get("sol_in", 0) * (1 - frac)
+        p["raw"] = int(h["raw"]) - amt
+        p["part"] = True
+        p.pop("closing", None)
+        _note(R, "exit", f"GERÇEK SAT %{frac * 100:.0f} {p['sym']} {got:.4f} SOL (${usd:.2f}) · {'+' if pnl >= 0 else ''}{pnl:.2f}$ · {reason}")
+        return
     try:
         time.sleep(2)
         close_empty(key, R["addr"])  # boşalan token hesabının kirası geri alınır
@@ -324,7 +337,7 @@ def _sync(R, cfg, prices, held_paper, key):
     for m, p in list(R["pos"].items()):
         if p.get("ui") and p.get("val") and p.get("cost") and time.time() * 1000 - p["ts"] > 60000:
             g = (p["val"] / p["cost"] - 1) * 100
-            if g <= -(cfg.get("sl_pct", 15) + 5) or g >= cfg.get("tp_pct", 100) + 20:
+            if g <= -(cfg.get("sl_pct", 15) + 5) or (g >= cfg.get("tp_pct", 100) + 20 and not p.get("part")):
                 p["closing"] = f"{'zarar kes' if g < 0 else 'kâr al'} (yedek, %{g:+.0f})"
                 held_paper = set(held_paper) - {m}
     R["value"] = round(v, 2)
@@ -397,7 +410,7 @@ def _loop():
                         last = time.time()
                     _buy(key, R, ev, cfg)
                 elif ev and ev[0] == "sell" and ev[1] in R["pos"]:
-                    _sell(key, R, ev[1], ev[2], cfg)
+                    _sell(key, R, ev[1], ev[2], cfg, ev[3] if len(ev) > 3 else 1.0)
                 elif ev and ev[0] == "dust":
                     _dust(key, R, set(ev[1]) if len(ev) > 1 else None)
                 elif ev and ev[0] == "kill":
@@ -513,6 +526,6 @@ def public(state):
     return {"on": R.get("on"), "addr": R.get("addr"), "sol": round(R["sol"], 4), "solpx": R["solpx"], "value": R["value"],
             "start": R["start"], "pnl": round(R["value"] - R["start"], 2) if R["start"] else 0, "dead": R["dead"], "err": R["err"],
             "sync": R.get("sync"), "positions": [{"mint": m, "sym": p["sym"], "ts": p["ts"], "cost": round(p["cost"], 2),
-                                                  "val": p.get("val", 0), "why": p["why"]} for m, p in R["pos"].items()],
+                                                  "val": p.get("val", 0), "why": p["why"], "part": bool(p.get("part"))} for m, p in R["pos"].items()],
             "trades": R["trades"][-40:][::-1], "log": R["log"][-40:][::-1], "equity_series": R["equity"][-200:],
             "sells": len(sells), "win_rate": round(len(wins) / len(sells) * 100) if sells else None}
