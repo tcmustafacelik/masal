@@ -775,16 +775,17 @@ h2{margin:0 2px 7px}
 #ladder .lr b,#ladder .lr small{text-align:center}
 #ladder .hint{text-align:left}
 
-/* 1.69.4: sayı kutusu — bütün sistemde tek, orantılı tasarım: [−] [sayı/birim] [+] */
-.step,#setv .step{display:flex;align-items:center;gap:4px;border:0!important;background:transparent!important;border-radius:0;overflow:visible;flex:none;height:auto}
-.step button,#setv .step button{width:30px!important;height:30px!important;border-radius:8px;border:1px solid var(--line)!important;background:var(--surface)!important;color:var(--muted);display:grid;place-items:center;padding:0;-webkit-tap-highlight-color:transparent;transition:background .15s,color .15s}
-.step button:active{background:var(--acc-bg)!important;color:var(--acc-ink,var(--text))}
-.step button svg.i{width:13px!important;height:13px!important}
-.step .sv{display:flex;flex-direction:column;align-items:center;justify-content:center;width:56px!important;height:36px;border:1px solid var(--line);border-radius:9px;background:var(--surface);cursor:text;align-self:auto}
-.step .sv input,#setv .step .sv input{width:100%!important;height:auto!important;padding:0!important;margin:0!important;border:0;background:transparent;text-align:center!important;font-size:14px!important;font-weight:650;line-height:1.15}
-.step .sv .u{width:auto!important;padding:0!important;text-align:center!important;font-size:9px!important;line-height:1;margin-top:1px;color:var(--faint);letter-spacing:.2px}
-.step.changed{box-shadow:none!important}.step.changed .sv{border-color:var(--acc);background:var(--acc-bg)}
-.ldh{flex-wrap:wrap}.ldh b,.ldh{white-space:nowrap}
+/* 1.70: sayı kutusu — tek parça, renkli, orantılı: ( − )  16 saat  ( + ) */
+.step,#setv .step{display:inline-flex;align-items:center;gap:2px;height:36px;padding:3px;border:1px solid var(--acc-line)!important;background:var(--acc-bg)!important;border-radius:11px;overflow:visible;flex:none;box-shadow:none!important}
+.step button,#setv .step button{width:28px!important;height:28px!important;border-radius:8px;border:0!important;background:var(--surface)!important;color:var(--acc-ink,var(--acc));display:grid;place-items:center;padding:0;box-shadow:0 1px 2px rgba(0,0,0,.08);-webkit-tap-highlight-color:transparent;transition:transform .1s,background .15s}
+.step button:active{transform:scale(.92);background:var(--acc)!important;color:#fff}
+.step button svg.i{width:13px!important;height:13px!important;stroke-width:2.4}
+.step .sv{display:flex;flex-direction:row;align-items:baseline;justify-content:center;gap:3px;width:84px;min-width:84px;overflow:hidden;height:auto;padding:0 4px;border:0!important;background:transparent!important;border-radius:0;cursor:text}
+.step .sv input,#setv .step .sv input{field-sizing:content;width:auto!important;min-width:1ch;max-width:62px;height:auto!important;padding:0!important;margin:0!important;border:0;background:transparent;text-align:center!important;font-size:14px!important;font-weight:700;color:var(--text);line-height:1.2}
+@supports not (field-sizing:content){.step .sv input,#setv .step .sv input{width:46px!important}}
+.step .sv .u{width:auto!important;padding:0!important;font-size:10.5px!important;font-weight:600;line-height:1;margin:0;color:var(--acc-ink,var(--muted));opacity:.8}
+.step.changed{border-color:var(--acc)!important;box-shadow:0 0 0 1px var(--acc)!important}
+.step.changed .sv{background:transparent!important}
 .field .lb{min-width:0;overflow:visible}.field .lb span{overflow-wrap:anywhere}
 </style>
 </head>
@@ -983,6 +984,6 @@ h2{margin:0 2px 7px}
 <div class="toast" id="toast" hidden></div>
 <div class="qsh" id="qsh" hidden><div class="qb"><div class="gr"></div><h3><span><svg class="i" id="qIco"><use href="#i-info"/></svg></span><b id="qTitle"></b></h3><div class="qt" id="qText"></div><button class="btn primary" id="qOk">Anladım</button></div></div>
 
-<script src="app.js?v=1.69.6"></script>
+<script src="app.js?v=1.70.0"></script>
 </body>
 </html>

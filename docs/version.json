@@ -1,11 +1,21 @@
 {
-  "version": "1.69.6",
+  "version": "1.70.0",
   "date": "2026-11-23",
   "notes": [
-    "Para hareketi kontrolü arka planda; bot turu daha kısa",
-    "İngilizce modda Futures, Memecoin ve Aktarım ayar açıklamaları çevrildi"
+    "Sayı kutuları yenilendi: tek parça, renkli, hepsi aynı boyda; sayı ve birim yan yana",
+    "Memecoin kademeli kâr al: kâr alda belirlediğin kısım satılır, kalanı iz süren stopla yükselişte tutulur",
+    "Futures izleme listesi 8'den 18 coine çıktı; Fable 3. tur bot düzeltmeleri"
   ],
   "history": [
+    {
+      "version": "1.70.0",
+      "date": "2026-11-23",
+      "notes": [
+        "Sayı kutuları yenilendi: tek parça, renkli, hepsi aynı boyda; sayı ve birim yan yana",
+        "Memecoin kademeli kâr al: kâr alda belirlediğin kısım satılır, kalanı iz süren stopla yükselişte tutulur",
+        "Futures izleme listesi 8'den 18 coine çıktı; Fable 3. tur bot düzeltmeleri"
+      ]
+    },
     {
       "version": "1.69.6",
       "date": "2026-11-23",
@@ -111,16 +121,6 @@
       "date": "2026-11-23",
       "notes": [
         "Ayar ekranları inceldi: satırlar, değer kutuları, açılır bölümler, sekmeler ve seçim kutuları daha küçük ve sade"
-      ]
-    },
-    {
-      "version": "1.63.0",
-      "date": "2026-11-23",
-      "notes": [
-        "Ana sayfa: bütün kasaların toplamı ve Spot, Futures, Memecoin kâr/zararı ayrı ayrı; hepsinin toplam kâr/zararı TL olarak",
-        "Küçük bakiyeler: OKX'in 'küçük varlıkları dönüştür' sistemi kullanılıyor; en küçük tutar sınırı olmadan çevrilir, olmayanlar fiyat teklifiyle denenir",
-        "Fable denetimi düzeltmeleri: gerçek masaların ana turu bekletmesi, alımdan hemen sonra yanlış zarar sınırı, para aktarımında kâr/zarar karışması, kapanmayan pozisyonların yeniden denenmesi, yeniden başlarken emir kaybı, yarım kayıt dosyası, çift küçük bakiye isteği, kilitlenen Kaydet, Trust Wallet bağlantısı ve daha fazlası",
-        "Uygulama daha az çalışıyor: listeler yalnız değişince yeniden çiziliyor, yavaş bağlantıda istekler üst üste binmiyor"
       ]
     }
   ]
