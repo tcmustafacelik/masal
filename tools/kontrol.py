@@ -1,6 +1,6 @@
 """OKX TR ve OKX Global anahtar kontrolü. Sadece okur; işlem/çekim yapmaz.
 Depo herkese açık olduğu için çıktıda bakiye ve adres gizlenir (yalnız var/yok, izinler, ağlar)."""
-import base64, hashlib, hmac, json, os, urllib.request
+import base64, hashlib, hmac, json, os, time, urllib.request
 from datetime import datetime, timezone
 
 def req(base, key, sec, pas, path):
@@ -38,6 +38,8 @@ def check(name, base, pre):
             rows = d[0].get("details", []) if p.endswith("account/balance") else d
             n = [x["ccy"] for x in rows if float(x.get("bal") or x.get("eq") or 0) > 0]
             usdt = sum(float(x.get("availBal") or 0) for x in rows if x["ccy"] == "USDT")
+            if lbl == "Fon hesabı":
+                print("  fon ayrıntı:", [(x["ccy"], x.get("bal"), x.get("frozenBal")) for x in rows])
             print(f"{lbl}: okunuyor · {len(n)} varlık var · boş USDT {usdt:.2f}")
         except Exception as e:
             print(f"{lbl}: HATA {e}")
@@ -56,10 +58,10 @@ def moves(name, base, pre):
     key, sec, pas = (os.environ.get(pre + s, "") for s in ("_API_KEY", "_API_SECRET", "_API_PASSPHRASE"))
     if not key:
         return
-    for p, lbl in (("/api/v5/asset/withdrawal-history?ccy=USDT&limit=3", "Son çekimler"), ("/api/v5/asset/deposit-history?ccy=USDT&limit=3", "Son yatırmalar")):
+    for p, lbl in (("/api/v5/asset/withdrawal-history?limit=3", "Son çekimler"), ("/api/v5/asset/deposit-history?ccy=USDT&limit=3", "Son yatırmalar")):
         try:
             rows = req(base, key, sec, pas, p)
-            print(f"{name} {lbl}:", "; ".join(f"{x.get('amt')} USDT · {x.get('chain')} · durum {x.get('state')} · {x.get('ts')}" for x in rows) or "yok")
+            print(f"{name} {lbl}:", "; ".join(f"{x.get('amt')} {x.get('ccy')} · {x.get('chain')} · durum {x.get('state')} · {time.strftime('%d.%m %H:%M', time.gmtime(int(x.get('ts'))/1000+3*3600))}" for x in rows) or "yok")
         except Exception as e:
             print(f"{name} {lbl}: HATA {e}")
 
