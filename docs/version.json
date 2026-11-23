@@ -1,10 +1,17 @@
 {
-  "version": "1.69.1",
+  "version": "1.69.2",
   "date": "2026-11-23",
   "notes": [
-    "Ayar grupları ve kademe merdiveni hizalandı; çift çizgiler kaldırıldı"
+    "Ayar kutularındaki birim yazıları (adet, saat, kat, %) sıkışmadan sayının yanında duruyor"
   ],
   "history": [
+    {
+      "version": "1.69.2",
+      "date": "2026-11-23",
+      "notes": [
+        "Ayar kutularındaki birim yazıları (adet, saat, kat, %) sıkışmadan sayının yanında duruyor"
+      ]
+    },
     {
       "version": "1.69.1",
       "date": "2026-11-23",
@@ -118,15 +125,6 @@
       "notes": [
         "Küçük bakiyeler: seçtiğin coinlerin hepsi tek seferde çevrilir (10 sınırı kalktı)",
         "Düzeltme: çevirme sonucu Kasalar'da ve bildirimde görünmüyordu"
-      ]
-    },
-    {
-      "version": "1.60.0",
-      "date": "2026-11-23",
-      "notes": [
-        "Bot daha hızlı: tur 5 sn'den 3 sn'ye indi; uygulamadan verilen emirler ve ayarlar daha çabuk uygulanır",
-        "Futures: fiyat 5 sn'de bir izlenir (önce 20 sn); saatlik mum kapanınca karar 4 sn içinde verilir (önce 5 dakikaya kadar gecikebiliyordu)",
-        "Memecoin: tarama ve çıkış kontrolü 10 sn'de bir (önce 20 sn); gerçek cüzdan 15 sn'de bir eşitlenir"
       ]
     }
   ]
