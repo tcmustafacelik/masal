@@ -167,5 +167,8 @@
     "sweep_pct": 50,
     "sweep_days": 7,
     "sweep_min": 15
+  },
+  "meme": {
+    "wallet": "7YmjQvaZdKDKmfmTPP1vmUxK8ns1CKEim9ovBbwNEKwN"
   }
 }
