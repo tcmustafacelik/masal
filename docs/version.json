@@ -1,7 +1,7 @@
 {
-  "version": "1.46.1",
+  "version": "1.46.2",
   "date": "2026-11-23",
   "notes": [
-    "Aktarım iptali: bekleyen aktarım iptal edilir, para bota geri döner"
+    "Aktarım: boşta para yoksa 'Bottan al' seçili gelir, yetmeyen tutar gönderilmez"
   ]
 }

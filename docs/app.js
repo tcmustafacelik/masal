@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.46.1';
+const APP_VERSION = '1.46.2';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -970,7 +970,8 @@ function openXfer(dir) {
     qHead(v[2], 'Vazgeç');
     document.getElementById('qOk').hidden = true;
     document.getElementById('qTitle').textContent = v[0];
-    xfSrc = 'bos';
+    const freeUsd = X.free_tl != null && USDTTRY ? Math.max(0, X.free_tl) / USDTTRY : 0;
+    xfSrc = fromTr && freeUsd < 1 ? 'bot' : 'bos'; // TR'de boşta para yoksa varsayılan "Bottan al"
     const draw = () => {
         const t = document.getElementById('qText');
         t.innerHTML = `<div class="xfs">${fromTr ? `<div class="seg"><button data-s="bos" class="${xfSrc === 'bos' ? 'on' : ''}">Boştaki paradan</button><button data-s="bot" class="${xfSrc === 'bot' ? 'on' : ''}">Bottan al</button></div>` : ''}
@@ -1024,6 +1025,13 @@ async function sendXfer(dir, retry = true) {
     if (!(amt >= 1)) {
         toast('Tutarı yaz (en az 1 USDT)');
         return;
+    }
+    {
+        const X = S?.xfer || {}, freeUsd = X.free_tl != null && USDTTRY ? Math.max(0, X.free_tl) / USDTTRY : null;
+        if (dir.startsWith('tr') && xfSrc === 'bos' && freeUsd != null && freeUsd < amt) {
+            toast(`TR'de boşta sadece ~${nf(freeUsd, 2)} USDT var. "Bottan al"ı seç ya da önce bankadan TL yatır.`);
+            return;
+        }
     }
     if (!token) {
         toast('Önce Ayarlar\'dan GitHub bağlantısını kur');
