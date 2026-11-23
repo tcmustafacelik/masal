@@ -150,7 +150,15 @@
     }
   },
   "theme": "auto",
-  "xfer_req": [],
+  "xfer_req": [
+    {
+      "id": "x1a20950a04c",
+      "ts": 1795452608588,
+      "dir": "g2k",
+      "amt": 10,
+      "src": "bos"
+    }
+  ],
   "xfer_cancel": [],
   "clear": 1795452174725
 }
