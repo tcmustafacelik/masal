@@ -209,7 +209,7 @@ def _send(ex, side, addr, dest, amt, job, X):
     try:
         res = _wd(ex, body, info, nm, dest)
     except RuntimeError as e:
-        if not (dest and "58207" in str(e)):
+        if not (dest and ("58207" in str(e) or "58380" in str(e))):
             raise
         # Alıcı hesap (UID) adres defterinde "OKX kullanıcısı" olarak kayıtlı değil: doğrulanmış Arbitrum adresine zincirden gönder
         addr = ROUTES[job["dir"]][1]
