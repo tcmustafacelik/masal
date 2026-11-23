@@ -254,6 +254,8 @@ def _sell(key, R, m, reason, cfg, frac=1.0):
         del R["pos"][m]
         _note(R, "info", f"{p['sym']} cüzdanda yok; kayıttan çıkarıldı")
         return
+    if frac < 1 and p.get("val") and p["val"] * (1 - frac) < 1:
+        frac = 1.0  # kalan 1 $'ın altında kalacaksa hepsi satılır (küçük artık satılamaz)
     amt = int(h["raw"]) if frac >= 1 else int(int(h["raw"]) * frac)
     if amt <= 0:
         return
@@ -272,7 +274,8 @@ def _sell(key, R, m, reason, cfg, frac=1.0):
         p["sol_in"] = p.get("sol_in", 0) * (1 - frac)
         p["raw"] = int(h["raw"]) - amt
         p["part"] = True
-        p.pop("closing", None)
+        p["ui"] = p.get("ui", 0) * (1 - frac)
+        p["val"] = p.get("val", 0) * (1 - frac)
         _note(R, "exit", f"GERÇEK SAT %{frac * 100:.0f} {p['sym']} {got:.4f} SOL (${usd:.2f}) · {'+' if pnl >= 0 else ''}{pnl:.2f}$ · {reason}")
         return
     try:
@@ -315,6 +318,13 @@ def _sync(R, cfg, prices, held_paper, key):
     h = _holdings(R["addr"])
     for m, p in list(R["pos"].items()):
         if m in h:
+            if p.get("raw") and h[m]["raw"] < p["raw"] * 0.9 and h[m]["raw"] > 0:
+                # cüzdanda beklenenden az token: kısmi satış borsada gerçekleşmiş (kayda geçmeden yeniden başladı ya da yanıt gelmedi)
+                k = h[m]["raw"] / p["raw"]
+                p["cost"] *= k
+                p["sol_in"] = p.get("sol_in", 0) * k
+                p["part"] = True
+                p.pop("tp_due", None)
             p["ui"], p["raw"] = h[m]["ui"], h[m]["raw"]
         elif p.get("ui") or time.time() * 1000 - p["ts"] > 600000:
             _note(R, "info", f"{p['sym']} artık cüzdanda yok; kayıttan çıkarıldı")
@@ -344,6 +354,13 @@ def _sync(R, cfg, prices, held_paper, key):
     if not R["start"] and v > 0:
         R["start"] = round(v, 2)
         _note(R, "info", f"MEME cüzdanı bağlandı ({R['how']}); başlangıç değeri ${v:.2f}")
+    for m, p in list(R["pos"].items()):  # yarım kalan kısmi kâr al
+        if p.get("tp_due") and not p.get("closing") and not p.get("part"):
+            try:
+                _sell(key, R, m, "kâr al (yeniden deneme)", cfg, p["tp_due"])
+                p.pop("tp_due", None)
+            except Exception as e:
+                R["err"] = f"{p['sym']} kısmi satış: {e}"[:160]
     # deneme masasının tutmadığı ama gerçekte kalan token: satış yeniden denenir
     for m in list(R["pos"]):
         if (m not in held_paper or R["pos"][m].get("closing")) and time.time() * 1000 - R["pos"][m]["ts"] > 60000:
@@ -427,6 +444,9 @@ def _loop():
                 R["err"] = str(e)[:160]
                 if ev and ev[0] == "buy":
                     _note(R, "risk", f"GERÇEK {ev[2]} alınamadı: {str(e)[:100]}")
+                elif ev and ev[0] == "sell" and ev[1] in R["pos"] and len(ev) > 3 and ev[3] < 1:
+                    R["pos"][ev[1]]["tp_due"] = ev[3]  # kısmi kâr al yeniden denenir (hepsi satılmaz)
+                    _note(R, "risk", f"GERÇEK {R['pos'][ev[1]]['sym']} kısmi satış yapılamadı, yeniden denenecek: {str(e)[:100]}")
                 elif ev and ev[0] == "sell" and ev[1] in R["pos"]:
                     R["pos"][ev[1]]["closing"] = ev[2]  # bir sonraki eşitlemede yeniden denenir
                     _note(R, "risk", f"GERÇEK {R['pos'][ev[1]]['sym']} satılamadı, yeniden denenecek: {str(e)[:100]}")

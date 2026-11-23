@@ -197,7 +197,7 @@ def step(state, S):
             reason = f"iz süren stop (zirveden %{(1 - price / pos['peak']) * 100:.0f} geri)"
         elif ts - pos["ts"] > cfg["max_hold_h"] * 3600_000:
             reason = f"süre doldu ({cfg['max_hold_h']} sa)"
-        frac = max(1.0, min(100.0, float(cfg.get("tp_part", 100)))) / 100
+        frac = max(1.0, min(100.0, float(cfg.get("tp_part") or 100))) / 100
         if reason and reason.startswith("kâr al") and frac < 1:
             # kademeli kâr al: bir kısmı satılır (ana para kurtarılır), kalanı iz süren stopla yükselişte tutulur
             got = pos["qty"] * frac * price * (1 - slip) * (1 - fee)

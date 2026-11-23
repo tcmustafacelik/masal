@@ -52,19 +52,25 @@ def _fetch(coins, candles):
             c = t["instId"].split("-")[0]
             if t["instId"].endswith("-USDT-SWAP") and c in coins:
                 px[c] = float(t["last"])
-        out = {}
+        with _LOCK:
+            _SNAP["px"] = px  # fiyatlar mumları beklemeden yayınlanır
+        out, errs = {}, []
         if candles:
-            for c in coins:
+            from concurrent.futures import ThreadPoolExecutor
+
+            def one(c):
                 try:
                     rows = _get(f"/api/v5/market/candles?instId={c}-USDT-SWAP&bar=1H&limit=300")
                     rows = [r for r in rows if r[8] == "1"]  # yalnız kapanmış mumlar
                     out[c] = [(int(r[0]), float(r[2]), float(r[3]), float(r[4])) for r in reversed(rows)]
                 except Exception as e:
-                    _SNAP["err"] = f"{c}: {e}"
+                    errs.append(f"{c}: {e}")
+            with ThreadPoolExecutor(6) as pool:
+                list(pool.map(one, coins))
         with _LOCK:
-            _SNAP["px"] = px
+            _SNAP["err"] = errs[0] if errs else ""
             if out:
-                _SNAP["c"] = out
+                _SNAP["c"] = {**_SNAP.get("c", {}), **out}  # isteği başarısız olan coin eski mumlarıyla kalır
             _SNAP["ts"] = int(time.time() * 1000)
     except Exception as e:
         _SNAP["err"] = str(e)

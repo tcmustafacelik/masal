@@ -550,6 +550,8 @@ def step(state, S, N):
     # iptal istekleri: henüz gönderilmemiş işler durdurulur, fon hesabına ayrılan para alım-satım hesabına geri döner
     _th = _JOBS.get("t")
     busy = bool(_th and _th.is_alive())  # iş parçacığı gönderim yaparken iptal edilmez (sonraki turda yeniden bakılır)
+    if not busy:
+        _merge_jobs(X, N)  # biten işin sonucu önce işlenir (gönderilmiş iş iptal sanılmasın)
     for rid in ([] if busy else (S.get("xfer_cancel") or [])):
         job = next((j for j in X["jobs"] if j["id"] == str(rid) and j["stage"] == "new"), None)
         if not job:

@@ -215,7 +215,7 @@ def _sync(D, R, cfg):
     # kayıtta olmayan pozisyon (ör. bot emir verdikten hemen sonra yeniden başladı): masa sahiplenir, yönetmeye devam eder
     for c, x in live.items():
         if (c not in R["pos"] and c in cfg.get("coins", []) and x.get("mgnMode", "isolated") == "isolated"
-                and (c in cfg.get("_held", []) or time.time() * 1000 - float(x.get("cTime") or 0) < 120_000)):
+                and cfg.get("real") and c in cfg.get("_held", [])):
             # yalnız masanın açmış olabileceği pozisyon sahiplenilir; elle açılan pozisyona dokunulmaz
             pos = float(x.get("pos") or 0)
             side = (1 if x.get("posSide") == "long" else -1) if x.get("posSide") in ("long", "short") else (1 if pos > 0 else -1)
