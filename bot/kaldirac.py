@@ -101,6 +101,7 @@ def _upnl(p, px):
 
 def _close(L, c, px, ts, reason, cfg):
     p = L["positions"].pop(c)
+    L.setdefault("ev", []).append(["close", c, reason])  # gerçek masa aynı kararı uygular
     exit_px = px * (1 - p["side"] * cfg["slip_pct"] / 100)
     pnl = p["side"] * (exit_px - p["entry"]) * p["qty"] - exit_px * p["qty"] * cfg["fee_pct"] / 100
     L["bank"] += pnl
@@ -210,6 +211,7 @@ def step(state, S):
                              "atr": k["atr"], "stop": entry - side * dist, "tp": entry + side * cfg["tp_atr"] * k["atr"],
                              "liq": entry * (1 - side * (1 / lev - 0.005)), "why": why}
         L["stats"]["entered"] += 1
+        L.setdefault("ev", []).append(["open", c, side, px[c], dist, cfg["tp_atr"] * k["atr"], why])
         _note(L, ts, "buy", f"AÇ {c} {name} {lev:g}x · teminat ${margin:.2f} · {why}")
 
     L["trades"] = L["trades"][-300:]

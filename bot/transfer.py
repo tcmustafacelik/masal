@@ -156,7 +156,8 @@ def _prepare(ex, side, amt, job):
         job["msg"] = f"para {NAMES[side]} fon hesabında hazır; borsa çekim kilidi kalkınca otomatik gönderilecek"
         job["locked"] = True
         return False
-    t = ex.trading("USDT")
+    # Global'in işlem hesabındaki USDT gerçek kaldıraç masasının teminatıdır; aktarım ona dokunmaz
+    t = ex.trading("USDT") if side == "tr" else 0.0
     if f + t < need and side == "tr":
         short = need - f - t
         tl_need = round(short * _rate() * 1.006 + 1, 2)

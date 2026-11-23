@@ -232,6 +232,11 @@ def clear_old(state, S):
         d = state.get(k) or {}
         if d:
             d["log"] = d.get("log", [])[-5:]
+    try:
+        from . import kaldirac_gercek
+        kaldirac_gercek.trim_log()
+    except Exception:
+        pass
     print("Eski kayıtlar temizlendi")
 
 
@@ -415,6 +420,9 @@ def signature(state, S):
     lv = state.get("lev") or {}
     parts.append([len(lv.get("trades", [])), sorted(lv.get("positions", {})), len(lv.get("log", [])),
                   [round(v.get("stop", 0), 8) for v in (lv.get("positions") or {}).values()]])
+    lr = state.get("levr") or {}
+    parts.append([len(lr.get("trades", [])), sorted(lr.get("pos", {})), len(lr.get("log", [])), lr.get("err"),
+                  round(lr.get("eq", 0), 2), lr.get("halt"), lr.get("dead"), lr.get("on")])
     parts.append(json.dumps(S, sort_keys=True, default=str))
     return json.dumps(parts, default=str)
 
@@ -559,6 +567,11 @@ def main():
         kaldirac.step(state, S)  # kaldıraç deneme masası (sanal para; ağ işi arka planda)
     except Exception as e:
         print("Kaldıraç masası hatası:", e)
+    try:
+        from . import kaldirac, kaldirac_gercek
+        kaldirac_gercek.step(state, S, {**kaldirac.DEFAULT, **(S.get("lev") or {})})  # aynı kararlar gerçek parayla (OKX Global)
+    except Exception as e:
+        print("Gerçek kaldıraç masası hatası:", e)
     PERF["main"] = round(time.time() - t_start, 2)
     state["perf"] = dict(PERF)
     # Gönderilen bildirimler buluta da yazılır (gerçek hesabın şifreli kaydında): uygulama her cihazda aynı listeyi görür

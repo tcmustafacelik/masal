@@ -41,6 +41,14 @@ def _lev(state):
         return None
 
 
+def _levr(state):
+    try:
+        from . import kaldirac_gercek
+        return kaldirac_gercek.public(state)
+    except Exception:
+        return None
+
+
 def _meme(state):
     try:
         from . import meme
@@ -119,12 +127,12 @@ def build(state, S=None):
         "updated": state.get("updated"), "created": state.get("created"),
         "mode": "Sanal", "start_cash": config.START_CASH,
         "risk": config.RISK, "fee": config.FEE_RATE, "slippage": config.SLIPPAGE,
-        "universe": state.get("universe", []), "strategies": strategies, "settings": S, "okx": state.get("okx"), "perf": state.get("perf"), "meme": _meme(state), "lev": _lev(state), "xfer": _xfer(state, S),
+        "universe": state.get("universe", []), "strategies": strategies, "settings": S, "okx": state.get("okx"), "perf": state.get("perf"), "meme": _meme(state), "lev": _lev(state), "xfer": _xfer(state, S), "levr": _levr(state),
     }
     if vault.password() and "live" in strategies:
         # Gerçek hesap bilgileri herkese açık sayfada şifreli durur; uygulama OKX şifresiyle çözer
         lv = strategies.pop("live")
-        out["live_enc"] = vault.seal({"strategy": lv, "okx": state.get("okx"), "xfer": out.pop("xfer", None)})
+        out["live_enc"] = vault.seal({"strategy": lv, "okx": state.get("okx"), "xfer": out.pop("xfer", None), "levr": out.pop("levr", None)})
         out["live_public"] = {"armed": lv["armed"], "paused": lv["paused"]}
         out["okx"] = None
     with open(OUT, "w", encoding="utf-8") as f:

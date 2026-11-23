@@ -1,7 +1,7 @@
 {
-  "version": "1.51.1",
+  "version": "1.52.0",
   "date": "2026-11-23",
   "notes": [
-    "Fable test düzeltmeleri: aktarım çift gönderim koruması, yedek yol ücreti, koyu tema sekmesi, grafik etiketi, gönderim penceresi"
+    "Gerçek futures masası (OKX Global, borsada zarar durdur, bütçe ve en fazla kayıp sınırı); Ayarlar'a Futures ve Memecoin bölümleri"
   ]
 }
