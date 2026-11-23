@@ -20,7 +20,7 @@
   "grid": {
     "step_pct": 3.3,
     "lot_pct": 3.1,
-    "lot_tp_pct": 5,
+    "lot_tp_pct": 4.5,
     "max_lots": 10,
     "max_coins": 2,
     "stop_pct": 50,
@@ -169,18 +169,53 @@
     "sweep_min": 15
   },
   "meme": {
+    "on": true,
+    "bank": 100,
+    "size_pct": 25,
+    "max_pos": 3,
+    "min_liq": 20000,
+    "max_fdv": 5000000,
+    "min_age_min": 10,
+    "max_age_h": 72,
+    "tp_pct": 30,
+    "trail_from": 15,
+    "trail_pct": 12,
+    "sl_pct": 15,
+    "max_hold_h": 4,
+    "slip_pct": 1,
+    "fee_pct": 0.5,
     "wallet": "7YmjQvaZdKDKmfmTPP1vmUxK8ns1CKEim9ovBbwNEKwN",
     "real": true,
     "max_loss": 6,
     "max_slip": 2,
-    "size_pct": 25,
-    "max_pos": 3
+    "real_reset": 0
   },
   "lev": {
+    "on": true,
+    "bank": 100,
+    "lev": 3,
+    "risk_pct": 1,
+    "max_pos": 3,
+    "sl_atr": 2,
+    "tp_atr": 4,
+    "daily_loss_pct": 5,
+    "fee_pct": 0.05,
+    "slip_pct": 0.05,
+    "coins": [
+      "BTC",
+      "ETH",
+      "SOL",
+      "XRP",
+      "DOGE",
+      "HYPE",
+      "ZEC",
+      "PEPE"
+    ],
     "real": true,
     "real_budget": 20,
     "real_lev": 2,
-    "max_loss": 8
+    "max_loss": 8,
+    "real_reset": 0
   },
   "dust": [
     {
