@@ -329,5 +329,6 @@
       "to": "USDT"
     }
   ],
-  "desk_cmd": []
+  "desk_cmd": [],
+  "accent": "ocean"
 }
