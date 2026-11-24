@@ -102,6 +102,13 @@ def _fetch(held):
         _SNAP["err"] = str(e)
 
 
+def _sym(raw, mint):
+    """Token sembolü dış kaynaktan (DexScreener) gelir: kayıtlara, bildirimlere ve uygulamaya yalnız yazdırılabilir,
+    işaretleme karakteri içermeyen kısa bir ad girer (HTML/ayırıcı karakterleri ve satır sonları atılır)."""
+    s = "".join(ch for ch in str(raw or "") if ch.isprintable() and ch not in "<>&\"'`·\\" and not ch.isspace())[:16]
+    return s or str(mint)[:4]
+
+
 def new_state(cfg):
     return {"cash": cfg["bank"], "start": cfg["bank"], "positions": {}, "trades": [], "log": [],
             "seen": {}, "equity": [], "stats": {"scanned": 0, "blocked": 0, "entered": 0}, "snap": 0}
@@ -237,7 +244,7 @@ def step(state, S):
         p = pairs.get(m)
         if not p:
             continue
-        sym = (p.get("baseToken") or {}).get("symbol") or m[:4]
+        sym = _sym((p.get("baseToken") or {}).get("symbol"), m)
         M["stats"]["scanned"] += 1
         sig = _signal(p, cfg.get("max_m5", 8), float(cfg.get("min_ratio") or 1.2), int(cfg.get("min_buys") or 5),
                       float(cfg.get("max_h1") or 0))

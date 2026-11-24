@@ -382,7 +382,7 @@ details.setup summary::-webkit-details-marker{display:none}
 .mnote{color:var(--muted);line-height:1.45;font-size:11px;margin:2px 4px 6px}.card>.mfeed{padding:4px 12px}.mmeme .mfeed{padding:0 4px;border-top:1px solid var(--line2)}
 .mfeed .fr{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--line2);font-size:12.5px}.mfeed .fr:last-child{border-bottom:0}
 .mfeed time{flex:none;width:38px;color:var(--faint);font-variant-numeric:tabular-nums;font-size:11.5px;padding-top:1px}
-.mfeed .ft{flex:none;font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.3px;padding:3px 0;border-radius:5px;width:50px;text-align:center;margin-top:1px}
+.mfeed .ft{flex:none;font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.3px;padding:3px 0;border-radius:5px;width:52px;text-align:center;margin-top:1px}
 .mfeed .fh{display:block;line-height:1.35}.mfeed .fh b{font-weight:700}.mfeed .fh .up{color:var(--green);font-weight:650}.mfeed .fh .dn{color:var(--red);font-weight:650}
 .ft.al{background:var(--blue-bg);color:var(--blue)}.ft.sat{background:var(--green-bg);color:var(--green)}.ft.zar{background:var(--red-bg);color:var(--red)}.ft.not{background:var(--line2);color:var(--muted)}.ft.err{background:var(--red-bg);color:var(--red)}
 .mfeed .fr>div{min-width:0;overflow-wrap:anywhere}.mfeed small{display:block;color:var(--muted);font-size:11px;margin-top:1px}
@@ -465,7 +465,7 @@ details.setup summary::-webkit-details-marker{display:none}
 .rules .rule:last-child:nth-child(odd){grid-column:1/-1}
 .qsh{position:fixed;inset:0;z-index:60;display:flex;align-items:flex-end;justify-content:center;background:rgba(10,14,20,.38);animation:qfade .2s ease}
 @keyframes qfade{from{opacity:0}}
-.qsh .qb{width:100%;max-width:520px;background:var(--surface);border-radius:16px 16px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom));box-shadow:0 -10px 30px var(--shadow);animation:qup .26s cubic-bezier(.2,.8,.2,1)}
+.qsh .qb{width:100%;max-width:520px;background:var(--surface);border-radius:16px 16px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom));max-height:calc(100vh - 10px);max-height:calc(100dvh - 10px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;box-shadow:0 -10px 30px var(--shadow);animation:qup .26s cubic-bezier(.2,.8,.2,1)}
 .qsh .qb .gr{width:38px;height:4px;border-radius:2px;background:var(--line);margin:-6px auto 12px}
 .qsh h3{font-size:16px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
 .qsh h3 span{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:var(--amber-bg);color:var(--amber)}
@@ -550,7 +550,7 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 .mfeed .fr:has(.ft.zar)::before,.mfeed .fr:has(.ft.err)::before,.xl.lg:has(.lk.dn)::before{background:var(--red)}
 .xl.lg:has(.lk.sh)::before{background:var(--violet)}.xl.lg:has(.lk.ac)::before{background:var(--acc)}.xl.lg:has(.lk.wn)::before{background:var(--amber)}
 .mfeed .fr:has(.ft.not)::before,.xl.lg:has(.lk.z)::before{background:var(--zero)}
-.lk{width:50px;text-align:center;padding:3px 0}
+
 .fv{display:flex;align-items:center;justify-content:center;gap:5px;margin-top:10px;font-size:11.5px;color:var(--faint)}.fv svg{width:13px;height:13px}.fv b{color:var(--muted);font-weight:700}.fv em{font-style:normal;color:var(--acc);font-weight:600}
 #now .swb{gap:3px;top:3px;bottom:3px;font-size:11px;line-height:1;border-radius:10px}#now .swb svg{width:22px;height:22px;padding:5px}#now .swr:first-child .swb{top:0}
 .swr.drag .swc{transition:none}
@@ -657,7 +657,7 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 .xfs .xq .xall{display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1;background:var(--acc-bg);border-color:var(--acc-line);color:var(--acc-ink,var(--text));font-weight:700}
 .xq .xall small{font-size:9.5px;font-weight:600;opacity:.8;margin-top:1px}
 .xq .xall:disabled{opacity:.45}
-.xq button.off{opacity:.4}
+.xq button.off{opacity:.4}.btn.off{opacity:.55;pointer-events:none}
 .agent .al b span{color:inherit}.agent .al b span.up{color:var(--green)}.agent .al b span.dn{color:var(--red)}
 /* ---- toplam varlık: birim seçimi ve gizle/göster ---- */
 .ovw .oh b{white-space:nowrap}
@@ -729,7 +729,7 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 .ovw .oleg .ptr em{background:var(--blue)}.ovw .oleg .pg em{background:#8b5cf6}.ovw .oleg .pm em{background:var(--teal)}.ovw .oleg .pk em{background:var(--amber)}
 
 .rbadge.pp{background:var(--amber-bg);color:var(--amber-ink)}
-.card.mfeed{padding:2px 12px}
+.card.mfeed{padding:2px 12px}.card>.funnel+.mfeed{padding:4px 0 0}
 
 /* Kasalar ekranı bölümleri */
 #xfer .card.xf{margin-top:0}
@@ -748,9 +748,9 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 /* Bot kayıtları: Kasalar kaydıyla aynı düzen */
 #log{padding:0 12px}
 .xl.lg{align-items:flex-start}.xl.lg time{display:flex;flex-direction:column;line-height:1.25;min-width:38px}.xl.lg time small{font-size:9.5px;color:var(--faint)}
-.lk{flex:none;font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.3px;padding:2px 6px;border-radius:5px;margin-top:1px}
+em.lk{flex:none;font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.3px;padding:3px 0;border-radius:5px;margin-top:1px;width:52px;text-align:center}
 .lk.b{background:var(--blue-bg);color:var(--blue)}.lk.up{background:var(--green-bg);color:var(--green)}.lk.dn{background:var(--red-bg);color:var(--red)}.lk.sh{background:var(--violet-bg);color:var(--violet)}.lk.z{background:var(--line2);color:var(--muted)}.lk.ac{background:var(--acc-bg);color:var(--acc-ink)}.lk.wn{background:var(--amber-bg);color:var(--amber-ink)}
-.xl.lg>div{min-width:0}
+.xl.lg>div{min-width:0;overflow-wrap:anywhere}
 </style>
 </head>
 <body>
@@ -951,6 +951,6 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 <div class="toast" id="toast" hidden></div>
 <div class="qsh" id="qsh" hidden><div class="qb"><div class="gr"></div><h3><span><svg class="i" id="qIco"><use href="#i-info"/></svg></span><b id="qTitle"></b></h3><div class="qt" id="qText"></div><button class="btn primary" id="qOk">Anladım</button></div></div>
 
-<script src="app.js?v=1.80.4"></script>
+<script src="app.js?v=1.81.0"></script>
 </body>
 </html>

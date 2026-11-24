@@ -1,11 +1,12 @@
-const APP_VERSION='1.80.4';
+const APP_VERSION='1.81.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (kehribar)
 let S: Summary = null, B: Backtest = null, sel = 'live' as StrategyKey, view: 'live' | 'bt' = 'live';
 
 function localStore(k: string, v?: string): string | null {try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
-const nf=(v,d=2)=>new Intl.NumberFormat('tr-TR',{minimumFractionDigits:d,maximumFractionDigits:d}).format(v);
+const NF: Record<number, Intl.NumberFormat> = {}; // biçimleyici ondalık sayısına göre bir kez kurulur (her çizimde yüzlerce kez çağrılır)
+const nf=(v,d=2)=>(NF[d]||(NF[d]=new Intl.NumberFormat('tr-TR',{minimumFractionDigits:d,maximumFractionDigits:d}))).format(v);
 const tl=(v,d=2)=>nf(v,d)+'\u00a0TL'; // bölünmez boşluk: "TL" satır sonunda tek başına kalmasın
 const sgn=v=>(v>0?'+':v<0?'−':'')+nf(Math.abs(v));
 const spc=(v,d=2)=>(v>0?'+':v<0?'−':'')+'%'+nf(Math.abs(v),d); // işaretli yüzde: +%0,14 / −%1,86
@@ -17,6 +18,8 @@ function dt(ts: number, withYear?: boolean): string {const d=new Date(ts);const 
 function ago(ts){const m=Math.round((Date.now()-ts)/60000);if(m<1)return 'az önce';if(m<60)return m+' dk önce';const h=Math.floor(m/60);return h<24?h+' sa önce':Math.floor(h/24)+' gün önce'}
 const ic=(id,c='i')=>`<svg class="${c}"><use href="#${id}"/></svg>`;
 const sym=inst=>inst.split('-')[0];
+/** Dış kaynaktan gelen yazı (token adı, borsa hata mesajı) ekrana yazılmadan önce: HTML olarak yorumlanmaz */
+const escH=(t: unknown)=>String(t??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 
 /* ---------- dil: varsayılan Türkçe; İngilizce seçilince ekrandaki yazılar sözlükle (docs/en.json) çevrilir ----------
    Kodda bütün yazılar Türkçe kalır. Çeviri, ekrana gelen her yazıya uygulanır: sayılar ve coin adları yer tutucu
@@ -166,8 +169,7 @@ function render(){
   const L=S.strategies.live;
   {const m=document.getElementById('mode'),halt=L&&L.halted,real=L&&L.armed,want=orig?orig.live:S.settings?.live;
    const pending=L&&!halt&&want!==undefined&&!!want!==!!real;
-   m.className='mode'+(halt?' halt':real?' real':'');
-   if(pending)m.className='mode';
+   {const mc=pending?'mode':'mode'+(halt?' halt':real?' real':'');if(m.className!==mc)m.className=mc}
    setH(m,pending?`<span class="mi">${ic('i-refresh')}</span><span><b>${want?'Gerçeğe':'Denemeye'}</b><small>geçiliyor…</small></span>`:halt?`<span class="mi">${ic('i-stop')}</span><span><b>Durdu</b><small>Acil fren</small></span>`
      :L&&L.paused?`<span class="mi">${ic('i-pause')}</span><span><b>Beklemede</b><small>Yeni alım yok</small></span>`
      :real?`<span class="mi">${ic('i-coins')}</span><span><b>Gerçek</b><small>OKX TR'de</small></span>`
@@ -323,13 +325,13 @@ function deskHero(lbl: string, val: number, sub: string, pnl: number, base: numb
 function renderLevR(): string {
   const R = (S as any)?.levr;
   if (!R) return (S as any)?.live_enc && !pw ? `<div class="warn">${ic('i-lock')}<div>Gerçek futures masasını görmek için kilidi aç.</div></div>` : '';
-  const usd = (v: number, d = 2) => '$' + nf(v, d), esc = (t: any) => String(t).replace(/</g, '&lt;');
+  const usd = (v: number, d = 2) => '$' + nf(v, d), esc = escH;
   const pf = (v: number) => nf(v, v >= 100 ? 2 : v >= 1 ? 4 : Math.min(8, 2 - Math.floor(Math.log10(v || 1))));
   const lv = (orig || S?.settings as any)?.lev || {}, ml = +lv.max_loss || 10, left = Math.max(0, ml + Math.min(0, R.pnl));
   const pos = (R.positions || []).map((p: any) => {const g = p.margin ? p.pnl / p.margin * 100 : 0;
-    return `<div class="fr"><time>${masaClock(p.ts)}</time><em class="ft ${p.side === 'UZUN' ? 'al' : 'zar'}">${p.side}</em><div><b>${p.sym}</b> ${p.lev || ''}x · teminat ${usd(p.margin)} · <span class="${cls(p.pnl)}">${p.pnl < 0 ? '−' : '+'}${usd(Math.abs(p.pnl))} (${spc(g, 0)})</span><small>giriş ${pf(p.entry)} · borsada stop ${pf(p.stop)} · hedef ${pf(p.tp)}</small></div>${deskBtn('lev', p.sym, 'Kapat')}</div>`}).join('');
+    return `<div class="fr"><time>${masaClock(p.ts)}</time><em class="ft ${p.side === 'UZUN' ? 'al' : 'zar'}">${p.side}</em><div><span class="fh"><b>${esc(p.sym)}</b> ${p.lev || ''}x <span class="${cls(p.pnl) || 'up'}">${p.pnl < 0 ? '−' : '+'}${usd(Math.abs(p.pnl))} (${spc(g, 0)})</span></span><small>teminat ${usd(p.margin)} · giriş ${pf(p.entry)} · borsada stop ${pf(p.stop)} · hedef ${pf(p.tp)}</small></div>${deskBtn('lev', p.sym, 'Kapat')}</div>`}).join('');
   const feed = (R.log || []).slice(0, 15).map(([ts, k, t]: [number, string, string]) =>
-    `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : 'not'}">${k === 'buy' ? 'AÇ' : k === 'exit' ? 'KAPAT' : k === 'risk' ? 'ENGEL' : 'BİLGİ'}</em><div>${feedTxt(String(t).replace(/^GERÇEK (AÇ|KAPAT|ENGEL) ?/, ''))}</div></div>`).join('');
+    `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : 'not'}">${k === 'buy' ? 'AÇ' : k === 'exit' ? 'KAPAT' : k === 'risk' ? 'ENGEL' : 'BİLGİ'}</em><div>${feedTxt(String(t).replace(/^GERÇEK (?:(?:AÇ|KAPAT|ENGEL) )?/, ''))}</div></div>`).join('');
   const st = R.dead ? `<b class="dn">Durdu: ${esc(R.dead)}. Ayarlar → Futures → Yeniden başlat.</b>` : R.halt ? `<b class="dn">Bugün durduruldu: günlük zarar sınırı.</b>` : !R.on ? '<b>Kapalı.</b> Ayarlar → Futures\'tan açılır.' : '';
   return `<h2 class="mh">${ic('i-layers')}Futures<span class="hsum"><em class="rbadge">GERÇEK</em>OKX Global</span><button class="mset" type="button" data-sett="fut">${ic('i-gear')}Ayarlar</button></h2>
     <div class="card mmeme">
@@ -349,7 +351,8 @@ function levWatch(): string {
   const lv = (orig || S?.settings as any)?.lev || {};
   const pf = (v: number) => nf(v, v >= 100 ? 2 : v >= 1 ? 4 : Math.min(8, 2 - Math.floor(Math.log10(v || 1))));
   const w = (L.watch || []).map((r: any) => {const d = Math.abs(r.dist || 0), up = r.side === 'UZUN', near = Math.max(4, Math.min(100, 100 - d * 12));
-    return `<div class="wr ${up ? 'wu' : 'wd'}" data-lo="${r.sym}" data-ls="${up ? 1 : -1}" role="button"><div><b>${r.sym}</b><em>${r.open ? 'AÇIK' : up ? '↑ UZUN' : '↓ KISA'}</em></div><div><span>${pf(r.px)}</span><small>${r.open ? 'pozisyon açık' : `sinyale %${nf(d, 1)}`}</small></div><i style="width:${(r.open ? 100 : near).toFixed(0)}%"></i></div>`}).join('');
+    const ps = pf(r.px), lg = ps.length > 9; // uzun fiyat (0,00000335): alt yazı kısalır, kutu tek satırda ve eşit boyda kalır
+    return `<div class="wr ${up ? 'wu' : 'wd'}" data-lo="${escH(r.sym)}" data-ls="${up ? 1 : -1}" role="button"><div><b>${escH(r.sym)}</b><em>${r.open ? 'AÇIK' : up ? '↑ UZUN' : '↓ KISA'}</em></div><div><span>${ps}</span><small>${r.open ? (lg ? 'açık' : 'pozisyon açık') : `${lg ? '' : 'sinyale '}%${nf(d, 1)}`}</small></div><i style="width:${(r.open ? 100 : near).toFixed(0)}%"></i></div>`}).join('');
   const lg = (L.log || []).slice(0, 8).map(([ts, k, t]: [number, string, string]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : 'not'}">${k === 'buy' ? 'SİNYAL' : k === 'exit' ? 'ÇIKIŞ' : 'ENGEL'}</em><div>${feedTxt(String(t).replace(/^(AÇ|KAPAT|ENGEL) /, ''))}</div></div>`).join('');
   return `<h2 class="mh">${ic('i-eye')}İzlenen coinler<span class="hsum">sinyale uzaklık · saatlik</span></h2>
     <div class="card"><div class="wgrid">${w || `<div class="empty">${ic('i-refresh')}<div>Mumlar yükleniyor</div></div>`}</div>
@@ -446,12 +449,12 @@ function renderMemeR(): string {
   if (((orig || S?.settings as any)?.meme || {}).on === false) return memeOff();
   const R = (S as any)?.memer;
   if (!R) return (S as any)?.live_enc && !pw ? `<div class="warn">${ic('i-lock')}<div>Gerçek memecoin masasını görmek için kilidi aç.</div></div>` : '';
-  const usd = (v: number, d = 2) => '$' + nf(v, d), esc = (t: any) => String(t).replace(/</g, '&lt;');
+  const usd = (v: number, d = 2) => '$' + nf(v, d), esc = escH;
   const mm = (orig || S?.settings as any)?.meme || {}, ml = +mm.max_loss || 10, left = Math.max(0, ml + Math.min(0, R.pnl));
   const pos = (R.positions || []).map((p: any) => {const g = p.cost ? (p.val / p.cost - 1) * 100 : 0;
-    return `<div class="fr mpc" data-mc="${esc(p.mint)}" role="button"><time>${masaClock(p.ts)}</time><em class="ft al">${p.part ? 'KALAN' : 'AÇIK'}</em><div><b>${esc(p.sym)}</b> ${usd(p.val)} · <span class="${cls(g)}">${spc(g, 1)}</span><small>giriş ${usd(p.cost)} · ${esc(p.why)}</small></div>${deskBtn('meme', p.mint, 'Sat')}</div>`}).join('');
+    return `<div class="fr mpc" data-mc="${esc(p.mint)}" role="button"><time>${masaClock(p.ts)}</time><em class="ft al">${p.part ? 'KALAN' : 'AÇIK'}</em><div><span class="fh"><b>${esc(p.sym)}</b> ${usd(p.val)} <span class="${cls(g) || 'up'}">${spc(g, 1)}</span></span><small>giriş ${usd(p.cost)} · ${esc(p.why)}</small></div>${deskBtn('meme', p.mint, 'Sat')}</div>`}).join('');
   const feed = (R.log || []).slice(0, 15).map(([ts, k, t]: [number, string, string]) =>
-    `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : 'not'}">${k === 'buy' ? 'AL' : k === 'exit' ? 'SAT' : k === 'risk' ? 'ENGEL' : 'BİLGİ'}</em><div>${feedTxt(String(t).replace(/^GERÇEK (AL|SAT|ENGEL) ?/, ''))}</div></div>`).join('');
+    `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : 'not'}">${k === 'buy' ? 'AL' : k === 'exit' ? 'SAT' : k === 'risk' ? 'ENGEL' : 'BİLGİ'}</em><div>${feedTxt(String(t).replace(/^GERÇEK (?:(?:AL|SAT|ENGEL) )?/, ''))}</div></div>`).join('');
   const st = R.dead ? `<b class="dn">Durdu: ${esc(R.dead)}. Ayarlar → Memecoin → Yeniden başlat.</b>` : !R.on ? '<b>Kapalı.</b> Ayarlar → Memecoin\'den açılır.' : '';
   return `<h2 class="mh">${ic('i-flask')}Memecoin<span class="hsum">${mm.real ? '<em class="rbadge">GERÇEK</em>' : '<em class="rbadge pp">DENEME</em>'}</span><button class="mset ico" type="button" data-memeon="0" aria-label="Masayı kapat">${ic('i-power')}</button><button class="mset" type="button" data-sett="meme">${ic('i-gear')}Ayarlar</button></h2>
     <div class="card mmeme">
@@ -468,7 +471,7 @@ function renderMemeR(): string {
 document.getElementById('masaBtn').onclick = () => showMasa(true);
 document.getElementById('closeMasa').onclick = () => showMasa(false);
 /* ---------- bulut: verilerin GitHub'la eşitlenme durumu (üst çubuktaki bulut simgesi) ----------
-   Bot her değişiklikte (en geç 30 sn'de bir) kayıtları buluta yedekler; uygulama birkaç saniyede bir kontrol eder. */
+   Bot her değişiklikte (en geç 10 sn'de bir) kayıtları buluta yedekler; uygulama birkaç saniyede bir kontrol eder. */
 let syncOk = 0, syncBad = false;
 function syncMark(ok: boolean) { if (ok) { syncOk = Date.now(); syncBad = false; } else syncBad = true; cloudUI(); }
 function cloudUI() {
@@ -489,7 +492,7 @@ function openCloud() {
     <div class="kvl"><span>Botun son kaydı</span><b>${tm(S?.updated || 0)}</b></div>
     <div class="kvl"><span>Otomatik eşitleme</span><b class="up">Her zaman açık · ${token?2:15} sn</b></div>
     ${(S as any)?.perf?.turn?`<div class="kvl"><span>Botun tur süresi</span><b>${nf((S as any).perf.turn,1)} sn</b></div>`:''}
-    <p class="cldn">Bot her işlemde ve en geç 30 saniyede bir bütün kayıtları buluta (GitHub) yedekler. Uygulama buluta sürekli bakar, değişiklik olunca hemen yeniler; fiyatlar 2 saniyede bir borsadan canlı gelir. Ayarlar <b>Kaydet</b>'e basınca buluta yazılır.</p>
+    <p class="cldn">Bot her işlemde ve en geç 10 saniyede bir bütün kayıtları buluta (GitHub) yedekler. Uygulama buluta sürekli bakar, değişiklik olunca hemen yeniler; fiyatlar 2 saniyede bir borsadan canlı gelir. Ayarlar <b>Kaydet</b>'e basınca buluta yazılır.</p>
     <button class="btn" id="syncNow" style="width:100%;margin-bottom:10px">${ic('i-refresh')}Şimdi eşitle</button>`;
   q.hidden = false;
   document.getElementById('syncNow').onclick = async () => { q.hidden = true; await load(); toast(syncBad ? 'Eşitlenemedi, bağlantını kontrol et' : 'Eşitlendi'); };
@@ -575,6 +578,8 @@ function openGloss(k: string){const [t,h]=gloss(k);if(!t)return;
   document.getElementById('qsh').dataset.n='';qHead('i-info','Anladım');document.getElementById('qTitle').textContent=t;document.getElementById('qText').innerHTML=h;document.getElementById('qsh').hidden=false}
 document.addEventListener('click',e=>{const q=(e.target as HTMLElement).closest<HTMLElement>('.qm');if(q){e.preventDefault();e.stopPropagation();openGloss(q.dataset.q)}});
 document.getElementById('qOk').onclick=()=>document.getElementById('qsh').hidden=true;
+// alt pencere her açılışta baştan başlar (uzun pencere kendi içinde kayar; önceki pencerenin kaydırma konumu kalmasın)
+new MutationObserver(()=>{const q=document.getElementById('qsh');if(!q.hidden)(q.firstElementChild as HTMLElement).scrollTop=0}).observe(document.getElementById('qsh'),{attributes:true,attributeFilter:['hidden']});
 document.getElementById('qsh').onclick=e=>{if(e.target===e.currentTarget)(e.currentTarget as HTMLElement).hidden=true};
 document.querySelectorAll<HTMLElement>('.adv .acch').forEach(b=>b.onclick=()=>b.parentElement.classList.toggle('open'));
 
@@ -712,13 +717,13 @@ function renderXfer(){
   if(sel!=='live'||!S?.strategies?.live||S.strategies.live.locked){box.hidden=true;return}
   box.hidden=false;
   const jobs=(X?.jobs||[]).slice(0,4).map((j: any)=>{const st=XST[j.stage]||[j.stage,'i-info','w'];
-    return `<div class="xr"><span class="xs ${st[2]}">${ic(st[1])}</span><div class="xm"><b>${j.dir==='m2g'&&j.then?`MEME → ${XEND[j.then][0]}`:j.dir==='g2m'&&j.wait?`${XEND[j.via]?.[0]||''} → MEME`:XDIR[j.dir]?xName(j.dir):j.dir}<i>${nf(j.amt,2)} $</i></b>
-      <small>${masaClock(j.ts)} · ${st[0]}${j.stage!=='done'&&j.msg&&j.msg!=='sırada'?' · '+j.msg:''}</small></div>${j.stage==='new'?`<button class="xc" data-xc="${j.id}">İptal</button>`:''}</div>`}).join('');
+    return `<div class="xr"><span class="xs ${st[2]}">${ic(st[1])}</span><div class="xm"><b>${j.dir==='m2g'&&XEND[j.then]?`MEME → ${XEND[j.then][0]}`:j.dir==='g2m'&&j.wait&&XEND[j.via]?`${XEND[j.via][0]} → MEME`:XDIR[j.dir]?xName(j.dir):escH(j.dir)}<i>${nf(+j.amt||0,2)} $</i></b>
+      <small>${masaClock(j.ts)} · ${escH(st[0])}${j.stage!=='done'&&j.msg&&j.msg!=='sırada'?' · '+escH(j.msg):''}</small></div>${j.stage==='new'?`<button class="xc" data-xc="${escH(j.id)}">İptal</button>`:''}</div>`}).join('');
   // Kasalar ekranı: her bölüm kendi başlığı ve kartıyla (bakiyeler · para gönder · aktarımlar · küçük bakiyeler · kayıt)
   const grp: [string,string,string[]][]=[['OKX TR\'den','tr',['tr2g','tr2k','tr2m']],['OKX Global\'den','g',['g2tr','g2k','g2m']],['MEME\'den','m',['m2g','m2k','m2tr']],['KASA\'dan','k',['k2g','k2tr','k2m']]];
   const tile=(k: string)=>{const [f,t,sub]=XDIR[k];return `<button data-x="${k}"><span class="xrt">${xEnd(f)}${ic('i-chev')}${xEnd(t)}</span><b>${XEND[t][0]}</b><small>${sub}</small></button>`};
-  const logRows=((X?.log||[]) as any[]).slice(0,5).map(([t,m]: [number,string])=>{const parts=String(m).replace(/</g,'&lt;').split(' · ');
-    const [c,lb]: [string,string]=/başarısız|hata|reddetti|yapılamadı|ulaşmadı/i.test(m)?['dn','HATA']:/ulaştı|tamamlandı/i.test(m)?['up','ULAŞTI']:/gönderildi|aktarıldı/i.test(m)?['b','GÖNDER']
+  const logRows=((X?.log||[]) as any[]).slice(0,5).map(([t,m]: [number,string])=>{const parts=escH(String(m).replace(/^(HATA|İptal:) /,'')).split(' · ');
+    const [c,lb]: [string,string]=/^İptal/i.test(m)?['wn','İPTAL']:/başarısız|hata|reddetti|yapılamadı|ulaşmadı|çevrilemedi/i.test(m)?['dn','HATA']:/alınamadı|edilemedi|edilecek/i.test(m)?['wn','BEKLE']:/ulaştı|tamamlandı/i.test(m)?['up','ULAŞTI']:/gönderildi|aktarıldı/i.test(m)?['b','GÖNDER']
       :/çevrildi|satıldı|alındı/i.test(m)?['ac','ÇEVİR']:/bekle|sınır|iptal/i.test(m)?['wn','BEKLE']:['z','BİLGİ'];
     return `<div class="xl lg"><time>${masaClock(t)}</time><em class="lk ${c}">${lb}</em><div><b>${parts[0]}</b>${parts.length>1?`<small>${parts.slice(1).join(' · ')}</small>`:''}</div></div>`}).join('');
   if(!setH(box,`<h2 class="mh">${ic('i-wallet')}Kasalar<span class="hsum">dakikada bir güncellenir</span></h2>
@@ -805,15 +810,18 @@ function openKasaSend(dir: string){
   document.getElementById('qText').innerHTML='';draw();q.hidden=false;
 }
 /** Elle gönderilen (KASA / OKX TR) para Global'e ulaşınca bot SOL alıp MEME'ye geçirsin diye bekleyen istek kaydedilir */
+let waitBusy=false;
 async function waitMeme(via: string, amt: number, btn?: HTMLElement): Promise<boolean>{
+  if(waitBusy)return false; // çift dokunuş: istek bir kez kaydedilir (iki kayıt = iki kez SOL alımı olurdu)
   amt=Math.round((amt||0)*100)/100;
   if(!(amt>=1)){toast('Tutarı yaz (en az 1 USDT)');return false}
   if(!(S as any)?.memer?.addr){toast('MEME cüzdanı bağlı değil');return false}
   if(!token){toast('Önce Ayarlar\'dan GitHub bağlantısını kur');return false}
-  if(btn)btn.classList.add('off');
+  waitBusy=true;if(btn)btn.classList.add('off');
   const req={id:'w'+Date.now().toString(36),ts:Date.now(),dir:'g2m',amt,src:'bos',wait:true,via};
-  const ok=await cloudPatch(o=>{(o as any).xfer_req=[...((o as any).xfer_req||[]).filter((r: any)=>Date.now()-(r.ts||0)<3600000),req]},'Aktarım: '+via+' → MEME '+amt+' USDT');
-  if(btn)btn.classList.remove('off');
+  let ok=false;
+  try{ok=await cloudPatch((o: any)=>{const l: any[]=o.xfer_req||[];if(!l.some(r=>r.id===req.id))o.xfer_req=[...l.filter(r=>Date.now()-(r.ts||0)<3600000),req]},'Aktarım: '+via+' → MEME '+amt+' USDT')}
+  finally{waitBusy=false;if(btn)btn.classList.remove('off')}
   if(ok){toast(`Kaydedildi: ${nf(amt,2)} USDT Global'e ulaşınca MEME'ye geçecek`);fastWatch()}else toast('İstek gönderilemedi, tekrar dene');
   return ok;
 }
@@ -829,7 +837,7 @@ function openXfer(dir: string){
       <button class="btn primary xgo" id="tmGo">${ic('i-out')}Kaydet ve OKX TR'yi aç</button></div>`;
     const inp=document.getElementById('tmAmt') as HTMLInputElement;
     document.querySelectorAll<HTMLElement>('[data-tq]').forEach(b=>b.onclick=()=>{inp.value=b.dataset.tq});
-    document.getElementById('tmGo').onclick=async()=>{const w=window.open('about:blank','_blank');
+    document.getElementById('tmGo').onclick=async()=>{if(waitBusy)return;const w=window.open('about:blank','_blank');
       if(await waitMeme('tr',+inp.value,document.getElementById('tmGo'))){if(w)w.location.href='https://tr.okx.com/balance/withdrawal';else location.href='https://tr.okx.com/balance/withdrawal';q.hidden=true}else w?.close()};
     q.hidden=false;return}
   if(dir.startsWith('tr')){const q=document.getElementById('qsh');q.dataset.n='';qHead('i-bank','Anladım');document.getElementById('qTitle').textContent=xName(dir);
@@ -1136,7 +1144,7 @@ function openBuy(inst: string){
   const h=+it.h||0,lot=h<=0?+c.lot:+c.lot*(h===1?(c.lot2??1):(c.lot3??1)),cash=+x.cash||0;
   const cur=livePrice(inst,it.p),gap=it.t?(cur/it.t-1)*100:0;
   const q=document.getElementById('qsh');q.dataset.n='';qHead('i-buy','Vazgeç');document.getElementById('qTitle').textContent=`${sym(inst)} al`;
-  const quick=[...new Set([Math.round(lot/2),Math.round(lot),Math.round(lot*2)].filter(v=>v>=10))];
+  const quick=[...new Set([Math.round(lot/2),Math.round(lot),Math.round(lot*2)].filter(v=>v>=10))],bid='b'+Date.now().toString(36);
   const P: any=(x.positions||[]).find((p: any)=>p.inst===inst),pq0=P?+P.qty||0:0,pc0=P?+P.cost||0:0,tp=+c.lot_tp||0.04,stp=+c.stop||0.5;
   const calc=(a: number)=>{const q=pq0+a/cur,cost=pc0+a,avg=q?cost/q:cur,val=q*cur;
     return `${P?`<div class="pavg"><div><span>Şimdiki ortalama</span><b>${px(+P.avg||pc0/pq0)}</b></div>${ic('i-chev')}<div><span>Alımdan sonra</span><b>${px(avg)}</b></div><div><span>Toplam</span><b>${tl(cost,0)}</b></div></div>`:''}
@@ -1159,14 +1167,15 @@ function openBuy(inst: string){
   const upd=()=>{go.lastChild.textContent=+inp.value>=10?`${tl(+inp.value,0)} al`:'Al';if(+inp.value>=1){document.getElementById('bCalc').innerHTML=calc(+inp.value);pcInit()}};inp.oninput=upd;upd();
   document.querySelectorAll<HTMLElement>('[data-bq]').forEach(b=>b.onclick=()=>{inp.value=b.dataset.bq;upd()});
   go.onclick=()=>{const a=Math.round(+inp.value||0);if(a<10){toast('Tutarı yaz (en az 10 TL)');return}
-    if(a>cash+0.5){toast(`Botta boşta ${tl(cash,0)} var`);return}buyCoin(inst,a,h,go)};
+    if(a>cash+0.5){toast(`Botta boşta ${tl(cash,0)} var`);return}buyCoin(inst,a,h,go,bid)};
   q.hidden=false;
 }
-async function buyCoin(inst: string, amt: number, h: number, btn?: HTMLButtonElement){
+async function buyCoin(inst: string, amt: number, h: number, btn?: HTMLButtonElement, id?: string){
   if(!token){toast('Almak için önce Ayarlar\'dan GitHub bağlantısını kur');return}
+  if(btn?.disabled)return; // çift dokunuş: istek bir kez gider
   if(btn)btn.disabled=true;fastWatch();
-  const req={id:'b'+Date.now().toString(36),ts:Date.now(),inst,amt};
-  const ok=await cloudPatch(o=>{const p: any=(o as any).buy;(o as any).buy=[...(Array.isArray(p)?p:[]).filter((r: any)=>Date.now()-(r.ts||0)<600000),req]},'Uygulamadan alım: '+inst+' '+amt+' TL');
+  const req={id:id||'b'+Date.now().toString(36),ts:Date.now(),inst,amt};
+  const ok=await cloudPatch(o=>{const p: any=(o as any).buy,l: any[]=Array.isArray(p)?p:[];if(!l.some(r=>r.id===req.id))(o as any).buy=[...l.filter((r: any)=>Date.now()-(r.ts||0)<600000),req]},'Uygulamadan alım: '+inst+' '+amt+' TL');
   if(!ok){if(btn)btn.disabled=false;toast('Alım isteği gönderilemedi, tekrar dene');return}
   document.getElementById('qsh').hidden=true;BUYING[inst]={t:Date.now(),n:h};if(S)render();
   toast(`${sym(inst)} alım isteği gönderildi; bot birkaç saniye içinde ${tl(amt,0)} alır.`);
@@ -1198,12 +1207,14 @@ function pcInit(){document.querySelectorAll<HTMLElement>('#qText .pcs').forEach(
 
 /** Akış satırı metnini düzenler: "SEMBOL $fiyat · ±kâr$ · sebep…" → kalın başlık (+ renkli kâr/zarar), altında küçük ayrıntı */
 function feedTxt(raw: string): string {
-  const parts = String(raw).replace(/&/g, '&amp;').replace(/</g, '&lt;').split(' · ');
+  const parts = escH(String(raw).replace(/^kapatma emri (\S+)/, '$1 kapatma emri')).split(' · ');
   let head = parts.shift() || '';
-  head = head.replace(/^([^\s:]+)(:?)/, '<b>$1</b>$2');
-  if (parts.length && /^[+\-−]?\$?\d[\d.,]*\$?$/.test(parts[0].trim())) {
-    const v = parts.shift().trim(), neg = /^[-−]/.test(v);
-    head += ` <span class="${neg ? 'dn' : 'up'}">${v.replace(/^-/, '−')}</span>`;
+  head = head.replace(/^((?:%\d+\s+)?[^\s:]+)(:?)/, '<b>$1</b>$2'); // "%50 WAFF" (kısmi satış) birlikte kalın
+  // kâr/zarar parçası: "+1.15$" ya da "-0.72$ (teminata göre %-2)"; parantez içi küçük ayrıntıya iner
+  const m = parts.length ? /^([+\-−]\$?\d[\d.,]*\$?|\$?\d[\d.,]*\$)(?:\s+\((.+)\))?$/.exec(parts[0].trim()) : null;
+  if (m) {
+    parts.shift(); if (m[2]) parts.unshift(m[2]);
+    head += ` <span class="${/^[-−]/.test(m[1]) ? 'dn' : 'up'}">${m[1].replace(/^-/, '−')}</span>`;
   }
   return `<span class="fh">${head}</span>${parts.length ? `<small>${parts.join(' · ')}</small>` : ''}`;
 }

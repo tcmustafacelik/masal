@@ -619,7 +619,11 @@ def instant_buys(live, series):
 def signature(state, S):
     """Kaydedilmesi gereken bir değişiklik olup olmadığını anlamak için özet."""
     parts = []
+    tail = lambda d: ((d.get("log") or [None])[-1], (d.get("trades") or [{}])[-1].get("ts"))  # listeler sınıra ulaşınca uzunluk değişmez
+    for k in ("meme", "lev", "levr", "memer"):
+        parts.append(tail(state.get(k) or {}))
     for s in list(state["portfolios"].values()) + [state.get("live") or {}]:
+        parts.append(tail(s))
         parts.append([len(s.get("trades", [])), sorted(s.get("positions", {})), len(s.get("log", [])),
                       s.get("halted"), s.get("armed"), s.get("paused"), round(s.get("cash", 0), 2)])
     parts.append(len((state.get("money") or {}).get("seen", [])))

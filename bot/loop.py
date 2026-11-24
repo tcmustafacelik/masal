@@ -108,25 +108,35 @@ def recovery_note():
         n.flush()
 
 
-_PUSH = {"t": None, "ok": True}
+_PUSH = {"t": None, "ok": True, "fail": 0.0}
 
 
-def _push_dir(d, token, repo):
-    sh("git", "init", "-q", "-b", "data", cwd=d)
-    sh("git", "add", "-A", cwd=d)
-    sh("git", "-c", "user.name=masal-bot", "-c", "user.email=masal-bot@users.noreply.github.com",
-       "commit", "-qm", "Bot turu " + time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), cwd=d)
-    ok = False
-    for _ in range(3):
-        r = sh("git", "push", "-q", "-f", f"https://x-access-token:{token}@github.com/{repo}.git", "data", cwd=d, timeout=90)
-        if r.returncode == 0:
-            ok = True
-            break
-        time.sleep(3)
-    if not ok:
-        print("Kayıt gönderilemedi:", r.stderr[-300:])
-    shutil.rmtree(d, ignore_errors=True)
-    _PUSH["ok"] = ok
+def _push_dir(d, token, repo, tries=3, timeout=90):
+    """Arka plandaki gönderim tek kez ve kısa süre sınırıyla denenir (tries=1): takılan bir gönderim aynı eski kopyayı
+    dakikalarca yeniden denemez; ana döngü birkaç saniye sonra güncel kayıtla yenisini başlatır.
+    Oturum sonu / yeniden başlama öncesi son gönderim (bekleyerek) 3 kez denenir."""
+    ok, r = False, None
+    try:
+        sh("git", "init", "-q", "-b", "data", cwd=d)
+        sh("git", "add", "-A", cwd=d)
+        sh("git", "-c", "user.name=masal-bot", "-c", "user.email=masal-bot@users.noreply.github.com",
+           "commit", "-qm", "Bot turu " + time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), cwd=d)
+        for i in range(tries):
+            r = sh("git", "push", "-q", "-f", f"https://x-access-token:{token}@github.com/{repo}.git", "data", cwd=d, timeout=timeout)
+            if r.returncode == 0:
+                ok = True
+                break
+            if i + 1 < tries:
+                time.sleep(3)
+        if not ok:
+            _PUSH["fail"] = time.time()
+            print("Kayıt gönderilemedi:", ((r.stderr if r else "") or "")[-300:].replace(token, "***"))
+    except Exception as e:  # iş parçacığı sessizce ölmesin: başarısız sayılır, ana döngü yeniden gönderir
+        _PUSH["fail"] = time.time()
+        print("Kayıt gönderilemedi:", str(e)[:200].replace(token, "***"))
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+        _PUSH["ok"] = ok
 
 
 def push_data(wait=False):
@@ -140,13 +150,15 @@ def push_data(wait=False):
         if not wait:
             return False
         th.join()
+    if not wait and time.time() - _PUSH["fail"] < 5:
+        return False  # az önce başarısız oldu: her turda (2 sn) değil, 5 sn arayla yeniden denenir
     d = f"/tmp/masal-data-{time.time_ns()}"
     os.makedirs(d + "/docs")
     shutil.copytree("docs/data", d + "/docs/data", ignore=shutil.ignore_patterns("*.tmp"))
     if wait:
         _push_dir(d, token, repo)
         return _PUSH["ok"]
-    _PUSH["t"] = threading.Thread(target=_push_dir, args=(d, token, repo), daemon=True)
+    _PUSH["t"] = threading.Thread(target=_push_dir, args=(d, token, repo, 1, 30), daemon=True)
     _PUSH["t"].start()
     return True
 

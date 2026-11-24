@@ -245,6 +245,10 @@ def step(state, S):
             continue
         _enter(L, c, side, k, px[c], cfg, lev, ts, why)
 
+    # Ayarlardan çıkarılmış coin izleme listesinde kalmasın (yeniden başlamadan sonra mumu bellekte olmadığı için
+    # yukarıdaki döngü ona hiç uğramaz ve kayıt sonsuza kadar taşınırdı)
+    for c in [c for c in (L.get("watch") or {}) if c not in coins and c not in L["positions"]]:
+        del L["watch"][c]
     L["trades"] = L["trades"][-300:]
     eq = L["bank"] + sum(_upnl(p, p["now"]) for p in L["positions"].values())
     if not L["equity"] or ts - L["equity"][-1][0] >= 15 * 60000:
@@ -288,7 +292,8 @@ def manual_open(state, S, sym, side):
         rows = list((_SNAP["c"] or {}).get(sym) or [])
         x = _SNAP["px"].get(sym)
     brk, trend, trend_on = _windows(cfg)
-    bad = ("zaten açık" if sym in L["positions"] else "günlük zarar sınırı dolu" if L["halt"]
+    bad = ("zaten açık" if sym in L["positions"] else "izlenen coinler arasında değil" if sym not in (cfg.get("coins") or [])
+           else "günlük zarar sınırı dolu" if L["halt"]
            else f"en fazla {cfg['max_pos']} pozisyon" if len(L["positions"]) >= cfg["max_pos"]
            else "fiyat yok" if not x else "mumlar henüz yüklenmedi" if len(rows) < max(60, brk + 2) else None)
     if bad:

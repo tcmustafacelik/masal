@@ -708,6 +708,7 @@ EN = {
     "GÖNDER": "SENT",
     "ÇEVİR": "CONVERT",
     "BEKLE": "WAIT",
+    "İPTAL": "CANCELLED",
     "HATA": "ERROR",
     "Memecoin masası": "Memecoin desk", "deneme · sanal para": "test · virtual money", "Sanal kasa": "Virtual bank", "Sonuç": "Result",
     "İşlem": "Trades", "Kazanma": "Win rate", "AÇIK": "OPEN", "ENGEL": "BLOCK", "Gözcü {0} kontrol": "Scout {0} checks", "Bekçi {0} engel": "Guard {0} blocks", "Giriş {0}": "Entries {0}",
