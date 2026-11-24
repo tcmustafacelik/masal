@@ -59,9 +59,10 @@
     "cleared": 1795556518
   },
   "sell": {
-    "ts": 1795558107169,
+    "ts": 1795558109395,
     "insts": [
-      "AAVE-USDT"
+      "AAVE-USDT",
+      "NEAR-USDT"
     ]
   },
   "quote": "USDT",
