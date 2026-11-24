@@ -16,7 +16,7 @@
       "version": "1.87.4",
       "date": "2026-11-25",
       "notes": [
-        ""
+        "Çakışma düzeltmeleri: küçük bakiyeleri çevir Global spot botunun coinlerine dokunmaz; Global spot SOL almaz (memecoin aktarımı SOL kullanıyor)"
       ]
     },
     {
