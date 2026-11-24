@@ -58,9 +58,10 @@
     "cleared": 1795501185
   },
   "sell": {
-    "ts": 1795501564174,
+    "ts": 1795501594101,
     "insts": [
-      "DOS-USDT"
+      "DOS-USDT",
+      "WLFI-USDT"
     ]
   },
   "quote": "USDT",
