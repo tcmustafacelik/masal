@@ -270,7 +270,7 @@
     "bank": 100,
     "lev": 3,
     "risk_pct": 2,
-    "max_pos": 4,
+    "max_pos": 6,
     "sl_atr": 1.5,
     "tp_atr": 3,
     "daily_loss_pct": 10,
