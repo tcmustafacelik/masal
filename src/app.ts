@@ -1,4 +1,4 @@
-const APP_VERSION='1.72.1';
+const APP_VERSION='1.72.2';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='#D9861A';
@@ -1266,6 +1266,9 @@ const SECTIONS=[
   ['meme.trail_from','İz süren stop başlangıcı','Bu kâra ulaşınca devreye girer','%',5,5,200,0],
   ['meme.trail_pct','İz süren stop','Zirveden bu kadar düşünce satılır','%',1,3,50,0],
   ['meme.max_m5','Kovalamama sınırı','Son 5 dk\'da bundan fazla yükselmişse alınmaz','%',1,2,30,0],
+  ['meme.min_ratio','Alıcı baskısı','Son 5 dk\'da alıcı sayısı satıcının en az bu katı olmalı','kat',.5,1,10,1],
+  ['meme.min_buys','En az alıcı','Son 5 dk\'da en az bu kadar alıcı','adet',5,5,500,0],
+  ['meme.max_h1','Tepe sınırı','Son 1 saatte bundan fazla uçmuşsa alınmaz; 0 kapalı','%',50,0,5000,0],
   ['meme.max_hold_h','En uzun tutma','Bu süre dolunca satılır','saat',1,1,72,0]]},
  {t:'Aktarım ve KASA',i:'i-vault',f:[
   ['xfer.daily_max','Günlük aktarım sınırı','Bir günde borsalardan en fazla gönderilecek','$',100,10,100000,0],
@@ -1538,7 +1541,7 @@ async function loadSettings(){
   if(orig&&orig.grid&&orig.grid.use_pct==null)orig.grid.use_pct=40;
   if(orig&&orig.grid&&(orig.grid as any).vol_filter==null)(orig.grid as any).vol_filter=2;
   if(orig)(orig as any).lev={on:true,bank:100,lev:3,risk_pct:1,max_pos:3,sl_atr:2,tp_atr:4,daily_loss_pct:5,fee_pct:.05,slip_pct:.05,coins:['BTC','ETH','SOL','XRP','DOGE','HYPE','ZEC','PEPE'],real:false,real_budget:30,real_lev:2,max_loss:10,real_reset:0,brk_h:20,trend_h:200,trend_on:true,...((orig as any).lev||{})};
-  if(orig)(orig as any).meme={on:true,bank:100,size_pct:10,max_pos:5,min_liq:20000,max_fdv:5000000,min_age_min:10,max_age_h:72,tp_pct:30,tp_part:100,trail_from:15,trail_pct:12,sl_pct:15,max_hold_h:4,slip_pct:1,fee_pct:.5,max_m5:8,wallet:'',real:false,max_loss:10,max_slip:2,real_reset:0,...((orig as any).meme||{})};
+  if(orig)(orig as any).meme={on:true,bank:100,size_pct:10,max_pos:5,min_liq:20000,max_fdv:5000000,min_age_min:10,max_age_h:72,tp_pct:30,tp_part:100,trail_from:15,trail_pct:12,sl_pct:15,max_hold_h:4,slip_pct:1,fee_pct:.5,max_m5:8,min_ratio:1.2,min_buys:5,max_h1:0,wallet:'',real:false,max_loss:10,max_slip:2,real_reset:0,...((orig as any).meme||{})};
   if(orig)(orig as any).xfer={daily_max:1000,sweep_on:true,sweep_pct:50,sweep_days:7,sweep_min:10,...((orig as any).xfer||{})};
   if(orig&&orig.grid&&orig.grid.trend_filter_pct==null)orig.grid.trend_filter_pct=1;
   if(orig&&!orig.notify)orig.notify={enabled:false,topic:'',trades:true,alerts:true,daily:true,money:true};

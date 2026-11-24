@@ -36,6 +36,9 @@ DEFAULT = {
     "slip_pct": 1.0,     # varsayılan kayma (her yön)
     "fee_pct": 0.5,      # DEX + işlem ücreti (her yön)
     "max_m5": 8,         # son 5 dk'da bundan fazla yükselmişse girilmez (kovalanmaz)
+    "min_ratio": 1.2,    # son 5 dk'da alıcı sayısı satıcının en az bu katı olmalı (alıcı baskısı)
+    "min_buys": 5,       # son 5 dk'da en az bu kadar alıcı (ölü havuzda tek tük alım sinyal sayılmaz)
+    "max_h1": 0,         # son 1 saatte bundan fazla yükselmişse girilmez (patlamanın tepesi); 0 kapalı
 }
 EVERY = 10  # saniye
 
@@ -137,8 +140,9 @@ def _risk(m, p, rug, cfg, now_ms):
     return None
 
 
-def _signal(p, max_m5=15):
-    """Gözcü: hacim patlaması + alıcı baskısı + kovalamaya değmeyecek kadar yükselmemiş fiyat."""
+def _signal(p, max_m5=15, min_ratio=1.2, min_buys=5, max_h1=0):
+    """Gözcü: hacim patlaması + alıcı baskısı + kovalamaya değmeyecek kadar yükselmemiş fiyat.
+    Deneme sonuçları: zararların çoğu alıcı/satıcı oranı düşük (≈1,2-1,9) ya da 1 saatte %600+ uçmuş tokenlerden geldi."""
     v = p.get("volume") or {}
     ch = p.get("priceChange") or {}
     tx = (p.get("txns") or {}).get("m5") or {}
@@ -146,7 +150,8 @@ def _signal(p, max_m5=15):
     v5, v1h = v.get("m5") or 0, v.get("h1") or 0
     spike = v5 / (v1h / 12) if v1h > 0 else 0
     m5, h1 = ch.get("m5") or 0, ch.get("h1") or 0
-    if spike >= 2 and b >= s * 1.2 and 0 < m5 <= max_m5 and h1 > 0:
+    if (spike >= 2 and b >= max(5, min_buys) and b >= s * max(1.0, min_ratio) and 0 < m5 <= max_m5 and h1 > 0
+            and not (max_h1 and h1 > max_h1)):
         return f"hacim {spike:.1f}x · alıcı {b}/{s} · 5 dk %{m5:+.1f} · 1 sa %{h1:+.1f}"
     return None
 
@@ -234,7 +239,8 @@ def step(state, S):
             continue
         sym = (p.get("baseToken") or {}).get("symbol") or m[:4]
         M["stats"]["scanned"] += 1
-        sig = _signal(p, cfg.get("max_m5", 8))
+        sig = _signal(p, cfg.get("max_m5", 8), float(cfg.get("min_ratio") or 1.2), int(cfg.get("min_buys") or 5),
+                      float(cfg.get("max_h1") or 0))
         if not sig:
             continue
         M["seen"][m] = ts

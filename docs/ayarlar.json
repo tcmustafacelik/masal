@@ -180,7 +180,7 @@
     "sweep_min": 15
   },
   "meme": {
-    "on": false,
+    "on": true,
     "bank": 100,
     "size_pct": 20,
     "max_pos": 3,
@@ -201,7 +201,10 @@
     "real": false,
     "max_loss": 6,
     "max_slip": 2,
-    "real_reset": 0
+    "real_reset": 0,
+    "min_ratio": 2.5,
+    "min_buys": 30,
+    "max_h1": 600
   },
   "lev": {
     "on": true,

@@ -1,10 +1,17 @@
 {
-  "version": "1.72.1",
+  "version": "1.72.2",
   "date": "2026-11-24",
   "notes": [
-    "Memecoin bölümü geri geldi; masa artık elle açılıp kapanır (Memecoin sekmesinde Aç / güç düğmesi, Ayarlar'da 'Memecoin masası açık')"
+    "Memecoin daha akıllı: alıcı baskısı (alıcı/satıcı oranı), en az alıcı ve tepe sınırı filtreleri; masa yeniden açıldı (deneme)"
   ],
   "history": [
+    {
+      "version": "1.72.2",
+      "date": "2026-11-24",
+      "notes": [
+        "Memecoin daha akıllı: alıcı baskısı (alıcı/satıcı oranı), en az alıcı ve tepe sınırı filtreleri; masa yeniden açıldı (deneme)"
+      ]
+    },
     {
       "version": "1.72.1",
       "date": "2026-11-24",
@@ -110,16 +117,6 @@
       "date": "2026-11-23",
       "notes": [
         "Varlık özeti yenilendi: büyük toplam, kâr/zarar rozeti, renkli dağılım çubuğu, borsa eşleşme durumu ve hedef çubuğu"
-      ]
-    },
-    {
-      "version": "1.67.0",
-      "date": "2026-11-23",
-      "notes": [
-        "Futures: her pozisyonun borsada zarar durdurması dakikada bir kontrol edilir; yoksa eklenir, fiyat stopu geçmişse pozisyon hemen kapatılır",
-        "Memecoin: DexScreener fiyat vermezse Jupiter fiyatı kullanılır; deneme masası çalışmasa da yedek zarar kes / kâr al devrede",
-        "Aktarım işleri arka planda: borsa beklerken bot turu durmuyor",
-        "İngilizce çeviriler tamamlandı; kullanılmayan eski aktarım kodu temizlendi"
       ]
     }
   ]
