@@ -148,7 +148,9 @@ def step(state, S):
         _TH["last"] = now
         if need_c:
             _TH["clast"] = now
-        _TH["t"] = threading.Thread(target=_fetch, args=(list(cfg["coins"]), need_c), daemon=True)
+        # açık pozisyonu olan coin ayarlardan çıkarılsa da fiyatı okunur (zarar durdur / kâr al çalışmaya devam etsin)
+        want = list(dict.fromkeys(list(cfg["coins"]) + list(L["positions"])))
+        _TH["t"] = threading.Thread(target=_fetch, args=(want, need_c), daemon=True)
         _TH["t"].start()
     with _LOCK:
         snap = {"ts": _SNAP["ts"], "px": dict(_SNAP["px"]), "c": _SNAP["c"]}
@@ -189,8 +191,13 @@ def step(state, S):
     # Gözcü + Bekçi + Ölçücü: kapanan saatlik mumla karar
     brk, trend, trend_on = _windows(cfg)
     need = max(60, brk + 2, trend + 10 if trend_on else 0)  # göstergelerin oturması için gereken mum sayısı
+    coins = set(cfg.get("coins") or [])
     for c, rows in (snap["c"] or {}).items():
         if len(rows) < need:
+            continue
+        if c not in coins and c not in L["positions"]:
+            # ayarlardan çıkarılan coin (mumları oturum sonuna kadar bellekte kalır): yeni sinyal üretmez, izleme listesinden düşer
+            (L.get("watch") or {}).pop(c, None)
             continue
         k = _ind(rows, brk, trend)
         L.setdefault("watch", {})[c] = {"hh": k["hh"], "ll": k["ll"], "e200": k["e200"], "up": k["e20"] > k["e50"],
@@ -209,7 +216,6 @@ def step(state, S):
             continue
         if p:
             p["against"] = 0
-        if p:
             continue
         if trend_on:
             side = 1 if k["c"] > k["hh"] and k["c"] > k["e200"] else -1 if k["c"] < k["ll"] and k["c"] < k["e200"] else 0
@@ -308,12 +314,12 @@ def watch_list(L, px):
     return sorted(out, key=lambda r: abs(r["dist"]))
 
 
-def manual_close(state, sym, reason="elle kapatıldı"):
+def manual_close(state, sym, reason="elle kapatıldı", S=None):
     """Uygulamadan 'Kapat': deneme masasında kapatılır, olay gerçek masaya da gider."""
     L = state.get("lev") or {}
     p = (L.get("positions") or {}).get(sym)
     if p:
-        _close(L, sym, p["now"], int(time.time() * 1000), reason, {**DEFAULT})
+        _close(L, sym, p["now"], int(time.time() * 1000), reason, {**DEFAULT, **((S or {}).get("lev") or {})})
     else:
         L.setdefault("ev", []).append(["close", sym, reason])
 

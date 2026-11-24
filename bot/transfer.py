@@ -556,19 +556,21 @@ def step(state, S, N):
         X["day"], X["day_sum"] = _day(), 0
     # yeni istekler
     for r in (S.get("xfer_req") or []):
+        if not isinstance(r, dict):
+            continue
         rid = str(r.get("id") or "")
         if not rid or rid in X["seen"] or (r.get("dir") not in ROUTES and r.get("dir") not in MEME_DIRS):
             continue
         X["seen"] = (X["seen"] + [rid])[-100:]
-        if now * 1000 - float(r.get("ts") or 0) > 3600_000:
-            continue  # bir saatten eski istek (bot kapalıyken kalmış) işlenmez
         try:
+            if now * 1000 - float(r.get("ts") or 0) > 3600_000:
+                continue  # bir saatten eski istek (bot kapalıyken kalmış) işlenmez
             amt = round(float(r.get("amt") or 0), 2)
         except (TypeError, ValueError):
             continue
         if not (1 <= amt <= 1e6):
             continue
-        job = {"id": rid, "dir": r["dir"], "amt": amt, "src": r.get("src") or "bos", "ts": int(r.get("ts") or now * 1000),
+        job = {"id": rid, "dir": r["dir"], "amt": amt, "src": r.get("src") or "bos", "ts": int(float(r.get("ts") or now * 1000)),
                "stage": "new", "msg": "sırada"}
         if r["dir"] == "m2g" and r.get("all"):
             job["all"] = True  # MEME'deki bütün SOL (tokenler satıldıktan sonra)

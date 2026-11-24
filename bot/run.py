@@ -254,8 +254,14 @@ def desk_commands(state, S):
     """Uygulamadan masa komutları: {"desk_cmd": [{id, ts, desk: lev|meme, act: close|sell, sym}]} (her biri bir kez)."""
     done = state.setdefault("desk_done", [])
     for c in S.get("desk_cmd") or []:
+        if not isinstance(c, dict):
+            continue  # bozuk kayıt turu düşürmesin
         cid = str(c.get("id") or "")
-        if not cid or cid in done or time.time() * 1000 - float(c.get("ts") or 0) > 600_000:
+        try:
+            old = time.time() * 1000 - float(c.get("ts") or 0) > 600_000
+        except (TypeError, ValueError):
+            old = True
+        if not cid or cid in done or old:
             continue
         done.append(cid)
         try:
@@ -264,7 +270,7 @@ def desk_commands(state, S):
                 kaldirac.manual_open(state, S, str(c.get("sym")), c.get("side"))
             elif c.get("desk") == "lev":
                 from . import kaldirac
-                kaldirac.manual_close(state, str(c.get("sym")))
+                kaldirac.manual_close(state, str(c.get("sym")), S=S)
             elif c.get("desk") == "meme":
                 from . import meme
                 meme.manual_sell(state, str(c.get("sym")))
@@ -294,7 +300,12 @@ def buy_selected(p, S):
     L = p.s
     done = L.setdefault("buy_done", [])
     now = time.time() * 1000
-    todo = [r for r in reqs if str(r.get("id") or "") and str(r["id"]) not in done and now - float(r.get("ts") or 0) <= 600_000]
+    def fresh(r):
+        try:
+            return now - float(r.get("ts") or 0) <= 600_000
+        except (TypeError, ValueError):
+            return False
+    todo = [r for r in reqs if str(r.get("id") or "") and str(r["id"]) not in done and fresh(r)]
     if not todo:
         return
     try:
@@ -311,10 +322,13 @@ def buy_selected(p, S):
             continue
         price = okx.ASK.get(inst) or prices.get(inst) or L["last_prices"].get(inst)
         if not inst or amt < 10 or not price:
-            p._note(int(now), f"Elle alım yapılamadı: {inst.split('-')[0]} fiyatı bulunamadı")
+            p._note(int(now), f"Elle alım yapılamadı: {inst.split('-')[0]} " + ("tutarı 10 TL'nin altında" if inst and amt < 10 else "fiyatı bulunamadı"))
             continue
         n = len((L["positions"].get(inst) or {}).get("lots") or [])
-        p._buy(int(now), inst, price, amt, f"{n + 1}. kademe · elle alım")
+        notes = len(p.log)
+        if not p._buy(int(now), inst, price, amt, f"{n + 1}. kademe · elle alım") and len(p.log) == notes:
+            # alım olmadı ve sebebi kayda geçmedi (boş nakit 10 TL'nin altında ya da coin bu hesapta işleme kapalı)
+            p._note(int(now), f"Elle alım yapılamadı: {inst.split('-')[0]} · botta yeterli boş nakit yok ya da coin işleme kapalı")
     L["buy_done"] = done[-50:]
 
 def daily_summary(L, p, N):
@@ -548,10 +562,11 @@ def instant_buys(live, series):
     şimdiki fiyat değerse hemen alır. Kurallar mum kapanışındaki alımla aynıdır."""
     c = live.cfg
     if live.s["key"] != "grid" or not c.get("instant"):
-        return
+        return None
     w = watch(live, series)
     if not w or not w["items"]:
-        return
+        return w
+    any_buy = False
     prices = okx.prices_tl()  # TL karşılığı anlık fiyatlar (tek istek, bu turda okunur: alım kararı eski fiyatla verilmez)
     ts = int(time.time() * 1000)
     s = live.s
@@ -589,6 +604,7 @@ def instant_buys(live, series):
         elif live._can_open() and len(s["positions"]) < c["max_coins"] and live._room(c["lot"]):
             bought = live._buy(ts, inst, price, c["lot"], f"1. kademe · anlık · {why}")
         s["last_prices"][inst] = prices.get(inst, price)
+        any_buy = any_buy or bool(bought)
         if bought and live.armed:
             # gerçek alım birkaç saniye sürer: sıradaki coin için fiyatlar yeniden okunur; okunamazsa bu tur başka alım yapılmaz
             try:
@@ -597,6 +613,7 @@ def instant_buys(live, series):
             except Exception as e:
                 print("Fiyatlar yenilenemedi; kalan alımlar bir sonraki tura kaldı:", e)
                 break
+    return None if any_buy else w  # alım olduysa liste eskidi: çağıran yeniden hesaplar
 
 
 def signature(state, S):
@@ -700,12 +717,14 @@ def main():
     check_target(live, S, N)
     convert_request(live, S, N)
     topup(live, S, N if L["armed"] else None)
+    w = None
     try:
-        instant_buys(live, live_series)  # fiyat alım seviyesine değdiği an al (mum kapanışını bekleme)
+        w = instant_buys(live, live_series)  # fiyat alım seviyesine değdiği an al (mum kapanışını bekleme)
     except Exception as e:
         print("Anlık alım kontrolü yapılamadı:", e)
     try:
-        L["watch"] = watch(live, live_series)  # uygulamada "Bot ne yapıyor" kartı
+        # uygulamada "Bot ne yapıyor" kartı; anlık alım kontrolü az önce aynı listeyi hesapladıysa (ve alım olmadıysa) o kullanılır
+        L["watch"] = w if w is not None else watch(live, live_series)
     except Exception as e:
         print("İzleme listesi hazırlanamadı:", e)
 
