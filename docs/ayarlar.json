@@ -59,7 +59,7 @@
     "cleared": 1795556518
   },
   "sell": {
-    "ts": 1795558118859,
+    "ts": 1795558156295,
     "insts": [
       "AAVE-USDT",
       "NEAR-USDT",
@@ -67,7 +67,8 @@
       "HBAR-USDT",
       "ETHFI-USDT",
       "PUMP-USDT",
-      "VVV-USDT"
+      "VVV-USDT",
+      "XLM-USDT"
     ]
   },
   "quote": "USDT",
