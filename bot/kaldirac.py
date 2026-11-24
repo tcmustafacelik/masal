@@ -211,6 +211,10 @@ def step(state, S):
             side = 1 if k["c"] > k["hh"] else -1 if k["c"] < k["ll"] else 0
         if not side:
             continue
+        # Kısa vadeli eğilim (20/50 ort.) kırılımın tersindeyse girilmez: aksi hâlde pozisyon bir sonraki mumda
+        # "eğilim döndü" diye küçük zararla kapanıyordu (deneme masasındaki kayıpların çoğu buydu).
+        if (side > 0) != (k["e20"] > k["e50"]):
+            continue
         L["stats"]["signals"] += 1
         why = (f"{brk} sa zirvesi kırıldı ({k['hh']:.6g})" if side > 0 else f"{brk} sa dibi kırıldı ({k['ll']:.6g})")
         if trend_on:
