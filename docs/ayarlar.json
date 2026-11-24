@@ -242,9 +242,9 @@
     "real_lev": 3,
     "max_loss": 8,
     "real_reset": 0,
-    "brk_h": 8,
+    "brk_h": 12,
     "trend_h": 100,
-    "trend_on": false
+    "trend_on": true
   },
   "dust": [
     {
