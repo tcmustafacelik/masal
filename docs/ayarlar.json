@@ -260,7 +260,7 @@
   "xfer_cancel": [
     "gs1795557828089"
   ],
-  "clear": 1795563385574,
+  "clear": 1795564433086,
   "xfer": {
     "daily_max": 1000,
     "sweep_on": true,
@@ -428,5 +428,5 @@
     "use_pct": 90,
     "max_loss": 15
   },
-  "clear_all": 1795563385574
+  "clear_all": 1795564433086
 }

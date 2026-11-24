@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.88.1';
+const APP_VERSION = '1.89.0';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = 'var(--acc)';
@@ -15,6 +15,8 @@ catch (e) {
 const NF = {};
 const nf = (v, d = 2) => (NF[d] || (NF[d] = new Intl.NumberFormat('tr-TR', { minimumFractionDigits: d, maximumFractionDigits: d }))).format(v);
 const tl = (v, d = 2) => nf(v, d) + '\u00a0TL';
+const U = (v, d = 2) => nf(v, d) + '\u00a0USDT';
+const ut = (x) => x.replace(/([+\-−]?)\$(\d[\d.,]*)/g, '$1$2\u00a0USDT').replace(/(\d[\d.,]*) ?\$/g, '$1\u00a0USDT');
 const sgn = v => (v > 0 ? '+' : v < 0 ? '−' : '') + nf(Math.abs(v));
 const spc = (v, d = 2) => (v > 0 ? '+' : v < 0 ? '−' : '') + '%' + nf(Math.abs(v), d);
 const cls = v => v > 0 ? 'up' : v < 0 ? 'dn' : '';
@@ -704,23 +706,25 @@ function renderMasa() {
     <h2 class="mh">${ic('i-list')}Canlı akış<span class="hsum">her işlem sebebiyle</span></h2>
     <div class="card mfeed">${feed.length ? feed.slice(0, 30).map(([ts, k, tag, txt]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k}">${tag}</em><div>${txt}</div></div>`).join('') : `<div class="empty">${ic('i-list')}<div>Henüz kayıt yok</div></div>`}</div>`);
 }
+const usdTL = (v) => { const r = +(S?.xfer?.usdtry || USDTTRY || 0); return r && isFinite(v) ? tl(v * r, 0) : ''; };
 function deskHero(lbl, val, sub, pnl, base, left, ml, chips) {
-    const usd = (v) => '$' + nf(v, 2), pc = base > 0 ? pnl / base * 100 : 0, r = ml > 0 ? Math.max(0, Math.min(100, left / ml * 100)) : 0;
-    return `<div class="dhero"><div><small>${lbl}</small><strong>${usd(val)}</strong><span>${sub}</span></div>
-    <div class="adf ${cls(pnl)}">${pnl >= 0 ? '▲' : '▼'} %${nf(Math.abs(pc), 1)}<small>${pnl < 0 ? '−' : '+'}${usd(Math.abs(pnl))}</small></div></div>
-    <div class="drisk"><div><span>${ic('i-shield')}Kalan risk</span><b>${usd(left)} / $${nf(ml, 0)}</b></div><div class="rb"><i class="${r > 60 ? 'ok' : r > 25 ? 'mid' : 'low'}" style="width:${r.toFixed(1)}%"></i></div></div>
+    const usd = (v) => U(v, 2), pc = base > 0 ? pnl / base * 100 : 0, r = ml > 0 ? Math.max(0, Math.min(100, left / ml * 100)) : 0;
+    const tv = usdTL(val), tp = usdTL(Math.abs(pnl));
+    return `<div class="dhero"><div><small>${lbl}</small><strong>${usd(val)}</strong>${tv ? `<em class="dtl">≈ ${tv}</em>` : ''}<span>${sub}</span></div>
+    <div class="adf ${cls(pnl)}">${pnl >= 0 ? '▲' : '▼'} %${nf(Math.abs(pc), 1)}<small>${pnl < 0 ? '−' : '+'}${usd(Math.abs(pnl))}</small>${tp ? `<small>${pnl < 0 ? '−' : '+'}${tp}</small>` : ''}</div></div>
+    <div class="drisk"><div><span>${ic('i-shield')}Kalan risk</span><b>${usd(left)} / ${U(ml, 0)}</b></div><div class="rb"><i class="${r > 60 ? 'ok' : r > 25 ? 'mid' : 'low'}" style="width:${r.toFixed(1)}%"></i></div></div>
     <div class="dchips">${chips.map(([k, v]) => `<span>${k}<b>${v}</b></span>`).join('')}</div>`;
 }
 function renderLevR() {
     const R = S?.levr;
     if (!R)
         return (S?.live_enc || S?.live_z) && !pw ? `<div class="warn">${ic('i-lock')}<div>Gerçek futures masasını görmek için kilidi aç.</div></div>` : '';
-    const usd = (v, d = 2) => '$' + nf(v, d), esc = escH;
+    const usd = (v, d = 2) => U(v, d), esc = escH;
     const pf = (v) => nf(v, v >= 100 ? 2 : v >= 1 ? 4 : Math.min(8, 2 - Math.floor(Math.log10(v || 1))));
     const lv = (orig || S?.settings)?.lev || {}, ml = +lv.max_loss || 10, left = Math.max(0, ml + Math.min(0, R.pnl));
     const pos = (R.positions || []).map((p) => {
         const g = p.margin ? p.pnl / p.margin * 100 : 0;
-        return `<div class="fr"><time>${masaClock(p.ts)}</time><em class="ft ${p.side === 'UZUN' ? 'al' : 'zar'}">${p.side}</em><div><span class="fh"><b>${esc(p.sym)}</b> ${p.lev || ''}x <span class="${cls(p.pnl) || 'up'}">${p.pnl < 0 ? '−' : '+'}${usd(Math.abs(p.pnl))} (${spc(g, 0)})</span></span><small>teminat ${usd(p.margin)} · giriş ${pf(p.entry)} · borsada stop ${pf(p.stop)} · hedef ${pf(p.tp)}</small></div>${deskBtn('lev', p.sym, 'Kapat')}</div>`;
+        return `<div class="fr"><time>${masaClock(p.ts)}</time><em class="ft ${p.side === 'UZUN' ? 'al' : 'zar'}">${p.side}</em><div><span class="fh"><b>${esc(p.sym)}</b> ${p.lev || ''}x <span class="${cls(p.pnl) || 'up'}">${p.pnl < 0 ? '−' : '+'}${usd(Math.abs(p.pnl))} (${spc(g, 0)})</span></span><small>${p.pnl < 0 ? '−' : '+'}${usdTL(Math.abs(p.pnl))} · teminat ${usd(p.margin)} · giriş ${pf(p.entry)} · borsada stop ${pf(p.stop)} · hedef ${pf(p.tp)}</small></div>${deskBtn('lev', p.sym, 'Kapat')}</div>`;
     }).join('');
     const feed = (R.log || []).slice(0, 15).map(([ts, k, t]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : 'not'}">${k === 'buy' ? 'AÇ' : k === 'exit' ? 'KAPAT' : k === 'risk' ? 'ENGEL' : 'BİLGİ'}</em><div>${feedTxt(String(t).replace(/^GERÇEK (?:(?:AÇ|KAPAT|ENGEL) )?/, ''))}</div></div>`).join('');
     const st = R.dead ? `<b class="dn">Durdu: ${esc(R.dead)}. Ayarlar → Futures → Yeniden başlat.</b>` : R.halt ? `<b class="dn">Bugün durduruldu: günlük zarar sınırı.</b>` : !R.on ? '<b>Kapalı.</b> Ayarlar → Futures\'tan açılır.' : '';
@@ -736,7 +740,7 @@ function renderLevR() {
     </div>${favSec(R.fav, S?.lev?.fav, 'lev')}${levWatch()}`;
 }
 function favSec(real, paper, kind) {
-    const usd = (v) => '$' + nf(v, 2), list = (real && real.length ? real : paper) || [], pp = !(real && real.length) && list.length;
+    const usd = (v) => U(v, 2), list = (real && real.length ? real : paper) || [], pp = !(real && real.length) && list.length;
     if (!list.length)
         return '';
     const ban = new Set((((orig || S?.settings)?.ban || {})[kind] || []).map((x) => banKey(x)));
@@ -777,15 +781,15 @@ function openLevOpen(sym, side0) {
     const draw = () => {
         const up = side > 0, against = r.up != null && r.up !== up;
         const atr = +r.atr || 0, dist = (+lv.sl_atr || 2) * atr, tpd = (+lv.tp_atr || 4) * atr, qty = atr ? Math.min(eq * risk / 100 / dist, eq / 3 * lev / r.px) : 0, nt = qty * r.px, mg = nt / lev;
-        const calc = atr && nt ? `<div class="pavg"><div><span>Teminat</span><b>$${nf(mg, 2)}</b></div><div><span>İşlem büyüklüğü</span><b>$${nf(nt, 2)}</b></div><div><span>Kaldıraç</span><b>${lev}x</b></div></div>
-      ${pnlCalc({ u: '$', now: 0, size: nt, side, ref: mg, min: -15, max: 15, what: 'Fiyat', marks: [['Kâr al', side * tpd / r.px * 100, tpd * qty], ['Zarar durdur', -side * dist / r.px * 100, -dist * qty]] })}` : '';
+        const calc = atr && nt ? `<div class="pavg"><div><span>Teminat</span><b>${U(mg, 2)}</b></div><div><span>İşlem büyüklüğü</span><b>${U(nt, 2)}</b></div><div><span>Kaldıraç</span><b>${lev}x</b></div></div>
+      ${pnlCalc({ u: 'USDT', now: 0, size: nt, side, ref: mg, min: -15, max: 15, what: 'Fiyat', marks: [['Kâr al', side * tpd / r.px * 100, tpd * qty], ['Zarar durdur', -side * dist / r.px * 100, -dist * qty]] })}` : '';
         document.getElementById('qText').innerHTML = `<div class="xfs">
       <div class="seg lseg"><button type="button" data-sd="1" class="${up ? 'on up' : ''}">${ic('i-buy')}<b>UZUN</b><small>yükselişe</small></button><button type="button" data-sd="-1" class="${!up ? 'on dn' : ''}">${ic('i-sell')}<b>KISA</b><small>düşüşe</small></button></div>
       ${against ? `<div class="warn">${ic('i-info')}<div>Kısa vadeli eğilim (20/50 ortalaması) şu an <b>${r.up ? 'yukarı' : 'aşağı'}</b>. Ters yönde açarsan eğilim 2 saat böyle kalırsa bot “eğilim döndü” kuralıyla kapatır.</div></div>` : ''}
       <div class="xinfo">
-        <div>${ic('i-chart')}<span>Fiyat</span><b>${nf(r.px, r.px >= 100 ? 2 : 4)} $</b></div>
+        <div>${ic('i-chart')}<span>Fiyat</span><b>${nf(r.px, r.px >= 100 ? 2 : 4)} USDT</b></div>
         <div>${ic('i-layers')}<span>Kaldıraç</span><b>${lev}x · ${real ? 'gerçek masa' : 'deneme masası'}</b></div>
-        <div>${ic('i-shield')}<span>Risk</span><b>en fazla %${nf(risk, 1)} · ≈ $${nf(eq * risk / 100, 2)}</b></div>
+        <div>${ic('i-shield')}<span>Risk</span><b>en fazla %${nf(risk, 1)} · ≈ ${U(eq * risk / 100, 2)}</b></div>
         <div>${ic('i-stop')}<span>Zarar durdur</span><b>${nf(+lv.sl_atr || 2, 1)} ATR geride (borsada kurulur)</b></div>
         <div>${ic('i-target')}<span>Kâr al</span><b>${nf(+lv.tp_atr || 4, 1)} ATR ileride</b></div>
       </div>
@@ -820,7 +824,7 @@ function openLevOpen(sym, side0) {
 document.addEventListener('click', e => { const t = e.target.closest?.('[data-lo]'); if (t)
     openLevOpen(t.dataset.lo, +t.dataset.ls); });
 const gReal = (G) => (+G?.phys || 0) + (+G?.fund_res || 0) + (G?.positions || []).reduce((a, p) => a + (+p.val || 0), 0);
-const sgnU = (v) => (v < 0 ? '−' : '+') + '$' + nf(Math.abs(v), 2);
+const sgnU = (v) => (v < 0 ? '−' : '+') + U(Math.abs(v), 2);
 function renderGspot() {
     const gs = (orig || S?.settings)?.gspot || {}, P = S?.gspot, RR = S?.gspotr;
     const real = !!(RR && (gs.real || (RR.positions || []).length)), G = real ? RR : P, desk = real ? 'gspotr' : 'gspot';
@@ -830,7 +834,7 @@ function renderGspot() {
     if (!G)
         return gs.real && !RR && (S?.live_enc || S?.live_z) && !pw ? `<div class="warn">${ic('i-lock')}<div>Gerçek Global masasını görmek için kilidi aç.</div></div>`
             : `<div class="empty">${ic('i-globe')}<div>Global spot masası hazırlanıyor; ilk veriler birkaç dakika içinde gelir</div></div>`;
-    const usd = (v, d = 2) => '$' + nf(v, d), esc = escH, tp = +(gs.lot_tp_pct ?? 3.5);
+    const usd = (v, d = 2) => U(v, d), esc = escH, tp = +(gs.lot_tp_pct ?? 3.5);
     const pf = (v) => nf(v, v >= 100 ? 2 : v >= 1 ? 4 : Math.min(8, 2 - Math.floor(Math.log10(v || 1))));
     const ml = real ? +(gs.max_loss ?? 15) : 0, left = real ? Math.max(0, ml + Math.min(0, G.pnl)) : 0;
     const tpP = tp / 100, slP = +(gs.stop_pct ?? 50) / 100;
@@ -841,7 +845,7 @@ function renderGspot() {
       <div class="mid"><b><span class="sy">${esc(p.sym)}</span>${pq(p.inst)}${p.lots > 1 ? `<i class="kd">${p.lots} kademe</i>` : ''}</b><span>Alış ${pf(p.avg)} → şimdi ${pf(p.px)}<br>${ago(p.ts)} alındı · maliyet ${usd(p.cost)}</span>
         <div class="rng"><i class="av" style="left:${k(p.avg).toFixed(1)}%"></i><i class="mk ${cls(p.pnl)}" style="left:${k(p.px).toFixed(1)}%"></i></div>
         <div class="rngl"><em class="dn">Zarar sınırı ${pf(sl)}</em><em class="up">Kâr al ${pf(tpx)}</em></div></div>
-      <div class="end"><b>${usd(p.val)}</b>${busy ? `<span class="sellst"><i class="spn"></i>Satılıyor</span>` : `<span class="pill ${cls(p.pnl) || 'z'}"><i>${p.pnl >= 0 ? '▲' : '▼'}</i>${usd(Math.abs(p.pnl))}</span><span class="est ${cls(p.pnl)}">${spc(g, 1)}</span>`}</div></div>`;
+      <div class="end"><b>${usd(p.val)}</b><small class="etl">${usdTL(p.val)}</small>${busy ? `<span class="sellst"><i class="spn"></i>Satılıyor</span>` : `<span class="pill ${cls(p.pnl) || 'z'}"><i>${p.pnl >= 0 ? '▲' : '▼'}</i>${usd(Math.abs(p.pnl))}</span><span class="est ${cls(p.pnl)}">${spc(g, 1)}</span>`}</div></div>`;
         return `<div class="swr${swOpen === 'g:' + p.inst ? ' open' : ''}${busy ? ' busy' : ''}" data-i="g:${esc(p.inst)}"><button class="swb" type="button" data-desk="${desk}" data-sym="${esc(p.inst)}">${ic('i-sell')}${busy ? 'Satılıyor' : 'Sat'}</button>${row}</div>`;
     }).join('');
     const feed = (G.log || []).slice(0, 15).map(([ts, k, t]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : /^HATA/.test(t) ? 'err' : 'not'}">${k === 'buy' ? 'AL' : k === 'exit' ? 'SAT' : k === 'risk' ? (/^HATA/.test(t) ? 'HATA' : 'ENGEL') : 'BİLGİ'}</em><div>${feedTxt(String(t).replace(/^(?:AL|SAT|HATA|ENGEL:?|DUR:) ?/, ''))}</div></div>`).join('');
@@ -906,8 +910,8 @@ function openMemeCalc(mint) {
     document.getElementById('qTitle').textContent = `${p.sym} · memecoin`;
     const toEntry = (x) => ((1 + x / 100) / (1 + g) - 1) * 100;
     document.getElementById('qText').innerHTML = `<div class="xfs">
-    <div class="pavg"><div><span>Yatırılan</span><b>$${nf(cost, 2)}</b></div><div><span>Şimdi</span><b>$${nf(val, 2)}</b></div><div><span>Durum</span><b class="${cls(g)}">${spc(g * 100, 1)}</b></div></div>
-    ${pnlCalc({ u: '$', now: val - cost, size: val, side: 1, ref: cost, min: -60, max: 300, what: 'Token şimdiden',
+    <div class="pavg"><div><span>Yatırılan</span><b>${U(cost, 2)}</b></div><div><span>Şimdi</span><b>${U(val, 2)}</b></div><div><span>Durum</span><b class="${cls(g)}">${spc(g * 100, 1)}</b></div></div>
+    ${pnlCalc({ u: 'USDT', now: val - cost, size: val, side: 1, ref: cost, min: -60, max: 300, what: 'Token şimdiden',
         marks: [[part < 1 ? `Kâr al (%${nf(part * 100, 0)}'i satılır)` : 'Kâr al', toEntry(tp), cost * tp / 100 * (p.part ? 1 : part)], ['Zarar kes', toEntry(-sl), -cost * sl / 100]] })}
     <p class="hint">Bot yönetir: girişe göre %${nf(tp, 0)} kârda ${part < 1 ? `%${nf(part * 100, 0)}'ini satar, kalanı iz süren stopla taşır` : 'satar'}; %${nf(+m.trail_from || 15, 0)} kârdan sonra zirveden %${nf(+m.trail_pct || 12, 0)} geri çekilirse satar; %${nf(sl, 0)} zararda keser.</p></div>`;
     pcInit();
@@ -954,7 +958,7 @@ function memeOff() {
     const R = S?.memer;
     return `<h2 class="mh">${ic('i-flask')}Memecoin<span class="hsum">kapalı</span><button class="mset" type="button" data-sett="meme">${ic('i-gear')}Ayarlar</button></h2>
     <div class="card moff"><span class="moi">${ic('i-flask')}</span><b>Memecoin masası kapalı</b>
-      <p>Token taranmıyor, alım-satım yapılmıyor.${R?.addr ? ` MEME cüzdanında ${'$' + nf(+R.value || 0, 2)} var.` : ''} Açınca önce deneme olarak tarar; gerçek parayla işlem için Ayarlar → Memecoin → "Gerçek parayla işlem" açılır ve MEME'ye SOL gönderilir.</p>
+      <p>Token taranmıyor, alım-satım yapılmıyor.${R?.addr ? ` MEME cüzdanında ${U(+R.value || 0, 2)} var.` : ''} Açınca önce deneme olarak tarar; gerçek parayla işlem için Ayarlar → Memecoin → "Gerçek parayla işlem" açılır ve MEME'ye SOL gönderilir.</p>
       <button class="btn primary" type="button" data-memeon="1">${ic('i-power')}Masayı aç</button></div>`;
 }
 function renderMemeR() {
@@ -963,11 +967,11 @@ function renderMemeR() {
     const R = S?.memer;
     if (!R)
         return (S?.live_enc || S?.live_z) && !pw ? `<div class="warn">${ic('i-lock')}<div>Gerçek memecoin masasını görmek için kilidi aç.</div></div>` : '';
-    const usd = (v, d = 2) => '$' + nf(v, d), esc = escH;
+    const usd = (v, d = 2) => U(v, d), esc = escH;
     const mm = (orig || S?.settings)?.meme || {}, ml = +mm.max_loss || 10, left = Math.max(0, ml + Math.min(0, R.pnl));
     const pos = (R.positions || []).map((p) => {
         const g = p.cost ? (p.val / p.cost - 1) * 100 : 0;
-        return `<div class="fr mpc" data-mc="${esc(p.mint)}" role="button"><time>${masaClock(p.ts)}</time><em class="ft al">${p.part ? 'KALAN' : 'AÇIK'}</em><div><span class="fh"><b>${esc(p.sym)}</b> ${usd(p.val)} <span class="${cls(g) || 'up'}">${spc(g, 1)}</span></span><small>giriş ${usd(p.cost)} · ${esc(p.why)}</small></div>${deskBtn('meme', p.mint, 'Sat')}</div>`;
+        return `<div class="fr mpc" data-mc="${esc(p.mint)}" role="button"><time>${masaClock(p.ts)}</time><em class="ft al">${p.part ? 'KALAN' : 'AÇIK'}</em><div><span class="fh"><b>${esc(p.sym)}</b> ${usd(p.val)} <span class="${cls(g) || 'up'}">${spc(g, 1)}</span></span><small>≈ ${usdTL(p.val)} · giriş ${usd(p.cost)} · ${esc(p.why)}</small></div>${deskBtn('meme', p.mint, 'Sat')}</div>`;
     }).join('');
     const feed = (R.log || []).slice(0, 15).map(([ts, k, t]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : 'not'}">${k === 'buy' ? 'AL' : k === 'exit' ? 'SAT' : k === 'risk' ? 'ENGEL' : 'BİLGİ'}</em><div>${feedTxt(String(t).replace(/^GERÇEK (?:(?:AL|SAT|ENGEL) )?/, ''))}</div></div>`).join('');
     const st = R.dead ? `<b class="dn">Durdu: ${esc(R.dead)}. Ayarlar → Memecoin → Yeniden başlat.</b>` : !R.on ? '<b>Kapalı.</b> Ayarlar → Memecoin\'den açılır.' : '';
@@ -1389,14 +1393,14 @@ function renderXfer() {
     }).join('');
     if (!setH(box, `<h2 class="mh">${ic('i-wallet')}Kasalar<span class="hsum">dakikada bir güncellenir</span></h2>
     <div class="card xf">${xKasalar(X)}</div>
-    <h2 class="mh">${ic('i-out')}Para gönder<span class="hsum">bugün $${nf(X?.day_sum || 0, 0)} / ${nf(X?.daily_max || 1000, 0)}</span></h2>
+    <h2 class="mh">${ic('i-out')}Para gönder<span class="hsum">bugün ${U(X?.day_sum || 0, 0)} / ${nf(X?.daily_max || 1000, 0)}</span></h2>
     <div class="card xf xsend">${grp.filter(([, , ks]) => ks.some(k => XDIR[k])).map(([n, f, ks]) => `<div class="xg"><div class="xgh">${xEnd(f)}<span>${n}</span></div><div class="xt x3">${ks.filter(k => XDIR[k]).map(tile).join('')}</div></div>`).join('')}
       ${X?.free_tl != null ? `<p class="hint">OKX TR'de boşta ${tl(Math.max(0, X.free_tl), 0)}</p>` : ''}</div>
     ${jobs ? `<h2 class="mh">${ic('i-refresh')}Aktarımlar<span class="hsum">dokun, aşamaları gör</span></h2><div class="card xf"><div class="xj">${jobs}</div></div>` : ''}
     <h2 class="mh">${ic('i-coins')}Küçük bakiyeler<span class="hsum">tek dokunuşla çevir</span></h2>
     <div class="card xf"><div class="xt x3">${DUST.map(([k, f, to]) => {
         const l = (X?.dust || {})[k] || [], u = l.reduce((a, x) => a + (+x.usd || 0), 0);
-        return `<button data-dust="${k}"><span class="xrt">${xEnd(f)}${ic('i-chev')}<span class="xe e5">${to}</span></span><b>${XEND[f][0]}</b><small>${l.length ? `${l.length} coin · $${nf(u, 2)}` : 'artık yok'}</small></button>`;
+        return `<button data-dust="${k}"><span class="xrt">${xEnd(f)}${ic('i-chev')}<span class="xe e5">${to}</span></span><b>${XEND[f][0]}</b><small>${l.length ? `${l.length} coin · ${U(u, 2)}` : 'artık yok'}</small></button>`;
     }).join('')}</div></div>
     ${logRows ? `<h2 class="mh">${ic('i-list')}Kayıt<span class="hsum">son olaylar</span></h2><div class="card xf xlogc">${logRows}</div>` : ''}`))
         return;
@@ -1413,7 +1417,7 @@ function openDust(k) {
     const pick = new Set(list.map(x => x.ccy));
     let to = k === 'tr' ? (localStore('masal_dust_to') || 'TRY') : k === 'g' ? 'USDT' : 'SOL';
     const TOS = { tr: [['TRY', 'TL'], ['USDT', 'USDT']], g: [['USDT', 'USDT'], ['USDC', 'USDC']], m: [['SOL', 'SOL']] };
-    const usd = (v) => v > 0 && v < 0.01 ? '<$0,01' : '$' + nf(v, 2);
+    const usd = (v) => v > 0 && v < 0.01 ? '<0,01\u00a0USDT' : U(v, 2);
     const draw = () => {
         const all = list.length && pick.size === list.length, sum = list.filter(x => pick.has(x.ccy)).reduce((a, x) => a + (+x.usd || 0), 0);
         document.getElementById('qText').innerHTML = list.length ? `<div class="dsh">
@@ -1464,9 +1468,9 @@ function xKasalar(X) {
     const trUsd = X?.tr_total != null ? +X.tr_total : (o.total_tl && r ? o.total_tl / r : null), gUsd = X?.g_val != null ? +X.g_val : null, kUsd = X?.kasa?.usd != null ? +X.kasa.usd : null;
     const MR = S?.memer, mUsd = MR?.addr ? +MR.value || 0 : null;
     const all = [trUsd, gUsd, kUsd].every(v => v != null) ? trUsd + gUsd + kUsd + (mUsd || 0) : null;
-    const cell = (k, u) => `<div>${xEnd(k)}<span>${XEND[k][0]}</span><b>${u == null ? '—' : '$' + nf(u, 2)}</b><small>${u != null && r ? tl(u * r, 0) : ''}</small></div>`;
+    const cell = (k, u) => `<div>${xEnd(k)}<span>${XEND[k][0]}</span><b>${u == null ? '—' : U(u, 2)}</b><small>${u != null && r ? tl(u * r, 0) : ''}</small></div>`;
     return `<div class="xk${mUsd != null ? ' x4' : ''}">${cell('tr', trUsd)}${cell('g', gUsd)}${cell('k', kUsd)}${mUsd != null ? cell('m', mUsd) : ''}</div>
-    ${all != null ? `<div class="xb"><span>Hepsi birlikte <b>$${nf(all, 2)}</b>${r ? ` · <b>${tl(all * r, 0)}</b>` : ''}</span>${X?.kasa ? `<span>KASA'da komisyon için <b>${nf(X.kasa.eth || 0, 4)} ETH</b></span>` : ''}</div>` : ''}`;
+    ${all != null ? `<div class="xb"><span>Hepsi birlikte <b>${U(all, 2)}</b>${r ? ` · <b>${tl(all * r, 0)}</b>` : ''}</span>${X?.kasa ? `<span>KASA'da komisyon için <b>${nf(X.kasa.eth || 0, 4)} ETH</b></span>` : ''}</div>` : ''}`;
 }
 const KDEST = { k2g: ['OKX Global', '0x74877903737257289dc07e7baf1f4b078c2a82a3'], k2m: ['OKX Global', '0x74877903737257289dc07e7baf1f4b078c2a82a3'], k2tr: ['OKX TR', '0x1e194face9b26c78f75d854d741cf6547730b705'] };
 function openKasaSend(dir) {
@@ -1478,14 +1482,14 @@ function openKasaSend(dir) {
         const a = document.getElementById('kAmt')?.value || (have ? String(Math.floor(have * 100) / 100) : '');
         const link = `trust://send?asset=c10042221_t0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9&address=${addr}${+a ? `&amount=${+a}` : ''}`;
         document.getElementById('qText').innerHTML = `<div class="xfs">
-      <div class="xroute"><div>${xEnd('k')}<b>KASA</b><small>$${nf(have, 2)}</small></div><span class="xar">${ic('i-chev')}</span><div>${xEnd(dir === 'k2tr' ? 'tr' : dir === 'k2m' ? 'm' : 'g')}<b>${dir === 'k2m' ? 'MEME' : nm}</b><small>${dir === 'k2m' ? 'Solana' : 'Arbitrum'}</small></div></div>
+      <div class="xroute"><div>${xEnd('k')}<b>KASA</b><small>${U(have, 2)}</small></div><span class="xar">${ic('i-chev')}</span><div>${xEnd(dir === 'k2tr' ? 'tr' : dir === 'k2m' ? 'm' : 'g')}<b>${dir === 'k2m' ? 'MEME' : nm}</b><small>${dir === 'k2m' ? 'Solana' : 'Arbitrum'}</small></div></div>
       <p class="xnote">KASA'nın anahtarı güvenlik için sistemde yok; gönderimi <b>Trust Wallet'ta sen onaylarsın</b>. Tutar ve adres hazır gelir.${dir === 'k2m' ? ` Para önce <b>OKX Global</b>'e gider; ulaşınca bot kendiliğinden SOL alıp <b>MEME</b>'ye gönderir (3 saat bekler).` : ''}</p>
       <div class="xlab">Tutar</div><div class="xamt"><input id="kAmt" type="number" inputmode="decimal" min="1" step="1" value="${a}"><span>USDT</span></div>
-      <div class="xq">${[5, 10, 25, 50].map(v => `<button data-kq="${v}"${v > have ? ' class="off"' : ''}>${v} $</button>`).join('')}<button class="xall" data-kq="${Math.floor(have * 100) / 100}"${have ? '' : ' disabled'}>Tümü<small>$${nf(have, 2)}</small></button></div>
+      <div class="xq">${[5, 10, 25, 50].map(v => `<button data-kq="${v}"${v > have ? ' class="off"' : ''}>${v}</button>`).join('')}<button class="xall" data-kq="${Math.floor(have * 100) / 100}"${have ? '' : ' disabled'}>Tümü<small>${U(have, 2)}</small></button></div>
       <div class="xinfo">
         <div>${ic('i-lock')}<span>Adres</span><b>${sh} <button class="xcp" type="button" data-cp="${addr}">${ic('i-copy')}Kopyala</button></b></div>
         <div>${ic('i-globe')}<span>Ağ</span><b>Arbitrum One · USDT</b></div>
-        <div>${ic('i-shield')}<span>Ücret</span><b>~0,01 $ ETH${eth < 0.00005 ? ' · <span class="dn">ETH yok!</span>' : ''}</b></div>
+        <div>${ic('i-shield')}<span>Ücret</span><b>~0,01 USDT ETH${eth < 0.00005 ? ' · <span class="dn">ETH yok!</span>' : ''}</b></div>
         <div>${ic('i-info')}<span>Önce</span><b>Trust Wallet'ta üstte KASA seçili olsun</b></div>
       </div>
       <a class="btn primary xgo" href="${link}" target="_blank" rel="noopener">${ic('i-out')}${dir === 'k2m' ? 'Kaydet ve Trust Wallet\'ı aç' : 'Trust Wallet\'ta gönderimi aç'}</a>
@@ -1599,7 +1603,7 @@ function openXfer(dir) {
       <div class="xroute"><div>${xEnd('tr')}<b>OKX TR</b><small>uygulamadan</small></div><span class="xar">${ic('i-chev')}</span><div>${xEnd('m')}<b>MEME</b><small>Solana</small></div></div>
       <p class="xnote">OKX TR bottan para çıkışına izin vermiyor. USDT'yi <b>OKX TR uygulamasından OKX Global</b>'e gönder (ücretsiz, anında); ulaşınca bot kendiliğinden SOL alıp <b>MEME</b>'ye gönderir.</p>
       <div class="xlab">Tutar</div><div class="xamt"><input id="tmAmt" type="number" inputmode="decimal" min="1" step="1" placeholder="0"><span>USDT</span></div>
-      <div class="xq">${[5, 10, 25, 50].map(v => `<button data-tq="${v}">${v} $</button>`).join('')}</div>
+      <div class="xq">${[5, 10, 25, 50].map(v => `<button data-tq="${v}">${v}</button>`).join('')}</div>
       <div class="xinfo"><div>${ic('i-bank')}<span>1</span><b>Alıcı'da <u>OKX Global ve OKX TR Kullanıcıları</u> sekmesine dokun</b></div><div>${ic('i-globe')}<span>2</span><b>"Telefon Numarası" yerine UID seç, yapıştır (UID kopyalandı)</b></div><div>${ic('i-flask')}<span>3</span><b>Gelince bot SOL alıp MEME'ye gönderir</b></div></div>${uidBox()}
       <button class="btn primary xgo" id="tmGo">${ic('i-out')}Kaydet ve OKX TR'yi aç</button></div>`;
         const inp = document.getElementById('tmAmt');
@@ -1659,7 +1663,7 @@ function openXfer(dir) {
     qHead(XEND[t][1], 'Vazgeç');
     document.getElementById('qTitle').textContent = 'Para gönder';
     xfId = 'x' + Date.now().toString(36);
-    const bal = (k) => { const o = S?.okx || {}; const u = k === 'tr' ? (X.tr_total ?? (o.total_tl && r ? o.total_tl / r : null)) : k === 'g' ? X.g_val : k === 'm' ? S?.memer?.value : X.kasa?.usd; return u == null ? '—' : '$' + nf(u, 2); };
+    const bal = (k) => { const o = S?.okx || {}; const u = k === 'tr' ? (X.tr_total ?? (o.total_tl && r ? o.total_tl / r : null)) : k === 'g' ? X.g_val : k === 'm' ? S?.memer?.value : X.kasa?.usd; return u == null ? '—' : U(u, 2); };
     const MR = S?.memer, maxOf = () => {
         let v = null;
         if (f === 'm' && MR)
@@ -1671,7 +1675,7 @@ function openXfer(dir) {
         return v == null ? null : Math.floor(v * 100) / 100;
     };
     const mx = maxOf();
-    const mm = f === 'm' || t === 'm', fee = dir === 'm2k' ? '~0,03 $ ağ + satış ücreti' : mm ? '~0,02 $ ağ ücreti + alım-satım ücreti' : t === 'k' ? '~0,003 $ ağ ücreti' : 'Ücretsiz · OKX iç transfer', time_ = mm || t === 'k' ? 'Birkaç dakika' : 'Birkaç saniye – birkaç dakika';
+    const mm = f === 'm' || t === 'm', fee = dir === 'm2k' ? '~0,03 USDT ağ + satış ücreti' : mm ? '~0,02 USDT ağ ücreti + alım-satım ücreti' : t === 'k' ? '~0,003 USDT ağ ücreti' : 'Ücretsiz · OKX iç transfer', time_ = mm || t === 'k' ? 'Birkaç dakika' : 'Birkaç saniye – birkaç dakika';
     const draw = () => {
         const tx = document.getElementById('qText'), cur = document.getElementById('xfAmt')?.value || '';
         tx.innerHTML = `<div class="xfs">
@@ -1679,11 +1683,11 @@ function openXfer(dir) {
       <div class="xlab">Tutar</div>
       <div class="xamt"><input id="xfAmt" type="number" inputmode="decimal" min="1" step="1" placeholder="0" value="${cur}"><span>USDT</span></div>
       <div class="xeq" id="xfEq">${r && +cur ? '≈ ' + tl(+cur * r, 0) : '&nbsp;'}</div>
-      <div class="xq">${[5, 10, 25, 50].map(v => `<button data-q="${v}"${mx != null && v > mx ? ' class="off"' : ''}>${v} $</button>`).join('')}<button class="xall" data-q="${mx ?? ''}"${mx ? '' : ' disabled'}>Tümü<small>${mx != null ? '$' + nf(mx, 2) : '—'}</small></button></div>
+      <div class="xq">${[5, 10, 25, 50].map(v => `<button data-q="${v}"${mx != null && v > mx ? ' class="off"' : ''}>${v}</button>`).join('')}<button class="xall" data-q="${mx ?? ''}"${mx ? '' : ' disabled'}>Tümü<small>${mx != null ? U(mx, 2) : '—'}</small></button></div>
       <div class="xinfo">
         <div>${ic('i-shield')}<span>Ücret</span><b>${fee}</b></div>
         <div>${ic('i-clock')}<span>Süre</span><b>${time_}</b></div>
-        <div>${ic('i-flag')}<span>Günlük sınır</span><b>$${nf(X.day_sum || 0, 0)} / ${nf(X.daily_max || 1000, 0)}</b></div>
+        <div>${ic('i-flag')}<span>Günlük sınır</span><b>${U(X.day_sum || 0, 0)} / ${nf(X.daily_max || 1000, 0)}</b></div>
         ${dir === 'g2tr' ? `<div>${ic('i-info')}<span>Varınca</span><b>TL'ye çevrilip Nakit'e konur</b></div>` : ''}
         ${t === 'k' ? `<div>${ic('i-lock')}<span>Adres</span><b>0x0113…7db7 (sabit)</b></div>` : ''}
         ${dir === 'g2m' ? `<div>${ic('i-info')}<span>Nasıl</span><b>Global fonundaki USDT ile SOL alınır, MEME'ye gider</b></div><div>${ic('i-lock')}<span>Adres</span><b>7Ymj…EKwN (sabit)</b></div>` : ''}
@@ -1749,7 +1753,7 @@ async function sendXfer(dir) {
     {
         const X = S?.xfer || {}, MR = S?.memer;
         if (dir.startsWith('m') && MR && amt > Math.max(0, (MR.sol - 0.02) * (MR.solpx || 0))) {
-            toast(`MEME'de boşta ~$${nf(Math.max(0, (MR.sol - 0.02) * (MR.solpx || 0)), 2)} SOL var (tokenler hariç)`);
+            toast(`MEME'de boşta ~${U(Math.max(0, (MR.sol - 0.02) * (MR.solpx || 0)), 2)} SOL var (tokenler hariç)`);
             return;
         }
         if (dir === 'g2m' && !MR?.addr) {
@@ -1757,11 +1761,11 @@ async function sendXfer(dir) {
             return;
         }
         if (dir.startsWith('g') && X.g_fund != null && amt > +X.g_fund) {
-            toast(`OKX Global fon hesabında boşta ~$${nf(+X.g_fund, 2)} var (futures teminatı hariç); daha fazlası gönderilemez`);
+            toast(`OKX Global fon hesabında boşta ~${U(+X.g_fund, 2)} var (futures teminatı hariç); daha fazlası gönderilemez`);
             return;
         }
         if (dir.startsWith('g') && X.g_fund == null && X.g_val != null && amt > +X.g_val) {
-            toast(`OKX Global'de ~$${nf(+X.g_val, 2)} var; daha fazlası gönderilemez`);
+            toast(`OKX Global'de ~${U(+X.g_val, 2)} var; daha fazlası gönderilemez`);
             return;
         }
     }
@@ -1945,20 +1949,20 @@ function renderDeck() {
     }
     {
         const R2 = S.levr;
-        set('dkFut', R2?.on ? '$' + nf(R2.equity, 2) : 'kapalı');
+        set('dkFut', R2?.on ? U(R2.equity, 0) : 'kapalı');
     }
     {
         const G2 = S.gspotr, P2 = S.gspot, gs2 = (S?.settings?.gspot) || {};
-        set('dkG', gs2.on === false && !G2 ? 'kapalı' : G2 && gs2.real ? (gReal(G2) > 0.005 ? '$' + nf(gReal(G2), 2) : 'para yok') : P2 ? 'deneme' : '—');
+        set('dkG', gs2.on === false && !G2 ? 'kapalı' : G2 && gs2.real ? (gReal(G2) > 0.005 ? U(gReal(G2), 0) : 'para yok') : P2 ? 'deneme' : '—');
     }
     {
         const R3 = S.memer, on3 = (S?.settings?.meme || {}).on !== false;
-        set('dkMeme', on3 && R3?.on ? '$' + nf(R3.value, 2) : on3 ? 'deneme' : 'kapalı');
+        set('dkMeme', on3 && R3?.on ? U(R3.value, 0) : on3 ? 'deneme' : 'kapalı');
     }
     if (X) {
         const a = [X.tr_total, X.g_val, X.kasa?.usd];
         if (a.every((v) => v != null))
-            set('dkKasa', '$' + nf(a.reduce((x, y) => x + y, 0) + (+S.memer?.value || 0), 0));
+            set('dkKasa', U(a.reduce((x, y) => x + y, 0) + (+S.memer?.value || 0), 0));
     }
     renderOverview();
     if (VIEW === 'home')
@@ -1987,17 +1991,17 @@ function renderHome() {
         setH(box, `<div class="empty">${ic('i-lock')}<div>Özeti görmek için Spot sekmesinden kilidi aç</div></div>`);
         return;
     }
-    const ms = (S.settings?.meme) || {}, usd = (v) => '$' + nf(v, 2);
+    const ms = (S.settings?.meme) || {}, usd = (v) => U(v, 2), uh = (v) => U(v, 2) + (usdTL(v) ? `<small class="htl">≈ ${usdTL(v)}</small>` : '');
     const pill = (v, t) => `<span class="hp ${Math.abs(v) < 0.005 ? 'z' : cls(v)}">${v >= 0 ? '▲' : '▼'} ${t}</span>`;
     const spP = liveEquity(sp) - sp.start_cash, spT = sp.today_pnl ?? 0;
     const desks = [
         ['spot', 'h1', 'i-coins', 'Spot', tl(liveEquity(sp), 0), pill(spP, nf(Math.abs(spP), 0) + ' TL'), sp.halted ? ['', 'durdu'] : sp.paused ? ['pp', 'beklemede'] : ['on', `${(sp.positions || []).length} coin · bugün ${sgn(spT)} TL`]],
-        ['gspot', 'h5', 'i-globe', 'Global', (() => { const G = S.gspotr, P = S.gspot, gs = ms && S.settings?.gspot || {}; return G && gs.real ? usd(gReal(G)) : P ? 'Deneme' : '—'; })(),
+        ['gspot', 'h5', 'i-globe', 'Global', (() => { const G = S.gspotr, P = S.gspot, gs = ms && S.settings?.gspot || {}; return G && gs.real ? uh(gReal(G)) : P ? 'Deneme' : '—'; })(),
             (() => { const G = S.gspotr, gs = S.settings?.gspot || {}; return G && gs.real ? pill(+G.pnl || 0, usd(Math.abs(+G.pnl || 0))) : ''; })(),
             (() => { const G = S.gspotr, P = S.gspot, gs = S.settings?.gspot || {}, X = G && gs.real ? G : P; return gs.on === false && !G ? ['', 'kapalı'] : X ? [G && gs.real ? 'on' : 'pp', `${(X.positions || []).length} coin · ${G && gs.real ? 'gerçek' : 'deneme'}`] : ['', 'hazırlanıyor']; })()],
-        ['fut', 'h2', 'i-layers', 'Futures', R?.on || R?.funded ? usd(+R.equity || 0) : '—', R?.funded ? pill(+R.pnl || 0, usd(Math.abs(+R.pnl || 0))) : '', R?.dead ? ['', 'durdu'] : R?.on ? ['on', `${(R.positions || []).length} pozisyon · ${S.lev?.watch?.length || 0} coin izleniyor`] : ['', 'kapalı']],
-        ['meme', 'h3', 'i-flask', 'Memecoin', ms.on === false ? 'Kapalı' : M?.on ? usd(+M.value || 0) : 'Deneme', M?.on && M?.start ? pill(+M.pnl || 0, usd(Math.abs(+M.pnl || 0))) : '', ms.on === false ? ['', 'kapalı'] : M?.on ? ['on', `${(M.positions || []).length} token`] : ['pp', 'yalnız deneme taraması']],
-        ['kasa', 'h4', 'i-vault', 'Kasalar', X?.kasa?.usd != null ? usd(+X.kasa.usd) : '—', '', ['on', X?.g_val != null ? `Global ${usd(+X.g_val)} · TR ${usd(+X.tr_total || 0)}` : 'aktarım']]
+        ['fut', 'h2', 'i-layers', 'Futures', R?.on || R?.funded ? uh(+R.equity || 0) : '—', R?.funded ? pill(+R.pnl || 0, usd(Math.abs(+R.pnl || 0))) : '', R?.dead ? ['', 'durdu'] : R?.on ? ['on', `${(R.positions || []).length} pozisyon · ${S.lev?.watch?.length || 0} coin izleniyor`] : ['', 'kapalı']],
+        ['meme', 'h3', 'i-flask', 'Memecoin', ms.on === false ? 'Kapalı' : M?.on ? uh(+M.value || 0) : 'Deneme', M?.on && M?.start ? pill(+M.pnl || 0, usd(Math.abs(+M.pnl || 0))) : '', ms.on === false ? ['', 'kapalı'] : M?.on ? ['on', `${(M.positions || []).length} token`] : ['pp', 'yalnız deneme taraması']],
+        ['kasa', 'h4', 'i-vault', 'Kasalar', X?.kasa?.usd != null ? uh(+X.kasa.usd) : '—', '', ['on', X?.g_val != null ? `Global ${usd(+X.g_val)} · TR ${usd(+X.tr_total || 0)}` : 'aktarım']]
     ];
     let h = `<h2 class="mh">${ic('i-layers')}Masalar<span class="hsum">dokun, aç</span></h2><div class="hdesk">${desks.map(([v, c, i, n, val, p, [d, st]]) => `<button type="button" data-goto="${v}"><span class="hi ${c}">${ic(i)}</span>${p}<span class="hn">${n}</span><span class="hv">${val}</span><span class="hs"><i class="${d}"></i>${st}</span></button>`).join('')}</div>`;
     const fd = [];
@@ -2009,13 +2013,13 @@ function renderHome() {
         if (k !== 'buy' && k !== 'exit')
             continue;
         const m = /([+-]?\d+\.\d+)\$/.exec(t), v = m ? +m[1] : 0;
-        fd.push([ts, 'h2', 'i-layers', t.replace(/^GERÇEK\s+/, '').split(' · ')[0], 'Futures', k === 'exit' ? `<span class="hx ${cls(v) || 'z'}">${v >= 0 ? '+' : '−'}$${nf(Math.abs(v), 2)}</span>` : `<span class="hx b">açıldı</span>`]);
+        fd.push([ts, 'h2', 'i-layers', ut(t).replace(/^GERÇEK\s+/, '').split(' · ')[0], 'Futures', k === 'exit' ? `<span class="hx ${cls(v) || 'z'}">${v >= 0 ? '+' : '−'}${U(Math.abs(v), 2)}</span>` : `<span class="hx b">açıldı</span>`]);
     }
     for (const [ts, k, t] of ((M?.log) || []).slice(0, 10)) {
         if (k !== 'buy' && k !== 'exit')
             continue;
         const m = /([+-]?\d+\.\d+)\$/.exec(t), v = m ? +m[1] : 0;
-        fd.push([ts, 'h3', 'i-flask', t.replace(/^GERÇEK\s+/, '').split(' · ')[0], 'Memecoin', k === 'exit' ? `<span class="hx ${cls(v) || 'z'}">${v >= 0 ? '+' : '−'}$${nf(Math.abs(v), 2)}</span>` : `<span class="hx b">alındı</span>`]);
+        fd.push([ts, 'h3', 'i-flask', ut(t).replace(/^GERÇEK\s+/, '').split(' · ')[0], 'Memecoin', k === 'exit' ? `<span class="hx ${cls(v) || 'z'}">${v >= 0 ? '+' : '−'}${U(Math.abs(v), 2)}</span>` : `<span class="hx b">alındı</span>`]);
     }
     {
         const G = S.gspotr;
@@ -2023,7 +2027,7 @@ function renderHome() {
             if (k !== 'buy' && k !== 'exit')
                 continue;
             const m = /([+-]?\d+\.\d+)\$ ·/.exec(t), v = m ? +m[1] : 0;
-            fd.push([ts, 'h5', 'i-globe', t.split(' · ')[0].replace(/ \$[\d.]+$/, '').replace(/^AL /, '').replace(/^SAT /, '') + (k === 'buy' ? ' alındı' : ' satıldı'), 'Global', k === 'exit' ? `<span class="hx ${cls(v) || 'z'}">${v >= 0 ? '+' : '−'}$${nf(Math.abs(v), 2)}</span>` : `<span class="hx b">alındı</span>`]);
+            fd.push([ts, 'h5', 'i-globe', t.split(' · ')[0].replace(/ \$[\d.]+$/, '').replace(/^AL /, '').replace(/^SAT /, '') + (k === 'buy' ? ' alındı' : ' satıldı'), 'Global', k === 'exit' ? `<span class="hx ${cls(v) || 'z'}">${v >= 0 ? '+' : '−'}${U(Math.abs(v), 2)}</span>` : `<span class="hx b">alındı</span>`]);
         }
     }
     fd.sort((a, b) => b[0] - a[0]);
@@ -2059,13 +2063,13 @@ function renderOverview() {
     }
     const btcTL = +(LP['BTC-USDT']?.last || LP['BTC-TRY']?.last || 0), btcUsd = btcTL && r ? btcTL / r : +((S.lev?.watch || []).find((w) => w.sym === 'BTC')?.px || 0);
     const cur = OV_CUR === 'btc' && !btcUsd ? 'usd' : OV_CUR;
-    const cv = (usd, d) => OV_HIDE ? '••••' : cur === 'try' ? tl(usd * r, d ?? 0) : cur === 'btc' ? '₿' + nf(usd / btcUsd, d ?? (Math.abs(usd / btcUsd) < 0.01 ? 6 : 4)) : '$' + nf(usd, d ?? 2);
+    const cv = (usd, d) => OV_HIDE ? '••••' : cur === 'try' ? tl(usd * r, d ?? 0) : cur === 'btc' ? '₿' + nf(usd / btcUsd, d ?? (Math.abs(usd / btcUsd) < 0.01 ? 6 : 4)) : U(usd, d ?? 2);
     const GS = S.gspotr, gE = GS ? gReal(GS) : 0;
     const parts = [['tr', 'Spot · OKX TR', 'i-bank', +X.tr_total || 0], ['g', 'Futures · Global', 'i-layers', Math.max(0, (+X.g_val || 0) - gE)], ...(gE ? [['gs', 'Global spot', 'i-globe', gE]] : []), ['m', 'Memecoin', 'i-flask', +M?.value || 0], ['k', 'Kasa', 'i-vault', +X.kasa?.usd || 0]];
     const tot = [X.tr_total, X.g_val, X.kasa?.usd].every((v) => v != null) ? parts.reduce((a, p) => a + p[3], 0) : null;
     const sP = (liveEquity(sp) - sp.start_cash) / r, fP = R?.funded ? +R.pnl || 0 : 0, mP = M?.start ? +M.pnl || 0 : 0, gP = GS?.funded ? +GS.pnl || 0 : 0, all = sP + fP + mP + gP;
     const sum = Math.max(1, tot || 0), bar = parts.filter(p => p[3] > 0).map(p => `<i class="p${p[0]}" style="width:${(p[3] / sum * 100).toFixed(2)}%"></i>`).join('');
-    const second = OV_HIDE || tot == null ? '' : cur === 'try' ? '$' + nf(tot, 2) : tl(tot * r, 0);
+    const second = OV_HIDE || tot == null ? '' : cur === 'try' ? U(tot, 2) : tl(tot * r, 0);
     setH(el, `<div class="ob"><div class="oh">${ic('i-wallet')}<b>Toplam varlık</b>
       <div class="ocur">${[['usd', 'USDT'], ['btc', 'BTC'], ['try', 'TRY']].map(([k, n]) => `<button type="button" data-ovc="${k}" class="${cur === k ? 'on' : ''}">${n}</button>`).join('')}</div>
       <button type="button" class="oeye" data-ovh="1" aria-label="${OV_HIDE ? 'Tutarları göster' : 'Tutarları gizle'}">${ic(OV_HIDE ? 'i-lock' : 'i-eye')}</button></div>
@@ -2342,7 +2346,7 @@ function pnlCalc(o) {
     <input type="range" min="${o.min}" max="${o.max}" step="1" value="0">
     <div class="pco"></div></div>`;
 }
-function pcFmt(v, u) { const a = Math.abs(v), s = a < 0.005 ? '' : v < 0 ? '−' : '+'; return u === 'TL' ? `${s}${nf(a, a >= 100 ? 0 : 2)} TL` : `${s}$${nf(a, 2)}`; }
+function pcFmt(v, u) { const a = Math.abs(v), s = a < 0.005 ? '' : v < 0 ? '−' : '+'; return u === 'TL' ? `${s}${nf(a, a >= 100 ? 0 : 2)} TL` : `${s}${U(a, 2)}`; }
 function pcUpd(el) {
     const r = el.querySelector('input'), p = +r.value, d = el.dataset, v = +d.now + (+d.side) * (+d.size) * p / 100, ref = +d.ref;
     el.querySelector('.pcp').textContent = (p > 0 ? '+' : p < 0 ? '−' : '') + '%' + Math.abs(p);
@@ -2366,7 +2370,7 @@ function feedTxt(raw) {
             parts.unshift(m[2]);
         head += ` <span class="${/^[-−]/.test(m[1]) ? 'dn' : 'up'}">${m[1].replace(/^-/, '−')}</span>`;
     }
-    return `<span class="fh">${head}</span>${parts.length ? `<small>${parts.join(' · ')}</small>` : ''}`;
+    return `<span class="fh">${ut(head)}</span>${parts.length ? `<small>${ut(parts.join(' · '))}</small>` : ''}`;
 }
 function renderRules(R, c) {
     const rows = c ? [
@@ -2738,8 +2742,8 @@ const SECTIONS = [
             ['target.amount', 'Hedef kâr', () => `Bu kârda her şey satılır, bot durur`, 'TL', 500, 100, 1e8, 0]
         ] },
     { t: 'Futures', i: 'i-layers', sw: [['lev.real', 'Gerçek parayla işlem', 'Kararlar OKX Global\'de gerçek parayla uygulanır'], ['lev.trend_on', 'Eğilim filtresi', 'Kapalıysa yalnız kırılım yönü karar verir (daha çok işlem, daha riskli)']], f: [
-            ['lev.real_budget', 'Bütçe', 'Global fon hesabından futures\'a geçecek para', '$', 5, 5, 10000, 0],
-            ['lev.max_loss', 'En fazla kayıp', 'Toplam zarar buna ulaşınca masa tamamen durur', '$', 5, 1, 10000, 0],
+            ['lev.real_budget', 'Bütçe', 'Global fon hesabından futures\'a geçecek para', 'USDT', 5, 5, 10000, 0],
+            ['lev.max_loss', 'En fazla kayıp', 'Toplam zarar buna ulaşınca masa tamamen durur', 'USDT', 5, 1, 10000, 0],
             ['lev.real_lev', 'Kaldıraç', 'İzole marjin; güvenlik için en fazla 3x', 'x', 1, 1, 3, 0],
             ['lev.risk_pct', 'İşlem başına risk', 'Zarar durdurmaya kadar kaybedilecek; kasanın', '%', .5, .5, 5, 1],
             ['lev.max_pos', 'En fazla pozisyon', 'Aynı anda açık', 'adet', 1, 1, 10, 0],
@@ -2750,11 +2754,11 @@ const SECTIONS = [
             ['lev.tp_atr', 'Kâr al mesafesi', 'Saatlik oynaklığın (ATR) katı', 'kat', .5, 1, 10, 1]
         ] },
     { t: 'Memecoin', i: 'i-flask', sw: [['meme.on', 'Memecoin masası açık', 'Kapalıyken token taranmaz, alım yapılmaz'], ['meme.real', 'Gerçek parayla işlem', 'Kararlar MEME cüzdanında gerçek parayla uygulanır']], f: [
-            ['meme.max_loss', 'En fazla kayıp', 'Toplam zarar buna ulaşınca masa durur, tokenler satılır', '$', 5, 1, 10000, 0],
+            ['meme.max_loss', 'En fazla kayıp', 'Toplam zarar buna ulaşınca masa durur, tokenler satılır', 'USDT', 5, 1, 10000, 0],
             ['meme.max_slip', 'En fazla fiyat etkisi', 'Bunu aşan alım reddedilir', '%', .5, .5, 10, 1],
             ['meme.size_pct', 'İşlem büyüklüğü', 'Kasanın', '%', 1, 1, 50, 0],
             ['meme.max_pos', 'En fazla pozisyon', 'Aynı anda tutulan token', 'adet', 1, 1, 10, 0],
-            ['meme.min_liq', 'En az likidite', 'Havuzu bundan küçük token alınmaz', '$', 5000, 5000, 1e7, 0],
+            ['meme.min_liq', 'En az likidite', 'Havuzu bundan küçük token alınmaz', 'USDT', 5000, 5000, 1e7, 0],
             ['meme.tp_pct', 'Kâr al', 'Bu kâra ulaşınca satış başlar', '%', 5, 5, 1000, 0],
             ['meme.tp_part', 'Kâr alda satılan kısım', 'Kalanı iz süren stopla yükselişte tutulur; 100 = hepsi satılır', '%', 10, 10, 100, 0],
             ['meme.sl_pct', 'Zarar durdur', 'Bu zararda satılır', '%', 1, 3, 50, 0],
@@ -2767,9 +2771,9 @@ const SECTIONS = [
             ['meme.max_hold_h', 'En uzun tutma', 'Bu süre dolunca satılır', 'saat', 1, 1, 72, 0]
         ] },
     { t: 'Global spot', i: 'i-globe', sw: [['gspot.on', 'Global spot masası açık', 'Kapalıyken tarama ve alım yapılmaz'], ['gspot.real', 'Gerçek parayla işlem', 'Kararlar OKX Global işlem hesabında gerçek emirle uygulanır']], f: [
-            ['gspot.budget', 'Bütçe', 'Gerçek masanın kullanacağı en fazla para; alım anında Global fon hesabından işlem hesabına geçer', '$', 10, 0, 100000, 0],
-            ['gspot.max_loss', 'En fazla kayıp', 'Toplam zarar buna ulaşınca yeni alım durur; eldeki coinler kurallarıyla satılır', '$', 5, 1, 100000, 0],
-            ['gspot.lot_pct', '1. kademe', 'Bütçenin; en az $5 olmalı', '%', 1, 1, 100, 0],
+            ['gspot.budget', 'Bütçe', 'Gerçek masanın kullanacağı en fazla para; alım anında Global fon hesabından işlem hesabına geçer', 'USDT', 10, 0, 100000, 0],
+            ['gspot.max_loss', 'En fazla kayıp', 'Toplam zarar buna ulaşınca yeni alım durur; eldeki coinler kurallarıyla satılır', 'USDT', 5, 1, 100000, 0],
+            ['gspot.lot_pct', '1. kademe', 'Bütçenin; en az 5 USDT olmalı', '%', 1, 1, 100, 0],
             ['gspot.lot2_pct', '2. kademe büyüklüğü', '1. kademenin', '%', 5, 10, 100, 0],
             ['gspot.lot3_pct', '3. ve sonraki kademeler', '1. kademenin', '%', 5, 10, 100, 0],
             ['gspot.sma_hours', 'Ortalama süresi', '1. kademe bu kadar saatin ortalamasına göre alınır', 'saat', 4, 4, 72, 0],
@@ -2783,13 +2787,13 @@ const SECTIONS = [
             ['gspot.trend_filter_pct', 'Düşüş süzgeci', '48 saatlik ortalama bundan fazla düşüyorsa yeni coin alınmaz; 0 kapalı', '%', .5, 0, 50, 1],
             ['gspot.vol_filter', 'Hacim süzgeci', 'Son mumun hacmi 24 saat ortalamasının bu katını aşarsa beklenir; 0 kapalı', 'kat', .5, 0, 50, 1],
             ['gspot.coins', 'İzlenen coin', 'Hacmi en yüksek USDT pariteleri', 'adet', 5, 5, 60, 0],
-            ['gspot.bank', 'Deneme kasası', 'Deneme masasının sanal parası (değişince deneme masası yeniden başlamaz)', '$', 10, 10, 1000000, 0]
+            ['gspot.bank', 'Deneme kasası', 'Deneme masasının sanal parası (değişince deneme masası yeniden başlamaz)', 'USDT', 10, 10, 1000000, 0]
         ] },
     { t: 'Aktarım ve KASA', i: 'i-vault', f: [
-            ['xfer.daily_max', 'Günlük aktarım sınırı', 'Bir günde borsalardan en fazla gönderilecek', '$', 100, 10, 1000, 0],
+            ['xfer.daily_max', 'Günlük aktarım sınırı', 'Bir günde borsalardan en fazla gönderilecek', 'USDT', 100, 10, 1000, 0],
             ['xfer.sweep_pct', 'Kâr süpürme oranı', 'Futures ve memecoin kârının bu kadarı KASA\'ya gider; 0 kapalı', '%', 5, 0, 100, 0],
             ['xfer.sweep_days', 'Süpürme aralığı', 'Bu kadar günde bir', 'gün', 1, 1, 90, 0],
-            ['xfer.sweep_min', 'En az süpürme kârı', 'Kâr bundan azsa gönderilmez', '$', 5, 1, 10000, 0]
+            ['xfer.sweep_min', 'En az süpürme kârı', 'Kâr bundan azsa gönderilmez', 'USDT', 5, 1, 10000, 0]
         ] },
 ];
 const TGT_TOTAL = ['target.amount', 'Hedef toplam para', () => `Bot + kasa bu tutara ulaşınca her şey satılır`, 'TL', 500, 100, 1e8, 0];
@@ -2832,10 +2836,10 @@ const SUMS = {
     grid: () => `${(() => { const l = draft.budget * draft.grid.lot_pct / 100, a = (draft.grid.lot2_pct ?? 100) / 100, c = (draft.grid.lot3_pct ?? 100) / 100; return a === 1 && c === 1 ? tl(l, 0) + ' kademe' : `${nf(l, 0)} → ${nf(l * a, 0)} → ${tl(l * c, 0)}`; })()} · ${draft.grid.max_coins} coine kadar · en çok ${tl(draft.budget * (draft.grid.use_pct ?? 40) / 100, 0)}${draft.grid.instant ? ' · anlık alım' : ''}`,
     dip: () => `Düşüş ${pc(draft.dip.dip_pct)} · kâr ${pc(draft.dip.take_profit_pct)} · en çok ${draft.dip.max_hold_hours} saat`,
     trend: () => `İz süren stop ${pc(draft.trend.trailing_pct)}`,
-    'Futures': () => { const l = draft.lev || {}; return `${l.real ? 'Gerçek açık' : 'Gerçek kapalı'} · bütçe $${nf(l.real_budget ?? 30, 0)} · en fazla $${nf(l.max_loss ?? 10, 0)} kayıp · ${l.real_lev ?? 2}x`; },
+    'Futures': () => { const l = draft.lev || {}; return `${l.real ? 'Gerçek açık' : 'Gerçek kapalı'} · bütçe ${U(l.real_budget ?? 30, 0)} · en fazla ${U(l.max_loss ?? 10, 0)} kayıp · ${l.real_lev ?? 2}x`; },
     'Memecoin': () => { const m = draft.meme || {}; return `${m.real ? 'Gerçek açık' : 'Gerçek kapalı'} · kasanın ${pc(m.size_pct ?? 10)}'u · kâr ${pc(m.tp_pct ?? 30)}${(m.tp_part ?? 100) < 100 ? ` (${pc(m.tp_part)}'i)` : ''} · zarar ${pc(m.sl_pct ?? 15)}`; },
-    'Global spot': () => { const g = draft.gspot || {}; return g.on === false ? 'Kapalı' : `${g.real ? 'Gerçek açık' : 'Deneme'} · bütçe $${nf(g.budget ?? 50, 0)} · kademe kârı ${pc(g.lot_tp_pct ?? 3.5)} · ${g.max_coins ?? 5} coin`; },
-    'Aktarım ve KASA': () => { const x = draft.xfer || {}; return `Günde en çok $${nf(x.daily_max || 1000, 0)} · ${+x.sweep_pct > 0 ? `kârın ${pc(x.sweep_pct)}'i ${x.sweep_days} günde bir KASA'ya` : 'kâr süpürme kapalı'}`; }
+    'Global spot': () => { const g = draft.gspot || {}; return g.on === false ? 'Kapalı' : `${g.real ? 'Gerçek açık' : 'Deneme'} · bütçe ${U(g.budget ?? 50, 0)} · kademe kârı ${pc(g.lot_tp_pct ?? 3.5)} · ${g.max_coins ?? 5} coin`; },
+    'Aktarım ve KASA': () => { const x = draft.xfer || {}; return `Günde en çok ${U(x.daily_max || 1000, 0)} · ${+x.sweep_pct > 0 ? `kârın ${pc(x.sweep_pct)}'i ${x.sweep_days} günde bir KASA'ya` : 'kâr süpürme kapalı'}`; }
 };
 const SEC_C = { 'Global spot': 'teal', 'Futures': 'red', 'Memecoin': 'violet', 'Kasa': 'teal', 'Kasadan ekleme': 'teal', 'Koruma': 'red', 'Kâr hedefi': 'green', 'Aktarım ve KASA': 'amber' };
 function field([k, label, hint, u, step, min, max, dec]) {
@@ -3282,19 +3286,19 @@ function gspotExtra() {
     const g = draft.gspot || {}, o = orig?.gspot || {};
     let h = '';
     if (g.real && !o.real)
-        h += `<div class="warn">${ic('i-info')}<div>Kaydedince bot OKX Global'de <b>gerçek emir</b> verir. Para, alım anında Global <b>fon hesabından</b> işlem hesabına geçer (en fazla $${nf(+g.budget || 0, 0)}); önce Kasalar'dan Global'e USDT gönder. Futures masasının parasına dokunulmaz.</div></div>`;
+        h += `<div class="warn">${ic('i-info')}<div>Kaydedince bot OKX Global'de <b>gerçek emir</b> verir. Para, alım anında Global <b>fon hesabından</b> işlem hesabına geçer (en fazla ${U(+g.budget || 0, 0)}); önce Kasalar'dan Global'e USDT gönder. Futures masasının parasına dokunulmaz.</div></div>`;
     if (!g.real && o.real)
         h += `<div class="warn">${ic('i-info')}<div>Gerçek mod kapanınca yeni alım yapılmaz; eldeki coinler kurallarıyla (kademe kârı, zarar sınırı) satılmaya devam eder.</div></div>`;
     const l1 = (+g.budget || 0) * (+g.lot_pct || 0) / 100;
     if (g.real && l1 < 5)
-        h += `<div class="warn">${ic('i-info')}<div>1. kademe $${nf(l1, 2)}; $5'in altındaki kademe alınmaz. Bütçeyi ya da 1. kademe yüzdesini artır.</div></div>`;
+        h += `<div class="warn">${ic('i-info')}<div>1. kademe ${U(l1, 2)}; 5 USDT'nin altındaki kademe alınmaz. Bütçeyi ya da 1. kademe yüzdesini artır.</div></div>`;
     return h;
 }
 function futExtra() {
     const R = S?.levr, l = draft.lev || {};
     let h = '';
     if (l.real && !orig?.lev?.real)
-        h += `<div class="warn">${ic('i-info')}<div>Kaydedince Global fon hesabından $${nf(l.real_budget, 0)} futures'a geçer ve sinyal gelince gerçek pozisyon açılır. Kaybedebileceğin en fazla $${nf(l.max_loss, 0)}.</div></div>`;
+        h += `<div class="warn">${ic('i-info')}<div>Kaydedince Global fon hesabından ${U(l.real_budget, 0)} futures'a geçer ve sinyal gelince gerçek pozisyon açılır. Kaybedebileceğin en fazla ${U(l.max_loss, 0)}.</div></div>`;
     if (+l.max_loss > +l.real_budget)
         h += `<div class="warn">${ic('i-info')}<div>En fazla kayıp bütçeden büyük; bütçeden fazlası zaten kaybedilemez.</div></div>`;
     if (R?.dead)
@@ -3311,7 +3315,7 @@ function memeExtra() {
     else
         h += `<div class="hint" style="margin:2px 2px 10px">MEME cüzdanı <b>${m.wallet.slice(0, 4)}…${m.wallet.slice(-4)}</b>${R?.addr ? ' · bağlı' : ''}. Yalnız bu cüzdandaki parayla işlem yapılır; KASA'ya dokunulmaz.</div>`;
     if (m.real && !orig?.meme?.real)
-        h += `<div class="warn">${ic('i-info')}<div>Kaydedince MEME cüzdanındaki SOL ile gerçek alım-satım başlar. Her girişte boş SOL'un %${m.size_pct}'i kullanılır; en fazla $${nf(m.max_loss, 0)} kayıpta durur.</div></div>`;
+        h += `<div class="warn">${ic('i-info')}<div>Kaydedince MEME cüzdanındaki SOL ile gerçek alım-satım başlar. Her girişte boş SOL'un %${m.size_pct}'i kullanılır; en fazla ${U(m.max_loss, 0)} kayıpta durur.</div></div>`;
     if (R?.dead)
         h += `<div style="margin:4px 0 8px"><button class="btn xsync" type="button" id="memeReset">${ic('i-refresh')}Yeniden başlat</button><p class="hint">Masa durdu: ${String(R.dead).replace(/</g, '&lt;')}. Yeniden başlatınca kayıp sayacı sıfırlanır.</p></div>`;
     return h;

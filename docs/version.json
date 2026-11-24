@@ -1,10 +1,17 @@
 {
-  "version": "1.88.1",
+  "version": "1.89.0",
   "date": "2026-11-25",
   "notes": [
-    "Ters pozisyon çakışması önlendi: futures bir coinde KISA iken Global spot o coini almaz; Global spot'ta elde olan coinde futures KISA açmaz"
+    "Tutarlar her yerde USDT olarak yazılıyor, yanında TL karşılığı; masa kutularında ve özet kartlarında TL satırı; bot kayıtlarındaki $ yazıları USDT'ye çevrildi; geçmiş temizlendi"
   ],
   "history": [
+    {
+      "version": "1.89.0",
+      "date": "2026-11-25",
+      "notes": [
+        "Tutarlar her yerde USDT olarak yazılıyor, yanında TL karşılığı; masa kutularında ve özet kartlarında TL satırı; bot kayıtlarındaki $ yazıları USDT'ye çevrildi; geçmiş temizlendi"
+      ]
+    },
     {
       "version": "1.88.1",
       "date": "2026-11-25",
@@ -101,13 +108,6 @@
       "date": "2026-11-25",
       "notes": [
         "Kara liste (spot, futures, memecoin ayrı ayrı): listedeki coinde yeni işlem açılmaz, eldeki kendi kurallarıyla satılır · Favoriler: en çok kâr getiren coinler yıldızlı · Koruma yenilenince yanlış 'sahipsiz emir' iptali düzeltildi · Futures en fazla pozisyon ayarı 10'a kadar"
-      ]
-    },
-    {
-      "version": "1.84.2",
-      "date": "2026-11-25",
-      "notes": [
-        "Spot: kademe kârı değişince borsadaki kâr al emirleri yeni hedefe göre yeniden kurulur"
       ]
     }
   ]
