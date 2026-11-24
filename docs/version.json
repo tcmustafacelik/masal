@@ -1,10 +1,17 @@
 {
-  "version": "1.75.0",
+  "version": "1.75.1",
   "date": "2026-11-24",
   "notes": [
-    "Kasalar arası her yön: OKX TR/KASA → MEME (Global üzerinden kendiliğinden SOL), MEME → KASA ve MEME → OKX TR (zincirleme); Para gönder kartları 3'lü düzen"
+    "Kaydırınca çıkan Sat düğmesi yenilendi: yumuşak kırmızı kart, dolu yuvarlak simge, açılırken ölçeklenerek belirir"
   ],
   "history": [
+    {
+      "version": "1.75.1",
+      "date": "2026-11-24",
+      "notes": [
+        "Kaydırınca çıkan Sat düğmesi yenilendi: yumuşak kırmızı kart, dolu yuvarlak simge, açılırken ölçeklenerek belirir"
+      ]
+    },
     {
       "version": "1.75.0",
       "date": "2026-11-24",
@@ -105,15 +112,6 @@
       "date": "2026-11-23",
       "notes": [
         "Varlık özeti ayrı kart olmaktan çıktı, Gerçek hesap kartına katıldı (aynı rakamlar iki kez gösterilmiyor)"
-      ]
-    },
-    {
-      "version": "1.70.1",
-      "date": "2026-11-23",
-      "notes": [
-        "Toplam varlıkta USDT / BTC / TRY seçimi ve tutarları gizle-göster",
-        "Para gönderme sayfalarında 'Tümü' kısayolu; bakiye değiştikçe kendiliğinden güncellenir",
-        "Fable 3. tur: değişen/hatalı ayar kutusu belirgin, kesilen açıklamalar, Ajan masası hizası, renk ayrımı"
       ]
     }
   ]
