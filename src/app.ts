@@ -1,4 +1,4 @@
-const APP_VERSION='1.75.1';
+const APP_VERSION='1.76.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (pembe)
@@ -230,6 +230,7 @@ function gloss(k: string): [string, string] {
       <li><span class="chip a">Düşüş filtresi</span> coin hızlı düşüyor ya da hacmi aniden patladı (panik satışı); sakinleşene kadar alım bekletiliyor.</li>
       <li><span class="chip a st"><b>Şartta</b><small>bütçe dolu</small></span> fiyat uygun ama coinlere ayrılan para dolu; bir kademe satılınca alır.</li>
       <li><span class="chip a st"><b>Şartta</b><small>coin sınırı dolu</small></span> fiyat uygun ama aynı anda tutulabilecek coin sayısı dolu; elindeki bir coin satılınca alır.</li>
+      <li><b>Elle almak için</b> satırı sola kaydır ve yeşil <b>Al</b>'a dokun; tutarı seç. Bot birkaç saniye içinde piyasa fiyatından alır ve coini kendi kademesi gibi yönetir (kâr al, zarar durdur). Bütçe ya da coin sınırı dolu olsa da elle alım yapılır.</li>
       <li><b>Alım</b> fiyatı bir eşiktir: fiyat bunun altına inince bot <b>o anki (daha düşük) fiyattan</b> alır.</li>
       <li><i class="kd">1 kademe</i> coin zaten elde; mavi yüzde kadar daha düşerse bir sonraki kademe alınır (<b>2. alım</b> fiyatı).</li></ul>
       <p>Şartta görünüp alınmıyorsa: ${c?.instant?'':'mum henüz kapanmamıştır, ya da '}bütçe sınırı / coin sayısı dolmuştur.</p>`],
@@ -526,7 +527,7 @@ function nextBar(){const m=15*6e4,t=Math.ceil((Date.now()+1000)/m)*m,d=new Date(
 function renderNow(x: Strategy){
   const sec=document.getElementById('nowSec'),box=document.getElementById('now');
   if(!x.live){sec.hidden=true;return}
-  sec.hidden=false;
+  sec.hidden=false;if(swDrag)return;
   const w=x.watch,c=x.cfg,used=w?w.used:x.positions.reduce((a,p)=>a+p.cost,0);
   let st:[string,string,string,string];
   if(x.halted)st=['red','i-power','Durdu: acil fren devrede',`${x.halt_reason||''}. Yeni işlem açılmıyor.`];
@@ -550,8 +551,10 @@ function renderNow(x: Strategy){
       else if(it.gap<=0){const r=why(it);chip=r?`<span class="chip a st"><b>${ic('i-check')}Şartta</b><small>${r}</small></span>`:`<span class="chip g st"><b>${ic('i-check')}Şartta</b><small>alım hazır</small></span>`}
       else chip=`<span class="chip ${it.h?'b':'m'}">%${nf(it.gap,it.gap<10?1:0)} düşerse</span>`;
       const near=it.f||it.gap<=0?'':`<div class="near"><i style="width:${Math.max(4,Math.min(100,100-it.gap*20)).toFixed(0)}%"></i></div>`;
-      return `<div class="row wrow">${cico(it.i)}<div class="mid"><b>${sym(it.i)}${pq(it.i)}${it.h?`<i class="kd">${it.h} kademe</i>`:''}</b>
-        <div class="pv"><span><em>Şimdi</em>${px(it.cur)}</span><span><em>${it.h?`${it.h+1}. alım`:'Alım'}</em>${px(it.t)}</span></div></div><div class="end">${chip}${near}</div></div>`}).join('');
+      const bz=BUYING[it.i];if(bz)chip=`<span class="sellst buyst"><i class="spn"></i>Alınıyor</span>`;
+      const row=`<div class="row wrow swc">${cico(it.i)}<div class="mid"><b>${sym(it.i)}${pq(it.i)}${it.h?`<i class="kd">${it.h} kademe</i>`:''}</b>
+        <div class="pv"><span><em>Şimdi</em>${px(it.cur)}</span><span><em>${it.h?`${it.h+1}. alım`:'Alım'}</em>${px(it.t)}</span></div></div><div class="end">${chip}${near}</div></div>`;
+      return `<div class="swr${swOpen==='b:'+it.i?' open':''}${bz?' busy':''}" data-i="b:${it.i}"><button class="swb buy" data-buy="${it.i}">${ic('i-buy')}Al</button>${row}</div>`}).join('');
     h+='</div>';
     if(items.length>5)h+=`<button class="more" id="nowMore">${nowAll?'Daha az göster':`Tümünü göster (${items.length} coin)`}</button>`;
   }
@@ -1037,11 +1040,12 @@ function renderCoins(x){
       <div class="end"><span class="pill lg ${cls(c.tot)||'z'}"><i>${c.tot>=0?'▲':'▼'}</i>${nf(Math.abs(c.tot))} TL</span><span class="est">${det}</span></div></div>`}).join(''));clipList('coins',5);
 }
 // Satırı sola kaydırınca "Sat" düğmesi çıkar (sadece gerçek hesapta). Kaydırılırken liste yenilenmez.
-let swOpen='',swDrag=false,swJust=0;const SELLING:Record<string,number>={};
+let swOpen='',swDrag=false,swJust=0;const SELLING:Record<string,number>={},BUYING:Record<string,{t:number,n:number}>={};
 function renderPositions(x){
   if(swDrag)return;
   const pos=x.positions,ps=document.getElementById('posSum'),canSell=sel==='live'&&!!x.armed;
   for(const k in SELLING)if(!pos.some(p=>p.inst===k))delete SELLING[k]; // satıldı: "Satılıyor" kalksın
+  for(const k in BUYING){const p0: any=pos.find(p=>p.inst===k);if(p0&&(p0.lots||1)>BUYING[k].n)delete BUYING[k]} // alındı: "Alınıyor" kalksın
   {const T=pos.reduce((a,p)=>a+p.qty*sellPrice(p.inst,p.price)-p.cost,0);ps.className='hsum '+cls(T);ps.textContent=pos.length?`${pos.length} coin · ${sgn(T)} TL`:''}
   setH(document.getElementById('positions'),pos.length?pos.map(p=>{const cur=sellPrice(p.inst,p.price),val=p.qty*cur,pl=val-p.cost,plp=(val/p.cost-1)*100;
     const prot=p.protected===true?`<span class="shd" title="Borsa korumalı">${ic('i-shield')}</span>`:p.protected===false?`<span class="shd no" title="Koruma bekliyor">${ic('i-shield')}</span>`:'';
@@ -1055,7 +1059,8 @@ function renderPositions(x){
     return canSell?`<div class="swr${swOpen===p.inst?' open':''}${SELLING[p.inst]?' busy':''}" data-i="${p.inst}"><button class="swb" data-sell="${p.inst}">${ic('i-sell')}${SELLING[p.inst]?'Satılıyor':'Sat'}</button>${row}</div>`:row}).join('')
     :`<div class="empty">${ic('i-box')}<div>Şu an açık pozisyon yok</div></div>`);
 }
-{const box=document.getElementById('positions');let sx=0,sy=0,el:HTMLElement=null,dx=0,lock='';
+/** Sola kaydırınca düğme açılan satırlar (Elimdeki coinler: Sat · Alıma yakın coinler: Al) — tek davranış */
+function swipeBox(box: HTMLElement, act: (b: HTMLElement)=>void){let sx=0,sy=0,el:HTMLElement=null,dx=0,lock='';
   const start=(x,y,t)=>{const w=(t as HTMLElement).closest<HTMLElement>('.swr');if(!w)return;el=w;sx=x;sy=y;dx=0;lock='';swDrag=true;w.classList.add('drag')};
   const move=(x,y,ev)=>{if(!el)return;const ddx=x-sx,ddy=y-sy;if(!lock)lock=Math.abs(ddx)>8&&Math.abs(ddx)>Math.abs(ddy)?'x':(Math.abs(ddy)>8?'y':'');
     if(lock!=='x')return;ev.preventDefault?.();swDrag=true;const base=el.classList.contains('open')?-88:0;dx=Math.min(0,Math.max(-110,base+ddx));
@@ -1069,10 +1074,12 @@ function renderPositions(x){
   box.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse')start(e.clientX,e.clientY,e.target)});
   box.addEventListener('pointermove',e=>{if(e.pointerType==='mouse'&&e.buttons)move(e.clientX,e.clientY,e)});
   window.addEventListener('pointerup',e=>{if(e.pointerType==='mouse')end()});
-  box.addEventListener('click',e=>{const b=(e.target as HTMLElement).closest<HTMLElement>('.swb');if(b){sellCoin(b.dataset.sell);return}
+  box.addEventListener('click',e=>{const b=(e.target as HTMLElement).closest<HTMLElement>('.swb');if(b){act(b);return}
     if(Date.now()-swJust<400)return; // kaydırmanın bıraktığı tıklama satırı kapatmasın
     if(swOpen&&!(e.target as HTMLElement).closest('.swr.open .swb')){swOpen='';box.querySelectorAll('.swr.open').forEach(w=>w.classList.remove('open'))}});
 }
+swipeBox(document.getElementById('positions'),b=>sellCoin(b.dataset.sell));
+swipeBox(document.getElementById('now'),b=>openBuy(b.dataset.buy));
 // Tek coini sat: ayarlar.json'a satış isteği yazılır, bot ~5 sn içinde piyasa fiyatından satar
 async function sellCoin(inst: string, retry = true){
   if(SELLING[inst]&&retry)return;fastWatch();
@@ -1092,6 +1099,46 @@ async function sellCoin(inst: string, retry = true){
   }catch(e){delete SELLING[inst];if(S)render();toast('Satış isteği gönderilemedi ('+e+'), tekrar dene');return}
   // coin listeden düşünce "Satılıyor" kendiliğinden kalkar (renderPositions); 2 dakikada satılmazsa düğme geri gelir
   const t0=SELLING[inst];setTimeout(()=>{if(SELLING[inst]===t0){delete SELLING[inst];if(S)render()}},120000);
+}
+
+/** Elle alım: "Alıma en yakın coinler"de satırı sola kaydır → Al. Tutar varsayılanı botun sıradaki kademe tutarıdır.
+ *  Alınan coin botun kendi kademesi gibi yönetilir (kademe kârı, zarar durdur, sonraki kademeler). */
+function openBuy(inst: string){
+  const x: any=S?.strategies?.live;if(!x)return;
+  swOpen='';document.querySelectorAll('.swr.open').forEach(w=>w.classList.remove('open'));
+  const w: any=x.watch||{},it: any=(w.items||[]).find((i: any)=>i.i===inst)||{i:inst,p:0,t:0,h:0},c: any=x.cfg||{};
+  const h=+it.h||0,lot=h<=0?+c.lot:+c.lot*(h===1?(c.lot2??1):(c.lot3??1)),cash=+x.cash||0;
+  const cur=livePrice(inst,it.p),gap=it.t?(cur/it.t-1)*100:0;
+  const q=document.getElementById('qsh');q.dataset.n='';qHead('i-buy','Vazgeç');document.getElementById('qTitle').textContent=`${sym(inst)} al`;
+  const quick=[...new Set([Math.round(lot/2),Math.round(lot),Math.round(lot*2)].filter(v=>v>=10))];
+  document.getElementById('qText').innerHTML=`<div class="xfs">
+    <div class="xroute"><div>${cico(inst)}<b>${sym(inst)}</b><small>şimdi ${px(cur)}</small></div><span class="xar">${ic('i-chev')}</span><div><span class="xe e1">${ic('i-layers')}</span><b>${h+1}. kademe</b><small>${it.t?'bot hedefi '+px(it.t):'elle'}</small></div></div>
+    ${it.t?`<p class="xnote">${gap<=0?`Fiyat botun alım hedefinin <b>altında</b>; şart oluşmuş.`:`Fiyat botun alım hedefinin <b>%${nf(gap,1)} üstünde</b>. Bot bu fiyattan almazdı; karar senin.`}</p>`:''}
+    <div class="xlab">Tutar</div>
+    <div class="xamt"><input id="bAmt" type="number" inputmode="decimal" min="10" step="1" value="${Math.round(Math.min(lot,cash))||''}"><span>TL</span></div>
+    <div class="xq">${quick.map(v=>`<button data-bq="${v}"${v>cash?' class="off"':''}>${tl(v,0)}</button>`).join('')}<button class="xall" data-bq="${Math.floor(cash)}"${cash>=10?'':' disabled'}>Tümü<small>${tl(cash,0)}</small></button></div>
+    <div class="xinfo">
+      <div>${ic('i-coins')}<span>Boşta nakit</span><b>${tl(cash,0)}</b></div>
+      <div>${ic('i-target')}<span>Sonra</span><b>Bot yönetir: ${pp(+c.lot_tp||0)} kârda satar, zarar durdur korur</b></div>
+      ${w.room===false?`<div>${ic('i-info')}<span>Not</span><b class="dn">Coinlere ayrılan sınır dolu; bu alım sınırı aşar</b></div>`:''}
+    </div>
+    <button class="btn primary xgo" id="bGo">${ic('i-buy')}Al</button></div>`;
+  const inp=document.getElementById('bAmt') as HTMLInputElement,go=document.getElementById('bGo') as HTMLButtonElement;
+  const upd=()=>{go.lastChild.textContent=+inp.value>=10?`${tl(+inp.value,0)} al`:'Al'};inp.oninput=upd;upd();
+  document.querySelectorAll<HTMLElement>('[data-bq]').forEach(b=>b.onclick=()=>{inp.value=b.dataset.bq;upd()});
+  go.onclick=()=>{const a=Math.round(+inp.value||0);if(a<10){toast('Tutarı yaz (en az 10 TL)');return}
+    if(a>cash+0.5){toast(`Botta boşta ${tl(cash,0)} var`);return}buyCoin(inst,a,h,go)};
+  q.hidden=false;
+}
+async function buyCoin(inst: string, amt: number, h: number, btn?: HTMLButtonElement){
+  if(!token){toast('Almak için önce Ayarlar\'dan GitHub bağlantısını kur');return}
+  if(btn)btn.disabled=true;fastWatch();
+  const req={id:'b'+Date.now().toString(36),ts:Date.now(),inst,amt};
+  const ok=await cloudPatch(o=>{const p: any=(o as any).buy;(o as any).buy=[...(Array.isArray(p)?p:[]).filter((r: any)=>Date.now()-(r.ts||0)<600000),req]},'Uygulamadan alım: '+inst+' '+amt+' TL');
+  if(!ok){if(btn)btn.disabled=false;toast('Alım isteği gönderilemedi, tekrar dene');return}
+  document.getElementById('qsh').hidden=true;BUYING[inst]={t:Date.now(),n:h};if(S)render();
+  toast(`${sym(inst)} alım isteği gönderildi; bot birkaç saniye içinde ${tl(amt,0)} alır.`);
+  const t0=BUYING[inst].t;setTimeout(()=>{if(BUYING[inst]?.t===t0){delete BUYING[inst];if(S)render()}},120000);
 }
 
 function renderRules(R: Risk, c?: GridCfg | null){

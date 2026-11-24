@@ -283,6 +283,37 @@ def sell_selected(p, S):
             p._sell_lots(ts, inst, L["last_prices"].get(inst, 0), list(L["positions"][inst]["lots"]), "Elle satış")
 
 
+
+def buy_selected(p, S):
+    """Uygulamadan elle alım: {"buy": [{id, ts, inst, amt}]} — her istek bir kez, 10 dakikadan eskisi işlenmez.
+    Alınan coin botun kendi kademesi gibi yönetilir (kademe kârı, zarar durdur, sonraki kademeler)."""
+    reqs = [r for r in (S.get("buy") or []) if isinstance(r, dict)]
+    L = p.s
+    done = L.setdefault("buy_done", [])
+    now = time.time() * 1000
+    todo = [r for r in reqs if str(r.get("id") or "") and str(r["id"]) not in done and now - float(r.get("ts") or 0) <= 600_000]
+    if not todo:
+        return
+    try:
+        prices = okx.prices_tl()
+    except Exception as e:
+        print("Elle alım: fiyat alınamadı", e)
+        return  # bir sonraki turda yeniden denenir
+    for r in todo:
+        done.append(str(r["id"]))
+        inst = str(r.get("inst") or "")
+        try:
+            amt = float(r.get("amt") or 0)
+        except (TypeError, ValueError):
+            continue
+        price = okx.ASK.get(inst) or prices.get(inst) or L["last_prices"].get(inst)
+        if not inst or amt < 10 or not price:
+            p._note(int(now), f"Elle alım yapılamadı: {inst.split('-')[0]} fiyatı bulunamadı")
+            continue
+        n = len((L["positions"].get(inst) or {}).get("lots") or [])
+        p._buy(int(now), inst, price, amt, f"{n + 1}. kademe · elle alım")
+    L["buy_done"] = done[-50:]
+
 def daily_summary(L, p, N):
     """Her gün ayarlanan saatte (varsayılan 21:00) günün özetini gönderir."""
     from datetime import datetime, timedelta, timezone
@@ -657,6 +688,10 @@ def main():
     run_bars([live], live_events, live_series)
     liquidate(live, S)
     sell_selected(live, S)
+    try:
+        buy_selected(live, S)
+    except Exception as e:
+        print("Elle alım yapılamadı:", e)
     desk_commands(state, S)
     clear_old(state, S)
     check_target(live, S, N)

@@ -1,10 +1,17 @@
 {
-  "version": "1.75.1",
+  "version": "1.76.0",
   "date": "2026-11-24",
   "notes": [
-    "Kaydırınca çıkan Sat düğmesi yenilendi: yumuşak kırmızı kart, dolu yuvarlak simge, açılırken ölçeklenerek belirir"
+    "Elle alım: Alıma en yakın coinlerde satırı sola kaydır → yeşil Al; tutarı seç, bot alır ve kendi kademesi gibi yönetir"
   ],
   "history": [
+    {
+      "version": "1.76.0",
+      "date": "2026-11-24",
+      "notes": [
+        "Elle alım: Alıma en yakın coinlerde satırı sola kaydır → yeşil Al; tutarı seç, bot alır ve kendi kademesi gibi yönetir"
+      ]
+    },
     {
       "version": "1.75.1",
       "date": "2026-11-24",
@@ -105,13 +112,6 @@
         "Bot turu daha hızlı (~0,24 sn); emirlerde ve aktarımlarda tekrar gönderim koruması",
         "Futures: kırılım süresi, eğilim ortalaması ve eğilim filtresi ayarlardan değiştirilebilir",
         "'Şartta' kutuları küçük ve tek tip; stiller sadeleştirildi, koyu tema renkleri ve İngilizce çeviriler tamamlandı"
-      ]
-    },
-    {
-      "version": "1.70.2",
-      "date": "2026-11-23",
-      "notes": [
-        "Varlık özeti ayrı kart olmaktan çıktı, Gerçek hesap kartına katıldı (aynı rakamlar iki kez gösterilmiyor)"
       ]
     }
   ]

@@ -21,6 +21,7 @@ DEFAULTS = {
     "clear": 0,  # zaman damgası yeniyse eski kayıtlar (akış, aktarım geçmişi, masa günlükleri, bildirimler) temizlenir
     "xfer": {"daily_max": 1000, "sweep_on": True, "sweep_pct": 50, "sweep_days": 7, "sweep_min": 10},  # para aktarımı ve kâr süpürme
     "dust": [],
+    "buy": [],  # uygulamadan elle alım istekleri [{id, ts, inst, amt (TL)}]
     "desk_cmd": [],  # futures/memecoin elle kapat/sat istekleri  # küçük bakiye çevirme istekleri [{id, ts, ex: tr|g|m}]
     "xfer_cancel": [],  # iptal edilecek aktarım istekleri (id listesi)
     "xfer_req": [],  # uygulamadan aktarım istekleri [{id, ts, dir, amt, src}]; her biri bir kez işlenir
