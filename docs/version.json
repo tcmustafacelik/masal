@@ -1,10 +1,17 @@
 {
-  "version": "1.84.0",
+  "version": "1.84.1",
   "date": "2026-11-24",
   "notes": [
-    "Spot: Toplu kâr al — açıkken kademeler tek tek satılmaz, fiyat bütün kademelerin alış ortalamasının %X üstüne çıkınca hepsi birden satılır (borsadaki korumalar yalnız zarar durdur olarak yeniden kurulur); kademe merdiveninde satış yeri"
+    "Toplu kâr al anlık: hedefe değdiği an satılır (mum kapanışı beklenmez)"
   ],
   "history": [
+    {
+      "version": "1.84.1",
+      "date": "2026-11-24",
+      "notes": [
+        "Toplu kâr al anlık: hedefe değdiği an satılır (mum kapanışı beklenmez)"
+      ]
+    },
     {
       "version": "1.84.0",
       "date": "2026-11-24",
@@ -101,13 +108,6 @@
       "date": "2026-11-24",
       "notes": [
         "Kehribar tema: pembe yerine sıcak altın vurgu (açık/koyu/otomatik); uyarı rengi turuncuya kaydırıldı, temayla karışmasın"
-      ]
-    },
-    {
-      "version": "1.76.2",
-      "date": "2026-11-24",
-      "notes": [
-        "Sürüm yazısı Özet sayfasının en altına taşındı"
       ]
     }
   ]

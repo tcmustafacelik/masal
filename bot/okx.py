@@ -121,6 +121,7 @@ def tl_factor(inst):
 VOL = {}  # coin başına kapanmış mumların hacmi (Bekçi'nin hacim patlaması kontrolü)
 SPREAD = {}  # son fiyat çekiminde her paritenin alış-satış farkı (oran); Bekçi kayma kontrolünde kullanır
 ASK = {}     # anlık en iyi satış fiyatı (TL karşılığı): alım bu fiyattan olur
+BID = {}     # anlık en iyi alış fiyatı (TL karşılığı): satış bu fiyattan olur
 
 
 def prices_tl():
@@ -144,9 +145,11 @@ def prices_tl():
             if bid > 0 and ask > 0:
                 SPREAD[inst] = (ask - bid) / ask
                 ASK[inst] = ask * k[q]
+                BID[inst] = bid * k[q]
             else:  # tahta boş: eski satış fiyatıyla alım kararı verilmesin (Bekçi "fark yüksek" diye geçirmez)
                 SPREAD[inst] = 1.0
                 ASK.pop(inst, None)
+                BID.pop(inst, None)
     return out
 
 

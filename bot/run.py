@@ -590,6 +590,29 @@ def _spot_sync(live):
     _SPOT["t"].start()
 
 
+def instant_sells(live):
+    """Toplu kâr al açıkken: coinin bütün kademelerinin alış ortalamasının %X üstüne (satış/alış tahtası fiyatıyla) çıkıldığı an
+    hepsi birden satılır; mum kapanışı beklenmez (borsada kademe başına kâr al emri olmadığı için bu kontrol bota düşer)."""
+    c, s = live.cfg, live.s
+    ptp = c.get("pos_tp") or 0
+    if s["key"] != "grid" or ptp <= 0 or not s["positions"]:
+        return
+    prices = okx.prices_tl()
+    ts = int(time.time() * 1000)
+    for inst, pos in list(s["positions"].items()):
+        if not pos.get("lots") or (hasattr(live, "_is_unsure") and live._is_unsure(inst)):
+            continue
+        price = okx.BID.get(inst) or prices.get(inst)
+        if not price:
+            continue
+        s["last_prices"][inst] = prices.get(inst, price)
+        cost = sum(l["cost"] for l in pos["lots"])
+        qty = sum(l["qty"] for l in pos["lots"])
+        if qty > 0 and price >= cost / qty * (1 + ptp):
+            live._sell_lots(ts, inst, price, list(pos["lots"]),
+                            f"Toplu kâr · {len(pos['lots'])} kademe · ortalamanın %{(price / (cost / qty) - 1) * 100:.1f} üstünde")
+
+
 def instant_buys(live, series):
     """Kademeli stratejide anlık alım: son kapanmış mumlara göre hesaplanan alım fiyatına
     şimdiki fiyat değerse hemen alır. Kurallar mum kapanışındaki alımla aynıdır."""
@@ -774,6 +797,10 @@ def _turn(state, S, N, t_start):
     check_target(live, S, N)
     convert_request(live, S, N)
     topup(live, S, N if L["armed"] else None)
+    try:
+        instant_sells(live)  # toplu kâr al: hedefe değdiği an hepsini sat
+    except Exception as e:
+        print("Anlık toplu satış kontrolü yapılamadı:", e)
     w = None
     try:
         w = instant_buys(live, live_series)  # fiyat alım seviyesine değdiği an al (mum kapanışını bekleme)
