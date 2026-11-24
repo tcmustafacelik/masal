@@ -222,12 +222,10 @@
   "theme": "auto",
   "xfer_req": [
     {
-      "id": "mclosef0948781",
-      "ts": 1795498005102,
-      "dir": "m2g",
-      "amt": 1,
-      "all": true,
-      "then": "k",
+      "id": "gs1795557828089",
+      "ts": 1795557828089,
+      "dir": "tr2g",
+      "amt": 70,
       "src": "bos"
     }
   ],
@@ -392,5 +390,10 @@
     ],
     "lev": [],
     "meme": []
+  },
+  "gspot": {
+    "on": true,
+    "real": true,
+    "budget": 50
   }
 }
