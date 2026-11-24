@@ -1,12 +1,17 @@
 {
-  "version": "1.71.0",
+  "version": "1.72.0",
   "date": "2026-11-24",
   "notes": [
-    "Bot turu daha hızlı (~0,24 sn); emirlerde ve aktarımlarda tekrar gönderim koruması",
-    "Futures: kırılım süresi, eğilim ortalaması ve eğilim filtresi ayarlardan değiştirilebilir",
-    "'Şartta' kutuları küçük ve tek tip; stiller sadeleştirildi, koyu tema renkleri ve İngilizce çeviriler tamamlandı"
+    "Memecoin bölümü kaldırıldı: sekme, ayarlar, MEME aktarım yönleri ve toplamdaki payı"
   ],
   "history": [
+    {
+      "version": "1.72.0",
+      "date": "2026-11-24",
+      "notes": [
+        "Memecoin bölümü kaldırıldı: sekme, ayarlar, MEME aktarım yönleri ve toplamdaki payı"
+      ]
+    },
     {
       "version": "1.71.0",
       "date": "2026-11-24",
@@ -115,14 +120,6 @@
       "date": "2026-11-23",
       "notes": [
         "Açılır bölümlerde uzun özet yazısı ok simgesini sıkıştırıyordu; düzeltildi"
-      ]
-    },
-    {
-      "version": "1.66.1",
-      "date": "2026-11-23",
-      "notes": [
-        "Spot: bankadan gelen TL Fonlama hesabında kalıyordu, bot kullanamıyordu; artık kendiliğinden Alım-satım hesabına alınıyor ve bildirim geliyor",
-        "Gizlilik: kasa, futures ve memecoin kayıtları da herkese açık depoda şifreli tutuluyor"
       ]
     }
   ]

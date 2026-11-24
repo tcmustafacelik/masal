@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.71.0';
+const APP_VERSION = '1.72.0';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -606,7 +606,7 @@ function levWatch() {
     <p class="hint">Çubuk dolu = sinyale yakın. Fiyat son ${lv.brk_h ?? 20} saatin zirvesini aşınca UZUN, dibini kırınca KISA açılır (${lv.trend_on === false ? 'eğilim filtresi kapalı' : `${lv.trend_h ?? 200} saatlik ortalamanın yönünde`}).</p></div>
     ${lg ? `<h2 class="mh">${ic('i-list')}Son kararlar<span class="hsum">${L.stats?.signals || 0} sinyal · ${L.stats?.entered || 0} giriş</span></h2><div class="card mfeed">${lg}</div>` : ''}`;
 }
-/** Futures/Memecoin pozisyonunu elle kapatma düğmesi: istek ayarlara yazılır, bot birkaç saniyede uygular */
+/** Futures pozisyonunu elle kapatma düğmesi: istek ayarlara yazılır, bot birkaç saniyede uygular */
 const DESK_BUSY = {};
 function deskBtn(desk, sym, label) {
     const k = desk + ':' + sym, busy = DESK_BUSY[k] && Date.now() - DESK_BUSY[k] < 60000;
@@ -635,39 +635,6 @@ document.addEventListener('click', async (e) => {
         renderDeck();
     }
 });
-/** Memecoin: tarama özeti ve son kararlar (hangi token neden alındı / engellendi) */
-function memeScan() {
-    const M = S?.meme;
-    if (!M)
-        return '';
-    const st = M.stats || {}, esc = (t) => String(t).replace(/</g, '&lt;');
-    const lg = (M.log || []).slice(0, 10).map(([ts, k, t]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : 'not'}">${k === 'buy' ? 'SİNYAL' : k === 'exit' ? 'ÇIKIŞ' : 'ENGEL'}</em><div>${esc(t).replace(/^(AL|SAT|ENGEL) /, '')}</div></div>`).join('');
-    return `<h2 class="mh">${ic('i-eye')}Tarama<span class="hsum">10 sn'de bir · Solana</span></h2>
-    <div class="card"><div class="funnel">${[['i-eye', 'Taranan', st.scanned || 0, 'f1'], ['i-shield', 'Engellenen', st.blocked || 0, 'f2'], ['i-flag', 'Sinyal', st.entered || 0, 'f3']]
-        .map(([i, n, v, c]) => `<div class="${c}">${ic(i)}<b>${nf(v, 0)}</b><span>${n}</span><i style="width:${Math.max(6, Math.min(100, Math.log10(v + 1) / Math.log10((st.scanned || 0) + 1 || 10) * 100)).toFixed(0)}%"></i></div>`).join('')}</div>
-    ${lg ? `<div class="mfeed">${lg}</div>` : ''}</div>`;
-}
-function renderMemeR() {
-    const R = S?.memer;
-    if (!R)
-        return S?.live_enc && !pw ? `<div class="warn">${ic('i-lock')}<div>Gerçek memecoin masasını görmek için kilidi aç.</div></div>` : '';
-    const usd = (v, d = 2) => '$' + nf(v, d), esc = (t) => String(t).replace(/</g, '&lt;');
-    const mm = (orig || S?.settings)?.meme || {}, ml = +mm.max_loss || 10, left = Math.max(0, ml + Math.min(0, R.pnl));
-    const pos = (R.positions || []).map((p) => {
-        const g = p.cost ? (p.val / p.cost - 1) * 100 : 0;
-        return `<div class="fr"><time>${masaClock(p.ts)}</time><em class="ft al">${p.part ? 'KALAN' : 'AÇIK'}</em><div><b>${esc(p.sym)}</b> ${usd(p.val)} · <span class="${cls(g)}">${spc(g, 1)}</span><small>giriş ${usd(p.cost)} · ${esc(p.why)}</small></div>${deskBtn('meme', p.mint, 'Sat')}</div>`;
-    }).join('');
-    const feed = (R.log || []).slice(0, 15).map(([ts, k, t]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : 'not'}">${k === 'buy' ? 'AL' : k === 'exit' ? 'SAT' : k === 'risk' ? 'ENGEL' : 'BİLGİ'}</em><div>${esc(t).replace(/^GERÇEK (AL|SAT|ENGEL) ?/, '')}</div></div>`).join('');
-    const st = R.dead ? `<b class="dn">Durdu: ${esc(R.dead)}. Ayarlar → Memecoin → Yeniden başlat.</b>` : !R.on ? '<b>Kapalı.</b> Ayarlar → Memecoin\'den açılır.' : '';
-    const ad = R.addr ? `${R.addr.slice(0, 4)}…${R.addr.slice(-4)}` : '';
-    return `<h2 class="mh">${ic('i-flask')}Memecoin<span class="hsum"><em class="rbadge">GERÇEK</em>${ad}</span><button class="mset" type="button" data-sett="meme">${ic('i-gear')}Ayarlar</button></h2>
-    <div class="card mmeme">
-      ${deskHero('Cüzdan', R.value, `${nf(R.sol, 4)} SOL · başlangıç ${usd(R.start || 0)}`, R.pnl, R.start, left, ml, [['Pozisyon', String((R.positions || []).length)], ['Hedef', mm.tp_pct ? '%' + nf(+mm.tp_pct, 0) : '—'], ['Stop', mm.sl_pct ? '%' + nf(+mm.sl_pct, 0) : '—'], ['Fiyat etkisi', '≤%' + nf(+mm.max_slip || 2, 1)]])}
-      <p class="mnote">${ic('i-lock')}Jupiter ile alım-satım · KASA'ya dokunulmaz. ${st}${R.err ? ` <b class="dn">Uyarı: ${esc(R.err).slice(0, 110)}</b>` : ''}</p>
-      ${pos ? `<div class="mfeed">${pos}</div>` : ''}
-      ${feed ? `<div class="mfeed">${feed}</div>` : `<div class="empty">${ic('i-eye')}<div>${R.sol > 0 ? 'Henüz gerçek işlem yok; şartı tutan token bekleniyor' : 'MEME cüzdanına SOL gönderilince başlar'}</div></div>`}
-    </div>${memeScan()}`;
-}
 document.getElementById('masaBtn').onclick = () => showMasa(true);
 document.getElementById('closeMasa').onclick = () => showMasa(false);
 /* ---------- bulut: verilerin GitHub'la eşitlenme durumu (üst çubuktaki bulut simgesi) ----------
@@ -1023,8 +990,8 @@ async function syncReal(retry = true) {
 }
 /* ---------- Para aktarımı: TR ↔ Global ↔ KASA (USDT, Arbitrum One). İstek bulut ayar dosyasına yazılır, bot gönderir. ---------- */
 /* Uçlar: her kasanın simgesi, rengi ve kısa adı (kartlarda ve pencerede aynı standart) */
-const XEND = { tr: ['OKX TR', 'i-bank', 'e1'], g: ['OKX Global', 'i-globe', 'e2'], k: ['KASA', 'i-vault', 'e3'], m: ['MEME', 'i-flask', 'e4'] };
-const XDIR = { tr2g: ['tr', 'g', 'OKX TR uygulamasından'], g2tr: ['g', 'tr', 'TL\'ye çevrilir'], tr2k: ['tr', 'k', 'OKX TR uygulamasından'], g2k: ['g', 'k', 'Soğuk cüzdana'], g2m: ['g', 'm', 'SOL alınıp gönderilir'], m2g: ['m', 'g', 'SOL satılıp USDT olur'], k2g: ['k', 'g', 'Trust Wallet\'tan'], k2tr: ['k', 'tr', 'Trust Wallet\'tan'] };
+const XEND = { tr: ['OKX TR', 'i-bank', 'e1'], g: ['OKX Global', 'i-globe', 'e2'], k: ['KASA', 'i-vault', 'e3'] };
+const XDIR = { tr2g: ['tr', 'g', 'OKX TR uygulamasından'], g2tr: ['g', 'tr', 'TL\'ye çevrilir'], tr2k: ['tr', 'k', 'OKX TR uygulamasından'], g2k: ['g', 'k', 'Soğuk cüzdana'], k2g: ['k', 'g', 'Trust Wallet\'tan'], k2tr: ['k', 'tr', 'Trust Wallet\'tan'] };
 const xName = (d) => `${XEND[XDIR[d][0]][0]} → ${XEND[XDIR[d][1]][0]}`;
 const XST = { new: ['Sırada', 'i-clock', 'w'], sent: ['Yolda', 'i-out', 'w'], arriving: ['Ulaşıyor', 'i-in', 'w'], done: ['Tamam', 'i-check', 'ok'], failed: ['Olmadı', 'i-stop', 'bad'] };
 function xEnd(k) { const e = XEND[k]; return `<span class="xe ${e[2]}">${ic(e[1])}</span>`; }
@@ -1122,10 +1089,9 @@ let xfSrc = 'bos', USDTTRY = 0, xfId = '';
 function xKasalar(X) {
     const r = +(X?.usdtry || USDTTRY || 0), o = S?.okx || {};
     const trUsd = X?.tr_total != null ? +X.tr_total : (o.total_tl && r ? o.total_tl / r : null), gUsd = X?.g_val != null ? +X.g_val : null, kUsd = X?.kasa?.usd != null ? +X.kasa.usd : null;
-    const MR = S?.memer, mUsd = MR?.addr ? +MR.value || 0 : null;
-    const all = [trUsd, gUsd, kUsd].every(v => v != null) ? trUsd + gUsd + kUsd + (mUsd || 0) : null;
+    const all = [trUsd, gUsd, kUsd].every(v => v != null) ? trUsd + gUsd + kUsd : null;
     const cell = (k, u) => `<div>${xEnd(k)}<span>${XEND[k][0]}</span><b>${u == null ? '—' : '$' + nf(u, 2)}</b><small>${u != null && r ? tl(u * r, 0) : ''}</small></div>`;
-    return `<div class="xk${mUsd != null ? ' x4' : ''}">${cell('tr', trUsd)}${cell('g', gUsd)}${cell('k', kUsd)}${mUsd != null ? cell('m', mUsd) : ''}</div>
+    return `<div class="xk">${cell('tr', trUsd)}${cell('g', gUsd)}${cell('k', kUsd)}</div>
     ${all != null ? `<div class="xb"><span>Hepsi birlikte <b>$${nf(all, 2)}</b>${r ? ` · <b>${tl(all * r, 0)}</b>` : ''}</span>${X?.kasa ? `<span>KASA'da komisyon için <b>${nf(X.kasa.eth || 0, 4)} ETH</b></span>` : ''}</div>` : ''}`;
 }
 /** KASA'nın anahtarı sistemde yok: gönderimi Trust Wallet'ta sen onaylarsın. Bu sayfa tutarı ve adresi hazırlar. */
@@ -1188,20 +1154,18 @@ function openXfer(dir) {
     document.getElementById('qTitle').textContent = 'Para gönder';
     xfSrc = 'bos';
     xfId = 'x' + Date.now().toString(36);
-    const bal = (k) => { const o = S?.okx || {}; const u = k === 'tr' ? (X.tr_total ?? (o.total_tl && r ? o.total_tl / r : null)) : k === 'g' ? X.g_val : k === 'm' ? S?.memer?.value : X.kasa?.usd; return u == null ? '—' : '$' + nf(u, 2); };
-    // "Tümü": kaynaktan gönderilebilecek en fazla tutar (MEME: boş SOL − ağ payı; Global: fon hesabındaki boş USDT − ücret payı)
-    const MR = S?.memer, maxOf = () => {
+    const bal = (k) => { const o = S?.okx || {}; const u = k === 'tr' ? (X.tr_total ?? (o.total_tl && r ? o.total_tl / r : null)) : k === 'g' ? X.g_val : X.kasa?.usd; return u == null ? '—' : '$' + nf(u, 2); };
+    // "Tümü": kaynaktan gönderilebilecek en fazla tutar (Global: fon hesabındaki boş USDT − ücret payı; futures teminatı hariç)
+    const maxOf = () => {
         let v = null;
-        if (f === 'm' && MR)
-            v = Math.max(0, (+MR.sol - 0.02) * (+MR.solpx || 0) * 0.98);
-        else if (f === 'g' && X.g_fund != null)
+        if (f === 'g' && X.g_fund != null)
             v = Math.max(0, +X.g_fund - (t === 'tr' ? 0 : t === 'k' ? 0.2 : 0.1));
         if (v != null)
             v = Math.min(v, Math.max(0, (+X.daily_max || 1000) - (+X.day_sum || 0)));
         return v == null ? null : Math.floor(v * 100) / 100;
     };
     const mx = maxOf();
-    const mm = f === 'm' || t === 'm', fee = mm ? '~0,02 $ ağ ücreti + alım-satım ücreti' : t === 'k' ? '~0,003 $ ağ ücreti' : 'Ücretsiz (yedek yol ~0,003 $)', time_ = mm || t === 'k' ? 'Birkaç dakika' : 'Birkaç saniye – birkaç dakika';
+    const mm = false, fee = t === 'k' ? '~0,003 $ ağ ücreti' : 'Ücretsiz (yedek yol ~0,003 $)', time_ = mm || t === 'k' ? 'Birkaç dakika' : 'Birkaç saniye – birkaç dakika';
     const draw = () => {
         const tx = document.getElementById('qText'), cur = document.getElementById('xfAmt')?.value || '';
         tx.innerHTML = `<div class="xfs">
@@ -1216,8 +1180,6 @@ function openXfer(dir) {
         <div>${ic('i-flag')}<span>Günlük sınır</span><b>$${nf(X.day_sum || 0, 0)} / ${nf(X.daily_max || 1000, 0)}</b></div>
         ${dir === 'g2tr' ? `<div>${ic('i-info')}<span>Varınca</span><b>TL'ye çevrilip Nakit'e konur</b></div>` : ''}
         ${t === 'k' ? `<div>${ic('i-lock')}<span>Adres</span><b>0x0113…7db7 (sabit)</b></div>` : ''}
-        ${dir === 'g2m' ? `<div>${ic('i-info')}<span>Nasıl</span><b>Global fonundaki USDT ile SOL alınır, MEME'ye gider</b></div><div>${ic('i-lock')}<span>Adres</span><b>7Ymj…EKwN (sabit)</b></div>` : ''}
-        ${dir === 'm2g' ? `<div>${ic('i-info')}<span>Nasıl</span><b>SOL Global'e gider, satılıp USDT olur</b></div>` : ''}
       </div>
       <button class="btn primary xgo" id="xfGo">${ic('i-out')}Gönder</button></div>`;
         tx.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { document.getElementById('xfAmt').value = b.dataset.q; upd(); });
@@ -1289,15 +1251,6 @@ async function sendXfer(dir, retry = true) {
     }
     {
         const X = S?.xfer || {}, freeUsd = X.free_tl != null && USDTTRY ? Math.max(0, X.free_tl) / USDTTRY : null;
-        const MR = S?.memer;
-        if (dir === 'm2g' && MR && amt > Math.max(0, (MR.sol - 0.02) * (MR.solpx || 0))) {
-            toast(`MEME'de boşta ~$${nf(Math.max(0, (MR.sol - 0.02) * (MR.solpx || 0)), 2)} SOL var (tokenler hariç)`);
-            return;
-        }
-        if (dir === 'g2m' && !MR?.addr) {
-            toast('MEME cüzdanı bağlı değil');
-            return;
-        }
         if (dir.startsWith('g') && X.g_fund != null && amt > +X.g_fund) {
             toast(`OKX Global fon hesabında boşta ~$${nf(+X.g_fund, 2)} var (futures teminatı hariç); daha fazlası gönderilemez`);
             return;
@@ -1482,7 +1435,7 @@ document.addEventListener('click', e => {
     if (c)
         openCoin(c.dataset.coin);
 });
-/* ---------- Bölümler: Spot (OKX TR botu), Futures (kaldıraç masası), Memecoin, Kasalar — her biri ayrı ekranda ---------- */
+/* ---------- Bölümler: Spot (OKX TR botu), Futures (kaldıraç masası), Kasalar — her biri ayrı ekranda ---------- */
 let VIEW = 'spot';
 /** Tam ekran bir pencere (ayarlar, geçmiş, ajan masası) açılınca bölümler ve sekmeler gizlenir; kapanınca kalınan bölüme dönülür */
 function overlayView(on) {
@@ -1491,14 +1444,14 @@ function overlayView(on) {
         document.getElementById('ovw').hidden = true;
     else
         setTimeout(renderOverview, 0);
-    for (const id of ['futv', 'memev', 'kasav'])
+    for (const id of ['futv', 'kasav'])
         document.getElementById(id).hidden = true;
     if (!on && VIEW !== 'spot')
         setTimeout(() => showView(VIEW), 0);
 }
 function showView(v) {
     VIEW = v;
-    const m = { spot: 'mainv', fut: 'futv', meme: 'memev', kasa: 'kasav' };
+    const m = { spot: 'mainv', fut: 'futv', kasa: 'kasav' };
     for (const [k, id] of Object.entries(m))
         document.getElementById(id).hidden = k !== v;
     document.querySelectorAll('#deck button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
@@ -1526,23 +1479,15 @@ function renderDeck() {
         const R2 = S.levr;
         set('dkFut', R2?.on ? '$' + nf(R2.equity, 2) : 'kapalı');
     }
-    {
-        const R3 = S.memer;
-        set('dkMeme', R3?.on ? '$' + nf(R3.value, 2) : 'kapalı');
-    }
     if (X) {
         const a = [X.tr_total, X.g_val, X.kasa?.usd];
         if (a.every((v) => v != null))
-            set('dkKasa', '$' + nf(a.reduce((x, y) => x + y, 0) + (+S.memer?.value || 0), 0));
+            set('dkKasa', '$' + nf(a.reduce((x, y) => x + y, 0), 0));
     }
     renderOverview();
     if (VIEW === 'fut') {
         const b = document.getElementById('futBody');
         setH(b, renderLevR() || `<div class="empty">${ic('i-layers')}<div>Kaldıraç masası verisi bekleniyor</div></div>`);
-    }
-    if (VIEW === 'meme') {
-        const b = document.getElementById('memeBody');
-        setH(b, renderMemeR() || `<div class="empty">${ic('i-flask')}<div>Memecoin masası verisi bekleniyor</div></div>`);
     }
 }
 /** Ana sayfa üstü: bütün kasaların toplamı ve her masanın kâr/zararı ayrı ayrı (dolar ve TL) */
@@ -1566,7 +1511,7 @@ function renderOverview() {
     const el = document.getElementById('ovw');
     if (!el || !S)
         return;
-    const X = S.xfer, sp = S.strategies?.live, R = S.levr, M = S.memer, r = +(X?.usdtry || USDTTRY || 0);
+    const X = S.xfer, sp = S.strategies?.live, R = S.levr, r = +(X?.usdtry || USDTTRY || 0);
     if (document.getElementById('deck')?.hidden || !X || !sp || sp.locked || !r) {
         el.hidden = true;
         return;
@@ -1577,10 +1522,10 @@ function renderOverview() {
     /** USD tutarını seçili birimde yazar; gizliyse yıldız */
     const cv = (usd, d) => OV_HIDE ? '••••' : cur === 'try' ? tl(usd * r, d ?? 0) : cur === 'btc' ? '₿' + nf(usd / btcUsd, d ?? (Math.abs(usd / btcUsd) < 0.01 ? 6 : 4)) : '$' + nf(usd, d ?? 2);
     const sgv = (usd) => OV_HIDE ? '<b>••••</b>' : Math.abs(usd) < (cur === 'try' ? 0.01 : 0.005) ? '<b>±0</b>' : `<b class="${cls(usd)}">${usd < 0 ? '−' : '+'}${cv(Math.abs(usd), cur === 'try' ? 0 : undefined)}</b>`;
-    const parts = [['tr', 'Spot · OKX TR', 'i-bank', +X.tr_total || 0], ['g', 'Futures · Global', 'i-layers', +X.g_val || 0], ['m', 'Memecoin', 'i-flask', +M?.value || 0], ['k', 'Kasa', 'i-vault', +X.kasa?.usd || 0]];
+    const parts = [['tr', 'Spot', 'i-bank', +X.tr_total || 0], ['g', 'Futures', 'i-layers', +X.g_val || 0], ['k', 'Kasa', 'i-vault', +X.kasa?.usd || 0]];
     const tot = [X.tr_total, X.g_val, X.kasa?.usd].every((v) => v != null) ? parts.reduce((a, p) => a + p[3], 0) : null;
-    const sP = (liveEquity(sp) - sp.start_cash) / r, fP = R?.funded ? +R.pnl || 0 : 0, mP = M?.start ? +M.pnl || 0 : 0, all = sP + fP + mP;
-    const pl = { tr: sgv(sP), g: R?.on || R?.funded ? sgv(fP) : '<b>kapalı</b>', m: M?.on || M?.start ? sgv(mP) : '<b>kapalı</b>', k: '<b class="mu">yedek</b>' };
+    const sP = (liveEquity(sp) - sp.start_cash) / r, fP = R?.funded ? +R.pnl || 0 : 0, all = sP + fP;
+    const pl = { tr: sgv(sP), g: R?.on || R?.funded ? sgv(fP) : '<b>kapalı</b>', k: '<b class="mu">yedek</b>' };
     const sum = Math.max(1, tot || 0), bar = parts.filter(p => p[3] > 0).map(p => `<i class="p${p[0]}" style="width:${(p[3] / sum * 100).toFixed(2)}%"></i>`).join('');
     const second = OV_HIDE || tot == null ? '' : cur === 'try' ? '$' + nf(tot, 2) : tl(tot * r, 0);
     setH(el, `<div class="ob"><div class="oh">${ic('i-wallet')}<b>Toplam varlık</b>
@@ -2147,23 +2092,9 @@ const SECTIONS = [
             ['lev.sl_atr', 'Zarar durdur mesafesi', 'Saatlik oynaklığın (ATR) katı', 'kat', .5, 1, 5, 1],
             ['lev.tp_atr', 'Kâr al mesafesi', 'Saatlik oynaklığın (ATR) katı', 'kat', .5, 1, 10, 1]
         ] },
-    { t: 'Memecoin', i: 'i-flask', sw: [['meme.real', 'Gerçek parayla işlem', 'Kararlar MEME cüzdanında gerçek parayla uygulanır']], f: [
-            ['meme.max_loss', 'En fazla kayıp', 'Toplam zarar buna ulaşınca masa durur, tokenler satılır', '$', 5, 1, 10000, 0],
-            ['meme.max_slip', 'En fazla fiyat etkisi', 'Bunu aşan alım reddedilir', '%', .5, .5, 10, 1],
-            ['meme.size_pct', 'İşlem büyüklüğü', 'Kasanın', '%', 1, 1, 50, 0],
-            ['meme.max_pos', 'En fazla pozisyon', 'Aynı anda tutulan token', 'adet', 1, 1, 10, 0],
-            ['meme.min_liq', 'En az likidite', 'Havuzu bundan küçük token alınmaz', '$', 5000, 5000, 1e7, 0],
-            ['meme.tp_pct', 'Kâr al', 'Bu kâra ulaşınca satış başlar', '%', 5, 5, 1000, 0],
-            ['meme.tp_part', 'Kâr alda satılan kısım', 'Kalanı iz süren stopla yükselişte tutulur; 100 = hepsi satılır', '%', 10, 10, 100, 0],
-            ['meme.sl_pct', 'Zarar durdur', 'Bu zararda satılır', '%', 1, 3, 50, 0],
-            ['meme.trail_from', 'İz süren stop başlangıcı', 'Bu kâra ulaşınca devreye girer', '%', 5, 5, 200, 0],
-            ['meme.trail_pct', 'İz süren stop', 'Zirveden bu kadar düşünce satılır', '%', 1, 3, 50, 0],
-            ['meme.max_m5', 'Kovalamama sınırı', 'Son 5 dk\'da bundan fazla yükselmişse alınmaz', '%', 1, 2, 30, 0],
-            ['meme.max_hold_h', 'En uzun tutma', 'Bu süre dolunca satılır', 'saat', 1, 1, 72, 0]
-        ] },
     { t: 'Aktarım ve KASA', i: 'i-vault', f: [
             ['xfer.daily_max', 'Günlük aktarım sınırı', 'Bir günde borsalardan en fazla gönderilecek', '$', 100, 10, 100000, 0],
-            ['xfer.sweep_pct', 'Kâr süpürme oranı', 'Futures ve memecoin kârının bu kadarı KASA\'ya gider; 0 kapalı', '%', 5, 0, 100, 0],
+            ['xfer.sweep_pct', 'Kâr süpürme oranı', 'Futures kârının bu kadarı KASA\'ya gider; 0 kapalı', '%', 5, 0, 100, 0],
             ['xfer.sweep_days', 'Süpürme aralığı', 'Bu kadar günde bir', 'gün', 1, 1, 90, 0],
             ['xfer.sweep_min', 'En az süpürme kârı', 'Kâr bundan azsa gönderilmez', '$', 5, 1, 10000, 0]
         ] },
@@ -2210,10 +2141,9 @@ const SUMS = {
     dip: () => `Düşüş ${pc(draft.dip.dip_pct)} · kâr ${pc(draft.dip.take_profit_pct)} · en çok ${draft.dip.max_hold_hours} saat`,
     trend: () => `İz süren stop ${pc(draft.trend.trailing_pct)}`,
     'Futures': () => { const l = draft.lev || {}; return `${l.real ? 'Gerçek açık' : 'Gerçek kapalı'} · bütçe $${nf(l.real_budget ?? 30, 0)} · en fazla $${nf(l.max_loss ?? 10, 0)} kayıp · ${l.real_lev ?? 2}x`; },
-    'Memecoin': () => { const m = draft.meme || {}; return `${m.real ? 'Gerçek açık' : 'Gerçek kapalı'} · kasanın ${pc(m.size_pct ?? 10)}'u · kâr ${pc(m.tp_pct ?? 30)}${(m.tp_part ?? 100) < 100 ? ` (${pc(m.tp_part)}'i)` : ''} · zarar ${pc(m.sl_pct ?? 15)}`; },
     'Aktarım ve KASA': () => { const x = draft.xfer || {}; return `Günde en çok $${nf(x.daily_max || 1000, 0)} · ${+x.sweep_pct > 0 ? `kârın ${pc(x.sweep_pct)}'i ${x.sweep_days} günde bir KASA'ya` : 'kâr süpürme kapalı'}`; }
 };
-const SEC_C = { 'Futures': 'red', 'Memecoin': 'violet', 'Kasa': 'teal', 'Kasadan ekleme': 'teal', 'Koruma': 'red', 'Kâr hedefi': 'green', 'Aktarım ve KASA': 'amber' };
+const SEC_C = { 'Futures': 'red', 'Kasa': 'teal', 'Kasadan ekleme': 'teal', 'Koruma': 'red', 'Kâr hedefi': 'green', 'Aktarım ve KASA': 'amber' };
 function field([k, label, hint, u, step, min, max, dec]) {
     const v = P(draft, k), h = typeof hint === 'function' ? hint() : hint;
     return `<div class="field" data-k="${k}"><div class="lb"><b>${label}</b><span class="h">${h}</span><em></em></div>
@@ -2431,9 +2361,9 @@ function renderConn() {
         };
 }
 let STAB = 'spot';
-const STABS = [['spot', 'i-coins', 'Spot'], ['fut', 'i-layers', 'Futures'], ['meme', 'i-flask', 'Memecoin'], ['kasa', 'i-vault', 'Kasalar'], ['app', 'i-phone', 'Uygulama']];
+const STABS = [['spot', 'i-coins', 'Spot'], ['fut', 'i-layers', 'Futures'], ['kasa', 'i-vault', 'Kasalar'], ['app', 'i-phone', 'Uygulama']];
 const AUTO_OPEN = new Set();
-const SEC_TAB = { 'Kasa': 'spot', 'Kasadan ekleme': 'spot', 'Koruma': 'spot', 'Kâr hedefi': 'spot', 'Futures': 'fut', 'Memecoin': 'meme', 'Aktarım ve KASA': 'kasa' };
+const SEC_TAB = { 'Kasa': 'spot', 'Kasadan ekleme': 'spot', 'Koruma': 'spot', 'Kâr hedefi': 'spot', 'Futures': 'fut', 'Aktarım ve KASA': 'kasa' };
 function openSettingsTab(t) { STAB = t; document.getElementById('openSet').click(); }
 function renderForm() {
     delete draft._bad;
@@ -2476,7 +2406,6 @@ function renderForm() {
         h += accOpen(sec.t, sec.t, sec.i, SEC_C[sec.t], SUMS[sec.t](), secDirty([...ff.map(x => x[0]), ...(tg ? ['target.on', 'target.mode'] : []), ...(sec.sw || []).map(x => x[0])])) + `<div class="card">`
             + (sec.sw || []).map(([k, a, b]) => `<div style="margin-bottom:8px">${swRow('sw_' + k.replace('.', '_'), !!P(draft, k), a, b)}</div>`).join('')
             + (sec.t === 'Futures' ? futExtra() : '')
-            + (sec.t === 'Memecoin' ? memeExtra() : '')
             + (tg ? `<div style="margin-bottom:4px">${swRow('tgtSw', !!draft.target.on, 'Hedefte dur', 'Hedefte her şey satılır, bot durur')}</div>
         <div class="field"><div class="lb"><b>Hedef türü</b><span>${draft.target.mode === 'total' ? 'Bot + kasadaki yedek para toplamı' : 'Sadece kâr (başlangıç parasının üstü)'}</span></div>
         <div class="seg" id="tgtMode"><button type="button" data-m="profit" class="${draft.target.mode !== 'total' ? 'on' : ''}">Kâr</button><button type="button" data-m="total" class="${draft.target.mode === 'total' ? 'on' : ''}">Kasa dahil</button></div></div>` : '')
@@ -2535,9 +2464,6 @@ function renderForm() {
             if (b)
                 b.onclick = () => { SETP(draft, k, !P(draft, k)); renderForm(); };
         }
-    const mrs = document.getElementById('memeReset');
-    if (mrs)
-        mrs.onclick = () => { SETP(draft, 'meme.real_reset', Date.now()); renderForm(); };
     const rst = document.getElementById('levReset');
     if (rst)
         rst.onclick = () => { SETP(draft, 'lev.real_reset', Date.now()); renderForm(); };
@@ -2603,21 +2529,6 @@ function futExtra() {
         h += `<div class="warn">${ic('i-info')}<div>En fazla kayıp bütçeden büyük; bütçeden fazlası zaten kaybedilemez.</div></div>`;
     if (R?.dead)
         h += `<div style="margin:4px 0 8px"><button class="btn xsync" type="button" id="levReset">${ic('i-refresh')}Yeniden başlat</button><p class="hint">Masa durdu: ${String(R.dead).replace(/</g, '&lt;')}. Yeniden başlatınca kayıp sayacı sıfırlanır ve bütçe fon hesabından yeniden tamamlanır.</p></div>`;
-    return h;
-}
-function memeExtra() {
-    const R = S?.memer, m = draft.meme || {};
-    let h = '';
-    if (!m.wallet)
-        h += `<div class="hint" style="margin:2px 2px 10px">MEME cüzdanı tanımlı değil; gerçek mod çalışmaz.</div>`;
-    else if (R && !R.addr && R.err)
-        h += `<div class="warn">${ic('i-info')}<div>${String(R.err).replace(/</g, '&lt;')}</div></div>`;
-    else
-        h += `<div class="hint" style="margin:2px 2px 10px">MEME cüzdanı <b>${m.wallet.slice(0, 4)}…${m.wallet.slice(-4)}</b>${R?.addr ? ' · bağlı' : ''}. Yalnız bu cüzdandaki parayla işlem yapılır; KASA'ya dokunulmaz.</div>`;
-    if (m.real && !orig?.meme?.real)
-        h += `<div class="warn">${ic('i-info')}<div>Kaydedince MEME cüzdanındaki SOL ile gerçek alım-satım başlar. Her girişte boş SOL'un %${m.size_pct}'i kullanılır; en fazla $${nf(m.max_loss, 0)} kayıpta durur.</div></div>`;
-    if (R?.dead)
-        h += `<div style="margin:4px 0 8px"><button class="btn xsync" type="button" id="memeReset">${ic('i-refresh')}Yeniden başlat</button><p class="hint">Masa durdu: ${String(R.dead).replace(/</g, '&lt;')}. Yeniden başlatınca kayıp sayacı sıfırlanır.</p></div>`;
     return h;
 }
 /** Kademe merdiveni: ayarlara göre bir coinde her kademenin nerede, ne kadarla alınıp nerede satılacağı */
@@ -2689,8 +2600,6 @@ async function loadSettings() {
         orig.grid.vol_filter = 2;
     if (orig)
         orig.lev = { on: true, bank: 100, lev: 3, risk_pct: 1, max_pos: 3, sl_atr: 2, tp_atr: 4, daily_loss_pct: 5, fee_pct: .05, slip_pct: .05, coins: ['BTC', 'ETH', 'SOL', 'XRP', 'DOGE', 'HYPE', 'ZEC', 'PEPE'], real: false, real_budget: 30, real_lev: 2, max_loss: 10, real_reset: 0, brk_h: 20, trend_h: 200, trend_on: true, ...(orig.lev || {}) };
-    if (orig)
-        orig.meme = { on: true, bank: 100, size_pct: 10, max_pos: 5, min_liq: 20000, max_fdv: 5000000, min_age_min: 10, max_age_h: 72, tp_pct: 30, tp_part: 100, trail_from: 15, trail_pct: 12, sl_pct: 15, max_hold_h: 4, slip_pct: 1, fee_pct: .5, max_m5: 8, wallet: '', real: false, max_loss: 10, max_slip: 2, real_reset: 0, ...(orig.meme || {}) };
     if (orig)
         orig.xfer = { daily_max: 1000, sweep_on: true, sweep_pct: 50, sweep_days: 7, sweep_min: 10, ...(orig.xfer || {}) };
     if (orig && orig.grid && orig.grid.trend_filter_pct == null)
