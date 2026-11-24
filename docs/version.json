@@ -1,10 +1,17 @@
 {
-  "version": "1.87.9",
+  "version": "1.88.0",
   "date": "2026-11-25",
   "notes": [
-    "Aynı yönde bekleyen bir aktarım varken yenisi gönderilmez (üst üste basınca para iki kez gitmesin)"
+    "Global'de eldeki coinler Spot'taki gibi (simge, kâr al / zarar çubuğu, kaydırarak Sat) · Global spot'a ayrılan para elle aktarımlara ve futures'a gitmez · bot saniyede bir kontrol eder · tüm geçmişi silme"
   ],
   "history": [
+    {
+      "version": "1.88.0",
+      "date": "2026-11-25",
+      "notes": [
+        "Global'de eldeki coinler Spot'taki gibi (simge, kâr al / zarar çubuğu, kaydırarak Sat) · Global spot'a ayrılan para elle aktarımlara ve futures'a gitmez · bot saniyede bir kontrol eder · tüm geçmişi silme"
+      ]
+    },
     {
       "version": "1.87.9",
       "date": "2026-11-25",
@@ -101,13 +108,6 @@
       "date": "2026-11-24",
       "notes": [
         "Toplu kâr al anlık: hedefe değdiği an satılır (mum kapanışı beklenmez)"
-      ]
-    },
-    {
-      "version": "1.84.0",
-      "date": "2026-11-24",
-      "notes": [
-        "Spot: Toplu kâr al — açıkken kademeler tek tek satılmaz, fiyat bütün kademelerin alış ortalamasının %X üstüne çıkınca hepsi birden satılır (borsadaki korumalar yalnız zarar durdur olarak yeniden kurulur); kademe merdiveninde satış yeri"
       ]
     }
   ]

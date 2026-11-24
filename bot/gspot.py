@@ -52,7 +52,7 @@ SLIP = 0.0005
 MIN_ORDER = 5.0             # $: bundan küçük kademe alınmaz
 BPH = 4                     # saatte 4 mum (15 dk)
 WARM = 60 * BPH             # 60 saatlik veri birikmeden alım yapılmaz
-EVERY = 2.5                 # fiyat okuma aralığı (sn)
+EVERY = 1.5                 # fiyat okuma aralığı (sn)
 # SOL: memecoin aktarımı Global'de SOL alıp satar; Global spot SOL tutmaz (aynı coine iki iş dokunmasın)
 STABLE = {"SOL", "USDT", "USDC", "DAI", "FDUSD", "TUSD", "PYUSD", "USDG", "RLUSD", "USDE", "EURT", "EUR", "XAUT", "PAXG",
           "BUSD", "USDP", "USD1", "USDQ", "SUSDE", "WBTC", "STETH", "WETH", "WSTETH", "CBBTC"}
@@ -517,6 +517,7 @@ def _apply_results(R):
 
 
 PHYS = {"v": 0.0}  # Global spot'un işlem hesabındaki USDT'si: futures masası kendi bakiyesinden bunu düşer
+FUNDRES = {"v": 0.0}  # Global spot'un fon hesabında bekleyen (henüz kullanmadığı) parası: elle aktarımlar buna dokunmaz
 
 
 def _send(R, acts):
@@ -567,6 +568,8 @@ def step(state, S, N=None):
     P = state.get("gspot")
     R = state.get("gspotr")
     PHYS["v"] = max(0.0, (R or {}).get("phys", 0.0))  # futures masası her eşitlemede bunu kendi bakiyesinden düşer
+    # gerçek masa açıkken fon hesabında onun için ayrılan: boştaki nakdi − işlem hesabına geçirdiği
+    FUNDRES["v"] = max(0.0, (R or {}).get("cash", 0.0) - PHYS["v"]) if (R and c["real"]) else 0.0
     if not c["on"] and not (R and R["positions"]):
         return
     if not P:
@@ -667,4 +670,4 @@ def public(G, snap_bid=None):
             "equity_series": G["equity"][-200:], "sells": len(sells), "realized": round(sum(t["pnl"] for t in sells), 2),
             "win_rate": round(len(wins) / len(sells) * 100) if sells else None, "watch": G.get("watch"),
             "fav": config.top_earners(G["trades"]), "warm": warm, "uni": n, "stats": G["stats"],
-            "phys": round(max(0.0, G.get("phys", 0.0)), 2), "nousd": bool(G.get("cool") and G.get("nousd_ts"))}
+            "phys": round(max(0.0, G.get("phys", 0.0)), 2), "fund_res": round(max(0.0, G["cash"] - G.get("phys", 0.0)), 2), "nousd": bool(G.get("cool") and G.get("nousd_ts"))}

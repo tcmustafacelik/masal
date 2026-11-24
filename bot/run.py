@@ -240,14 +240,23 @@ def clear_old(state, S):
         d = state.get(k) or {}
         if d:
             d["log"] = d.get("log", [])[-5:]
+    # "Tüm geçmişi sil": işlem geçmişleri de silinir (bakiyeler, açık pozisyonlar ve toplam kâr/zarar korunur)
+    full = int(S.get("clear_all") or 0)
+    full = full and full > state.get("cleared_all_at", 0)
+    if full:
+        state["cleared_all_at"] = int(S["clear_all"])
+        L["trades"], L["coin_arch"] = [], {}
+        for k in ("meme", "lev", "levr", "memer", "gspot", "gspotr"):
+            if state.get(k):
+                state[k]["trades"] = []
     try:
         from . import kaldirac_gercek
-        kaldirac_gercek.trim_log()
+        kaldirac_gercek.trim_log(bool(full))
         from . import meme_gercek
-        meme_gercek.trim_log()
+        meme_gercek.trim_log(bool(full))
     except Exception:
         pass
-    print("Eski kayıtlar temizlendi")
+    print("Eski kayıtlar temizlendi" + (" (işlem geçmişi dahil)" if full else ""))
 
 
 def desk_commands(state, S):

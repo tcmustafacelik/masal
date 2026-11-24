@@ -288,7 +288,8 @@ def _sync(D, R, cfg):
         if R["day_eq"]:
             R["day_eq"] += ft["amt"]
     elif cfg.get("real") and not R["dead"] and R["funded"] < want:
-        free = D.ex.funding("USDT")
+        from . import gspot
+        free = max(0.0, D.ex.funding("USDT") - gspot.FUNDRES["v"])  # Global spot'a ayrılan para futures bütçesine alınmaz
         base = eq if R["funded"] <= 0 else R["funded"]
         amt = min(max(0.0, want - base), free)
         if R["funded"] <= 0 and amt < 1 and base >= 1:
@@ -576,11 +577,14 @@ def step(state, S, paper_cfg, N=None):
         _LOCK.release()
 
 
-def trim_log():
+def trim_log(trades=False):
+    """Eski kayıtları temizle: günlük son 5 satırına iner; trades=True ise işlem geçmişi de silinir (bakiye ve kâr/zarar korunur)."""
     if _LOCK.acquire(timeout=1):
         try:
             if _W["R"]:
                 del _W["R"]["log"][:-5]
+                if trades:
+                    _W["R"]["trades"] = []
         finally:
             _LOCK.release()
 

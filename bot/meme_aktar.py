@@ -135,7 +135,8 @@ def _g2m(g, job, X, N, note):
                         job["ordId"] = o["ordId"]
             if not job.get("ordId"):
                 if not job.get("moved"):
-                    if g.funding("USDT") < usd - 0.01:
+                    from . import gspot
+                    if g.funding("USDT") - gspot.FUNDRES["v"] < usd - 0.01:  # Global spot'a ayrılan para kullanılmaz
                         if job.get("wait") and time.time() * 1000 - job["ts"] < 3 * 3600_000:
                             job["msg"] = f"{ {'k': 'KASA', 'tr': 'OKX TR'}.get(job.get('via'), 'kaynak')}'dan Global'e gelmesi bekleniyor"
                             return

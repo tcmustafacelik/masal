@@ -20,6 +20,7 @@ DEFAULTS = {
     "liquidate": 0,         # zaman damgası; yeniyse gerçek hesaptaki her şey satılır
     "sell": {"ts": 0, "insts": []},
     "clear": 0,  # zaman damgası yeniyse eski kayıtlar (akış, aktarım geçmişi, masa günlükleri, bildirimler) temizlenir
+    "clear_all": 0,  # zaman damgası yeniyse (clear ile birlikte) işlem geçmişleri de silinir
     "xfer": {"daily_max": 1000, "sweep_on": True, "sweep_pct": 50, "sweep_days": 7, "sweep_min": 10},  # para aktarımı ve kâr süpürme
     "dust": [],
     "gspot": {"on": True, "real": False, "bank": 100.0, "budget": 50.0, "max_loss": 15.0, "lot_pct": 10.0, "lot2_pct": 45.0,
@@ -92,7 +93,7 @@ def _merge(base, extra, bad=None, path=""):
 
 _GOOD = {}
 # Bozuk gelirse varsayılanı zararsız olan alanlar (görünüm, bildirim, tek seferlik istek listeleri)
-_SOFT = {"ban", "lang", "theme", "accent", "notify", "dust", "buy", "desk_cmd", "xfer_cancel", "xfer_req", "sell", "convert", "clear", "liquidate"}
+_SOFT = {"clear_all", "ban", "lang", "theme", "accent", "notify", "dust", "buy", "desk_cmd", "xfer_cancel", "xfer_req", "sell", "convert", "clear", "liquidate"}
 
 
 def _get(d, path):

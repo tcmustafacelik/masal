@@ -174,9 +174,16 @@ def _free_tr(ex, state):
 def _prepare(ex, side, amt, job):
     """Kaynakta `amt` USDT'yi fon hesabında hazırlar (TR'de gerekirse TL → USDT çevirir)."""
     need = amt
-    f = ex.funding("USDT")
+    res = 0.0
+    if side == "g" and job.get("src") != "kar":
+        from . import gspot
+        res = gspot.FUNDRES["v"]  # Global spot'un fon hesabında bekleyen parası elle aktarımda kullanılmaz
+    f = ex.funding("USDT") - res
     if f >= need:
         return True
+    if res and ex.funding("USDT") >= need:
+        job["msg"] = f"Global fon hesabındaki {res:.2f} $ Global spot masasına ayrılmış; gönderilebilir {max(0.0, f):.2f} $ (masanın bütçesini düşürürsen açılır)"
+        return False
     if ex.funding("USDT", total=True) >= need:
         # Para fon hesabında ama borsa henüz çekime açmamış (OKX TR'de yeni yatırılan TL ile alınanlarda bekleme süresi olur)
         job["msg"] = f"para {NAMES[side]} fon hesabında hazır; borsa çekim kilidi kalkınca otomatik gönderilecek"
@@ -722,7 +729,8 @@ def _balances(C, o, bot_cash):
     if C["g"].ok:
         try:
             out["g_val"] = round(float(C["g"].req("GET", "/api/v5/asset/asset-valuation?ccy=USDT")[0].get("totalBal") or 0), 2)
-            out["g_fund"] = round(C["g"].funding("USDT"), 2)  # gönderilebilir: fon hesabındaki boş USDT (futures teminatı hariç)
+            from . import gspot
+            out["g_fund"] = round(max(0.0, C["g"].funding("USDT") - gspot.FUNDRES["v"]), 2)  # gönderilebilir: fon hesabındaki boş USDT (futures teminatı hariç)
         except Exception as e:
             print("Global bakiye okunamadı:", e)
     try:

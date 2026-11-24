@@ -17,7 +17,7 @@ import traceback
 from . import run
 
 DURATION = int(os.environ.get("LOOP_MIN", "50")) * 60
-STEP = int(os.environ.get("LOOP_STEP", "2"))  # tur aralığı (sn)
+STEP = int(os.environ.get("LOOP_STEP", "1"))  # tur aralığı (sn): fiyat ve emir kontrolü saniyede bir
 HEARTBEAT = 10  # sn: fiyatla değişen kâr/zarar en geç bu sürede ekrana gider (işlem olunca hemen gönderilir)
 
 

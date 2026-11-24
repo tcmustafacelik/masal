@@ -1,4 +1,4 @@
-const APP_VERSION='1.87.9';
+const APP_VERSION='1.88.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (kehribar)
@@ -222,7 +222,7 @@ function render(){
      :real?`<span class="mi">${ic('i-coins')}</span><span><b>Gerçek</b><small>OKX TR'de</small></span>`
      :`<span class="mi">${ic('i-flask')}</span><span><b>Deneme</b><small>Emir gitmez</small></span>`);
    m.onclick=()=>document.getElementById('openSet').click()}
-  setH(document.getElementById('foot'),'Fiyatlar uygulama açıkken OKX TR\'den anlık güncellenir; bot kesintisiz çalışır, yaklaşık 2 saniyede bir kontrol eder.<br>'+(L&&L.armed?'Ekrandaki rakamlar OKX TR hesabındaki gerçek işlemlerdir.':'Gerçek para kullanılmıyor; tüm işlemler sanal.'));
+  setH(document.getElementById('foot'),'Fiyatlar uygulama açıkken OKX TR\'den anlık güncellenir; bot kesintisiz çalışır, saniyede bir kontrol eder.<br>'+(L&&L.armed?'Ekrandaki rakamlar OKX TR hesabındaki gerçek işlemlerdir.':'Gerçek para kullanılmıyor; tüm işlemler sanal.'));
   if(S.strategies.live&&sel!=='live')sel='live'; // sanal stratejiler kapalı: her zaman gerçek hesap
   const x=S.strategies[sel];
   const locked=!!x.locked;
@@ -272,7 +272,7 @@ function gloss(k: string): [string, string] {
   const L=S?.strategies?.live,c=(L&&!L.locked&&L.cfg)||null;
   const step=c?pp(c.step):'%1,5',tp=c?pp(c.lot_tp):'%4',stop=c?pp(c.stop):'%12',ml=c?c.max_lots:4,mc=c?c.max_coins:20,lot=c?tl(c.lot,0):'bir kademe',use=c?pp(c.max_use,0):'%40',cf=c?.coin_filter?pp(c.coin_filter):'%1',qt=S?.settings?.quote||S?.okx?.quote||'USDT';
   const G={
-    nasil:['Bot nasıl alıp satar?',`${c?.instant?'<p>Bot <b>2 saniyede bir</b> fiyatlara bakar; fiyat alım seviyesine değdiği an alır. Alım seviyesi son kapanan 15 dakikalık mumlara göre hesaplanır.</p>':'<p>Bot <b>2 saniyede bir</b> piyasaya bakar, kararını <b>15 dakikalık mum</b> kapanınca verir.</p>'}
+    nasil:['Bot nasıl alıp satar?',`${c?.instant?'<p>Bot <b>saniyede bir</b> fiyatlara bakar; fiyat alım seviyesine değdiği an alır. Alım seviyesi son kapanan 15 dakikalık mumlara göre hesaplanır.</p>':'<p>Bot <b>2 saniyede bir</b> piyasaya bakar, kararını <b>15 dakikalık mum</b> kapanınca verir.</p>'}
       <ul><li><b>Alım:</b> Bir coin son ${c?.sma_h||20} saatin ortalamasından <b>${step}</b> aşağı inince ${lot}'lik bir parça (kademe) alır.</li>
       <li><b>Düşerse:</b> ${step} düşüşte 2. kademeyi${c?.step3&&c.step3>c.step?`, ${pp(c.step3)} daha düşüşte 3. kademeyi`:''} alır; bir coinde en fazla <b>${ml}</b> kademe.${c&&((c.lot2??1)<1||(c.lot3??1)<1)?` Kademe tutarları: ${tl(c.lot,0)} → ${tl(c.lot*(c.lot2??1),0)} → ${tl(c.lot*(c.lot3??1),0)}.`:''}</li>
       <li><b>Satış:</b> Her kademe kendi alış fiyatının <b>${tp}</b> üstüne çıkınca ayrı satılır.</li>
@@ -452,7 +452,8 @@ document.addEventListener('click',e=>{const t=(e.target as HTMLElement).closest?
 /** Global spot masası (OKX Global, USDT pariteleri, kademeli strateji). Gerçek mod açıksa ya da gerçek masada coin
  *  varsa gerçek masa, değilse deneme masası gösterilir; alım adayları ve favoriler deneme masasının taramasından. */
 /** Gerçek Global masasında borsadaki gerçek para: kendi USDT'si + eldeki coinlerin değeri (bütçe değil) */
-const gReal=(G: any)=>(+G?.phys||0)+((G?.positions||[]) as any[]).reduce((a,p)=>a+(+p.val||0),0);
+const gReal=(G: any)=>(+G?.phys||0)+(+G?.fund_res||0)+((G?.positions||[]) as any[]).reduce((a,p)=>a+(+p.val||0),0);
+const sgnU=(v: number)=>(v<0?'−':'+')+'$'+nf(Math.abs(v),2);
 function renderGspot(): string {
   const gs: any = (orig || S?.settings as any)?.gspot || {}, P: any = (S as any)?.gspot, RR: any = (S as any)?.gspotr;
   const real = !!(RR && (gs.real || (RR.positions || []).length)), G: any = real ? RR : P, desk = real ? 'gspotr' : 'gspot';
@@ -463,26 +464,35 @@ function renderGspot(): string {
   const usd = (v: number, d = 2) => '$' + nf(v, d), esc = escH, tp = +(gs.lot_tp_pct ?? 3.5);
   const pf = (v: number) => nf(v, v >= 100 ? 2 : v >= 1 ? 4 : Math.min(8, 2 - Math.floor(Math.log10(v || 1))));
   const ml = real ? +(gs.max_loss ?? 15) : 0, left = real ? Math.max(0, ml + Math.min(0, G.pnl)) : 0;
-  const pos = (G.positions || []).map((p: any) => {const g = p.cost ? p.pnl / p.cost * 100 : 0;
-    return `<div class="fr"><time>${masaClock(p.ts)}</time><em class="ft al">${p.lots} KDM</em><div><span class="fh"><b>${esc(p.sym)}</b> ${usd(p.val)} <span class="${cls(p.pnl) || 'up'}">${spc(g, 1)}</span></span><small>${p.pnl < 0 ? '−' : '+'}${usd(Math.abs(p.pnl))} · maliyet ${usd(p.cost)} · ort. ${pf(p.avg)} · şimdi ${pf(p.px)}${p.pending ? ' · emir yolda' : ''}</small></div>${deskBtn(desk, p.inst, 'Sat')}</div>`}).join('');
+  // Eldeki coinler: Spot ekranındaki satırın aynısı (coin simgesi, alış → şimdi, kâr al / zarar sınırı çubuğu, sola kaydır: Sat)
+  const tpP = tp / 100, slP = +(gs.stop_pct ?? 50) / 100;
+  const pos = (G.positions || []).map((p: any) => {const g = p.cost ? p.pnl / p.cost * 100 : 0, sl = p.avg * (1 - slP), tpx = p.avg * (1 + tpP);
+    const k = (v: number) => Math.max(0, Math.min(100, (v - sl) / (tpx - sl) * 100)), busy = p.pending || (DESK_BUSY[desk + ':' + p.inst] && Date.now() - DESK_BUSY[desk + ':' + p.inst] < 60000);
+    const row = `<div class="row pos swc">${cico(p.inst)}
+      <div class="mid"><b><span class="sy">${esc(p.sym)}</span>${pq(p.inst)}${p.lots > 1 ? `<i class="kd">${p.lots} kademe</i>` : ''}</b><span>Alış ${pf(p.avg)} → şimdi ${pf(p.px)}<br>${ago(p.ts)} alındı · maliyet ${usd(p.cost)}</span>
+        <div class="rng"><i class="av" style="left:${k(p.avg).toFixed(1)}%"></i><i class="mk ${cls(p.pnl)}" style="left:${k(p.px).toFixed(1)}%"></i></div>
+        <div class="rngl"><em class="dn">Zarar sınırı ${pf(sl)}</em><em class="up">Kâr al ${pf(tpx)}</em></div></div>
+      <div class="end"><b>${usd(p.val)}</b>${busy ? `<span class="sellst"><i class="spn"></i>Satılıyor</span>` : `<span class="pill ${cls(p.pnl) || 'z'}"><i>${p.pnl >= 0 ? '▲' : '▼'}</i>${usd(Math.abs(p.pnl))}</span><span class="est ${cls(p.pnl)}">${spc(g, 1)}</span>`}</div></div>`;
+    return `<div class="swr${swOpen === 'g:' + p.inst ? ' open' : ''}${busy ? ' busy' : ''}" data-i="g:${esc(p.inst)}"><button class="swb" type="button" data-desk="${desk}" data-sym="${esc(p.inst)}">${ic('i-sell')}${busy ? 'Satılıyor' : 'Sat'}</button>${row}</div>`}).join('');
   const feed = (G.log || []).slice(0, 15).map(([ts, k, t]: [number, string, string]) =>
     `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : /^HATA/.test(t) ? 'err' : 'not'}">${k === 'buy' ? 'AL' : k === 'exit' ? 'SAT' : k === 'risk' ? (/^HATA/.test(t) ? 'HATA' : 'ENGEL') : 'BİLGİ'}</em><div>${feedTxt(String(t).replace(/^(?:AL|SAT|HATA|ENGEL:?|DUR:) ?/, ''))}</div></div>`).join('');
   const full = (G.positions || []).length >= +(gs.max_coins ?? 5);
   const W = (P?.watch || []).slice(0, 8).map((w: any) => {const d = w.g, ok = d <= 0 && !w.f && (w.h || !full), near = Math.max(4, Math.min(100, 100 - Math.max(0, d) * 12));
     return `<div class="wr ${ok ? 'wu' : 'wd'}"><div><b>${esc(sym(w.i))}</b><em>${w.f ? 'FİLTRE' : ok ? 'ŞART TAMAM' : d <= 0 && full && !w.h ? 'COİN SINIRI' : w.h ? (w.h + 1) + '. KDM' : 'ADAY'}</em></div><div><span>${pf(w.p)}</span><small>${d <= 0 ? 'hedefte' : 'hedefe %' + nf(d, 1)}</small></div><i style="width:${(ok ? 100 : near).toFixed(0)}%"></i></div>`}).join('');
   const warm = P && P.uni && P.warm < P.uni ? `<p class="hint">Mumlar yükleniyor: ${P.warm}/${P.uni} coin hazır. Bir coin, 60 saatlik verisi tamamlanınca alınabilir.</p>` : '';
-  const empty = real && !(+G.phys > 0.5) && !(G.positions || []).length;
-  const st = real ? (empty ? `<b class="dn">Henüz para yok.</b> Global fon hesabına USDT gelince ilk alımda en fazla ${usd(G.start)} işlem hesabına geçer (Kasalar'dan Global'e gönder).` : G.halt ? `<b class="dn">Yeni alım durdu: ${esc(G.halt)}.</b>` : !gs.real ? '<b>Gerçek mod kapalı:</b> yeni alım yok, eldeki coinler kurallarıyla satılır.' : 'Para Global fon hesabından alım anında işlem hesabına geçer; futures masasının parasına dokunulmaz.')
+  const empty = real && gReal(G) < 0.5;
+  const ready = Math.min(+G.fund_res || 0, G.start);
+  const st = real ? (empty ? `<b class="dn">Henüz para yok.</b> Global fon hesabına USDT gelince ilk alımda en fazla ${usd(G.start)} işlem hesabına geçer (Kasalar'dan Global'e gönder).` : !(G.positions || []).length && !(+G.phys > 0.5) && (+G.fund_res || 0) > 0.5 ? `<b>Alım bekleniyor.</b> Fon hesabında ${usd(ready)} bu masaya ayrıldı; ilk alımda işlem hesabına geçer. Elle aktarımlar ve diğer masalar bu paraya dokunmaz.` : G.halt ? `<b class="dn">Yeni alım durdu: ${esc(G.halt)}.</b>` : !gs.real ? '<b>Gerçek mod kapalı:</b> yeni alım yok, eldeki coinler kurallarıyla satılır.' : 'Para Global fon hesabından alım anında işlem hesabına geçer; futures masasının parasına dokunulmaz.')
     : 'Deneme: gerçek fiyatlarla sanal para. Gerçek işlem için Ayarlar → Global → Gerçek parayla işlem.';
   return `<h2 class="mh">${ic('i-globe')}Global<span class="hsum">${real ? '<em class="rbadge">GERÇEK</em>' : '<em class="rbadge pp">DENEME</em>'}OKX Global</span><button class="mset" type="button" data-sett="gspot">${ic('i-gear')}Ayarlar</button></h2>
     <div class="card mmeme">
       ${((h: string) => real && !empty ? h : h.replace(/<div class="drisk">[\s\S]*?<\/div><\/div>\s*/, ''))(deskHero(real ? 'Masada gerçek para' : 'Deneme kasası',
-        real ? (+G.phys || 0) + (G.positions || []).reduce((a: number, p: any) => a + (+p.val || 0), 0) : G.equity,
-        real ? `bütçe ${usd(G.start)} · coin ${usd((G.positions || []).reduce((a: number, p: any) => a + (+p.val || 0), 0))} · USDT ${usd(+G.phys || 0)}` : `boşta ${usd(G.cash)} · başlangıç ${usd(G.start)}`, G.pnl, G.start, left, ml,
+        real ? gReal(G) : G.equity,
+        real ? `bütçe ${usd(G.start)} · coin ${usd((G.positions || []).reduce((a: number, p: any) => a + (+p.val || 0), 0))} · USDT ${usd((+G.phys || 0) + (+G.fund_res || 0))}` : `boşta ${usd(G.cash)} · başlangıç ${usd(G.start)}`, G.pnl, G.start, left, ml,
         [['Coin', String((G.positions || []).length)], ['Satış', String(G.sells || 0)], ['Kazanma', G.win_rate == null ? '—' : '%' + G.win_rate], ['Kâr', '%' + nf(tp, 1)]]))}
       <p class="mnote">${ic(real ? 'i-lock' : 'i-flask')}${st}${G.err ? ` <b class="dn">Uyarı: ${esc(G.err).slice(0, 90)}</b>` : ''}</p>
     </div>
-    ${pos ? `<h2 class="mh">${ic('i-coins')}Eldeki coinler<span class="hsum">${(G.positions || []).length} coin</span></h2><div class="card mfeed">${pos}</div>` : ''}
+    ${pos ? `<h2 class="mh">${ic('i-coins')}Eldeki coinler<span class="hsum ${cls((G.positions || []).reduce((a: number, p: any) => a + (+p.pnl || 0), 0))}">${(G.positions || []).length} coin · ${sgnU((G.positions || []).reduce((a: number, p: any) => a + (+p.pnl || 0), 0))}</span></h2><div class="card list gpos">${pos}</div><p class="hint" style="margin:6px 2px 0">Satmak için satırı sola kaydır. Her kademe alışının %${nf(tp, 1)} üstünde satılır; çubuk ortalamaya göre.</p>` : ''}
     <h2 class="mh">${ic('i-list')}İşlem kaydı<span class="hsum">${real ? 'gerçek masa' : 'deneme masası'}</span></h2>
     <div class="card mfeed">${feed || `<div class="empty">${ic('i-eye')}<div>Henüz işlem yok; fiyat alım hedefine inince alır</div></div>`}</div>
     ${favSec(real ? G.fav : [], P?.fav, 'gspot')}
@@ -719,8 +729,8 @@ function renderNow(x: Strategy){
     h+='</div>';
     if(items.length>5)h+=`<button class="more" id="nowMore">${nowAll?'Daha az göster':`Tümünü göster (${items.length} coin)`}</button>`;
   }
-  h+=c?.instant?`<div class="nf">${ic('i-clock')}Anlık alım açık: fiyat alım seviyesine değdiği an alır (2 sn'de bir kontrol)</div>`
-    :`<div class="nf">${ic('i-clock')}Sonraki karar ${nextBar()}'te (15 dakikalık mum kapanışı) · fiyatlar 2 sn'de bir kontrol edilir</div>`;
+  h+=c?.instant?`<div class="nf">${ic('i-clock')}Anlık alım açık: fiyat alım seviyesine değdiği an alır (saniyede bir kontrol)</div>`
+    :`<div class="nf">${ic('i-clock')}Sonraki karar ${nextBar()}'te (15 dakikalık mum kapanışı) · fiyatlar saniyede bir kontrol edilir</div>`;
   if(setH(box,h)){const mb=document.getElementById('nowMore');if(mb)mb.onclick=()=>{nowAll=!nowAll;renderNow(x)}}
 }
 
@@ -1141,7 +1151,7 @@ function renderDeck(){
   renderOverview();
   if(VIEW==='home')renderHome();
   if(VIEW==='fut'){const b=document.getElementById('futBody');setH(b,renderLevR()||`<div class="empty">${ic('i-layers')}<div>Kaldıraç masası verisi bekleniyor</div></div>`)}
-  if(VIEW==='gspot'){const b=document.getElementById('gspotBody');setH(b,renderGspot())}
+  if(VIEW==='gspot'&&!swDrag){const b=document.getElementById('gspotBody');setH(b,renderGspot())}
   if(VIEW==='meme'){const b=document.getElementById('memeBody');setH(b,renderMemeR()||`<div class="empty">${ic('i-flask')}<div>Memecoin masası verisi bekleniyor</div></div>`)}
 }
 
@@ -1279,6 +1289,7 @@ function swipeBox(box: HTMLElement, act: (b: HTMLElement)=>void){let sx=0,sy=0,e
 }
 swipeBox(document.getElementById('positions'),b=>sellCoin(b.dataset.sell));
 swipeBox(document.getElementById('now'),b=>openBuy(b.dataset.buy));
+swipeBox(document.getElementById('gspotBody'),()=>{}); // Global: "Sat" düğmesi masa komutu gönderir (data-desk)
 swipeBox(document.getElementById('setForm'),b=>{const d=BAN_DESK[STAB],v=b.dataset.unban;if(!d||v==null)return;const l=banList(d),i=l.indexOf(v);if(i>=0)l.splice(i,1);swOpen='';renderForm()});
 // Tek coini sat: ayarlar.json'a satış isteği yazılır, bot ~5 sn içinde piyasa fiyatından satar
 async function sellCoin(inst: string){
@@ -1818,7 +1829,7 @@ function renderForm(){
    <div class="card" style="margin-top:8px"><div class="sw ${draft.paused?'on':''}" id="pauseSw"><div class="lb"><b>Botu durdur</b><span>Yeni alım yapılmaz; açık pozisyonların zarar sınırı çalışmaya devam eder</span></div><div class="track"><i></i></div></div>
    <div class="field" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line2)"><div class="lb"><b>Hepsini sat ve dur</b><span>Gerçek hesaptaki tüm coinleri hemen satar, botu durdurur</span></div>
    <button class="btn danger ${sellArm?'arm':''}" id="sellAll">${ic('i-sell')}${sellArm?'Emin misin? Dokun':'Hepsini sat'}</button></div></div></section>
-   <div class="hint" style="margin:8px 2px 4px">Bot kesintisiz çalışır: yaklaşık 2 saniyede bir piyasayı, borsadaki korumaları ve para hareketlerini kontrol eder. Uygulama kapalı olsa da çalışır.</div>
+   <div class="hint" style="margin:8px 2px 4px">Bot kesintisiz çalışır: saniyede bir piyasayı, borsadaki korumaları ve para hareketlerini kontrol eder. Uygulama kapalı olsa da çalışır.</div>
    <section><h2><span class="hb c-amber">${ic('i-coins')}</span>İşlem paritesi</h2><div class="tiles qtiles" data-g="quote">${QUOTES.map(([q,g,sub])=>`<button class="tile ${(draft.quote||'USDT')===q?'on':''}" data-t="${q}"><span class="ic"><b class="qg">${g}</b></span><span class="nm">${q}</span><span class="pc" style="color:var(--muted);font-weight:500">${sub}</span></button>`).join('')}</div>
    <div class="hint" style="margin:8px 2px 0">Yeni alımlar bu paritede yapılır; gereken para TL'den otomatik çevrilir. Eldeki coinler kendi paritesinde satılır. Bütün tutarlar TL karşılığıyla görünür.</div></section>
    <section><h2><span class="hb c-blue">${ic('i-target')}</span>Strateji</h2><div class="tiles" data-g="strat">${['grid','dip','trend'].map(k=>tile(draft.strategy===k,k,ICON[k],SNAMES[k])).join('')}</div>

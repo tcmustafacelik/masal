@@ -526,11 +526,14 @@ def step(state, S, paper_cfg, N=None):
         _LOCK.release()
 
 
-def trim_log():
+def trim_log(trades=False):
+    """Eski kayıtları temizle: günlük son 5 satırına iner; trades=True ise işlem geçmişi de silinir (bakiye ve kâr/zarar korunur)."""
     if _LOCK.acquire(timeout=1):
         try:
             if _W["R"]:
                 del _W["R"]["log"][:-5]
+                if trades:
+                    _W["R"]["trades"] = []
         finally:
             _LOCK.release()
 
