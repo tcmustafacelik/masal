@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.87.8';
+const APP_VERSION = '1.87.9';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = 'var(--acc)';
@@ -1567,6 +1567,15 @@ function uidBox(k = 'g') { const id = S?.xfer?.[k === 'g' ? 'g_uid' : 'tr_uid'];
 document.addEventListener('click', e => { const b = e.target.closest?.('[data-cp]'); if (!b)
     return; navigator.clipboard?.writeText(b.dataset.cp).then(() => toast('UID kopyalandı'), () => toast('Kopyalanamadı')); });
 const OKX_TR_WD = 'https://tr.okx.com/balance/withdrawal/usdt';
+function xPending(dir) {
+    const X = S?.xfer;
+    const j = (X?.jobs || []).find((j) => j.dir === dir && !['done', 'failed'].includes(j.stage) && Date.now() - (+j.ts || 0) < 3 * 3600_000);
+    if (j) {
+        toast(`Bekleyen bir ${xjName(j).replace(/<[^>]+>/g, '')} aktarımı var (${nf(+j.amt || 0, 2)} $). Önce o bitsin; Aktarımlar'dan takip et.`);
+        return true;
+    }
+    return false;
+}
 function openXfer(dir) {
     if (dir.startsWith('k')) {
         openKasaSend(dir);
@@ -1616,6 +1625,8 @@ function openXfer(dir) {
                     toast('En az 1 USDT');
                     return;
                 }
+                if (xPending('tr2g'))
+                    return;
                 if (!token) {
                     toast('Önce Ayarlar\'dan GitHub bağlantısını kur');
                     return;
@@ -1719,6 +1730,8 @@ async function cancelXfer(id, btn) {
 }
 async function sendXfer(dir) {
     fastWatch();
+    if (xPending(dir.startsWith('m') ? 'm2g' : dir))
+        return;
     const amt = Math.round((+document.getElementById('xfAmt')?.value || 0) * 100) / 100;
     if (!(amt >= 1)) {
         toast('Tutarı yaz (en az 1 USDT)');

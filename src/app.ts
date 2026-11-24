@@ -1,4 +1,4 @@
-const APP_VERSION='1.87.8';
+const APP_VERSION='1.87.9';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (kehribar)
@@ -958,6 +958,10 @@ document.addEventListener('click',e=>{const a=(e.target as HTMLElement).closest?
 function uidBox(k='g'): string {const id=(S as any)?.xfer?.[k==='g'?'g_uid':'tr_uid'];return id?`<div class="xuid"><span>${k==='g'?'OKX Global':'OKX TR'} UID<b>${escH(id)}</b></span><button type="button" data-cp="${escH(id)}">${ic('i-copy')}Kopyala</button></div>`:''}
 document.addEventListener('click',e=>{const b=(e.target as HTMLElement).closest?.('[data-cp]') as HTMLElement;if(!b)return;navigator.clipboard?.writeText(b.dataset.cp).then(()=>toast('UID kopyalandı'),()=>toast('Kopyalanamadı'))});
 const OKX_TR_WD='https://tr.okx.com/balance/withdrawal/usdt';
+/** Aynı yönde sonuçlanmamış bir aktarım varsa ikinci istek gönderilmez (üst üste basınca para iki kez gitmesin) */
+function xPending(dir: string): boolean {const X: any=(S as any)?.xfer;
+  const j=(X?.jobs||[]).find((j: any)=>j.dir===dir&&!['done','failed'].includes(j.stage)&&Date.now()-(+j.ts||0)<3*3600_000);
+  if(j){toast(`Bekleyen bir ${xjName(j).replace(/<[^>]+>/g,'')} aktarımı var (${nf(+j.amt||0,2)} $). Önce o bitsin; Aktarımlar'dan takip et.`);return true}return false}
 function openXfer(dir: string){
   if(dir.startsWith('k')){openKasaSend(dir);return}
   if(dir==='tr2m'){const q=document.getElementById('qsh');q.dataset.n='';qHead('i-bank','Kapat');document.getElementById('qTitle').textContent='OKX TR → MEME';
@@ -981,7 +985,7 @@ function openXfer(dir: string){
         <div class="xtr2"><div class="xamt"><input id="tryAmt" type="number" inputmode="decimal" min="1" step="1" value="2"><span>USDT</span></div><button class="btn xsync" type="button" id="tryGo">${ic('i-refresh')}Botla dene</button></div></div>`:''}</div>`;
     q.hidden=false;
     const tg=document.getElementById('tryGo');if(tg)tg.onclick=async()=>{const amt=Math.round(+(document.getElementById('tryAmt') as HTMLInputElement).value*100)/100;
-      if(!(amt>=1)){toast('En az 1 USDT');return}if(!token){toast('Önce Ayarlar\'dan GitHub bağlantısını kur');return}
+      if(!(amt>=1)){toast('En az 1 USDT');return}if(xPending('tr2g'))return;if(!token){toast('Önce Ayarlar\'dan GitHub bağlantısını kur');return}
       const req={id:'t'+Date.now().toString(36),ts:Date.now(),dir:'tr2g',amt,src:'bos'};(tg as HTMLButtonElement).disabled=true;
       const ok=await cloudPatch((o: any)=>{const l: any[]=o.xfer_req||[];o.xfer_req=[...l.filter(r=>Date.now()-(r.ts||0)<3600000),req]},'Deneme: OKX TR → Global iç transfer '+amt+' USDT');
       (tg as HTMLButtonElement).disabled=false;if(ok){q.hidden=true;fastWatch();toast('İstek gönderildi; sonucu Aktarımlar\'da adım adım görürsün')}else toast('İstek gönderilemedi',patchWhy())};
@@ -1037,7 +1041,7 @@ async function cancelXfer(id: string, btn?: HTMLButtonElement){
   if(ok)toast('İptal isteği gönderildi; para alım-satım hesabına geri konacak.');
   else{toast('İptal gönderilemedi',patchWhy());if(btn){btn.disabled=false;btn.textContent='İptal'}}
 }
-async function sendXfer(dir: string){fastWatch();
+async function sendXfer(dir: string){fastWatch();if(xPending(dir.startsWith('m')?'m2g':dir))return;
   const amt=Math.round((+(document.getElementById('xfAmt') as HTMLInputElement)?.value||0)*100)/100;
   if(!(amt>=1)){toast('Tutarı yaz (en az 1 USDT)');return}
   {const X: any=(S as any)?.xfer||{},MR: any=(S as any)?.memer;

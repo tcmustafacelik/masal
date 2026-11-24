@@ -1,10 +1,17 @@
 {
-  "version": "1.87.8",
+  "version": "1.87.9",
   "date": "2026-11-25",
   "notes": [
-    "Global → TR aktarımında OKX TR gönderici bilgisi isteyince Kasalar'da ne yapacağın yazar ve bildirim gelir"
+    "Aynı yönde bekleyen bir aktarım varken yenisi gönderilmez (üst üste basınca para iki kez gitmesin)"
   ],
   "history": [
+    {
+      "version": "1.87.9",
+      "date": "2026-11-25",
+      "notes": [
+        "Aynı yönde bekleyen bir aktarım varken yenisi gönderilmez (üst üste basınca para iki kez gitmesin)"
+      ]
+    },
     {
       "version": "1.87.8",
       "date": "2026-11-25",
@@ -101,13 +108,6 @@
       "date": "2026-11-24",
       "notes": [
         "Spot: Toplu kâr al — açıkken kademeler tek tek satılmaz, fiyat bütün kademelerin alış ortalamasının %X üstüne çıkınca hepsi birden satılır (borsadaki korumalar yalnız zarar durdur olarak yeniden kurulur); kademe merdiveninde satış yeri"
-      ]
-    },
-    {
-      "version": "1.83.0",
-      "date": "2026-11-24",
-      "notes": [
-        "Genel bakım 4: yanıtı kaybolan futures açma emri sahipsiz kalmıyor; Spot'ta sahipsiz koruma emirleri iptal ediliyor (yalnız botunkiler); MEME → Global SOL satışı ve hesap içi aktarımlar tek seferlik; elle satış 2 dk yeniden deneniyor; hata balonlarında sebep; küçük fiyatlar ve uzun adlar düzgün"
       ]
     }
   ]
