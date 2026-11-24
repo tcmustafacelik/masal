@@ -1,10 +1,17 @@
 {
-  "version": "1.76.1",
+  "version": "1.76.2",
   "date": "2026-11-24",
   "notes": [
-    "Uygulama sürümü sayfanın en altında; yeni sürüm varsa yanında yazar"
+    "Sürüm yazısı Özet sayfasının en altına taşındı"
   ],
   "history": [
+    {
+      "version": "1.76.2",
+      "date": "2026-11-24",
+      "notes": [
+        "Sürüm yazısı Özet sayfasının en altına taşındı"
+      ]
+    },
     {
       "version": "1.76.1",
       "date": "2026-11-24",
@@ -103,13 +110,6 @@
       "date": "2026-11-24",
       "notes": [
         "Memecoin bölümü geri geldi; masa artık elle açılıp kapanır (Memecoin sekmesinde Aç / güç düğmesi, Ayarlar'da 'Memecoin masası açık')"
-      ]
-    },
-    {
-      "version": "1.72.0",
-      "date": "2026-11-24",
-      "notes": [
-        "Memecoin bölümü kaldırıldı: sekme, ayarlar, MEME aktarım yönleri ve toplamdaki payı"
       ]
     }
   ]

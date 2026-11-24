@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.76.1';
+const APP_VERSION = '1.76.2';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = 'var(--acc)'; // seçili çizgi: tema vurgu rengi (pembe)
@@ -370,7 +370,7 @@ function render() {
                     : `<span class="mi">${ic('i-flask')}</span><span><b>Deneme</b><small>Emir gitmez</small></span>`;
         m.onclick = () => document.getElementById('openSet').click();
     }
-    document.getElementById('foot').innerHTML = 'Fiyatlar uygulama açıkken OKX TR\'den anlık güncellenir; bot kesintisiz çalışır, yaklaşık 5 saniyede bir kontrol eder.<br>' + (L && L.armed ? 'Ekrandaki rakamlar OKX TR hesabındaki gerçek işlemlerdir.' : 'Gerçek para kullanılmıyor; tüm işlemler sanal.') + `<div class="fv">${ic('i-phone')}Masal · sürüm <b>${APP_VERSION}</b>${remoteVer && vcmp(remoteVer.version, APP_VERSION) > 0 ? ` · <em>yeni sürüm var: ${remoteVer.version}</em>` : ''}</div>`;
+    document.getElementById('foot').innerHTML = 'Fiyatlar uygulama açıkken OKX TR\'den anlık güncellenir; bot kesintisiz çalışır, yaklaşık 5 saniyede bir kontrol eder.<br>' + (L && L.armed ? 'Ekrandaki rakamlar OKX TR hesabındaki gerçek işlemlerdir.' : 'Gerçek para kullanılmıyor; tüm işlemler sanal.');
     if (S.strategies.live && sel !== 'live')
         sel = 'live'; // sanal stratejiler kapalı: her zaman gerçek hesap
     const x = S.strategies[sel];
@@ -1708,6 +1708,7 @@ function renderHome() {
     }
     fd.sort((a, b) => b[0] - a[0]);
     h += `<h2 class="mh">${ic('i-list')}Son hareketler<span class="hsum">bütün masalar</span></h2><div class="card hfeed">${fd.length ? fd.slice(0, 8).map(([ts, c, i, t, sub, x]) => `<div class="hr"><span class="hk hi ${c}">${ic(i)}</span><div class="hm"><b>${String(t).replace(/</g, '&lt;')}</b><small>${ago(ts)} · ${String(sub).replace(/</g, '&lt;').slice(0, 60)}</small></div>${x}</div>`).join('') : `<div class="empty">${ic('i-clock')}<div>Henüz hareket yok</div></div>`}</div>`;
+    h += `<div class="fv">${ic('i-phone')}Masal · sürüm <b>${APP_VERSION}</b>${remoteVer && vcmp(remoteVer.version, APP_VERSION) > 0 ? ` · <em>yeni sürüm var: ${remoteVer.version}</em>` : ''}</div>`;
     setH(box, h);
 }
 document.addEventListener('click', e => { const b = e.target.closest?.('[data-goto]'); if (b)
