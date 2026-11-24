@@ -1,15 +1,22 @@
 {
-  "version": "1.87.4",
+  "version": "1.87.5",
   "date": "2026-11-25",
   "notes": [
-    "Çakışma düzeltmeleri: küçük bakiyeleri çevir Global spot botunun coinlerine dokunmaz; Global spot SOL almaz (memecoin aktarımı SOL kullanıyor)"
+    "OKX TR'yi açarken Global UID'n panoya kopyalanır; ekrandaki adımlar OKX'teki 'OKX Global ve OKX TR Kullanıcıları' sekmesini gösterir"
   ],
   "history": [
+    {
+      "version": "1.87.5",
+      "date": "2026-11-25",
+      "notes": [
+        "OKX TR'yi açarken Global UID'n panoya kopyalanır; ekrandaki adımlar OKX'teki 'OKX Global ve OKX TR Kullanıcıları' sekmesini gösterir"
+      ]
+    },
     {
       "version": "1.87.4",
       "date": "2026-11-25",
       "notes": [
-        "Çakışma düzeltmeleri: küçük bakiyeleri çevir Global spot botunun coinlerine dokunmaz; Global spot SOL almaz (memecoin aktarımı SOL kullanıyor)"
+        ""
       ]
     },
     {
@@ -101,13 +108,6 @@
       "date": "2026-11-24",
       "notes": [
         "Genel bakım 2: uzun pencereler (Futures aç, elle alım) küçük ekranda üstten kesilmiyor, kendi içinde kayıyor; Ayarlar → Hesaplar ve anahtarlar kutuları düzeldi; çift dokunuş ve kaybolan yanıtta istek iki kez gitmiyor (elle alım, TR/KASA → MEME); aktarım satırı gerçek yönü yazıyor (MEME → KASA); akışta kâr/zarar renkli, etiketler tek genişlik; ekran çizimi ~7 kat hızlı; bot veri gönderimi takılırsa güncel kayıtla yeniden deniyor"
-      ]
-    },
-    {
-      "version": "1.80.4",
-      "date": "2026-11-24",
-      "notes": [
-        "Akış ve kayıt satırları tek düzen: solda türün renginde şerit, eşit genişlikte etiket, kalın başlık + renkli kâr/zarar, altta küçük ayrıntı (Futures, Memecoin, Ajan masası, Bot kayıtları, Kasalar)"
       ]
     }
   ]
