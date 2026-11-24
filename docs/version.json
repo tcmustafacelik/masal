@@ -1,10 +1,17 @@
 {
-  "version": "1.76.0",
+  "version": "1.76.1",
   "date": "2026-11-24",
   "notes": [
-    "Elle alım: Alıma en yakın coinlerde satırı sola kaydır → yeşil Al; tutarı seç, bot alır ve kendi kademesi gibi yönetir"
+    "Uygulama sürümü sayfanın en altında; yeni sürüm varsa yanında yazar"
   ],
   "history": [
+    {
+      "version": "1.76.1",
+      "date": "2026-11-24",
+      "notes": [
+        "Uygulama sürümü sayfanın en altında; yeni sürüm varsa yanında yazar"
+      ]
+    },
     {
       "version": "1.76.0",
       "date": "2026-11-24",
@@ -103,15 +110,6 @@
       "date": "2026-11-24",
       "notes": [
         "Memecoin bölümü kaldırıldı: sekme, ayarlar, MEME aktarım yönleri ve toplamdaki payı"
-      ]
-    },
-    {
-      "version": "1.71.0",
-      "date": "2026-11-24",
-      "notes": [
-        "Bot turu daha hızlı (~0,24 sn); emirlerde ve aktarımlarda tekrar gönderim koruması",
-        "Futures: kırılım süresi, eğilim ortalaması ve eğilim filtresi ayarlardan değiştirilebilir",
-        "'Şartta' kutuları küçük ve tek tip; stiller sadeleştirildi, koyu tema renkleri ve İngilizce çeviriler tamamlandı"
       ]
     }
   ]
