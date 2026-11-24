@@ -58,18 +58,9 @@
     "cleared": 1795497754
   },
   "sell": {
-    "ts": 1795497716421,
+    "ts": 1795499535897,
     "insts": [
-      "INJ-USDT",
-      "ARB-USDT",
-      "OP-USDT",
-      "JUP-USDT",
-      "PUMP-USDT",
-      "ETHFI-USDT",
-      "CT-USDT",
-      "VVV-USDT",
-      "TRUMP-USDT",
-      "ENA-USDT"
+      "LIT-USDT"
     ]
   },
   "quote": "USDT",
