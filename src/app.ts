@@ -1,4 +1,4 @@
-const APP_VERSION='1.82.0';
+const APP_VERSION='1.83.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (kehribar)
@@ -11,7 +11,8 @@ const tl=(v,d=2)=>nf(v,d)+'\u00a0TL'; // bölünmez boşluk: "TL" satır sonunda
 const sgn=v=>(v>0?'+':v<0?'−':'')+nf(Math.abs(v));
 const spc=(v,d=2)=>(v>0?'+':v<0?'−':'')+'%'+nf(Math.abs(v),d); // işaretli yüzde: +%0,14 / −%1,86
 const cls=v=>v>0?'up':v<0?'dn':'';
-function px(v){const a=Math.abs(v);return nf(v,a>=1000?0:a>=10?2:a>=1?3:5)}
+/** Fiyat yazımı. 1'in altındaki fiyatlarda en az 4 anlamlı basamak gösterilir (PEPE gibi çok küçük fiyatlar "0,00000" görünmesin). */
+function px(v){const a=Math.abs(v);return nf(v,a>=1000?0:a>=10?2:a>=1?3:a>=0.01||!(a>0)?5:Math.min(14,3-Math.floor(Math.log10(a))))}
 function fv(v,dec){return dec>0?String(Math.round(+v*100)/100).replace('.',','):Number(v).toLocaleString('tr-TR')} // en fazla 2 ondalık: kutudan taşmasın
 function dt(ts: number, withYear?: boolean): string {const d=new Date(ts);const p=n=>String(n).padStart(2,'0');
   return p(d.getDate())+'.'+p(d.getMonth()+1)+(withYear?'.'+d.getFullYear():'')+' '+p(d.getHours())+':'+p(d.getMinutes())}
@@ -433,7 +434,7 @@ function openLevOpen(sym: string, side0: number){
       if(!token){toast('Önce Ayarlar\'dan GitHub bağlantısını kur');return}go.disabled=true;fastWatch();
       const req={id:'o'+Date.now().toString(36),ts:Date.now(),desk:'lev',act:'open',sym,side};
       const ok=await cloudPatch(o=>{(o as any).desk_cmd=[...((o as any).desk_cmd||[]).filter((x: any)=>Date.now()-(x.ts||0)<600000),req]},'Futures elle aç: '+sym+' '+(side>0?'UZUN':'KISA'));
-      if(ok){q.hidden=true;toast(`${sym} ${side>0?'UZUN':'KISA'} açma isteği gönderildi; bot birkaç saniyede açar`)}else{go.disabled=false;toast('İstek gönderilemedi, tekrar dene')}}};
+      if(ok){q.hidden=true;toast(`${sym} ${side>0?'UZUN':'KISA'} açma isteği gönderildi; bot birkaç saniyede açar`)}else{go.disabled=false;toast('İstek gönderilemedi, tekrar dene',patchWhy())}}};
   draw();q.hidden=false;
 }
 document.addEventListener('click',e=>{const t=(e.target as HTMLElement).closest?.('[data-lo]') as HTMLElement;if(t)openLevOpen(t.dataset.lo,+t.dataset.ls)});
@@ -449,7 +450,7 @@ document.addEventListener('click', async e => {
   const desk = b.dataset.desk, sym = b.dataset.sym, lbl = b.textContent; DESK_BUSY[desk + ':' + sym] = Date.now(); b.disabled = true; b.textContent = 'Gönderildi…';
   const req = {id: 'c' + Date.now().toString(36), ts: Date.now(), desk, act: desk === 'lev' ? 'close' : 'sell', sym};
   const ok = await cloudPatch(o => { (o as any).desk_cmd = [...((o as any).desk_cmd || []).filter((r: any) => r.id !== req.id && Date.now() - (r.ts || 0) < 600000), req]; }, 'Masa komutu: ' + desk + ' ' + sym);
-  toast(ok ? 'İstek gönderildi; bot birkaç saniyede piyasa fiyatından kapatır' : 'İstek gönderilemedi, tekrar dene');
+  toast(ok ? 'İstek gönderildi; bot birkaç saniyede piyasa fiyatından kapatır' : 'İstek gönderilemedi, tekrar dene', ok ? '' : patchWhy());
   // liste bu arada yeniden çizilmiş olabilir (eski düğme ekranda değil): durum kayıttan silinir ve masa yeniden çizilir
   if (!ok) { delete DESK_BUSY[desk + ':' + sym]; b.disabled = false; b.textContent = lbl; renderDeck(); }
 });
@@ -742,7 +743,7 @@ async function syncReal(){
   const free=o.cash_tl!=null?+o.cash_tl:(+o.try||0)+(+o.usdt_tl||0),base=+(x.base??x.start_cash)||0,b=Math.max(0,Math.round(base+free-(+x.cash||0)-(+x.cash_gap||0))),k=Math.round(b+(+o.fund_tl||0));
   const btn=document.getElementById('syncBtn') as HTMLButtonElement;if(btn)btn.disabled=true;
   const ok=await cloudPatch(o=>{o.budget=b;o.kasa=k},'Borsayla eşleştir: bütçe '+b+' · kasa '+k);
-  toast(ok?`Eşleştirildi: botta ${tl(b,0)}, kasa ${tl(k,0)}. Bot birkaç saniyede uygular.`:'Eşleştirilemedi ('+patchErr+'), tekrar dene');
+  toast(ok?`Eşleştirildi: botta ${tl(b,0)}, kasa ${tl(k,0)}. Bot birkaç saniyede uygular.`:'Eşleştirilemedi, tekrar dene',ok?'':patchWhy());
   if(btn)btn.disabled=false;
 }
 /* ---------- Para aktarımı: TR ↔ Global ↔ KASA (USDT, Arbitrum One). İstek bulut ayar dosyasına yazılır, bot gönderir. ---------- */
@@ -812,7 +813,7 @@ function openDust(k: string){
       const ccys=list.map(x=>x.ccy).filter(c=>pick.has(c)).slice(0,DUST_MAX);go.disabled=true;
       const req={id:'d'+Date.now().toString(36),ts:Date.now(),ex:k,ccys,to};
       const ok=await cloudPatch(o=>{(o as any).dust=[...((o as any).dust||[]).filter((r: any)=>r.id!==req.id&&Date.now()-(r.ts||0)<3600000),req]},'Küçük bakiye çevirme: '+k);
-      if(ok){q.hidden=true;toast(`${ccys.length} coin ${to}'ye çevriliyor; sonuç birkaç saniyede Kasalar'da görünür`)}else{go.disabled=false;toast('İstek gönderilemedi, tekrar dene')}};
+      if(ok){q.hidden=true;toast(`${ccys.length} coin ${to}'ye çevriliyor; sonuç birkaç saniyede Kasalar'da görünür`)}else{go.disabled=false;toast('İstek gönderilemedi, tekrar dene',patchWhy())}};
   };
   draw();q.hidden=false;
 }
@@ -868,7 +869,7 @@ async function waitMeme(via: string, amt: number, btn?: HTMLElement): Promise<bo
   let ok=false;
   try{ok=await cloudPatch((o: any)=>{const l: any[]=o.xfer_req||[];if(!l.some(r=>r.id===req.id))o.xfer_req=[...l.filter(r=>Date.now()-(r.ts||0)<3600000),req]},'Aktarım: '+via+' → MEME '+amt+' USDT')}
   finally{waitBusy=false;if(btn)btn.classList.remove('off')}
-  if(ok){toast(`Kaydedildi: ${nf(amt,2)} USDT Global'e ulaşınca MEME'ye geçecek`);fastWatch()}else toast('İstek gönderilemedi, tekrar dene');
+  if(ok){toast(`Kaydedildi: ${nf(amt,2)} USDT Global'e ulaşınca MEME'ye geçecek`);fastWatch()}else toast('İstek gönderilemedi, tekrar dene',patchWhy());
   return ok;
 }
 function openXfer(dir: string){
@@ -939,7 +940,7 @@ async function cancelXfer(id: string, btn?: HTMLButtonElement){
   if(btn){btn.disabled=true;btn.textContent='…'}
   const ok=await cloudPatch((o: any)=>{o.xfer_cancel=[...(o.xfer_cancel||[]).filter((x: string)=>x!==id).slice(-20),id]},'Aktarım iptali: '+id);
   if(ok)toast('İptal isteği gönderildi; para alım-satım hesabına geri konacak.');
-  else{toast('İptal gönderilemedi ('+patchErr+')');if(btn){btn.disabled=false;btn.textContent='İptal'}}
+  else{toast('İptal gönderilemedi',patchWhy());if(btn){btn.disabled=false;btn.textContent='İptal'}}
 }
 async function sendXfer(dir: string){fastWatch();
   const amt=Math.round((+(document.getElementById('xfAmt') as HTMLInputElement)?.value||0)*100)/100;
@@ -956,7 +957,7 @@ async function sendXfer(dir: string){fastWatch();
   const req={id:xfId,ts:Date.now(),dir:dir.startsWith('m')?'m2g':dir,amt,src:'bos',...(dir==='m2k'?{then:'k'}:dir==='m2tr'?{then:'tr'}:{})};
   const ok=await cloudPatch((o: any)=>{const l: any[]=o.xfer_req||[];if(!l.some(r=>r.id===req.id))o.xfer_req=[...l.filter(r=>Date.now()-(r.ts||0)<3600000),req]},'Uygulamadan aktarım: '+dir+' '+amt+' USDT');
   if(ok){document.getElementById('qsh').hidden=true;toast(`${xName(dir)}: ${nf(amt,2)} USDT isteği gönderildi; bot birkaç saniye içinde başlar.`)}
-  else{toast('İstek gönderilemedi ('+patchErr+'), tekrar dene');if(btn){btn.disabled=false;btn.lastChild.textContent='Gönder'}}
+  else{toast('İstek gönderilemedi, tekrar dene',patchWhy());if(btn){btn.disabled=false;btn.lastChild.textContent='Gönder'}}
 }
 
 /* ---------- Coin ayrıntısı: dokununca canlı fiyat, grafik ve parite seçimi (OKX TR herkese açık verisi) ---------- */
@@ -1046,6 +1047,8 @@ function renderDeck(){
 
 /** Özet (ana sayfa): toplam varlık kartının altında dört masanın kısa durumu ve bütün masalardan son hareketler.
  *  Spot ekranındaki ayrıntılar burada tekrarlanmaz; bir masaya dokununca kendi ekranı açılır. */
+/** Akış satırının ayrıntısı en fazla 60 karakter; kesilirse son tam bölümde biter (sonda yarım kelime ya da tek başına "·" kalmaz) */
+function hcut(t: string): string {if(t.length<=60)return t;const c=t.slice(0,60),i=c.lastIndexOf(' · ');return i>12?c.slice(0,i):c.trimEnd()+'…'}
 function renderHome(){
   const box=document.getElementById('homeBody');if(!box||!S)return;
   const sp=S.strategies?.live,X: any=(S as any).xfer,R: any=(S as any).levr,M: any=(S as any).memer;
@@ -1069,7 +1072,7 @@ function renderHome(){
     fd.push([ts,'h3','i-flask',t.replace(/^GERÇEK\s+/,'').split(' · ')[0],'Memecoin',k==='exit'?`<span class="hx ${cls(v)||'z'}">${v>=0?'+':'−'}$${nf(Math.abs(v),2)}</span>`:`<span class="hx b">alındı</span>`])}
   fd.sort((a,b)=>b[0]-a[0]);
   h+=`<h2 class="mh">${ic('i-list')}Son hareketler<span class="hsum">bütün masalar</span></h2><div class="card hfeed">${fd.length?fd.slice(0,8).map(([ts,c,i,t,sub,x])=>
-    `<div class="hr"><span class="hk hi ${c}">${ic(i)}</span><div class="hm"><b>${String(t).replace(/</g,'&lt;')}</b><small>${ago(ts)} · ${String(sub).replace(/</g,'&lt;').slice(0,60)}</small></div>${x}</div>`).join(''):`<div class="empty">${ic('i-clock')}<div>Henüz hareket yok</div></div>`}</div>`;
+    `<div class="hr"><span class="hk hi ${c}">${ic(i)}</span><div class="hm"><b>${String(t).replace(/</g,'&lt;')}</b><small>${ago(ts)} · ${hcut(String(sub)).replace(/</g,'&lt;')}</small></div>${x}</div>`).join(''):`<div class="empty">${ic('i-clock')}<div>Henüz hareket yok</div></div>`}</div>`;
   h+=`<div class="fv">${ic('i-phone')}Masal · sürüm <b>${APP_VERSION}</b>${remoteVer&&vcmp(remoteVer.version,APP_VERSION)>0?` · <em>yeni sürüm var: ${remoteVer.version}</em>`:''}</div>`;
   setH(box,h);
 }
@@ -1140,7 +1143,7 @@ function renderPositions(x){
       rng=`<div class="rng"><i class="av" style="left:${k(p.avg).toFixed(1)}%"></i><i class="mk ${cls(pl)}" style="left:${k(cur).toFixed(1)}%"></i></div>
         <div class="rngl"><em class="dn">${lg?'Zarar':'Zarar durdur'} ${px(p.sl)}</em><em class="up">${lg?'Kâr':'Kâr al'} ${px(p.tp)}</em></div>`}
     const row=`<div class="row pos${canSell?' swc':''}">${cico(p.inst)}
-      <div class="mid"><b>${sym(p.inst)}${pq(p.inst)}${prot}${p.lots>1?`<i class="kd">${p.lots} kademe</i>`:''}</b><span>Alış ${px(p.avg)} → satış ${px(cur)}<br>${ago(p.since)} alındı${volTxt(p.inst)?` · hacim ${volTxt(p.inst)}`:''}</span>${rng}</div>
+      <div class="mid"><b><span class="sy">${sym(p.inst)}</span>${pq(p.inst)}${prot}${p.lots>1?`<i class="kd">${p.lots} kademe</i>`:''}</b><span>Alış ${px(p.avg)} → satış ${px(cur)}<br>${ago(p.since)} alındı${volTxt(p.inst)?` · hacim ${volTxt(p.inst)}`:''}</span>${rng}</div>
       <div class="end"><b>${tl(val,0)}</b>${SELLING[p.inst]?`<span class="sellst"><i class="spn"></i>Satılıyor</span>`:`<span class="pill ${cls(pl)||'z'}"><i>${pl>=0?'▲':'▼'}</i>${nf(Math.abs(pl))} TL</span><span class="est ${cls(pl)}">${spc(plp)}</span>`}</div></div>`;
     return canSell?`<div class="swr${swOpen===p.inst?' open':''}${SELLING[p.inst]?' busy':''}" data-i="${p.inst}"><button class="swb" data-sell="${p.inst}">${ic('i-sell')}${SELLING[p.inst]?'Satılıyor':'Sat'}</button>${row}</div>`:row}).join('')
     :`<div class="empty">${ic('i-box')}<div>Şu an açık pozisyon yok</div></div>`);
@@ -1175,7 +1178,7 @@ async function sellCoin(inst: string){
   let req: any=null;
   const ok=await cloudPatch((o: any,remote)=>{if(remote){const p=o.sell,keep:string[]=p&&Date.now()-(p.ts||0)<90000?(p.insts||[]):[];req={ts:Date.now(),insts:[...new Set([...keep,inst])]}}
     if(req)o.sell=req},'Uygulamadan satış: '+inst);
-  if(!ok){delete SELLING[inst];if(S)render();toast('Satış isteği gönderilemedi ('+patchErr+'), tekrar dene');return}
+  if(!ok){delete SELLING[inst];if(S)render();toast('Satış isteği gönderilemedi, tekrar dene',patchWhy());return}
   toast(`${sym(inst)} satış isteği gönderildi; bot birkaç saniye içinde satar.`);
   // coin listeden düşünce "Satılıyor" kendiliğinden kalkar (renderPositions); 2 dakikada satılmazsa düğme geri gelir
   const t0=SELLING[inst];setTimeout(()=>{if(SELLING[inst]===t0){delete SELLING[inst];if(S)render()}},120000);
@@ -1222,7 +1225,7 @@ async function buyCoin(inst: string, amt: number, h: number, btn?: HTMLButtonEle
   if(btn)btn.disabled=true;fastWatch();
   const req={id:id||'b'+Date.now().toString(36),ts:Date.now(),inst,amt};
   const ok=await cloudPatch(o=>{const p: any=(o as any).buy,l: any[]=Array.isArray(p)?p:[];if(!l.some(r=>r.id===req.id))(o as any).buy=[...l.filter((r: any)=>Date.now()-(r.ts||0)<600000),req]},'Uygulamadan alım: '+inst+' '+amt+' TL');
-  if(!ok){if(btn)btn.disabled=false;toast('Alım isteği gönderilemedi, tekrar dene');return}
+  if(!ok){if(btn)btn.disabled=false;toast('Alım isteği gönderilemedi, tekrar dene',patchWhy());return}
   document.getElementById('qsh').hidden=true;BUYING[inst]={t:Date.now(),n:h};if(S)render();
   toast(`${sym(inst)} alım isteği gönderildi; bot birkaç saniye içinde ${tl(amt,0)} alır.`);
   const t0=BUYING[inst].t;setTimeout(()=>{if(BUYING[inst]?.t===t0){delete BUYING[inst];if(S)render()}},120000);
@@ -1716,7 +1719,7 @@ function renderForm(){
   if(document.getElementById('clrOld'))document.getElementById('clrOld').onclick=async()=>{if(!token){toast('Önce GitHub bağlantısını kur');return}const t=Date.now(),top=Math.ceil(t/1000);
     const ok=await cloudPatch(o=>{(o as any).clear=t;o.notify={...(o.notify||{} as any),cleared:top}},'Eski kayıtlar temizlendi');
     if(ok){localStore('masal_nclr',String(top));NOTES.length=0;nBadge()}
-    toast(ok?'Eski kayıtlar temizleniyor; bot birkaç saniyede uygular':'Temizleme isteği gönderilemedi, tekrar dene')};
+    toast(ok?'Eski kayıtlar temizleniyor; bot birkaç saniyede uygular':'Temizleme isteği gönderilemedi, tekrar dene',ok?'':patchWhy())};
   f.querySelectorAll<HTMLElement>('.acch').forEach(b=>b.onclick=()=>{const sec=b.parentElement,id=sec.dataset.acc;sec.classList.toggle('open');
     if(sec.classList.contains('open'))OPEN.add(id);else{OPEN.delete(id);renderForm()}});
   f.querySelectorAll<HTMLElement>('[data-g=mode] .tile').forEach(b=>b.onclick=()=>{draft.live=b.dataset.t==='real';renderForm()});
@@ -1802,6 +1805,8 @@ async function loadSettings(){
 
 /** Ayarlardaki tek bir şeyi buluta yazar (bekleyen başka değişikliklere dokunmadan): dil, tema, bildirim temizleme. */
 let patchQ: Promise<unknown> = Promise.resolve(), patchErr: unknown = '';
+/** Son bulut yazmasının neden başarısız olduğu, kullanıcının anlayacağı kısa sözle (bildirim balonunda parantez içinde) */
+function patchWhy(): string {const e = patchErr; return e === 'yok' ? '(GitHub bağlantısı kurulmamış)' : e === 401 ? '(GitHub anahtarının süresi dolmuş)' : e === 403 || e === 404 ? '(GitHub anahtarının yazma izni yok)' : '(bağlantı kurulamadı)';}
 /** Bulut yazmaları (istekler, ayar kaydı, eşleştirme) tek sıradan gider: üst üste dokunuşlarda (409 çakışması) hiçbiri kaybolmaz.
  *  fn önce buluttaki güncel ayarlara (remote=true), kayıt başarılıysa bu cihazdaki kopyalara (remote=false) uygulanır. */
 type PatchFn = (o: Settings, remote?: boolean) => void;
@@ -1815,7 +1820,7 @@ async function cloudGet(): Promise<[any, string]> {
 }
 const cloudPut = (o: unknown, msg: string, sha0: string) => tfetch(API, {method: 'PUT', headers: ghHead(true), body: JSON.stringify({message: msg, content: utf8e(JSON.stringify(o, null, 2) + '\n'), sha: sha0, branch: 'main'})});
 async function cloudPatch_(fn: PatchFn, msg: string, retry = true): Promise<boolean> {
-  if (!token) { patchErr = 'bağlantı yok'; return false; } fastWatch();
+  if (!token) { patchErr = 'yok'; return false; } fastWatch();
   try {
     const [o, sha0] = await cloudGet(); fn(o, true);
     const r = await cloudPut(o, msg, sha0);
@@ -1843,15 +1848,15 @@ async function save_(obj?: Settings, msg?: string, keepDraft?: boolean, retry = 
     if(!r.ok)throw r.status;const prev=keepDraft?clean(draft):null;orig=JSON.parse(JSON.stringify(data));draft=JSON.parse(JSON.stringify(data));
     if(prev)for(const k in prev)if(!['test_req','sell','convert','liquidate','xfer_req','xfer_cancel','dust','desk_cmd','buy','clear'].includes(k))draft[k]=prev[k];
     renderForm();if(S)render();toast(msg||'Kaydedildi. Bot birkaç saniye içinde yeni ayarlarla çalışır.');
-  }catch(e){toast(e===401||e===403?'Yetki hatası: anahtarın Contents yazma izni olmalı':'Kaydedilemedi, tekrar dene ('+e+')')}
+  }catch(e){toast(e===401?'GitHub anahtarının süresi dolmuş ya da silinmiş; Ayarlar → Uygulama bölümünden yeniden bağlan':e===403?'Yetki hatası: anahtarın Contents yazma izni olmalı':'Kaydedilemedi, tekrar dene ('+e+')')}
   finally{btn.innerHTML=ic('i-check')+'Kaydet'}
 }
 
 /** Bildirim balonu: yazıdan türü anlaşılır (hata kırmızı, tamam yeşil, bilgi kehribar), simge + yazı + kalan süre çizgisi */
-let toastT;function toast(t){const el=document.getElementById('toast');const s=String(t);
-  const k=/yanlış|hata|yapılamadı|kaydedilemedi|edilemedi|gönderilemez|alınamadı|bulunamadı|başarısız|yetmez|olmalı|gir$|bağlı değil/i.test(s)?'er':/gönderildi|kaydedildi|açıldı|kapatıldı|kopyalandı|eşitlendi|tamam|silindi|güncellendi|başlatıldı|değişti/i.test(s)?'ok':'in';
-  el.className='toast t-'+k;el.innerHTML=`<span class="ti">${ic(k==='er'?'i-info':k==='ok'?'i-check':'i-bell')}</span><span class="tt"></span><i class="tbar"></i>`;
-  (el.querySelector('.tt') as HTMLElement).textContent=s;el.hidden=false;el.onclick=()=>{el.hidden=true};
+let toastT;function toast(t,why?: string){const el=document.getElementById('toast');const s=String(t);
+  const k=/yanlış|hata|yapılamadı|kaydedilemedi|edilemedi|gönderilemez|alınamadı|bulunamadı|başarısız|yetmez|olmalı|gir$|bağlı değil|süresi dolmuş/i.test(s)?'er':/gönderildi|kaydedildi|açıldı|kapatıldı|kopyalandı|eşitlendi|tamam|silindi|güncellendi|başlatıldı|değişti/i.test(s)?'ok':'in';
+  el.className='toast t-'+k;el.innerHTML=`<span class="ti">${ic(k==='er'?'i-info':k==='ok'?'i-check':'i-bell')}</span><span class="tt"><span></span><span></span></span><i class="tbar"></i>`;
+  {const [a,b]=el.querySelectorAll<HTMLElement>('.tt span');a.textContent=s;b.textContent=why?' '+why:''}el.hidden=false;el.onclick=()=>{el.hidden=true};
   clearTimeout(toastT);toastT=setTimeout(()=>el.hidden=true,3800)}
 let HIST: Trade[] = null, hCoin = '', hSide: '' | Side = '';
 function showHist(on){overlayView(on);document.getElementById('mainv').hidden=on;document.getElementById('histv').hidden=!on;

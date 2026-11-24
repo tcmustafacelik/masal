@@ -6,6 +6,7 @@ m2g: MEME cüzdanından Global'in SOL yatırma adresine SOL gönderilir (bot imz
      USDT fon hesabına konur. Ücretler için MEME'de en az 0.02 SOL hep kalır.
 """
 import base64
+import hashlib
 import json
 import math
 import struct
@@ -60,6 +61,36 @@ def _g_sol_chain(g):
     raise RuntimeError("OKX Global'de SOL Solana ağı bulunamadı")
 
 
+def _cl(job, tag):
+    """İş başına sabit kimlik (emir / hesap içi aktarım): tekrar denemede aynı kimlik kullanılır."""
+    return tag + hashlib.md5(job["id"].encode()).hexdigest()[:30]
+
+
+def _move_once(g, job, tag, ccy, amt, frm, to):
+    """Hesaplar arası (fon ↔ işlem) aktarımı iş başına BİR KEZ yapar. Yanıt ağda kaybolursa bir sonraki denemede
+    aktarım körlemesine yinelenmez: önce kendi kimliğiyle borsaya sorulur, sonra fon hesabının bakiyesine bakılır
+    (aktarım gerçekleştiyse fon bakiyesi tutar kadar değişmiştir). İkinci kez aktarım, futures teminatından para
+    kaydırır ve gerçek masada zarar gibi görünürdü."""
+    mv = job.setdefault("mv", {})
+    rec = mv.get(tag)
+    if rec and rec.get("ok"):
+        return
+    cid = _cl(job, "v" + tag)
+    fund = g.funding(ccy, total=True)
+    if rec:  # önceki denemenin sonucu bilinmiyor
+        delta = (fund - rec["f0"]) * (1 if to == transfer.FUNDING else -1)
+        if g.moved(cid) or delta >= amt * 0.9:
+            rec["ok"] = True
+            return
+    mv[tag] = rec = {"f0": fund}
+    try:
+        g.move(ccy, amt, frm, to, cid)
+    except RuntimeError:
+        mv.pop(tag, None)  # borsa açıkça reddetti: aktarım olmadı
+        raise
+    rec["ok"] = True
+
+
 def _adj_start(usd):
     """Masanın başlangıç değeri, masa işçisinin kendi turunda düzeltilir (kilit beklenmez, düzeltme kaybolmaz)."""
     G._ADJ.append(float(usd))
@@ -109,10 +140,9 @@ def _g2m(g, job, X, N, note):
                             job["msg"] = f"{ {'k': 'KASA', 'tr': 'OKX TR'}.get(job.get('via'), 'kaynak')}'dan Global'e gelmesi bekleniyor"
                             return
                         raise RuntimeError(f"Global fon hesabında {usd:.2f} USDT yok (futures teminatına dokunulmaz)")
-                    g.move("USDT", usd, transfer.FUNDING, transfer.TRADING)
+                    _move_once(g, job, "u", "USDT", usd, transfer.FUNDING, transfer.TRADING)
                     job["moved"] = True
-                import hashlib
-                job["clOrd"] = cl = "g" + hashlib.md5(job["id"].encode()).hexdigest()[:30]  # iş başına tek emir kimliği
+                job["clOrd"] = cl = _cl(job, "g")  # iş başına tek emir kimliği
                 try:
                     o = g.market("SOL-USDT", "buy", f"{usd:.2f}", quote=True, cl=cl)
                 except RuntimeError:
@@ -122,6 +152,7 @@ def _g2m(g, job, X, N, note):
                     try:
                         g.move("USDT", usd, transfer.TRADING, transfer.FUNDING)
                         job.pop("moved", None)
+                        (job.get("mv") or {}).pop("u", None)
                     except Exception as e2:
                         print("Aktarım: USDT fona geri alınamadı:", str(e2)[:120])
                     raise
@@ -131,7 +162,7 @@ def _g2m(g, job, X, N, note):
             got = float(d.get("accFillSz") or 0) - abs(float(d.get("fee") or 0) if d.get("feeCcy") == "SOL" else 0)
             if got <= 0:
                 raise RuntimeError("SOL alınamadı")
-            g.move("SOL", math.floor(got * 1e6) / 1e6, transfer.TRADING, transfer.FUNDING)
+            _move_once(g, job, "s", "SOL", math.floor(got * 1e6) / 1e6, transfer.TRADING, transfer.FUNDING)
             job["bought"] = round(got, 6)
             time.sleep(1)
         amt = math.floor((min(job["bought"], g.funding("SOL")) - fee) * 1e6) / 1e6
@@ -180,6 +211,14 @@ def _m2g(g, job, X, N, note):
             free = G._sol(addr) - 0.002  # yalnız ağ ücreti payı kalır (masa kapalı, yedek gerekmez)
             if free * px < 1:
                 raise RuntimeError(f"MEME'de gönderilecek SOL kalmadı ({max(0, free):.4f} SOL)")
+            cap = job.get("cap")
+            if cap is not None and free * px > cap:
+                # cüzdandaki SOL günlük aktarım sınırından kalan paydan fazla: yalnız kalan pay kadar gönderilir
+                if cap < 1:
+                    job["msg"] = "günlük aktarım sınırı dolu; yarın gönderilecek"
+                    return
+                free = cap / px
+                note(X, f"MEME → OKX Global: günlük sınır nedeniyle yalnız {cap:.2f} $ gönderiliyor; kalanı için yarın yeniden iste")
             job["amt"] = math.floor(free * px * 100) / 100
             sol = free
         else:
@@ -229,12 +268,25 @@ def _m2g(g, job, X, N, note):
                 if str(d.get("state")) in ("1", "2"):  # 1: hesaba geçti (işlemde kullanılabilir), 2: tamam
                     amt = float(d.get("amt") or 0)
                     if not job.get("sold"):
-                        if not job.get("in_trading"):
-                            g.move("SOL", amt, transfer.FUNDING, transfer.TRADING)
-                            job["in_trading"] = True
-                        o = g.market("SOL-USDT", "sell", f"{math.floor(amt * 1e6) / 1e6:f}")
-                        job["sold"] = o["ordId"]
-                        time.sleep(2)
+                        cl = job.get("sellCl")
+                        if cl:
+                            # önceki denemede satış emri gönderildi ama yanıtı alınamadı: önce aynı kimlikle borsada
+                            # aranır (SOL ikinci kez satılmaz, satılmış emir kayıtsız kalmaz)
+                            try:
+                                o = g.find_order("SOL-USDT", cl)
+                            except RuntimeError as e:
+                                job["msg"] = f"satış emri kontrol edilemedi; tekrar denenecek: {str(e)[:80]}"
+                                return
+                            if o:
+                                job["sold"] = o["ordId"]
+                        if not job.get("sold"):
+                            if not job.get("in_trading"):
+                                _move_once(g, job, "s", "SOL", amt, transfer.FUNDING, transfer.TRADING)
+                                job["in_trading"] = True
+                            job["sellCl"] = cl = _cl(job, "s")  # iş başına tek satış emri kimliği
+                            o = g.market("SOL-USDT", "sell", f"{math.floor(amt * 1e6) / 1e6:f}", cl=cl)
+                            job["sold"] = o["ordId"]
+                            time.sleep(2)
                     if not job.get("usd"):
                         od = g.req("GET", f"/api/v5/trade/order?instId=SOL-USDT&ordId={job['sold']}")[0]
                         job["usd"] = float(od.get("accFillSz") or 0) * float(od.get("avgPx") or 0) - abs(float(od.get("fee") or 0))
@@ -243,7 +295,7 @@ def _m2g(g, job, X, N, note):
                         job["msg"] = "SOL satışı bekleniyor"
                         return
                     usd = job["usd"]
-                    g.move("USDT", math.floor(usd * 100) / 100, transfer.TRADING, transfer.FUNDING)
+                    _move_once(g, job, "u", "USDT", math.floor(usd * 100) / 100, transfer.TRADING, transfer.FUNDING)
                     job.update(stage="done", msg=f"Global'e ulaştı; {usd:.2f} USDT olarak fon hesabında")
                     try:
                         k_fee = float(g.chain()[1])
