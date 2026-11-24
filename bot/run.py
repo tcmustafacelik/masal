@@ -236,7 +236,7 @@ def clear_old(state, S):
     X["jobs"] = [j for j in X.get("jobs", []) if j.get("stage") not in ("done", "failed")
                  or (j.get("dir") == "g2tr" and nowm - (j.get("sent_ts") or j.get("ts") or 0) < 48 * 3600_000)]
     X["log"] = []
-    for k in ("meme", "lev", "levr", "memer"):
+    for k in ("meme", "lev", "levr", "memer", "gspot", "gspotr"):
         d = state.get(k) or {}
         if d:
             d["log"] = d.get("log", [])[-5:]
@@ -274,6 +274,9 @@ def desk_commands(state, S):
             elif c.get("desk") == "meme":
                 from . import meme
                 meme.manual_sell(state, str(c.get("sym")))
+            elif c.get("desk") in ("gspot", "gspotr"):
+                from . import gspot
+                gspot.manual_sell(state, str(c.get("sym")), c["desk"])
         except Exception as e:
             print("Masa komutu:", e)
     state["desk_done"] = done[-50:]
@@ -679,7 +682,7 @@ def signature(state, S):
     """Kaydedilmesi gereken bir değişiklik olup olmadığını anlamak için özet."""
     parts = []
     tail = lambda d: ((d.get("log") or [None])[-1], (d.get("trades") or [{}])[-1].get("ts"))  # listeler sınıra ulaşınca uzunluk değişmez
-    for k in ("meme", "lev", "levr", "memer"):
+    for k in ("meme", "lev", "levr", "memer", "gspot", "gspotr"):
         parts.append(tail(state.get(k) or {}))
     for s in list(state["portfolios"].values()) + [state.get("live") or {}]:
         parts.append(tail(s))
@@ -896,6 +899,11 @@ def _turn(state, S, N, t_start):
             dust.step(state, S, N)  # küçük bakiyeleri çevirme istekleri
     except Exception as e:
         print("Aktarım hatası:", e)
+    try:
+        from . import gspot
+        gspot.step(state, S, N)  # Global spot: deneme masası + (açıksa) gerçek masa (emirler arka planda)
+    except Exception as e:
+        print("Global spot masası hatası:", e)
     try:
         from . import kaldirac
         kaldirac.step(state, S)  # kaldıraç deneme masası (sanal para; ağ işi arka planda)

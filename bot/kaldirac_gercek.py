@@ -71,7 +71,10 @@ class _Desk:
     def balance(self):
         for x in self.ex.req("GET", "/api/v5/account/balance?ccy=USDT")[0].get("details", []):
             if x["ccy"] == "USDT":
-                return float(x.get("eq") or 0), float(x.get("availBal") or 0)
+                # İşlem hesabındaki USDT'nin bir kısmı Global spot masasının: futures onu kendi parası saymaz
+                from . import gspot
+                g = gspot.PHYS["v"]
+                return max(0.0, float(x.get("eq") or 0) - g), max(0.0, float(x.get("availBal") or 0) - g)
         return 0.0, 0.0
 
     def positions(self):

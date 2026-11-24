@@ -257,7 +257,7 @@ def main():
                 ok = sh("git", "checkout", sha, "--", "bot").returncode == 0
                 sh("git", "reset", "-q", "bot")
                 # yeni kod açılabiliyor mu? açılamıyorsa eski kodla devam (bozuk gönderim botu kilitlemesin)
-                if ok and sh(sys.executable, "-c", "import bot.loop, bot.run, bot.transfer, bot.dust, bot.money, bot.meme, bot.meme_gercek, bot.meme_aktar, bot.kaldirac, bot.kaldirac_gercek", timeout=120).returncode == 0:
+                if ok and sh(sys.executable, "-c", "import bot.loop, bot.run, bot.transfer, bot.dust, bot.money, bot.meme, bot.meme_gercek, bot.meme_aktar, bot.kaldirac, bot.kaldirac_gercek, bot.gspot", timeout=120).returncode == 0:
                     try:
                         flush_desks()
                         push_data(wait=True)

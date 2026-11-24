@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.85.0';
+const APP_VERSION = '1.86.0';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = 'var(--acc)';
@@ -310,6 +310,7 @@ async function openLive(s) {
         s.xfer = o.xfer;
         s.levr = o.levr;
         s.memer = o.memer;
+        s.gspotr = o.gspotr;
     }
     catch (e) {
         pw = '';
@@ -818,6 +819,44 @@ function openLevOpen(sym, side0) {
 }
 document.addEventListener('click', e => { const t = e.target.closest?.('[data-lo]'); if (t)
     openLevOpen(t.dataset.lo, +t.dataset.ls); });
+function renderGspot() {
+    const gs = (orig || S?.settings)?.gspot || {}, P = S?.gspot, RR = S?.gspotr;
+    const real = !!(RR && (gs.real || (RR.positions || []).length)), G = real ? RR : P, desk = real ? 'gspotr' : 'gspot';
+    if (gs.on === false && !real)
+        return `<h2 class="mh">${ic('i-globe')}Global spot<span class="hsum">kapalı</span><button class="mset" type="button" data-sett="gspot">${ic('i-gear')}Ayarlar</button></h2>
+    <div class="card moff"><span class="moi">${ic('i-globe')}</span><b>Global spot masası kapalı</b><p>Ayarlar → Global'den açılır.</p></div>`;
+    if (!G)
+        return gs.real && !RR && (S?.live_enc || S?.live_z) && !pw ? `<div class="warn">${ic('i-lock')}<div>Gerçek Global masasını görmek için kilidi aç.</div></div>`
+            : `<div class="empty">${ic('i-globe')}<div>Global spot masası hazırlanıyor; ilk veriler birkaç dakika içinde gelir</div></div>`;
+    const usd = (v, d = 2) => '$' + nf(v, d), esc = escH, tp = +(gs.lot_tp_pct ?? 3.5);
+    const pf = (v) => nf(v, v >= 100 ? 2 : v >= 1 ? 4 : Math.min(8, 2 - Math.floor(Math.log10(v || 1))));
+    const ml = real ? +(gs.max_loss ?? 15) : 0, left = real ? Math.max(0, ml + Math.min(0, G.pnl)) : 0;
+    const pos = (G.positions || []).map((p) => {
+        const g = p.cost ? p.pnl / p.cost * 100 : 0;
+        return `<div class="fr"><time>${masaClock(p.ts)}</time><em class="ft al">${p.lots} KDM</em><div><span class="fh"><b>${esc(p.sym)}</b> ${usd(p.val)} <span class="${cls(p.pnl) || 'up'}">${spc(g, 1)}</span></span><small>${p.pnl < 0 ? '−' : '+'}${usd(Math.abs(p.pnl))} · maliyet ${usd(p.cost)} · ort. ${pf(p.avg)} · şimdi ${pf(p.px)}${p.pending ? ' · emir yolda' : ''}</small></div>${deskBtn(desk, p.inst, 'Sat')}</div>`;
+    }).join('');
+    const feed = (G.log || []).slice(0, 15).map(([ts, k, t]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : /^HATA/.test(t) ? 'err' : 'not'}">${k === 'buy' ? 'AL' : k === 'exit' ? 'SAT' : k === 'risk' ? (/^HATA/.test(t) ? 'HATA' : 'ENGEL') : 'BİLGİ'}</em><div>${feedTxt(String(t).replace(/^(?:AL|SAT|HATA|ENGEL:?|DUR:) ?/, ''))}</div></div>`).join('');
+    const full = (G.positions || []).length >= +(gs.max_coins ?? 5);
+    const W = (P?.watch || []).slice(0, 8).map((w) => {
+        const d = w.g, ok = d <= 0 && !w.f && (w.h || !full), near = Math.max(4, Math.min(100, 100 - Math.max(0, d) * 12));
+        return `<div class="wr ${ok ? 'wu' : 'wd'}"><div><b>${esc(sym(w.i))}</b><em>${w.f ? 'FİLTRE' : ok ? 'ŞART TAMAM' : d <= 0 && full && !w.h ? 'COİN SINIRI' : w.h ? (w.h + 1) + '. KDM' : 'ADAY'}</em></div><div><span>${pf(w.p)}</span><small>${d <= 0 ? 'hedefte' : 'hedefe %' + nf(d, 1)}</small></div><i style="width:${(ok ? 100 : near).toFixed(0)}%"></i></div>`;
+    }).join('');
+    const warm = P && P.uni && P.warm < P.uni ? `<p class="hint">Mumlar yükleniyor: ${P.warm}/${P.uni} coin hazır. Bir coin, 60 saatlik verisi tamamlanınca alınabilir.</p>` : '';
+    const st = real ? (G.halt ? `<b class="dn">Yeni alım durdu: ${esc(G.halt)}.</b>` : !gs.real ? '<b>Gerçek mod kapalı:</b> yeni alım yok, eldeki coinler kurallarıyla satılır.' : 'Para Global fon hesabından alım anında işlem hesabına geçer; futures masasının parasına dokunulmaz.')
+        : 'Deneme: gerçek fiyatlarla sanal para. Gerçek işlem için Ayarlar → Global → Gerçek parayla işlem.';
+    return `<h2 class="mh">${ic('i-globe')}Global<span class="hsum">${real ? '<em class="rbadge">GERÇEK</em>' : '<em class="rbadge pp">DENEME</em>'}OKX Global</span><button class="mset" type="button" data-sett="gspot">${ic('i-gear')}Ayarlar</button></h2>
+    <div class="card mmeme">
+      ${((h) => real ? h : h.replace(/<div class="drisk">[\s\S]*?<\/div><\/div>\s*/, ''))(deskHero(real ? 'Masa' : 'Deneme kasası', G.equity, `boşta ${usd(G.cash)} · başlangıç ${usd(G.start)}`, G.pnl, G.start, left, ml, [['Coin', String((G.positions || []).length)], ['Satış', String(G.sells || 0)], ['Kazanma', G.win_rate == null ? '—' : '%' + G.win_rate], ['Kâr', '%' + nf(tp, 1)]]))}
+      <p class="mnote">${ic(real ? 'i-lock' : 'i-flask')}${st}${G.err ? ` <b class="dn">Uyarı: ${esc(G.err).slice(0, 90)}</b>` : ''}</p>
+    </div>
+    ${pos ? `<h2 class="mh">${ic('i-coins')}Eldeki coinler<span class="hsum">${(G.positions || []).length} coin</span></h2><div class="card mfeed">${pos}</div>` : ''}
+    <h2 class="mh">${ic('i-list')}İşlem kaydı<span class="hsum">${real ? 'gerçek masa' : 'deneme masası'}</span></h2>
+    <div class="card mfeed">${feed || `<div class="empty">${ic('i-eye')}<div>Henüz işlem yok; fiyat alım hedefine inince alır</div></div>`}</div>
+    ${favSec(real ? G.fav : [], P?.fav, 'gspot')}
+    <h2 class="mh">${ic('i-eye')}Alım adayları<span class="hsum">${P?.uni || 0} coin izleniyor · 15 dk</span></h2>
+    <div class="card"><div class="wgrid">${W || `<div class="empty">${ic('i-refresh')}<div>Mumlar yükleniyor</div></div>`}</div>
+    <p class="hint">Hacmi en yüksek ${gs.coins ?? 30} USDT paritesi izlenir. Fiyat son ${gs.sma_hours ?? 72} saatin ortalamasının %${nf(+(gs.step_pct ?? 3.3), 1)} altına inince 1. kademe alınır; her kademe alışının %${nf(tp, 1)} üstünde satılır. Çubuk dolu = hedefe yakın.</p>${warm}</div>`;
+}
 const DESK_BUSY = {};
 function deskBtn(desk, sym, label) {
     const k = desk + ':' + sym, busy = DESK_BUSY[k] && Date.now() - DESK_BUSY[k] < 60000;
@@ -1768,14 +1807,14 @@ function overlayView(on) {
         document.getElementById('ovw').hidden = true;
     else
         setTimeout(renderOverview, 0);
-    for (const id of ['futv', 'memev', 'kasav', 'homev'])
+    for (const id of ['futv', 'memev', 'kasav', 'homev', 'gspotv'])
         document.getElementById(id).hidden = true;
     if (!on)
         setTimeout(() => showView(VIEW), 0);
 }
 function showView(v) {
     VIEW = v;
-    const m = { home: 'homev', spot: 'mainv', fut: 'futv', meme: 'memev', kasa: 'kasav' };
+    const m = { home: 'homev', spot: 'mainv', gspot: 'gspotv', fut: 'futv', meme: 'memev', kasa: 'kasav' };
     for (const [k, id] of Object.entries(m))
         document.getElementById(id).hidden = k !== v;
     document.querySelectorAll('#deck button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
@@ -1804,6 +1843,10 @@ function renderDeck() {
         set('dkFut', R2?.on ? '$' + nf(R2.equity, 2) : 'kapalı');
     }
     {
+        const G2 = S.gspotr, P2 = S.gspot, gs2 = (S?.settings?.gspot) || {};
+        set('dkG', gs2.on === false && !G2 ? 'kapalı' : G2 && gs2.real ? '$' + nf(G2.equity, 2) : P2 ? 'deneme' : '—');
+    }
+    {
         const R3 = S.memer, on3 = (S?.settings?.meme || {}).on !== false;
         set('dkMeme', on3 && R3?.on ? '$' + nf(R3.value, 2) : on3 ? 'deneme' : 'kapalı');
     }
@@ -1818,6 +1861,10 @@ function renderDeck() {
     if (VIEW === 'fut') {
         const b = document.getElementById('futBody');
         setH(b, renderLevR() || `<div class="empty">${ic('i-layers')}<div>Kaldıraç masası verisi bekleniyor</div></div>`);
+    }
+    if (VIEW === 'gspot') {
+        const b = document.getElementById('gspotBody');
+        setH(b, renderGspot());
     }
     if (VIEW === 'meme') {
         const b = document.getElementById('memeBody');
@@ -1840,6 +1887,9 @@ function renderHome() {
     const spP = liveEquity(sp) - sp.start_cash, spT = sp.today_pnl ?? 0;
     const desks = [
         ['spot', 'h1', 'i-coins', 'Spot', tl(liveEquity(sp), 0), pill(spP, nf(Math.abs(spP), 0) + ' TL'), sp.halted ? ['', 'durdu'] : sp.paused ? ['pp', 'beklemede'] : ['on', `${(sp.positions || []).length} coin · bugün ${sgn(spT)} TL`]],
+        ['gspot', 'h5', 'i-globe', 'Global', (() => { const G = S.gspotr, P = S.gspot, gs = ms && S.settings?.gspot || {}; return G && gs.real ? usd(+G.equity || 0) : P ? 'Deneme' : '—'; })(),
+            (() => { const G = S.gspotr, gs = S.settings?.gspot || {}; return G && gs.real ? pill(+G.pnl || 0, usd(Math.abs(+G.pnl || 0))) : ''; })(),
+            (() => { const G = S.gspotr, P = S.gspot, gs = S.settings?.gspot || {}, X = G && gs.real ? G : P; return gs.on === false && !G ? ['', 'kapalı'] : X ? [G && gs.real ? 'on' : 'pp', `${(X.positions || []).length} coin · ${G && gs.real ? 'gerçek' : 'deneme'}`] : ['', 'hazırlanıyor']; })()],
         ['fut', 'h2', 'i-layers', 'Futures', R?.on || R?.funded ? usd(+R.equity || 0) : '—', R?.funded ? pill(+R.pnl || 0, usd(Math.abs(+R.pnl || 0))) : '', R?.dead ? ['', 'durdu'] : R?.on ? ['on', `${(R.positions || []).length} pozisyon · ${S.lev?.watch?.length || 0} coin izleniyor`] : ['', 'kapalı']],
         ['meme', 'h3', 'i-flask', 'Memecoin', ms.on === false ? 'Kapalı' : M?.on ? usd(+M.value || 0) : 'Deneme', M?.on && M?.start ? pill(+M.pnl || 0, usd(Math.abs(+M.pnl || 0))) : '', ms.on === false ? ['', 'kapalı'] : M?.on ? ['on', `${(M.positions || []).length} token`] : ['pp', 'yalnız deneme taraması']],
         ['kasa', 'h4', 'i-vault', 'Kasalar', X?.kasa?.usd != null ? usd(+X.kasa.usd) : '—', '', ['on', X?.g_val != null ? `Global ${usd(+X.g_val)} · TR ${usd(+X.tr_total || 0)}` : 'aktarım']]
@@ -1861,6 +1911,15 @@ function renderHome() {
             continue;
         const m = /([+-]?\d+\.\d+)\$/.exec(t), v = m ? +m[1] : 0;
         fd.push([ts, 'h3', 'i-flask', t.replace(/^GERÇEK\s+/, '').split(' · ')[0], 'Memecoin', k === 'exit' ? `<span class="hx ${cls(v) || 'z'}">${v >= 0 ? '+' : '−'}$${nf(Math.abs(v), 2)}</span>` : `<span class="hx b">alındı</span>`]);
+    }
+    {
+        const G = S.gspotr;
+        for (const [ts, k, t] of ((G?.log) || []).slice(0, 10)) {
+            if (k !== 'buy' && k !== 'exit')
+                continue;
+            const m = /([+-]?\d+\.\d+)\$ ·/.exec(t), v = m ? +m[1] : 0;
+            fd.push([ts, 'h5', 'i-globe', t.split(' · ')[0].replace(/ \$[\d.]+$/, '').replace(/^AL /, '').replace(/^SAT /, '') + (k === 'buy' ? ' alındı' : ' satıldı'), 'Global', k === 'exit' ? `<span class="hx ${cls(v) || 'z'}">${v >= 0 ? '+' : '−'}$${nf(Math.abs(v), 2)}</span>` : `<span class="hx b">alındı</span>`]);
+        }
     }
     fd.sort((a, b) => b[0] - a[0]);
     h += `<h2 class="mh">${ic('i-list')}Son hareketler<span class="hsum">bütün masalar</span></h2><div class="card hfeed">${fd.length ? fd.slice(0, 8).map(([ts, c, i, t, sub, x]) => `<div class="hr"><span class="hk hi ${c}">${ic(i)}</span><div class="hm"><b>${String(t).replace(/</g, '&lt;')}</b><small>${ago(ts)} · ${hcut(String(sub)).replace(/</g, '&lt;')}</small></div>${x}</div>`).join('') : `<div class="empty">${ic('i-clock')}<div>Henüz hareket yok</div></div>`}</div>`;
@@ -1896,9 +1955,10 @@ function renderOverview() {
     const btcTL = +(LP['BTC-USDT']?.last || LP['BTC-TRY']?.last || 0), btcUsd = btcTL && r ? btcTL / r : +((S.lev?.watch || []).find((w) => w.sym === 'BTC')?.px || 0);
     const cur = OV_CUR === 'btc' && !btcUsd ? 'usd' : OV_CUR;
     const cv = (usd, d) => OV_HIDE ? '••••' : cur === 'try' ? tl(usd * r, d ?? 0) : cur === 'btc' ? '₿' + nf(usd / btcUsd, d ?? (Math.abs(usd / btcUsd) < 0.01 ? 6 : 4)) : '$' + nf(usd, d ?? 2);
-    const parts = [['tr', 'Spot · OKX TR', 'i-bank', +X.tr_total || 0], ['g', 'Futures · Global', 'i-layers', +X.g_val || 0], ['m', 'Memecoin', 'i-flask', +M?.value || 0], ['k', 'Kasa', 'i-vault', +X.kasa?.usd || 0]];
+    const GS = S.gspotr, gE = GS && (+GS.equity || 0) > 0 ? +GS.equity : 0;
+    const parts = [['tr', 'Spot · OKX TR', 'i-bank', +X.tr_total || 0], ['g', 'Futures · Global', 'i-layers', Math.max(0, (+X.g_val || 0) - gE)], ...(gE ? [['gs', 'Global spot', 'i-globe', gE]] : []), ['m', 'Memecoin', 'i-flask', +M?.value || 0], ['k', 'Kasa', 'i-vault', +X.kasa?.usd || 0]];
     const tot = [X.tr_total, X.g_val, X.kasa?.usd].every((v) => v != null) ? parts.reduce((a, p) => a + p[3], 0) : null;
-    const sP = (liveEquity(sp) - sp.start_cash) / r, fP = R?.funded ? +R.pnl || 0 : 0, mP = M?.start ? +M.pnl || 0 : 0, all = sP + fP + mP;
+    const sP = (liveEquity(sp) - sp.start_cash) / r, fP = R?.funded ? +R.pnl || 0 : 0, mP = M?.start ? +M.pnl || 0 : 0, gP = GS?.funded ? +GS.pnl || 0 : 0, all = sP + fP + mP + gP;
     const sum = Math.max(1, tot || 0), bar = parts.filter(p => p[3] > 0).map(p => `<i class="p${p[0]}" style="width:${(p[3] / sum * 100).toFixed(2)}%"></i>`).join('');
     const second = OV_HIDE || tot == null ? '' : cur === 'try' ? '$' + nf(tot, 2) : tl(tot * r, 0);
     setH(el, `<div class="ob"><div class="oh">${ic('i-wallet')}<b>Toplam varlık</b>
@@ -2600,6 +2660,25 @@ const SECTIONS = [
             ['meme.max_h1', 'Tepe sınırı', 'Son 1 saatte bundan fazla uçmuşsa alınmaz; 0 kapalı', '%', 50, 0, 5000, 0],
             ['meme.max_hold_h', 'En uzun tutma', 'Bu süre dolunca satılır', 'saat', 1, 1, 72, 0]
         ] },
+    { t: 'Global spot', i: 'i-globe', sw: [['gspot.on', 'Global spot masası açık', 'Kapalıyken tarama ve alım yapılmaz'], ['gspot.real', 'Gerçek parayla işlem', 'Kararlar OKX Global işlem hesabında gerçek emirle uygulanır']], f: [
+            ['gspot.budget', 'Bütçe', 'Gerçek masanın kullanacağı en fazla para; alım anında Global fon hesabından işlem hesabına geçer', '$', 10, 0, 100000, 0],
+            ['gspot.max_loss', 'En fazla kayıp', 'Toplam zarar buna ulaşınca yeni alım durur; eldeki coinler kurallarıyla satılır', '$', 5, 1, 100000, 0],
+            ['gspot.lot_pct', '1. kademe', 'Bütçenin; en az $5 olmalı', '%', 1, 1, 100, 0],
+            ['gspot.lot2_pct', '2. kademe büyüklüğü', '1. kademenin', '%', 5, 10, 100, 0],
+            ['gspot.lot3_pct', '3. ve sonraki kademeler', '1. kademenin', '%', 5, 10, 100, 0],
+            ['gspot.sma_hours', 'Ortalama süresi', '1. kademe bu kadar saatin ortalamasına göre alınır', 'saat', 4, 4, 72, 0],
+            ['gspot.step_pct', 'Kademe aralığı', 'Ortalamanın / son kademenin bu kadar altında alır', '%', .1, .5, 30, 1],
+            ['gspot.step3_pct', 'Geniş kademe aralığı', '3. kademeden sonra', '%', .1, .5, 40, 1],
+            ['gspot.lot_tp_pct', 'Kademe kârı', 'Her kademe kendi alışının bu kadar üstünde satılır', '%', .1, .3, 50, 1],
+            ['gspot.stop_pct', 'Zarar sınırı', 'Ortalamanın bu kadar altında hepsi satılır', '%', 1, 1, 90, 0],
+            ['gspot.max_lots', 'En fazla kademe', 'Coin başına', 'adet', 1, 1, 10, 0],
+            ['gspot.max_coins', 'En fazla coin', 'Aynı anda', 'adet', 1, 1, 20, 0],
+            ['gspot.use_pct', 'Kullanım sınırı', 'Coinlere yatırılan toplam, bütçenin bu kadarını aşmaz', '%', 5, 5, 100, 0],
+            ['gspot.trend_filter_pct', 'Düşüş süzgeci', '48 saatlik ortalama bundan fazla düşüyorsa yeni coin alınmaz; 0 kapalı', '%', .5, 0, 50, 1],
+            ['gspot.vol_filter', 'Hacim süzgeci', 'Son mumun hacmi 24 saat ortalamasının bu katını aşarsa beklenir; 0 kapalı', 'kat', .5, 0, 50, 1],
+            ['gspot.coins', 'İzlenen coin', 'Hacmi en yüksek USDT pariteleri', 'adet', 5, 5, 60, 0],
+            ['gspot.bank', 'Deneme kasası', 'Deneme masasının sanal parası (değişince deneme masası yeniden başlamaz)', '$', 10, 10, 1000000, 0]
+        ] },
     { t: 'Aktarım ve KASA', i: 'i-vault', f: [
             ['xfer.daily_max', 'Günlük aktarım sınırı', 'Bir günde borsalardan en fazla gönderilecek', '$', 100, 10, 1000, 0],
             ['xfer.sweep_pct', 'Kâr süpürme oranı', 'Futures ve memecoin kârının bu kadarı KASA\'ya gider; 0 kapalı', '%', 5, 0, 100, 0],
@@ -2649,9 +2728,10 @@ const SUMS = {
     trend: () => `İz süren stop ${pc(draft.trend.trailing_pct)}`,
     'Futures': () => { const l = draft.lev || {}; return `${l.real ? 'Gerçek açık' : 'Gerçek kapalı'} · bütçe $${nf(l.real_budget ?? 30, 0)} · en fazla $${nf(l.max_loss ?? 10, 0)} kayıp · ${l.real_lev ?? 2}x`; },
     'Memecoin': () => { const m = draft.meme || {}; return `${m.real ? 'Gerçek açık' : 'Gerçek kapalı'} · kasanın ${pc(m.size_pct ?? 10)}'u · kâr ${pc(m.tp_pct ?? 30)}${(m.tp_part ?? 100) < 100 ? ` (${pc(m.tp_part)}'i)` : ''} · zarar ${pc(m.sl_pct ?? 15)}`; },
+    'Global spot': () => { const g = draft.gspot || {}; return g.on === false ? 'Kapalı' : `${g.real ? 'Gerçek açık' : 'Deneme'} · bütçe $${nf(g.budget ?? 50, 0)} · kademe kârı ${pc(g.lot_tp_pct ?? 3.5)} · ${g.max_coins ?? 5} coin`; },
     'Aktarım ve KASA': () => { const x = draft.xfer || {}; return `Günde en çok $${nf(x.daily_max || 1000, 0)} · ${+x.sweep_pct > 0 ? `kârın ${pc(x.sweep_pct)}'i ${x.sweep_days} günde bir KASA'ya` : 'kâr süpürme kapalı'}`; }
 };
-const SEC_C = { 'Futures': 'red', 'Memecoin': 'violet', 'Kasa': 'teal', 'Kasadan ekleme': 'teal', 'Koruma': 'red', 'Kâr hedefi': 'green', 'Aktarım ve KASA': 'amber' };
+const SEC_C = { 'Global spot': 'teal', 'Futures': 'red', 'Memecoin': 'violet', 'Kasa': 'teal', 'Kasadan ekleme': 'teal', 'Koruma': 'red', 'Kâr hedefi': 'green', 'Aktarım ve KASA': 'amber' };
 function field([k, label, hint, u, step, min, max, dec]) {
     const v = P(draft, k), h = typeof hint === 'function' ? hint() : hint;
     return `<div class="field" data-k="${k}"><div class="lb"><b>${label}</b><span class="h">${h}</span><em></em></div>
@@ -2865,9 +2945,9 @@ function renderConn() {
         };
 }
 let STAB = 'spot';
-const STABS = [['spot', 'i-coins', 'Spot'], ['fut', 'i-layers', 'Futures'], ['meme', 'i-flask', 'Memecoin'], ['kasa', 'i-vault', 'Kasalar'], ['app', 'i-phone', 'Uygulama']];
+const STABS = [['spot', 'i-coins', 'Spot'], ['gspot', 'i-globe', 'Global'], ['fut', 'i-layers', 'Futures'], ['meme', 'i-flask', 'Meme'], ['kasa', 'i-vault', 'Kasalar'], ['app', 'i-phone', 'Uygulama']];
 const AUTO_OPEN = new Set();
-const SEC_TAB = { 'Kasa': 'spot', 'Kasadan ekleme': 'spot', 'Koruma': 'spot', 'Kâr hedefi': 'spot', 'Futures': 'fut', 'Memecoin': 'meme', 'Aktarım ve KASA': 'kasa' };
+const SEC_TAB = { 'Global spot': 'gspot', 'Kasa': 'spot', 'Kasadan ekleme': 'spot', 'Koruma': 'spot', 'Kâr hedefi': 'spot', 'Futures': 'fut', 'Memecoin': 'meme', 'Aktarım ve KASA': 'kasa' };
 function openSettingsTab(t) { STAB = t; document.getElementById('openSet').click(); }
 function renderForm() {
     delete draft._bad;
@@ -2911,12 +2991,13 @@ function renderForm() {
             + (sec.sw || []).map(([k, a, b]) => `<div style="margin-bottom:8px">${swRow('sw_' + k.replace('.', '_'), !!P(draft, k), a, b)}</div>`).join('')
             + (sec.t === 'Futures' ? futExtra() : '')
             + (sec.t === 'Memecoin' ? memeExtra() : '')
+            + (sec.t === 'Global spot' ? gspotExtra() : '')
             + (tg ? `<div style="margin-bottom:4px">${swRow('tgtSw', !!draft.target.on, 'Hedefte dur', 'Hedefte her şey satılır, bot durur')}</div>
         <div class="field"><div class="lb"><b>Hedef türü</b><span>${draft.target.mode === 'total' ? 'Bot + kasadaki yedek para toplamı' : 'Sadece kâr (başlangıç parasının üstü)'}</span></div>
         <div class="seg" id="tgtMode"><button type="button" data-m="profit" class="${draft.target.mode !== 'total' ? 'on' : ''}">Kâr</button><button type="button" data-m="total" class="${draft.target.mode === 'total' ? 'on' : ''}">Kasa dahil</button></div></div>` : '')
             + `${ff.map(field).join('')}</div>` + ACC_END;
     }
-    if (STAB === 'fut' || STAB === 'meme')
+    if (STAB === 'fut' || STAB === 'meme' || STAB === 'gspot')
         h += banSec(STAB);
     const sf = STRAT_F[draft.strategy];
     const grid = draft.strategy === 'grid';
@@ -3033,7 +3114,7 @@ function renderForm() {
     });
     refresh();
 }
-const BAN_DESK = { spot: 'spot', fut: 'lev', meme: 'meme' };
+const BAN_DESK = { spot: 'spot', gspot: 'gspot', fut: 'lev', meme: 'meme' };
 function banList(d) { const b = (draft.ban = draft.ban || {}); return (b[d] = Array.isArray(b[d]) ? b[d] : []); }
 function banSugg(d) {
     const L = S?.strategies?.live, have = new Set(banList(d).map(banKey));
@@ -3042,6 +3123,8 @@ function banSugg(d) {
         c = [...(L?.positions || []).map((p) => sym(p.inst)), ...(L?.coins || []).filter((x) => x.realized + x.open_pnl < 0).map((x) => sym(x.inst))];
     else if (d === 'lev')
         c = (draft.lev?.coins || []);
+    else if (d === 'gspot')
+        c = [...((S?.gspotr?.positions) || []), ...((S?.gspot?.positions) || [])].map((p) => p.sym);
     else
         c = [...((S?.memer?.positions) || []), ...((S?.meme?.positions) || [])].map((p) => p.sym);
     return [...new Set(c.map(banKey))].filter(x => x && !have.has(x)).slice(0, 16);
@@ -3088,6 +3171,18 @@ function bindBan() {
             add(i.value);
         } };
     document.querySelectorAll('[data-ban]').forEach(t => t.onclick = () => add(t.dataset.ban));
+}
+function gspotExtra() {
+    const g = draft.gspot || {}, o = orig?.gspot || {};
+    let h = '';
+    if (g.real && !o.real)
+        h += `<div class="warn">${ic('i-info')}<div>Kaydedince bot OKX Global'de <b>gerçek emir</b> verir. Para, alım anında Global <b>fon hesabından</b> işlem hesabına geçer (en fazla $${nf(+g.budget || 0, 0)}); önce Kasalar'dan Global'e USDT gönder. Futures masasının parasına dokunulmaz.</div></div>`;
+    if (!g.real && o.real)
+        h += `<div class="warn">${ic('i-info')}<div>Gerçek mod kapanınca yeni alım yapılmaz; eldeki coinler kurallarıyla (kademe kârı, zarar sınırı) satılmaya devam eder.</div></div>`;
+    const l1 = (+g.budget || 0) * (+g.lot_pct || 0) / 100;
+    if (g.real && l1 < 5)
+        h += `<div class="warn">${ic('i-info')}<div>1. kademe $${nf(l1, 2)}; $5'in altındaki kademe alınmaz. Bütçeyi ya da 1. kademe yüzdesini artır.</div></div>`;
+    return h;
 }
 function futExtra() {
     const R = S?.levr, l = draft.lev || {};
@@ -3193,9 +3288,11 @@ async function loadSettings() {
     if (orig?.notify && orig.notify.daily_hour == null)
         orig.notify.daily_hour = 21;
     if (orig) {
-        const b = orig.ban || {};
-        orig.ban = { spot: Array.isArray(b.spot) ? b.spot : [], lev: Array.isArray(b.lev) ? b.lev : [], meme: Array.isArray(b.meme) ? b.meme : [] };
+        const b = orig.ban || {}, A = (x) => Array.isArray(x) ? x : [];
+        orig.ban = { spot: A(b.spot), lev: A(b.lev), meme: A(b.meme), gspot: A(b.gspot) };
     }
+    if (orig)
+        orig.gspot = { on: true, real: false, bank: 100, budget: 50, max_loss: 15, lot_pct: 10, lot2_pct: 45, lot3_pct: 77, step_pct: 3.3, step3_pct: 6.6, lot_tp_pct: 3.5, stop_pct: 50, max_lots: 5, max_coins: 5, use_pct: 85, sma_hours: 72, trend_filter_pct: 5, vol_filter: 4, coins: 30, ...(orig.gspot || {}) };
     topicPlain = '';
     if (pw && typeof orig.notify?.topic === 'object') {
         try {

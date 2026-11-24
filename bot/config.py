@@ -58,7 +58,7 @@ TZ_OFFSET_HOURS = 3  # Türkiye saati
 
 # Kara liste (uygulamadan): masa başına, bu coinlerde YENİ işlem açılmaz. Eldeki pozisyon kendi kurallarıyla
 # (kâr al, zarar durdur) satılmaya devam eder; yeni kademe / yeni pozisyon / elle alım yapılmaz.
-BAN = {"spot": set(), "lev": set(), "meme": set()}
+BAN = {"spot": set(), "lev": set(), "meme": set(), "gspot": set()}
 
 
 def ban_key(x):

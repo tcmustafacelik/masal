@@ -41,6 +41,15 @@ def _lev(state):
         return None
 
 
+def _gs(state, k):
+    try:
+        from . import gspot
+        return gspot.public(state.get(k))
+    except Exception as e:
+        print("Global spot özeti:", e)
+        return None
+
+
 def _levr(state):
     try:
         from . import kaldirac_gercek
@@ -136,13 +145,15 @@ def build(state, S=None):
         "mode": "Sanal", "start_cash": config.START_CASH,
         "risk": config.RISK, "fee": config.FEE_RATE, "slippage": config.SLIPPAGE,
         "universe": state.get("universe", []), "strategies": strategies, "settings": S, "okx": state.get("okx"), "perf": state.get("perf"), "meme": _meme(state), "lev": _lev(state), "xfer": _xfer(state, S), "levr": _levr(state), "memer": _memer(state),
+        "gspot": _gs(state, "gspot"), "gspotr": _gs(state, "gspotr"),
     }
     if vault.password() and "live" in strategies:
         # Gerçek hesap bilgileri herkese açık sayfada şifreli durur; uygulama OKX şifresiyle çözer
         lv = strategies.pop("live")
         okx_, xfer_, levr_, memer_ = state.get("okx"), out.pop("xfer", None), out.pop("levr", None), out.pop("memer", None)
+        gsr_ = out.pop("gspotr", None)
         # Sıkıştırılıp şifrelenen tam kutu (uygulama 1.82+ bunu okur): şifreli veri sıkışmadığı için önce sıkıştırılır
-        out["live_z"] = vault.seal({"strategy": lv, "okx": okx_, "xfer": xfer_, "levr": levr_, "memer": memer_}, z=True)
+        out["live_z"] = vault.seal({"strategy": lv, "okx": okx_, "xfer": xfer_, "levr": levr_, "memer": memer_, "gspotr": gsr_}, z=True)
         # Eski biçimde küçük yedek kutu: henüz güncellenmemiş açık uygulama (ve sıkıştırma açamayan cihaz) bozulmasın;
         # bakiye, pozisyonlar ve masalar durur, uzun listeler (bildirim, geçmiş, izleme) boş gider
         lite = dict(lv, recent=lv["recent"][:5], coins=[], notifs=[], watch=None, equity_series=lv["equity_series"][-48:],

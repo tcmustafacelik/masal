@@ -1,10 +1,17 @@
 {
-  "version": "1.85.0",
+  "version": "1.86.0",
   "date": "2026-11-25",
   "notes": [
-    "Kara liste (spot, futures, memecoin ayrı ayrı): listedeki coinde yeni işlem açılmaz, eldeki kendi kurallarıyla satılır · Favoriler: en çok kâr getiren coinler yıldızlı · Koruma yenilenince yanlış 'sahipsiz emir' iptali düzeltildi · Futures en fazla pozisyon ayarı 10'a kadar"
+    "Global spot masası: OKX Global'de USDT paritelerinde kademeli alım-satım (en hacimli 30 coin). Önce deneme olarak çalışır; Ayarlar → Global'den gerçek parayla açılır, kendi bütçesi ve kara listesi var, futures masasının parasına dokunmaz"
   ],
   "history": [
+    {
+      "version": "1.86.0",
+      "date": "2026-11-25",
+      "notes": [
+        "Global spot masası: OKX Global'de USDT paritelerinde kademeli alım-satım (en hacimli 30 coin). Önce deneme olarak çalışır; Ayarlar → Global'den gerçek parayla açılır, kendi bütçesi ve kara listesi var, futures masasının parasına dokunmaz"
+      ]
+    },
     {
       "version": "1.85.0",
       "date": "2026-11-25",
@@ -101,13 +108,6 @@
       "date": "2026-11-24",
       "notes": [
         "Futures: eğilim döndü kuralı artık 2 saatlik mum art arda ters kalınca kapatır (tek mumluk sahte dönüşlerde küçük zararla çıkmasın)"
-      ]
-    },
-    {
-      "version": "1.79.0",
-      "date": "2026-11-24",
-      "notes": [
-        "Kazanç hesabı: Spot elle alım, Futures elle açma ve Memecoin pozisyonunda (dokun) botun kâr al / zarar durdur noktasında ne kazanır ne kaybedersin, kaydırıcıyla fiyat %X değişirse; Spot'ta alımdan sonraki yeni ortalama"
       ]
     }
   ]
