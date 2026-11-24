@@ -229,18 +229,18 @@
   "theme": "auto",
   "xfer_req": [
     {
-      "id": "gs1795557828089",
-      "ts": 1795557828089,
-      "dir": "tr2g",
-      "amt": 70,
-      "src": "bos"
-    },
-    {
       "id": "t1795561279575",
       "ts": 1795561279575,
       "dir": "tr2g",
       "amt": 2,
       "src": "bot"
+    },
+    {
+      "id": "tmwvb0ri2",
+      "ts": 1795561607738,
+      "dir": "tr2g",
+      "amt": 2,
+      "src": "bos"
     }
   ],
   "xfer_cancel": [
