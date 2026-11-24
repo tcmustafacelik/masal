@@ -23,6 +23,8 @@ import unicodedata
 import urllib.request
 
 from cryptography.hazmat.primitives import serialization
+
+from . import config
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 RPC = "https://api.mainnet-beta.solana.com"
@@ -570,5 +572,5 @@ def public(state):
             "start": R["start"], "pnl": round(R["value"] - R["start"], 2) if R["start"] else 0, "dead": R["dead"], "err": R["err"],
             "sync": R.get("sync"), "positions": [{"mint": m, "sym": p["sym"], "ts": p["ts"], "cost": round(p["cost"], 2),
                                                   "val": p.get("val", 0), "why": p["why"], "part": bool(p.get("part"))} for m, p in R["pos"].items()],
-            "trades": R["trades"][-40:][::-1], "log": R["log"][-40:][::-1], "equity_series": R["equity"][-200:],
+            "trades": R["trades"][-40:][::-1], "log": R["log"][-40:][::-1], "equity_series": R["equity"][-200:], "fav": config.top_earners(R["trades"]),
             "sells": len(sells), "win_rate": round(len(wins) / len(sells) * 100) if sells else None}

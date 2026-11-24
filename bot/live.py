@@ -37,6 +37,8 @@ class OrderUnsure(Exception):
         self.cl, self.oid = cl, oid
 
 
+CANCELED = {}  # {algoId: zaman} bot bu oturumda iptal ettiği korumalar: eski bir okumada görünseler de "sahipsiz" sayılmaz
+
 class OkxPrivate:
     def __init__(self):
         self.key = os.environ.get("OKX_API_KEY", "")
@@ -114,6 +116,11 @@ class OkxPrivate:
     def cancel_algos(self, items):
         if items:
             self._req("POST", "/api/v5/trade/cancel-algos", [{"algoId": a, "instId": i} for a, i in items])
+            now = time.time()
+            for a, _ in items:
+                CANCELED[a] = now
+            for a in [a for a, t in CANCELED.items() if now - t > 600]:
+                del CANCELED[a]
 
     def order(self, inst, ord_id):
         return self._req("GET", f"/api/v5/trade/order?instId={inst}&ordId={ord_id}")[0]
@@ -309,6 +316,8 @@ class LivePortfolio(Portfolio):
         print(text)
 
     def _buy(self, ts, inst, price, amount, reason):
+        if config.banned("spot", inst):
+            return False  # kara listede: yeni alım / yeni kademe yok
         if inst in self.s.get("blocked", {}):
             return False
         if self.armed and self._is_unsure(inst):
@@ -624,7 +633,8 @@ class LivePortfolio(Portfolio):
         mine = {l["algo"] for p in self.s["positions"].values() for l in p["lots"] if l.get("algo")}
         items, kept = [], []
         for a, (inst, sz) in own.items():
-            if a in mine or not inst or self._is_unsure(inst):
+            if a in mine or not inst or self._is_unsure(inst) or time.time() - CANCELED.get(a, 0) < 180:
+                # az önce bot kendisi iptal etti (satış / koruma yenileme): arka plan okuması onu henüz bekliyor görmüş olabilir
                 continue  # kayıtta karşılığı var / sonucu doğrulanmamış emir var (kayıt birazdan değişecek)
             if inst not in self.s["positions"]:
                 bal = have.get(inst.split("-")[0])

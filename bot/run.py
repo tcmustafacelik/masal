@@ -347,6 +347,9 @@ def buy_selected(p, S):
         if not inst or amt < 10 or not price:
             p._note(int(now), f"Elle alım yapılamadı: {inst.split('-')[0]} " + ("tutarı 10 TL'nin altında" if inst and amt < 10 else "fiyatı bulunamadı"))
             continue
+        if config.banned("spot", inst):
+            p._note(int(now), f"Elle alım yapılmadı: {inst.split('-')[0]} kara listede")
+            continue
         n = len((L["positions"].get(inst) or {}).get("lots") or [])
         notes = len(p.log)
         if not p._buy(int(now), inst, price, amt, f"{n + 1}. kademe · elle alım") and len(p.log) == notes:

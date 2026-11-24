@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.84.2';
+const APP_VERSION = '1.85.0';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = 'var(--acc)';
@@ -732,8 +732,16 @@ function renderLevR() {
     <h2 class="mh">${ic('i-list')}İşlem kaydı<span class="hsum">gerçek masa</span></h2>
     <div class="card mfeed">
       ${feed ? feed : `<div class="empty">${ic('i-eye')}<div>Henüz gerçek işlem yok; sinyal gelince açılır</div></div>`}
-    </div>${levWatch()}`;
+    </div>${favSec(R.fav, S?.lev?.fav, 'lev')}${levWatch()}`;
 }
+function favSec(real, paper, kind) {
+    const usd = (v) => '$' + nf(v, 2), list = (real && real.length ? real : paper) || [], pp = !(real && real.length) && list.length;
+    if (!list.length)
+        return '';
+    const ban = new Set((((orig || S?.settings)?.ban || {})[kind] || []).map((x) => banKey(x)));
+    return `<h2 class="mh">${ic('i-star')}Favoriler<span class="hsum">${pp ? 'deneme masası · ' : ''}en çok kâr getiren</span></h2><div class="card mfeed">${list.map((f, i) => `<div class="fr"><time>${i + 1}.</time><em class="ft fav">${ic('i-star')}</em><div><span class="fh"><b>${escH(f.sym)}</b> <span class="up">+${usd(f.pnl)}</span>${ban.has(banKey(f.mint || f.sym)) || ban.has(banKey(f.sym)) ? ' <em class="lk wn in">KARA LİSTE</em>' : ''}</span><small>${f.n} işlem · ${f.w} kârlı</small></div></div>`).join('')}</div>`;
+}
+const banKey = (x) => { x = String(x || '').trim(); return x.length >= 30 ? x : x.toUpperCase().split(/[-/]/)[0]; };
 function levWatch() {
     const L = S?.lev;
     if (!L)
@@ -922,7 +930,7 @@ function renderMemeR() {
     <h2 class="mh">${ic('i-list')}İşlem kaydı<span class="hsum">${mm.real ? 'gerçek masa' : 'gerçek mod kapalı'}</span></h2>
     <div class="card mfeed">
       ${feed ? feed : `<div class="empty">${ic('i-eye')}<div>${R.sol > 0 ? 'Henüz gerçek işlem yok; şartı tutan token bekleniyor' : 'MEME cüzdanına SOL gönderilince başlar'}</div></div>`}
-    </div>${memeScan()}`;
+    </div>${favSec(R.fav, S?.meme?.fav, 'meme')}${memeScan()}`;
 }
 document.getElementById('masaBtn').onclick = () => showMasa(true);
 document.getElementById('closeMasa').onclick = () => showMasa(false);
@@ -1910,6 +1918,7 @@ function cico(inst, side, loss) {
     const sd = side ? `<i class="sd ${side === 'SAT' ? 'sat' + (loss ? ' l' : '') : 'al'}">${side}</i>` : '';
     return `<div class="coin${t.length > 3 ? ' sm' : ''}" data-coin="${inst}">${t}${img}${sd}</div>`;
 }
+const spotFav = (x) => (x?.coins || []).filter((c) => c.realized > 0.005).sort((a, b) => b.realized - a.realized).slice(0, 5).map((c) => c.inst);
 function renderCoins(x) {
     const box = document.getElementById('coins'), sumEl = document.getElementById('coinSum');
     const list = (x.coins || []).map(c => { const cur = c.open_qty ? sellPrice(c.inst, c.price) : 0, op = c.open_qty ? c.open_qty * cur - c.open_cost : 0; return { ...c, op, tot: c.realized + op }; }).sort((a, b) => b.tot - a.tot);
@@ -1920,6 +1929,7 @@ function renderCoins(x) {
     }
     const T = list.reduce((a, c) => a + c.tot, 0);
     setT(sumEl, sgn(T) + ' TL', 'hsum ' + cls(T));
+    const fav = new Set(spotFav(x)), ban = new Set(((orig || S?.settings)?.ban?.spot || []).map(banKey));
     setH(box, list.map(c => {
         const parts = [];
         if (c.sells)
@@ -1930,7 +1940,7 @@ function renderCoins(x) {
             parts.push(tl(c.bought, 0) + ' alındı');
         const det = c.open_qty ? (c.sells ? `açıkta ${sgn(c.op)}` : 'elde') : 'kapandı';
         return `<div class="row">${cico(c.inst)}
-      <div class="mid"><b>${sym(c.inst)}${pq(c.inst)}</b><span>${parts.join(' · ')}</span></div>
+      <div class="mid"><b>${sym(c.inst)}${pq(c.inst)}${fav.has(c.inst) ? `<i class="fst" title="Favori">${ic('i-star')}</i>` : ''}${ban.has(banKey(c.inst)) ? '<em class="lk wn in">KARA LİSTE</em>' : ''}</b><span>${parts.join(' · ')}</span></div>
       <div class="end"><span class="pill lg ${cls(c.tot) || 'z'}"><i>${c.tot >= 0 ? '▲' : '▼'}</i>${nf(Math.abs(c.tot))} TL</span><span class="est">${det}</span></div></div>`;
     }).join(''));
     clipList('coins', 5);
@@ -2031,6 +2041,9 @@ function swipeBox(box, act) {
 }
 swipeBox(document.getElementById('positions'), b => sellCoin(b.dataset.sell));
 swipeBox(document.getElementById('now'), b => openBuy(b.dataset.buy));
+swipeBox(document.getElementById('setForm'), b => { const d = BAN_DESK[STAB], v = b.dataset.unban; if (!d || v == null)
+    return; const l = banList(d), i = l.indexOf(v); if (i >= 0)
+    l.splice(i, 1); swOpen = ''; renderForm(); });
 async function sellCoin(inst) {
     if (SELLING[inst])
         return;
@@ -2563,7 +2576,7 @@ const SECTIONS = [
             ['lev.max_loss', 'En fazla kayıp', 'Toplam zarar buna ulaşınca masa tamamen durur', '$', 5, 1, 10000, 0],
             ['lev.real_lev', 'Kaldıraç', 'İzole marjin; güvenlik için en fazla 3x', 'x', 1, 1, 3, 0],
             ['lev.risk_pct', 'İşlem başına risk', 'Zarar durdurmaya kadar kaybedilecek; kasanın', '%', .5, .5, 5, 1],
-            ['lev.max_pos', 'En fazla pozisyon', 'Aynı anda açık', 'adet', 1, 1, 5, 0],
+            ['lev.max_pos', 'En fazla pozisyon', 'Aynı anda açık', 'adet', 1, 1, 10, 0],
             ['lev.brk_h', 'Kırılım süresi', 'Fiyat son bu kadar saatin zirvesini/dibini kırınca işlem açılır; kısa = daha sık işlem', 'saat', 1, 4, 48, 0],
             ['lev.trend_h', 'Eğilim ortalaması', 'İşlem bu ortalamanın yönünde açılır', 'saat', 10, 50, 280, 0],
             ['lev.daily_loss_pct', 'Günlük zarar sınırı', 'Aşılırsa pozisyonlar kapanır, o gün işlem yok', '%', 1, 1, 20, 0],
@@ -2859,7 +2872,7 @@ function openSettingsTab(t) { STAB = t; document.getElementById('openSet').click
 function renderForm() {
     delete draft._bad;
     const live = draft.live;
-    const dirtyTab = (t) => (t === 'spot' && secDirty(['live', 'paused', 'quote', 'strategy', 'target', 'grid', 'dip', 'trend'])) || (t === 'app' && secDirty(['notify'])) || SECTIONS.some(sec => SEC_TAB[sec.t] === t && secDirty([...sec.f.map(x => x[0]), ...(sec.sw || []).map(x => x[0])]));
+    const dirtyTab = (t) => (BAN_DESK[t] && secDirty(['ban.' + BAN_DESK[t]])) || (t === 'spot' && secDirty(['live', 'paused', 'quote', 'strategy', 'target', 'grid', 'dip', 'trend'])) || (t === 'app' && secDirty(['notify'])) || SECTIONS.some(sec => SEC_TAB[sec.t] === t && secDirty([...sec.f.map(x => x[0]), ...(sec.sw || []).map(x => x[0])]));
     for (const id of ['linkSec', 'connSec']) {
         const e = document.getElementById(id);
         if (e)
@@ -2903,6 +2916,8 @@ function renderForm() {
         <div class="seg" id="tgtMode"><button type="button" data-m="profit" class="${draft.target.mode !== 'total' ? 'on' : ''}">Kâr</button><button type="button" data-m="total" class="${draft.target.mode === 'total' ? 'on' : ''}">Kasa dahil</button></div></div>` : '')
             + `${ff.map(field).join('')}</div>` + ACC_END;
     }
+    if (STAB === 'fut' || STAB === 'meme')
+        h += banSec(STAB);
     const sf = STRAT_F[draft.strategy];
     const grid = draft.strategy === 'grid';
     const GG = [['i-coins', 'Alım', ['grid.sma_hours', 'grid.step_pct', 'grid.step3_pct', 'grid.lot_pct', 'grid.lot2_pct', 'grid.lot3_pct']], ['i-pnl', 'Satış', ['grid.lot_tp_pct', 'grid.pos_tp_pct', 'grid.stop_pct']], ['i-shield', 'Sınırlar', ['grid.max_lots', 'grid.max_coins', 'grid.use_pct']], ['i-eye', 'Filtreler', ['grid.trend_filter_pct', 'grid.vol_filter']]];
@@ -2910,6 +2925,8 @@ function renderForm() {
     if (STAB === 'spot')
         h += accOpen('strat', SNAMES[draft.strategy] + ' ayarları', ICON[draft.strategy], 'blue', SUMS[draft.strategy](), secDirty([...sf.map(x => x[0]), ...(grid ? ['grid.instant'] : [])])) + `<div class="card">${sfH}`
             + (grid ? `<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line2)">${swRow('instSw', !!draft.grid.instant, 'Anlık alım', 'Fiyat değince hemen alır')}</div>` : '') + `</div>` + ACC_END;
+    if (STAB === 'spot')
+        h += banSec('spot');
     if (STAB === 'app') {
         h += installSection();
         h += `<section class="clr"><button class="btn xsync" type="button" id="clrOld">${ic('i-trash')}Eski kayıtları temizle</button><p class="hint">Canlı akış, aktarım geçmişi, masa günlükleri ve bildirimler silinir; işlem geçmişi ve kâr/zarar hesabı korunur.</p></section>`;
@@ -2967,6 +2984,7 @@ function renderForm() {
         isw.onclick = () => { draft.grid.instant = !draft.grid.instant; renderForm(); };
     bindNotify();
     bindInstall();
+    bindBan();
     if (document.getElementById('sellAll'))
         document.getElementById('sellAll').onclick = () => {
             if (!sellArm) {
@@ -3014,6 +3032,62 @@ function renderForm() {
         });
     });
     refresh();
+}
+const BAN_DESK = { spot: 'spot', fut: 'lev', meme: 'meme' };
+function banList(d) { const b = (draft.ban = draft.ban || {}); return (b[d] = Array.isArray(b[d]) ? b[d] : []); }
+function banSugg(d) {
+    const L = S?.strategies?.live, have = new Set(banList(d).map(banKey));
+    let c = [];
+    if (d === 'spot')
+        c = [...(L?.positions || []).map((p) => sym(p.inst)), ...(L?.coins || []).filter((x) => x.realized + x.open_pnl < 0).map((x) => sym(x.inst))];
+    else if (d === 'lev')
+        c = (draft.lev?.coins || []);
+    else
+        c = [...((S?.memer?.positions) || []), ...((S?.meme?.positions) || [])].map((p) => p.sym);
+    return [...new Set(c.map(banKey))].filter(x => x && !have.has(x)).slice(0, 16);
+}
+function banSec(tab) {
+    const d = BAN_DESK[tab];
+    if (!d)
+        return '';
+    const list = banList(d), sg = banSugg(d);
+    const nm = (x) => x.length >= 30 ? x.slice(0, 4) + '…' + x.slice(-4) : x;
+    const rows = list.map(x => `<div class="swr${swOpen === 'ban:' + d + ':' + x ? ' open' : ''}" data-i="ban:${d}:${escH(x)}"><button class="swb" type="button" data-unban="${escH(x)}">${ic('i-trash')}Sil</button>
+    <div class="row swc">${d === 'meme' ? `<div class="coin sm">${escH(nm(x).slice(0, 4))}</div>` : cico(x + '-USDT')}<div class="mid"><b>${escH(nm(x))}</b><span>${d === 'spot' ? 'Yeni alım ve kademe yok' : d === 'lev' ? 'Yeni pozisyon açılmaz' : 'Bu token alınmaz'}</span></div><div class="end"><em class="lk wn">LİSTEDE</em></div></div></div>`).join('');
+    return accOpen('ban_' + d, 'Kara liste', 'i-ban', 'red', list.length ? `${list.length} ${d === 'meme' ? 'token' : 'coin'} · yeni işlem yok` : 'boş', secDirty(['ban.' + d])) + `<div class="card">
+    ${rows ? `<div class="list banl" id="banList">${rows}</div>` : `<div class="empty">${ic('i-ban')}<div>Liste boş. Eklediğin ${d === 'meme' ? 'tokende' : 'coinde'} bot bir daha işlem açmaz.</div></div>`}
+    <div class="banadd"><input class="inp" id="banIn" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="${d === 'meme' ? 'Token adı ya da adresi' : 'Coin adı, ör. IRYS'}"><button class="btn primary" type="button" id="banAdd">${ic('i-plus')}Ekle</button></div>
+    ${sg.length ? `<div class="fgh" style="margin-top:12px">${ic('i-plus')}${d === 'lev' ? 'İzlenen coinler' : d === 'spot' ? 'Elindekiler ve zarar ettirenler' : 'Elindekiler'} · dokun, ekle</div><div class="bant">${sg.map(x => `<button type="button" class="tile" data-ban="${escH(x)}"><span class="nm">${escH(nm(x))}</span></button>`).join('')}</div>` : ''}
+    <p class="hint" style="margin:10px 2px 0">Listedeki ${d === 'meme' ? 'tokende' : 'coinde'} yeni işlem açılmaz${d === 'spot' ? ' (otomatik alım, yeni kademe, elle alım)' : d === 'lev' ? ' (sinyal ya da elle açma)' : ''}. Elinde varsa kendi kurallarıyla, kârda ya da zarar sınırında satılır. Silmek için satırı sola kaydır. Kaydet'e basınca geçerli olur.</p></div>` + ACC_END;
+}
+function bindBan() {
+    const d = BAN_DESK[STAB];
+    if (!d)
+        return;
+    const add = (v) => {
+        v = banKey(v);
+        if (!v || v.length > 64) {
+            toast('Geçerli bir ad yaz');
+            return;
+        }
+        const l = banList(d);
+        if (l.map(banKey).includes(v)) {
+            toast(v + ' zaten listede');
+            return;
+        }
+        l.push(v);
+        OPEN.add('ban_' + d);
+        renderForm();
+    };
+    const i = document.getElementById('banIn'), b = document.getElementById('banAdd');
+    if (b)
+        b.onclick = () => add(i.value);
+    if (i)
+        i.onkeydown = e => { if (e.key === 'Enter') {
+            e.preventDefault();
+            add(i.value);
+        } };
+    document.querySelectorAll('[data-ban]').forEach(t => t.onclick = () => add(t.dataset.ban));
 }
 function futExtra() {
     const R = S?.levr, l = draft.lev || {};
@@ -3118,6 +3192,10 @@ async function loadSettings() {
         orig.notify = { enabled: false, topic: '', trades: true, alerts: true, daily: true, money: true };
     if (orig?.notify && orig.notify.daily_hour == null)
         orig.notify.daily_hour = 21;
+    if (orig) {
+        const b = orig.ban || {};
+        orig.ban = { spot: Array.isArray(b.spot) ? b.spot : [], lev: Array.isArray(b.lev) ? b.lev : [], meme: Array.isArray(b.meme) ? b.meme : [] };
+    }
     topicPlain = '';
     if (pw && typeof orig.notify?.topic === 'object') {
         try {

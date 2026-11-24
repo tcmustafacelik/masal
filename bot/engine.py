@@ -85,6 +85,8 @@ class Portfolio:
         return total
 
     def _buy(self, ts, inst, price, amount, reason):
+        if config.banned("spot", inst):
+            return False  # kara listede: yeni alım / yeni kademe yok
         amount = min(amount, self.s["cash"])
         if amount < 10:
             return False
@@ -204,6 +206,8 @@ class Portfolio:
     def _entry_ok(self, closes, price, extra=False, inst=None):
         """Düşüş filtresi: düşen bıçağı tutmamak için yeni alımı erteler (ayarlardan açılır)."""
         c = self.cfg
+        if inst and config.banned("spot", inst):
+            return False
         # Bekçi / hacim patlaması: son mumun hacmi son 24 saatin ortalamasının k katından fazlaysa (panik satışı,
         # düşen bıçak) alım ertelenir. 30 günlük testte zararı yarıya, en büyük düşüşü %9,4 → %6,4'e indirdi.
         k = c.get("vol_k")
@@ -330,8 +334,8 @@ def watch(p, series):
     out = []
     for inst, bars in series.items():
         closes = [x for _, x in bars[-300:]]
-        if not closes:
-            continue
+        if not closes or config.banned("spot", inst):
+            continue  # kara listedeki coin alım adayı olarak gösterilmez
         price = closes[-1]
         pos = p.s["positions"].get(inst)
         if pos:

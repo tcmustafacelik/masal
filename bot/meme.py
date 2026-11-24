@@ -15,6 +15,8 @@ import threading
 import time
 import urllib.request
 
+from . import config
+
 DS = "https://api.dexscreener.com"
 RC = "https://api.rugcheck.xyz/v1/tokens/{}/report/summary"
 
@@ -245,6 +247,8 @@ def step(state, S):
         if not p:
             continue
         sym = _sym((p.get("baseToken") or {}).get("symbol"), m)
+        if config.banned("meme", sym, m):
+            continue  # kara listede
         M["stats"]["scanned"] += 1
         sig = _signal(p, cfg.get("max_m5", 8), float(cfg.get("min_ratio") or 1.2), int(cfg.get("min_buys") or 5),
                       float(cfg.get("max_h1") or 0))
@@ -309,6 +313,6 @@ def public(state):
     return {"cash": round(M["cash"], 2), "equity": round(eq, 2), "start": M["start"], "stats": M["stats"],
             "positions": [{"mint": m, **{k: p[k] for k in ("sym", "ts", "entry", "now", "peak", "cost", "why", "url")},
                            "value": round(p["qty"] * p["now"], 2), "part": bool(p.get("part"))} for m, p in M["positions"].items()],
-            "trades": M["trades"][-40:][::-1], "log": M["log"][-40:][::-1], "equity_series": M["equity"][-200:],
+            "trades": M["trades"][-40:][::-1], "log": M["log"][-40:][::-1], "equity_series": M["equity"][-200:], "fav": config.top_earners(M["trades"]),
             "sells": len(sells), "win_rate": round(len(wins) / len(sells) * 100) if sells else None,
             "updated": M.get("snap"), "err": _SNAP.get("err") or ""}

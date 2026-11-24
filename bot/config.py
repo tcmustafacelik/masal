@@ -54,3 +54,41 @@ STRATEGIES = {
 }
 
 TZ_OFFSET_HOURS = 3  # Türkiye saati
+
+
+# Kara liste (uygulamadan): masa başına, bu coinlerde YENİ işlem açılmaz. Eldeki pozisyon kendi kurallarıyla
+# (kâr al, zarar durdur) satılmaya devam eder; yeni kademe / yeni pozisyon / elle alım yapılmaz.
+BAN = {"spot": set(), "lev": set(), "meme": set()}
+
+
+def ban_key(x):
+    """'irys', 'IRYS-USDT', ' Irys ' -> 'IRYS'; Solana token adresi (uzun) olduğu gibi kalır."""
+    x = str(x or "").strip()
+    if len(x) >= 30:
+        return x
+    return x.upper().split("-")[0].split("/")[0]
+
+
+def banned(desk, *names):
+    b = BAN.get(desk) or ()
+    return any(n and ban_key(n) in b for n in names)
+
+
+def top_earners(trades, n=5):
+    """Favoriler: kapanan işlemlerden en çok toplam kâr getiren coin/tokenler (yalnız toplamda kârda olanlar).
+    [{"sym", "mint"?, "pnl", "n" (işlem), "w" (kârlı işlem)}], kârı büyükten küçüğe."""
+    agg = {}
+    for t in trades or []:
+        if t.get("pnl") is None or t.get("side") == "AL":
+            continue
+        k = t.get("mint") or t.get("sym") or t.get("inst")
+        if not k:
+            continue
+        a = agg.setdefault(k, {"sym": t.get("sym") or str(t.get("inst", "")).split("-")[0], "pnl": 0.0, "n": 0, "w": 0})
+        if t.get("mint"):
+            a["mint"] = t["mint"]
+        a["pnl"] += float(t["pnl"] or 0)
+        a["n"] += 1
+        a["w"] += 1 if (t["pnl"] or 0) > 0 else 0
+    out = sorted((dict(a, pnl=round(a["pnl"], 2)) for a in agg.values() if a["pnl"] > 0.005), key=lambda a: -a["pnl"])
+    return out[:n]

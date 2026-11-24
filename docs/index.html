@@ -751,6 +751,13 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 em.lk{flex:none;font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.3px;padding:3px 0;border-radius:5px;margin-top:1px;width:52px;text-align:center}
 .lk.b{background:var(--blue-bg);color:var(--blue)}.lk.up{background:var(--green-bg);color:var(--green)}.lk.dn{background:var(--red-bg);color:var(--red)}.lk.sh{background:var(--violet-bg);color:var(--violet)}.lk.z{background:var(--line2);color:var(--muted)}.lk.ac{background:var(--acc-bg);color:var(--acc-ink)}.lk.wn{background:var(--amber-bg);color:var(--amber-ink)}
 .xl.lg>div{min-width:0;overflow-wrap:anywhere}
+.ft.fav{background:var(--amber-bg);color:var(--amber);display:flex;align-items:center;justify-content:center}.ft.fav svg{width:12px;height:12px;fill:currentColor}
+.mfeed .fr:has(.ft.fav)::before{background:var(--amber)}
+.fst{display:inline-flex;vertical-align:-2px;margin-left:5px;color:var(--amber)}.fst svg{width:13px;height:13px;fill:currentColor}
+em.lk.in{display:inline-block;width:auto;padding:2px 5px;margin:0 0 0 6px;vertical-align:1px;font-size:9px}
+.banadd{display:flex;gap:8px;align-items:center;margin-top:10px}.banadd .inp{margin:0;flex:1;min-width:0;text-transform:uppercase}.banadd .inp::placeholder{text-transform:none}.banadd .btn{flex:none;height:40px;padding:0 14px}
+.bant{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:6px}.bant .tile{min-height:38px;padding:6px 2px;border-radius:var(--r-sm)}.bant .tile .nm{font-size:12px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.banl{margin:-4px 0 2px}
 </style>
 </head>
 <body>
@@ -785,7 +792,7 @@ em.lk{flex:none;font-style:normal;font-size:9.5px;font-weight:700;letter-spacing
   <symbol id="i-buy" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M5 20h14"/></symbol>
   <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 6v12M6 12h12"/></symbol>
   <symbol id="i-minus" viewBox="0 0 24 24"><path d="M6 12h12"/></symbol>
-  <symbol id="i-bank" viewBox="0 0 24 24"><path d="M3.5 9.5L12 4l8.5 5.5"/><path d="M6 10v7.5M10 10v7.5M14 10v7.5M18 10v7.5"/><path d="M3.5 20h17"/></symbol><symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.4 3.8 5.3 3.8 8.5s-1.2 6.1-3.8 8.5c-2.6-2.4-3.8-5.3-3.8-8.5S9.4 5.9 12 3.5z"/></symbol><symbol id="i-vault" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="12" cy="12" r="3.2"/><path d="M12 8.8V7.2M15.2 12h1.6M6.5 19.5v1.5M17.5 19.5v1.5"/></symbol><symbol id="i-out" viewBox="0 0 24 24"><path d="M7 17L17 7"/><path d="M9 7h8v8"/></symbol><symbol id="i-in" viewBox="0 0 24 24"><path d="M17 7L7 17"/><path d="M15 17H7V9"/></symbol><symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></symbol>
+  <symbol id="i-bank" viewBox="0 0 24 24"><path d="M3.5 9.5L12 4l8.5 5.5"/><path d="M6 10v7.5M10 10v7.5M14 10v7.5M18 10v7.5"/><path d="M3.5 20h17"/></symbol><symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.4 3.8 5.3 3.8 8.5s-1.2 6.1-3.8 8.5c-2.6-2.4-3.8-5.3-3.8-8.5S9.4 5.9 12 3.5z"/></symbol><symbol id="i-vault" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="12" cy="12" r="3.2"/><path d="M12 8.8V7.2M15.2 12h1.6M6.5 19.5v1.5M17.5 19.5v1.5"/></symbol><symbol id="i-out" viewBox="0 0 24 24"><path d="M7 17L17 7"/><path d="M9 7h8v8"/></symbol><symbol id="i-in" viewBox="0 0 24 24"><path d="M17 7L7 17"/><path d="M15 17H7V9"/></symbol><symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"/></symbol><symbol id="i-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M6 6l12 12"/></symbol><symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></symbol>
   <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4.5 7h15M9.5 7V4.8h5V7M6.5 7l.8 12.2h9.4L17.5 7"/><path d="M10 10.5v5.5M14 10.5v5.5"/></symbol>
   <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></symbol>
   <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 18.5h10.2a4 4 0 00.6-7.96A5.5 5.5 0 007.3 9.1 4.7 4.7 0 007 18.5z"/><path d="M9.6 13.6l1.8 1.8 3.4-3.6"/></symbol>
@@ -951,6 +958,6 @@ em.lk{flex:none;font-style:normal;font-size:9.5px;font-weight:700;letter-spacing
 <div class="toast" id="toast" hidden></div>
 <div class="qsh" id="qsh" hidden><div class="qb"><div class="gr"></div><h3><span><svg class="i" id="qIco"><use href="#i-info"/></svg></span><b id="qTitle"></b></h3><div class="qt" id="qText"></div><button class="btn primary" id="qOk">Anladım</button></div></div>
 
-<script src="app.js?v=1.84.2"></script>
+<script src="app.js?v=1.85.0"></script>
 </body>
 </html>

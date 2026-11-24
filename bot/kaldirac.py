@@ -15,6 +15,8 @@ import threading
 import time
 import urllib.request
 
+from . import config
+
 BASE = "https://www.okx.com"
 DEFAULT = {
     "on": True,
@@ -191,7 +193,7 @@ def step(state, S):
     # Gözcü + Bekçi + Ölçücü: kapanan saatlik mumla karar
     brk, trend, trend_on = _windows(cfg)
     need = max(60, brk + 2, trend + 10 if trend_on else 0)  # göstergelerin oturması için gereken mum sayısı
-    coins = set(cfg.get("coins") or [])
+    coins = {c for c in (cfg.get("coins") or []) if not config.banned("lev", c)}  # kara listedekiler yeni sinyal üretmez
     for c, rows in (snap["c"] or {}).items():
         if len(rows) < need:
             continue
@@ -292,7 +294,7 @@ def manual_open(state, S, sym, side):
         rows = list((_SNAP["c"] or {}).get(sym) or [])
         x = _SNAP["px"].get(sym)
     brk, trend, trend_on = _windows(cfg)
-    bad = ("zaten açık" if sym in L["positions"] else "izlenen coinler arasında değil" if sym not in (cfg.get("coins") or [])
+    bad = ("zaten açık" if sym in L["positions"] else "kara listede" if config.banned("lev", sym) else "izlenen coinler arasında değil" if sym not in (cfg.get("coins") or [])
            else "günlük zarar sınırı dolu" if L["halt"]
            else f"en fazla {cfg['max_pos']} pozisyon" if len(L["positions"]) >= cfg["max_pos"]
            else "fiyat yok" if not x else "mumlar henüz yüklenmedi" if len(rows) < max(60, brk + 2) else None)
@@ -340,7 +342,7 @@ def public(state):
             "positions": [{"sym": c, "side": "UZUN" if p["side"] > 0 else "KISA", "ts": p["ts"], "entry": p["entry"],
                            "now": p["now"], "stop": p["stop"], "tp": p["tp"], "liq": p["liq"], "margin": round(p["margin"], 2),
                            "pnl": round(_upnl(p, p["now"]), 2), "why": p["why"]} for c, p in L["positions"].items()],
-            "trades": done[-40:][::-1], "log": L["log"][-40:][::-1], "equity_series": L["equity"][-200:],
+            "trades": done[-40:][::-1], "log": L["log"][-40:][::-1], "equity_series": L["equity"][-200:], "fav": config.top_earners(done),
             "watch": watch_list(L, {c: p for c, p in _SNAP.get("px", {}).items()}),
             "closed": len(done), "win_rate": round(len(wins) / len(done) * 100) if done else None,
             "updated": L.get("snap"), "err": _SNAP.get("err") or ""}

@@ -22,6 +22,7 @@ DEFAULTS = {
     "clear": 0,  # zaman damgası yeniyse eski kayıtlar (akış, aktarım geçmişi, masa günlükleri, bildirimler) temizlenir
     "xfer": {"daily_max": 1000, "sweep_on": True, "sweep_pct": 50, "sweep_days": 7, "sweep_min": 10},  # para aktarımı ve kâr süpürme
     "dust": [],
+    "ban": {"spot": [], "lev": [], "meme": []},  # kara liste: masa başına yeni işlem açılmayacak coinler
     "buy": [],  # uygulamadan elle alım istekleri [{id, ts, inst, amt (TL)}]
     "desk_cmd": [],  # futures/memecoin elle kapat/sat istekleri  # küçük bakiye çevirme istekleri [{id, ts, ex: tr|g|m}]
     "xfer_cancel": [],  # iptal edilecek aktarım istekleri (id listesi)
@@ -88,7 +89,7 @@ def _merge(base, extra, bad=None, path=""):
 
 _GOOD = {}
 # Bozuk gelirse varsayılanı zararsız olan alanlar (görünüm, bildirim, tek seferlik istek listeleri)
-_SOFT = {"lang", "theme", "accent", "notify", "dust", "buy", "desk_cmd", "xfer_cancel", "xfer_req", "sell", "convert", "clear", "liquidate"}
+_SOFT = {"ban", "lang", "theme", "accent", "notify", "dust", "buy", "desk_cmd", "xfer_cancel", "xfer_req", "sell", "convert", "clear", "liquidate"}
 
 
 def _get(d, path):
@@ -152,6 +153,9 @@ def apply(s):
     if s.get("quote") not in config.QUOTES:
         s["quote"] = "USDT"
     config.QUOTE = s["quote"]
+    b = s.get("ban") if isinstance(s.get("ban"), dict) else {}
+    config.BAN = {k: {config.ban_key(x) for x in (b.get(k) or []) if isinstance(x, str) and x.strip()}
+                  for k in ("spot", "lev", "meme")}
     from . import engine
     engine.MARKET_REF = f"BTC-{config.QUOTE}"
     r = s["risk"]
