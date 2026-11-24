@@ -681,9 +681,13 @@ class LivePortfolio(Portfolio):
                 if not lot.get("algo"):
                     self._protect(now, inst, lot)
                     continue
+                hedef = self._targets(lot.get("entry_q") or lot["entry"])[0] if want_tp else None
+                if hedef and lot.get("tp") and lot.get("entry_q"):
+                    hedef *= lot["entry"] / lot["entry_q"]  # lot["tp"] TL karşılığı tutulur
                 if (pending is not None and lot["algo"] in pending and self.s.get("key") == "grid"
-                        and (lot.get("tp") is not None) != want_tp):
-                    # Toplu kâr al açıldı/kapandı: borsadaki koruma yeni kurala göre (kâr al'lı ya da kâr al'sız) yeniden kurulur
+                        and ((lot.get("tp") is not None) != want_tp
+                             or (want_tp and hedef and lot.get("tp") and abs(lot["tp"] / hedef - 1) > 0.002))):
+                    # Toplu kâr al açıldı/kapandı ya da kademe kârı değişti: borsadaki koruma yeni hedefe göre yeniden kurulur
                     try:
                         self.cancel_items([(lot["algo"], inst)])
                     except Exception as e:
