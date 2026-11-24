@@ -58,10 +58,11 @@
     "cleared": 1795497668
   },
   "sell": {
-    "ts": 1795497686359,
+    "ts": 1795497688703,
     "insts": [
       "INJ-USDT",
-      "ARB-USDT"
+      "ARB-USDT",
+      "OP-USDT"
     ]
   },
   "quote": "USDT",
