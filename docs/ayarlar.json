@@ -3,8 +3,8 @@
   "paused": false,
   "liquidate": 0,
   "strategy": "grid",
-  "budget": 17853,
-  "kasa": 17853,
+  "budget": 17955,
+  "kasa": 17955,
   "topup": {
     "amount": 100,
     "profit_pct": 3,
@@ -248,6 +248,13 @@
       "dir": "tr2g",
       "amt": 2,
       "src": "bot"
+    },
+    {
+      "id": "r1795562150956",
+      "ts": 1795562150956,
+      "dir": "g2tr",
+      "amt": 2,
+      "src": "bos"
     }
   ],
   "xfer_cancel": [
