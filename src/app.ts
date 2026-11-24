@@ -1,4 +1,4 @@
-const APP_VERSION='1.73.0';
+const APP_VERSION='1.74.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (pembe)
@@ -888,12 +888,12 @@ document.addEventListener('click',e=>{
 });
 
 /* ---------- Bölümler: Spot (OKX TR botu), Futures (kaldıraç masası), Memecoin, Kasalar — her biri ayrı ekranda ---------- */
-let VIEW='spot';
+let VIEW='home';
 /** Tam ekran bir pencere (ayarlar, geçmiş, ajan masası) açılınca bölümler ve sekmeler gizlenir; kapanınca kalınan bölüme dönülür */
-function overlayView(on: boolean){document.getElementById('deck').hidden=on;if(on)document.getElementById('ovw').hidden=true;else setTimeout(renderOverview,0);for(const id of ['futv','memev','kasav'])document.getElementById(id).hidden=true;
-  if(!on&&VIEW!=='spot')setTimeout(()=>showView(VIEW),0)}
+function overlayView(on: boolean){document.getElementById('deck').hidden=on;if(on)document.getElementById('ovw').hidden=true;else setTimeout(renderOverview,0);for(const id of ['futv','memev','kasav','homev'])document.getElementById(id).hidden=true;
+  if(!on)setTimeout(()=>showView(VIEW),0)}
 function showView(v: string){
-  VIEW=v;const m: Record<string,string>={spot:'mainv',fut:'futv',meme:'memev',kasa:'kasav'};
+  VIEW=v;const m: Record<string,string>={home:'homev',spot:'mainv',fut:'futv',meme:'memev',kasa:'kasav'};
   for(const [k,id] of Object.entries(m))document.getElementById(id).hidden=k!==v;
   document.querySelectorAll<HTMLElement>('#deck button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
   scrollTo(0,0);renderDeck();navSave();
@@ -908,9 +908,40 @@ function renderDeck(){
   {const R2: any=(S as any).levr;set('dkFut',R2?.on?'$'+nf(R2.equity,2):'kapalı')}{const R3: any=(S as any).memer,on3=((S?.settings as any)?.meme||{}).on!==false;set('dkMeme',on3&&R3?.on?'$'+nf(R3.value,2):on3?'deneme':'kapalı')}
   if(X){const a=[X.tr_total,X.g_val,X.kasa?.usd];if(a.every((v: any)=>v!=null))set('dkKasa','$'+nf(a.reduce((x: number,y: number)=>x+y,0)+(+(S as any).memer?.value||0),0))}
   renderOverview();
+  if(VIEW==='home')renderHome();
   if(VIEW==='fut'){const b=document.getElementById('futBody');setH(b,renderLevR()||`<div class="empty">${ic('i-layers')}<div>Kaldıraç masası verisi bekleniyor</div></div>`)}
   if(VIEW==='meme'){const b=document.getElementById('memeBody');setH(b,renderMemeR()||`<div class="empty">${ic('i-flask')}<div>Memecoin masası verisi bekleniyor</div></div>`)}
 }
+
+/** Özet (ana sayfa): toplam varlık kartının altında dört masanın kısa durumu ve bütün masalardan son hareketler.
+ *  Spot ekranındaki ayrıntılar burada tekrarlanmaz; bir masaya dokununca kendi ekranı açılır. */
+function renderHome(){
+  const box=document.getElementById('homeBody');if(!box||!S)return;
+  const sp=S.strategies?.live,X: any=(S as any).xfer,R: any=(S as any).levr,M: any=(S as any).memer;
+  if(!sp||sp.locked){setH(box,`<div class="empty">${ic('i-lock')}<div>Özeti görmek için Spot sekmesinden kilidi aç</div></div>`);return}
+  const ms=((S.settings as any)?.meme)||{},usd=(v: number)=>'$'+nf(v,2);
+  const pill=(v: number,t: string)=>`<span class="hp ${Math.abs(v)<0.005?'z':cls(v)}">${v>=0?'▲':'▼'} ${t}</span>`;
+  const spP=liveEquity(sp)-sp.start_cash,spT=(sp as any).today_pnl??0;
+  const desks=[
+    ['spot','h1','i-coins','Spot',tl(liveEquity(sp),0),pill(spP,nf(Math.abs(spP),0)+' TL'),sp.halted?['','durdu']:sp.paused?['pp','beklemede']:['on',`${(sp.positions||[]).length} coin · bugün ${sgn(spT)} TL`]],
+    ['fut','h2','i-layers','Futures',R?.on||R?.funded?usd(+R.equity||0):'—',R?.funded?pill(+R.pnl||0,usd(Math.abs(+R.pnl||0))):'',R?.dead?['','durdu']:R?.on?['on',`${(R.positions||[]).length} pozisyon · ${(S as any).lev?.watch?.length||0} coin izleniyor`]:['','kapalı']],
+    ['meme','h3','i-flask','Memecoin',ms.on===false?'Kapalı':M?.on?usd(+M.value||0):'Deneme',M?.on&&M?.start?pill(+M.pnl||0,usd(Math.abs(+M.pnl||0))):'',ms.on===false?['','kapalı']:M?.on?['on',`${(M.positions||[]).length} token`]:['pp','yalnız deneme taraması']],
+    ['kasa','h4','i-vault','Kasalar',X?.kasa?.usd!=null?usd(+X.kasa.usd):'—','',['on',X?.g_val!=null?`Global ${usd(+X.g_val)} · TR ${usd(+X.tr_total||0)}`:'aktarım']]];
+  let h=`<h2 class="mh">${ic('i-layers')}Masalar<span class="hsum">dokun, aç</span></h2><div class="hdesk">${desks.map(([v,c,i,n,val,p,[d,st]])=>
+    `<button type="button" data-goto="${v}"><span class="hi ${c}">${ic(i as string)}</span>${p}<span class="hn">${n}</span><span class="hv">${val}</span><span class="hs"><i class="${d}"></i>${st}</span></button>`).join('')}</div>`;
+  // son hareketler: spot işlemleri + futures + memecoin kayıtları, zamana göre
+  type F=[number,string,string,string,string,string];const fd: F[]=[];
+  for(const t of (sp.recent||[]).slice(0,10)){const sell=t.side==='SAT';fd.push([t.ts,'h1','i-coins',`${sym(t.inst)} ${sell?'satıldı':'alındı'}`,`Spot · ${t.reason||''}`,sell?`<span class="hx ${cls(t.pnl)||'z'}">${sgn(t.pnl)} TL</span>`:`<span class="hx b">${tl(t.amount,0)}</span>`])}
+  for(const [ts,k,t] of ((R?.log)||[]).slice(0,10) as [number,string,string][]){if(k!=='buy'&&k!=='exit')continue;const m=/([+-]?\d+\.\d+)\$/.exec(t),v=m?+m[1]:0;
+    fd.push([ts,'h2','i-layers',t.replace(/^GERÇEK\s+/,'').split(' · ')[0],'Futures',k==='exit'?`<span class="hx ${cls(v)||'z'}">${v>=0?'+':'−'}$${nf(Math.abs(v),2)}</span>`:`<span class="hx b">açıldı</span>`])}
+  for(const [ts,k,t] of ((M?.log)||[]).slice(0,10) as [number,string,string][]){if(k!=='buy'&&k!=='exit')continue;const m=/([+-]?\d+\.\d+)\$/.exec(t),v=m?+m[1]:0;
+    fd.push([ts,'h3','i-flask',t.replace(/^GERÇEK\s+/,'').split(' · ')[0],'Memecoin',k==='exit'?`<span class="hx ${cls(v)||'z'}">${v>=0?'+':'−'}$${nf(Math.abs(v),2)}</span>`:`<span class="hx b">alındı</span>`])}
+  fd.sort((a,b)=>b[0]-a[0]);
+  h+=`<h2 class="mh">${ic('i-list')}Son hareketler<span class="hsum">bütün masalar</span></h2><div class="card hfeed">${fd.length?fd.slice(0,8).map(([ts,c,i,t,sub,x])=>
+    `<div class="hr"><span class="hk hi ${c}">${ic(i)}</span><div class="hm"><b>${String(t).replace(/</g,'&lt;')}</b><small>${ago(ts)} · ${String(sub).replace(/</g,'&lt;').slice(0,60)}</small></div>${x}</div>`).join(''):`<div class="empty">${ic('i-clock')}<div>Henüz hareket yok</div></div>`}</div>`;
+  setH(box,h);
+}
+document.addEventListener('click',e=>{const b=(e.target as HTMLElement).closest?.('[data-goto]') as HTMLElement;if(b)showView(b.dataset.goto)});
 
 /** Ana sayfa üstü: bütün kasaların toplamı ve her masanın kâr/zararı ayrı ayrı (dolar ve TL) */
 /** Toplam varlık para birimi (USDT / BTC / TRY) ve gizle-göster: bu cihazda hatırlanır */
@@ -920,17 +951,16 @@ document.addEventListener('click',e=>{const t=(e.target as HTMLElement).closest?
 function renderOverview(){
   const el=document.getElementById('ovw');if(!el||!S)return;
   const X: any=(S as any).xfer,sp=S.strategies?.live,R: any=(S as any).levr,M: any=(S as any).memer,r=+(X?.usdtry||USDTTRY||0);
-  if(document.getElementById('deck')?.hidden||!X||!sp||sp.locked||!r){el.hidden=true;return}
+  if(VIEW!=='home'||document.getElementById('deck')?.hidden||!X||!sp||sp.locked||!r){el.hidden=true;return}
   // BTC fiyatı (USD): OKX TR canlı fiyatı TL'den çevrilir; yoksa futures izleme listesindeki fiyat
   const btcTL=+(LP['BTC-USDT']?.last||LP['BTC-TRY']?.last||0),btcUsd=btcTL&&r?btcTL/r:+(((S as any).lev?.watch||[]).find((w: any)=>w.sym==='BTC')?.px||0);
   const cur=OV_CUR==='btc'&&!btcUsd?'usd':OV_CUR;
   /** USD tutarını seçili birimde yazar; gizliyse yıldız */
   const cv=(usd: number,d?: number)=>OV_HIDE?'••••':cur==='try'?tl(usd*r,d??0):cur==='btc'?'₿'+nf(usd/btcUsd,d??(Math.abs(usd/btcUsd)<0.01?6:4)):'$'+nf(usd,d??2);
-  const sgv=(usd: number)=>OV_HIDE?'<b>••••</b>':Math.abs(usd)<(cur==='try'?0.01:0.005)?'<b>±0</b>':`<b class="${cls(usd)}">${usd<0?'−':'+'}${cv(Math.abs(usd),cur==='try'?0:undefined)}</b>`;
   const parts: [string,string,string,number][]=[['tr','Spot · OKX TR','i-bank',+X.tr_total||0],['g','Futures · Global','i-layers',+X.g_val||0],['m','Memecoin','i-flask',+M?.value||0],['k','Kasa','i-vault',+X.kasa?.usd||0]];
   const tot=[X.tr_total,X.g_val,X.kasa?.usd].every((v: any)=>v!=null)?parts.reduce((a,p)=>a+p[3],0):null;
   const sP=(liveEquity(sp)-sp.start_cash)/r,fP=R?.funded?+R.pnl||0:0,mP=M?.start?+M.pnl||0:0,all=sP+fP+mP;
-  const pl: Record<string,string>={tr:sgv(sP),g:R?.on||R?.funded?sgv(fP):'<b>kapalı</b>',m:M?.on||M?.start?sgv(mP):'<b>kapalı</b>',k:'<b class="mu">yedek</b>'};
+  
   const sum=Math.max(1,tot||0),bar=parts.filter(p=>p[3]>0).map(p=>`<i class="p${p[0]}" style="width:${(p[3]/sum*100).toFixed(2)}%"></i>`).join('');
   const second=OV_HIDE||tot==null?'':cur==='try'?'$'+nf(tot,2):tl(tot*r,0);
   setH(el,`<div class="ob"><div class="oh">${ic('i-wallet')}<b>Toplam varlık</b>
@@ -939,7 +969,7 @@ function renderOverview(){
     <div class="obig"><div><strong>${tot!=null?cv(tot):'—'}</strong><small>${second}</small></div>
       <div class="adf ${OV_HIDE?'':cls(all)}">${OV_HIDE?'••••':(all>=0?'▲ ':'▼ ')+cv(Math.abs(all),cur==='try'?0:undefined)}<small>toplam kâr/zarar</small></div></div>
     <div class="abar">${bar}</div>
-    <div class="og">${parts.map(([k,n,i,v])=>`<div class="p${k}"><em></em><span>${ic(i)}${n}</span><b>${cv(v,cur==='usd'&&v>=100?0:undefined)}</b><small>${pl[k]}</small></div>`).join('')}</div></div>`);
+    <div class="oleg">${parts.map(([k,n,,v])=>`<span class="p${k}"><em></em>${n.split(' · ')[0]}<b>%${nf(v/sum*100,0)}</b></span>`).join('')}</div></div>`);
   el.hidden=false;
 }
 const ICON_BAD = new Set<string>(), ICON_OK = new Set<string>();
@@ -1764,7 +1794,7 @@ function backLayer(): boolean {
   if (!document.getElementById('setv').hidden) { document.getElementById('closeSet').click(); return true; }
   if (!document.getElementById('histv').hidden) { showHist(false); return true; }
   if (!document.getElementById('masav').hidden) { showMasa(false); return true; }
-  if (VIEW !== 'spot') { showView('spot'); return true; }
+  if (VIEW !== 'home') { showView('home'); return true; }
   return false;
 }
 history.pushState({masal: 1}, '');
@@ -1782,7 +1812,7 @@ function navSave(){if(!navReady)return;try{sessionStorage.setItem('masal_nav',JS
   let n: any=null;try{n=JSON.parse(sessionStorage.getItem('masal_nav')||'null')}catch(e){}
   if(!n){navReady=true;return}
   setTimeout(()=>{
-    if(n.set){STAB=n.stab||'spot';showSettings(true)}else if(n.v&&n.v!=='spot')showView(n.v);
+    if(n.set){STAB=n.stab||'spot';showSettings(true)}else if(n.v&&n.v!=='home')showView(n.v);
     navReady=true;let k=0;const go=()=>{scrollTo(0,n.y||0);if(++k<6&&Math.abs(scrollY-(n.y||0))>4)setTimeout(go,400)};setTimeout(go,300);
   },60);
 })();

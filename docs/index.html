@@ -122,7 +122,7 @@ h2 svg.i{width:15px;height:15px}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 11px}
 .tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:1fr;gap:8px}
 .tile{background:var(--surface);border:1px solid var(--line);text-align:center;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;font:inherit;color:inherit;transition:background .15s,border-color .15s;text-decoration:none;min-height:0;padding:7px 3px 6px;gap:3px;border-radius:11px}
-.deck{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding-bottom:2px;gap:6px}#deck{padding-top:8px}
+.deck{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));padding-bottom:2px;gap:6px}#deck{padding-top:8px}
 .deck button{display:flex;flex-direction:column;align-items:center;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--text);font:inherit;-webkit-tap-highlight-color:transparent;user-select:none;cursor:pointer;min-width:0;padding:7px 3px 6px;gap:1px}
 .deck .dic{display:inline-flex;align-items:center;justify-content:center;border-radius:9px;width:26px;height:26px;margin-bottom:1px}.deck .dic svg{width:15px;height:15px}
 .deck .d1{background:var(--blue-bg);color:var(--blue)}.deck .d2{background:var(--violet-bg);color:var(--violet)}.deck .d3{background:var(--green-bg);color:var(--green)}.deck .d4{background:var(--amber-bg);color:var(--amber)}
@@ -656,6 +656,32 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 .end .pill.lg{font-size:13.5px;padding:4px 9px;margin-top:0}
 .end .est{display:block;font-size:10.5px;color:var(--faint);margin-top:3px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums}.end .est.up{color:var(--green)}.end .est.dn{color:var(--red)}
 .end b.pxv{color:var(--text)}
+
+/* Özet (ana sayfa): masalar ve son hareketler */
+.deck .d0{background:var(--acc-bg);color:var(--acc)}
+.deck button{padding-left:2px;padding-right:2px}.deck b{font-size:11px}.deck small{font-size:10px}
+.hdesk{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.hdesk button{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:10px 11px 10px;font:inherit;color:var(--text);-webkit-tap-highlight-color:transparent;min-width:0;overflow:hidden}
+.hdesk button:active{transform:scale(.98)}
+.hdesk .hi{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;margin-bottom:4px}.hdesk .hi svg{width:15px;height:15px}
+:is(.hdesk,.hfeed) .h1{background:var(--blue-bg);color:var(--blue)}:is(.hdesk,.hfeed) .h2{background:var(--violet-bg);color:var(--violet)}:is(.hdesk,.hfeed) .h3{background:var(--green-bg);color:var(--green)}:is(.hdesk,.hfeed) .h4{background:var(--amber-bg);color:var(--amber)}
+.hdesk .hn{font-size:12px;font-weight:650;color:var(--muted)}
+.hdesk .hv{font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.hdesk .hs{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.hdesk .hs i{width:6px;height:6px;border-radius:50%;background:var(--faint);flex:none}.hdesk .hs i.on{background:var(--green)}.hdesk .hs i.pp{background:var(--amber)}
+.hdesk .hp{position:absolute;top:10px;right:10px;display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:6px;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums}
+.hdesk .hp.up{background:var(--green-bg);color:var(--green)}.hdesk .hp.dn{background:var(--red-bg);color:var(--red)}.hdesk .hp.z{background:var(--line2);color:var(--muted)}
+.hfeed .hr{display:flex;align-items:center;gap:9px;padding:8px 2px;border-top:1px solid var(--line2)}.hfeed .hr:first-child{border-top:0}
+.hfeed .hk{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;flex:none}.hfeed .hk svg{width:13px;height:13px}
+.hfeed .hm{flex:1;min-width:0}.hfeed .hm b{display:block;font-size:12.5px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hfeed .hm small{display:block;font-size:10.5px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hfeed .hx{flex:none;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;padding:2px 7px;border-radius:6px}
+.hfeed .hx.up{background:var(--green-bg);color:var(--green)}.hfeed .hx.dn{background:var(--red-bg);color:var(--red)}.hfeed .hx.b{background:var(--blue-bg);color:var(--blue)}.hfeed .hx.z{background:var(--line2);color:var(--muted)}
+
+.ovw .oleg{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:8px;font-size:11px;color:var(--muted)}
+.ovw .oleg span{display:inline-flex;align-items:center;gap:5px}.ovw .oleg em{width:8px;height:8px;border-radius:3px;display:block}
+.ovw .oleg b{color:var(--text);font-weight:650;font-variant-numeric:tabular-nums}
+.ovw .oleg .ptr em{background:var(--blue)}.ovw .oleg .pg em{background:#8b5cf6}.ovw .oleg .pm em{background:var(--teal)}.ovw .oleg .pk em{background:var(--amber)}
 </style>
 </head>
 <body>
@@ -722,16 +748,18 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 
 <div class="upbar" id="upbar" hidden></div>
 <nav class="deck wrap" id="deck">
-  <button data-v="spot" class="on"><span class="dic d1"><svg class="i"><use href="#i-coins"/></svg></span><b>Spot</b><small id="dkSpot">OKX TR</small></button>
+  <button data-v="home" class="on"><span class="dic d0"><svg class="i"><use href="#i-spark"/></svg></span><b>Özet</b><small id="dkHome">hepsi</small></button>
+  <button data-v="spot"><span class="dic d1"><svg class="i"><use href="#i-coins"/></svg></span><b>Spot</b><small id="dkSpot">OKX TR</small></button>
   <button data-v="fut"><span class="dic d2"><svg class="i"><use href="#i-layers"/></svg></span><b>Futures</b><small id="dkFut">—</small></button>
   <button data-v="meme"><span class="dic d3"><svg class="i"><use href="#i-flask"/></svg></span><b>Memecoin</b><small id="dkMeme">—</small></button>
   <button data-v="kasa"><span class="dic d4"><svg class="i"><use href="#i-vault"/></svg></span><b>Kasalar</b><small id="dkKasa">aktarım</small></button>
 </nav>
 <section class="wrap ovw" id="ovw" hidden></section>
+<main class="wrap" id="homev"><div id="homeBody"></div></main>
 <main class="wrap" id="futv" hidden><div id="futBody"></div></main>
 <main class="wrap" id="memev" hidden><div id="memeBody"></div></main>
 <main class="wrap" id="kasav" hidden><div class="card xf" id="xfer" hidden></div></main>
-<main class="wrap" id="mainv">
+<main class="wrap" id="mainv" hidden>
   <div id="homeChk"></div>
   <div class="err" id="err"></div>
   <div class="cols">
@@ -853,6 +881,6 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 <div class="toast" id="toast" hidden></div>
 <div class="qsh" id="qsh" hidden><div class="qb"><div class="gr"></div><h3><span><svg class="i" id="qIco"><use href="#i-info"/></svg></span><b id="qTitle"></b></h3><div class="qt" id="qText"></div><button class="btn primary" id="qOk">Anladım</button></div></div>
 
-<script src="app.js?v=1.73.0"></script>
+<script src="app.js?v=1.74.0"></script>
 </body>
 </html>
