@@ -194,7 +194,7 @@ def step(state, S):
             continue
         k = _ind(rows, brk, trend)
         L.setdefault("watch", {})[c] = {"hh": k["hh"], "ll": k["ll"], "e200": k["e200"], "up": k["e20"] > k["e50"],
-                                        "trend": trend_on}
+                                        "trend": trend_on, "atr": k["atr"]}
         if L["seen"].get(c) == k["t"]:
             continue  # bu mum için karar verildi
         L["seen"][c] = k["t"]
@@ -298,7 +298,7 @@ def watch_list(L, px):
         else:  # eğilim süzgeci kapalı: hangi kırılım daha yakınsa o
             side = "UZUN" if abs(w["hh"] - x) <= abs(x - w["ll"]) else "KISA"
         lvl = w["hh"] if side == "UZUN" else w["ll"]
-        out.append({"sym": c, "px": x, "side": side, "lvl": lvl, "dist": round((lvl / x - 1) * 100, 2), "open": c in L["positions"], "up": bool(w.get("up"))})
+        out.append({"sym": c, "px": x, "side": side, "lvl": lvl, "dist": round((lvl / x - 1) * 100, 2), "open": c in L["positions"], "up": bool(w.get("up")), "atr": w.get("atr")})
     return sorted(out, key=lambda r: abs(r["dist"]))
 
 

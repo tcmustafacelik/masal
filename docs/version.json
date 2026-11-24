@@ -1,10 +1,17 @@
 {
-  "version": "1.78.0",
+  "version": "1.79.0",
   "date": "2026-11-24",
   "notes": [
-    "Futures elle açma: izlenen coine dokun → UZUN/KISA seç → aç; sonrasını bot kendi kuralıyla yönetir (zarar durdur, kâr al, iz süren stop, eğilim dönünce kapat)"
+    "Kazanç hesabı: Spot elle alım, Futures elle açma ve Memecoin pozisyonunda (dokun) botun kâr al / zarar durdur noktasında ne kazanır ne kaybedersin, kaydırıcıyla fiyat %X değişirse; Spot'ta alımdan sonraki yeni ortalama"
   ],
   "history": [
+    {
+      "version": "1.79.0",
+      "date": "2026-11-24",
+      "notes": [
+        "Kazanç hesabı: Spot elle alım, Futures elle açma ve Memecoin pozisyonunda (dokun) botun kâr al / zarar durdur noktasında ne kazanır ne kaybedersin, kaydırıcıyla fiyat %X değişirse; Spot'ta alımdan sonraki yeni ortalama"
+      ]
+    },
     {
       "version": "1.78.0",
       "date": "2026-11-24",
@@ -103,13 +110,6 @@
       "date": "2026-11-24",
       "notes": [
         "Son işlemlerde alımlar artık mavi 'Alım' etiketiyle; satışlardaki yeşil/kırmızı kâr-zarar etiketinden ayırt ediliyor"
-      ]
-    },
-    {
-      "version": "1.72.3",
-      "date": "2026-11-24",
-      "notes": [
-        "Elle satışta 'Satış isteği · N sn' yazısı yerine dönen simgeli 'Satılıyor' etiketi ve satırın altında akan çubuk"
       ]
     }
   ]

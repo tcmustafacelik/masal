@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.78.0';
+const APP_VERSION = '1.79.0';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = 'var(--acc)'; // seçili çizgi: tema vurgu rengi (kehribar)
@@ -625,6 +625,9 @@ function openLevOpen(sym, side0) {
     document.getElementById('qTitle').textContent = `${sym} · futures`;
     const draw = () => {
         const up = side > 0, against = r.up != null && r.up !== up;
+        const atr = +r.atr || 0, dist = (+lv.sl_atr || 1.5) * atr, tpd = (+lv.tp_atr || 3) * atr, qty = atr ? Math.min(eq * risk / 100 / dist, eq / 3 * lev / r.px) : 0, nt = qty * r.px, mg = nt / lev;
+        const calc = atr && nt ? `<div class="pavg"><div><span>Teminat</span><b>$${nf(mg, 2)}</b></div><div><span>İşlem büyüklüğü</span><b>$${nf(nt, 2)}</b></div><div><span>Kaldıraç</span><b>${lev}x</b></div></div>
+      ${pnlCalc({ u: '$', now: 0, size: nt, side, ref: mg, min: -15, max: 15, what: 'Fiyat', marks: [['Kâr al', side * tpd / r.px * 100, tpd * qty], ['Zarar durdur', -side * dist / r.px * 100, -dist * qty]] })}` : '';
         document.getElementById('qText').innerHTML = `<div class="xfs">
       <div class="seg lseg"><button type="button" data-sd="1" class="${up ? 'on up' : ''}">${ic('i-buy')}<b>UZUN</b><small>yükselişe</small></button><button type="button" data-sd="-1" class="${!up ? 'on dn' : ''}">${ic('i-sell')}<b>KISA</b><small>düşüşe</small></button></div>
       ${against ? `<div class="warn">${ic('i-info')}<div>Kısa vadeli eğilim (20/50 ortalaması) şu an <b>${r.up ? 'yukarı' : 'aşağı'}</b>. Ters yönde açarsan bot bir sonraki saatlik mumda “eğilim döndü” kuralıyla kapatabilir.</div></div>` : ''}
@@ -635,8 +638,10 @@ function openLevOpen(sym, side0) {
         <div>${ic('i-stop')}<span>Zarar durdur</span><b>${nf(+lv.sl_atr || 1.5, 1)} ATR geride (borsada kurulur)</b></div>
         <div>${ic('i-target')}<span>Kâr al</span><b>${nf(+lv.tp_atr || 3, 1)} ATR ileride</b></div>
       </div>
+      ${calc}
       <p class="hint">Açtıktan sonra bot kendi kuralıyla yönetir: kâr al, zarar durdur, iz süren stop; eğilim dönerse kapatır. İstersen Pozisyonlar'dan elle kapatırsın.</p>
       <button class="btn primary xgo lgo ${up ? 'up' : 'dn'}" id="loGo">${ic(up ? 'i-buy' : 'i-sell')}${up ? 'UZUN' : 'KISA'} aç</button></div>`;
+        pcInit();
         document.querySelectorAll('[data-sd]').forEach(b => b.onclick = () => { side = +b.dataset.sd; draw(); });
         const go = document.getElementById('loGo');
         go.onclick = async () => {
@@ -692,6 +697,28 @@ document.addEventListener('click', async (e) => {
         renderDeck();
     }
 });
+/** Memecoin pozisyonuna dokununca: botun kâr al / zarar kes noktalarında ve fiyat değişirse ne olur */
+function openMemeCalc(mint) {
+    const p = (S?.memer?.positions || []).find((x) => x.mint === mint);
+    if (!p)
+        return;
+    const m = (orig || S?.settings)?.meme || {}, tp = +m.tp_pct || 100, sl = +m.sl_pct || 15, part = (+m.tp_part || 100) / 100, cost = +p.cost || 0, val = +p.val || 0, g = cost ? val / cost - 1 : 0;
+    const q = document.getElementById('qsh');
+    q.dataset.n = '';
+    qHead('i-flask', 'Kapat');
+    document.getElementById('qTitle').textContent = `${p.sym} · memecoin`;
+    const toEntry = (x) => ((1 + x / 100) / (1 + g) - 1) * 100; // girişe göre hedefin şimdiki fiyata uzaklığı
+    document.getElementById('qText').innerHTML = `<div class="xfs">
+    <div class="pavg"><div><span>Yatırılan</span><b>$${nf(cost, 2)}</b></div><div><span>Şimdi</span><b>$${nf(val, 2)}</b></div><div><span>Durum</span><b class="${cls(g)}">${spc(g * 100, 1)}</b></div></div>
+    ${pnlCalc({ u: '$', now: val - cost, size: val, side: 1, ref: cost, min: -60, max: 300, what: 'Token şimdiden',
+        marks: [[part < 1 ? `Kâr al (%${nf(part * 100, 0)}'i satılır)` : 'Kâr al', toEntry(tp), cost * tp / 100 * (p.part ? 1 : part)], ['Zarar kes', toEntry(-sl), -cost * sl / 100]] })}
+    <p class="hint">Bot yönetir: girişe göre %${nf(tp, 0)} kârda ${part < 1 ? `%${nf(part * 100, 0)}'ini satar, kalanı iz süren stopla taşır` : 'satar'}; %${nf(+m.trail_from || 25, 0)} kârdan sonra zirveden %${nf(+m.trail_pct || 20, 0)} geri çekilirse satar; %${nf(sl, 0)} zararda keser.</p></div>`;
+    pcInit();
+    q.hidden = false;
+}
+document.addEventListener('click', e => { const t = e.target; if (t.closest?.('[data-desk]'))
+    return; const r = t.closest?.('[data-mc]'); if (r)
+    openMemeCalc(r.dataset.mc); });
 /** Memecoin: tarama özeti ve son kararlar (hangi token neden alındı / engellendi) */
 function memeScan() {
     const M = S?.meme;
@@ -745,7 +772,7 @@ function renderMemeR() {
     const mm = (orig || S?.settings)?.meme || {}, ml = +mm.max_loss || 10, left = Math.max(0, ml + Math.min(0, R.pnl));
     const pos = (R.positions || []).map((p) => {
         const g = p.cost ? (p.val / p.cost - 1) * 100 : 0;
-        return `<div class="fr"><time>${masaClock(p.ts)}</time><em class="ft al">${p.part ? 'KALAN' : 'AÇIK'}</em><div><b>${esc(p.sym)}</b> ${usd(p.val)} · <span class="${cls(g)}">${spc(g, 1)}</span><small>giriş ${usd(p.cost)} · ${esc(p.why)}</small></div>${deskBtn('meme', p.mint, 'Sat')}</div>`;
+        return `<div class="fr mpc" data-mc="${esc(p.mint)}" role="button"><time>${masaClock(p.ts)}</time><em class="ft al">${p.part ? 'KALAN' : 'AÇIK'}</em><div><b>${esc(p.sym)}</b> ${usd(p.val)} · <span class="${cls(g)}">${spc(g, 1)}</span><small>giriş ${usd(p.cost)} · ${esc(p.why)}</small></div>${deskBtn('meme', p.mint, 'Sat')}</div>`;
     }).join('');
     const feed = (R.log || []).slice(0, 15).map(([ts, k, t]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : 'not'}">${k === 'buy' ? 'AL' : k === 'exit' ? 'SAT' : k === 'risk' ? 'ENGEL' : 'BİLGİ'}</em><div>${esc(t).replace(/^GERÇEK (AL|SAT|ENGEL) ?/, '')}</div></div>`).join('');
     const st = R.dead ? `<b class="dn">Durdu: ${esc(R.dead)}. Ayarlar → Memecoin → Yeniden başlat.</b>` : !R.on ? '<b>Kapalı.</b> Ayarlar → Memecoin\'den açılır.' : '';
@@ -2013,6 +2040,13 @@ function openBuy(inst) {
     qHead('i-buy', 'Vazgeç');
     document.getElementById('qTitle').textContent = `${sym(inst)} al`;
     const quick = [...new Set([Math.round(lot / 2), Math.round(lot), Math.round(lot * 2)].filter(v => v >= 10))];
+    const P = (x.positions || []).find((p) => p.inst === inst), pq0 = P ? +P.qty || 0 : 0, pc0 = P ? +P.cost || 0 : 0, tp = +c.lot_tp || 0.04, stp = +c.stop || 0.5;
+    const calc = (a) => {
+        const q = pq0 + a / cur, cost = pc0 + a, avg = q ? cost / q : cur, val = q * cur;
+        return `${P ? `<div class="pavg"><div><span>Şimdiki ortalama</span><b>${px(+P.avg || pc0 / pq0)}</b></div>${ic('i-chev')}<div><span>Alımdan sonra</span><b>${px(avg)}</b></div><div><span>Toplam</span><b>${tl(cost, 0)}</b></div></div>` : ''}
+    ${pnlCalc({ u: 'TL', now: val - cost, size: val, side: 1, ref: cost, min: -50, max: 100, what: 'Fiyat şimdiden',
+            marks: [['Kâr al (bu kademe)', tp * 100, a * tp * 0.996], ['Zarar durdur (hepsi)', (avg * (1 - stp) / cur - 1) * 100, -(cost * stp)]] })}`;
+    };
     document.getElementById('qText').innerHTML = `<div class="xfs">
     <div class="xroute"><div>${cico(inst)}<b>${sym(inst)}</b><small>şimdi ${px(cur)}</small></div><span class="xar">${ic('i-chev')}</span><div><span class="xe e1">${ic('i-layers')}</span><b>${h + 1}. kademe</b><small>${it.t ? 'bot hedefi ' + px(it.t) : 'elle'}</small></div></div>
     ${it.t ? `<p class="xnote">${gap <= 0 ? `Fiyat botun alım hedefinin <b>altında</b>; şart oluşmuş.` : `Fiyat botun alım hedefinin <b>%${nf(gap, 1)} üstünde</b>. Bot bu fiyattan almazdı; karar senin.`}</p>` : ''}
@@ -2024,9 +2058,13 @@ function openBuy(inst) {
       <div>${ic('i-target')}<span>Sonra</span><b>Bot yönetir: ${pp(+c.lot_tp || 0)} kârda satar, zarar durdur korur</b></div>
       ${w.room === false ? `<div>${ic('i-info')}<span>Not</span><b class="dn">Coinlere ayrılan sınır dolu; bu alım sınırı aşar</b></div>` : ''}
     </div>
+    <div id="bCalc">${calc(Math.round(Math.min(lot, cash)) || lot)}</div>
     <button class="btn primary xgo" id="bGo">${ic('i-buy')}Al</button></div>`;
     const inp = document.getElementById('bAmt'), go = document.getElementById('bGo');
-    const upd = () => { go.lastChild.textContent = +inp.value >= 10 ? `${tl(+inp.value, 0)} al` : 'Al'; };
+    const upd = () => { go.lastChild.textContent = +inp.value >= 10 ? `${tl(+inp.value, 0)} al` : 'Al'; if (+inp.value >= 1) {
+        document.getElementById('bCalc').innerHTML = calc(+inp.value);
+        pcInit();
+    } };
     inp.oninput = upd;
     upd();
     document.querySelectorAll('[data-bq]').forEach(b => b.onclick = () => { inp.value = b.dataset.bq; upd(); });
@@ -2072,6 +2110,28 @@ async function buyCoin(inst, amt, h, btn) {
             render();
     } }, 120000);
 }
+function pnlCalc(o) {
+    const f = (v) => pcFmt(v, o.u);
+    return `<div class="pcs" data-now="${o.now}" data-size="${o.size}" data-side="${o.side}" data-ref="${o.ref}" data-u="${o.u}">
+    <div class="xlab">Ne kazanırım, ne kaybederim</div>
+    <div class="pcm">${o.marks.map(([l, mv, v]) => `<div class="${v >= 0 ? 'up' : 'dn'}"><span>${l}</span><b>${f(v)}</b><small>fiyat ${mv >= 0 ? '+' : '−'}%${nf(Math.abs(mv), 1)}</small></div>`).join('')}</div>
+    <div class="pcr"><span>${o.what || 'Fiyat'} değişirse</span><b class="pcp">%0</b></div>
+    <input type="range" min="${o.min}" max="${o.max}" step="1" value="0">
+    <div class="pco"></div></div>`;
+}
+function pcFmt(v, u) { const a = Math.abs(v), s = v < 0 ? '−' : '+'; return u === 'TL' ? `${s}${nf(a, a >= 100 ? 0 : 2)} TL` : `${s}$${nf(a, 2)}`; }
+function pcUpd(el) {
+    const r = el.querySelector('input'), p = +r.value, d = el.dataset, v = +d.now + (+d.side) * (+d.size) * p / 100, ref = +d.ref;
+    el.querySelector('.pcp').textContent = (p > 0 ? '+' : p < 0 ? '−' : '') + '%' + Math.abs(p);
+    const o = el.querySelector('.pco');
+    o.className = 'pco ' + (v >= 0.005 ? 'up' : v <= -0.005 ? 'dn' : 'z');
+    o.innerHTML = `<b>${pcFmt(v, d.u)}</b><span>${ref > 0 ? `yatırdığının %${nf(Math.abs(v / ref * 100), 1)}'i ${v >= 0 ? 'kâr' : 'zarar'}` : ''}</span>`;
+    const pc = (p - +r.min) / (+r.max - +r.min) * 100;
+    r.style.setProperty('--pc', pc.toFixed(1) + '%');
+}
+document.addEventListener('input', e => { const el = e.target.closest?.('.pcs'); if (el)
+    pcUpd(el); });
+function pcInit() { document.querySelectorAll('#qText .pcs').forEach(pcUpd); }
 function renderRules(R, c) {
     const rows = c ? [
         ['i-coins', (c.lot2 ?? 1) === 1 && (c.lot3 ?? 1) === 1 ? tl(c.lot, 0) : `${nf(c.lot, 0)}·${nf(c.lot * (c.lot2 ?? 1), 0)}·${tl(c.lot * (c.lot3 ?? 1), 0)}`, '1., 2. ve 3. kademe tutarı'],

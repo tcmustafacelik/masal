@@ -528,6 +528,19 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 .xfs .lseg button.on.dn{border-color:var(--red);background:var(--red-bg)}.xfs .lseg button.on.dn svg,.xfs .lseg button.on.dn b{color:var(--red)}
 .btn.lgo.up{background:var(--green);border-color:var(--green);color:#fff}.btn.lgo.dn{background:var(--red);border-color:var(--red);color:#fff}
 .wr[data-lo]{cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none}.wr[data-lo]:active{transform:scale(.97)}
+.pcs{margin:12px 0 4px}.pcm{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.pcm>div{border-radius:11px;padding:8px 10px;display:flex;flex-direction:column;gap:1px}.pcm span{font-size:11px;font-weight:600}.pcm b{font-size:16px;font-variant-numeric:tabular-nums}.pcm small{font-size:10.5px;color:var(--muted)}
+.pcm .up{background:var(--green-bg);color:var(--green)}.pcm .dn{background:var(--red-bg);color:var(--red)}
+.pcr{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--muted)}.pcr b{color:var(--text);font-size:13px;font-variant-numeric:tabular-nums}
+.pcs input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:4px;margin:10px 0;background:linear-gradient(90deg,var(--acc) var(--pc,33%),var(--line) var(--pc,33%));outline:none}
+.pcs input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:var(--surface);border:2px solid var(--acc);box-shadow:0 1px 4px var(--shadow)}
+.pcs input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--surface);border:2px solid var(--acc)}
+.pco{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:8px 10px;border-radius:10px;background:var(--line2)}.pco b{font-size:17px;font-variant-numeric:tabular-nums}.pco span{font-size:11.5px;color:var(--muted)}
+.pco.up b{color:var(--green)}.pco.dn b{color:var(--red)}
+.pavg{display:grid;grid-template-columns:1fr auto 1fr 1fr;align-items:center;gap:6px;padding:8px 10px;border:1px solid var(--line2);border-radius:11px;margin-top:10px}
+.pavg:not(:has(svg)){grid-template-columns:repeat(3,1fr)}.pavg>svg{width:14px;height:14px;color:var(--faint)}
+.pavg div{display:flex;flex-direction:column;min-width:0}.pavg span{font-size:10.5px;color:var(--muted)}.pavg b{font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fr.mpc{cursor:pointer;-webkit-tap-highlight-color:transparent}
 .fv{display:flex;align-items:center;justify-content:center;gap:5px;margin-top:10px;font-size:11.5px;color:var(--faint)}.fv svg{width:13px;height:13px}.fv b{color:var(--muted);font-weight:700}.fv em{font-style:normal;color:var(--acc);font-weight:600}
 #now .swb{flex-direction:row;gap:6px;top:6px;bottom:6px;font-size:13px}#now .swb svg{width:26px;height:26px;padding:6px}#now .swr:first-child .swb{top:2px}
 .swr.drag .swc{transition:none}
@@ -928,6 +941,6 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 <div class="toast" id="toast" hidden></div>
 <div class="qsh" id="qsh" hidden><div class="qb"><div class="gr"></div><h3><span><svg class="i" id="qIco"><use href="#i-info"/></svg></span><b id="qTitle"></b></h3><div class="qt" id="qText"></div><button class="btn primary" id="qOk">Anladım</button></div></div>
 
-<script src="app.js?v=1.78.0"></script>
+<script src="app.js?v=1.79.0"></script>
 </body>
 </html>
