@@ -53,7 +53,8 @@ MIN_ORDER = 5.0             # $: bundan küçük kademe alınmaz
 BPH = 4                     # saatte 4 mum (15 dk)
 WARM = 60 * BPH             # 60 saatlik veri birikmeden alım yapılmaz
 EVERY = 2.5                 # fiyat okuma aralığı (sn)
-STABLE = {"USDT", "USDC", "DAI", "FDUSD", "TUSD", "PYUSD", "USDG", "RLUSD", "USDE", "EURT", "EUR", "XAUT", "PAXG",
+# SOL: memecoin aktarımı Global'de SOL alıp satar; Global spot SOL tutmaz (aynı coine iki iş dokunmasın)
+STABLE = {"SOL", "USDT", "USDC", "DAI", "FDUSD", "TUSD", "PYUSD", "USDG", "RLUSD", "USDE", "EURT", "EUR", "XAUT", "PAXG",
           "BUSD", "USDP", "USD1", "USDQ", "SUSDE", "WBTC", "STETH", "WETH", "WSTETH", "CBBTC"}
 
 _LOCK = threading.Lock()

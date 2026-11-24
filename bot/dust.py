@@ -16,7 +16,7 @@ SMALL = 5.0  # $; bunun altındaki bakiyeler "küçük" sayılır
 CASH = {"TRY", "USDT", "USDC", "EUR", "USD"}
 _SEEN = set()
 _OUT = []  # arka plan işinin sonuçları: ana turda kayda ve bildirime aktarılır (durum her turda diskten okunur)
-_HELD = {"tr": set()}
+_HELD = {"tr": set(), "g": set()}  # botların elindeki coinler: listelenmez, çevrilmez (g: Global spot gerçek masası)
 
 
 def _assets(ex):
@@ -45,7 +45,7 @@ def _assets(ex):
 def scan(C):
     """Kasalar ekranı için küçük bakiye listesi."""
     res = {}
-    for k, skip in (("tr", CASH | _HELD["tr"]), ("g", CASH | {"SOL"})):
+    for k, skip in (("tr", CASH | _HELD["tr"]), ("g", CASH | {"SOL"} | _HELD["g"])):
         if not C[k].ok:
             continue
         try:
@@ -121,7 +121,7 @@ def _run(req, X):
             want = str(req.get("to") or ("TRY" if k == "tr" else "USDT"))
             ok, bad, todo = [], [], []
             for c in ccys:
-                if c in CASH or (k == "tr" and c in _HELD["tr"]) or (k == "g" and c == "SOL"):
+                if c in CASH or (k == "tr" and c in _HELD["tr"]) or (k == "g" and (c == "SOL" or c in _HELD["g"])):
                     bad.append(f"{c} (korunuyor)")
                 else:
                     todo.append(c)
@@ -182,6 +182,7 @@ def step(state, S, N=None):
             X["dust_at"] = 0
     L = state.get("live") or {}
     _HELD["tr"] = {i.split("-")[0] for i in (L.get("positions") or {})}
+    _HELD["g"] = {i.split("-")[0] for i in ((state.get("gspotr") or {}).get("positions") or {})}
     seen_l = list(X.get("dust_seen") or [])
     seen = set(seen_l)
     for r in S.get("dust") or []:
