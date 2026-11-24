@@ -82,17 +82,16 @@
     "mode": "total"
   },
   "test_req": {
-    "ts": 1795162760424,
+    "ts": 1795499233140,
     "s": {
       "live": true,
       "paused": false,
-      "liquidate": 0,
       "strategy": "grid",
-      "budget": 19600,
-      "kasa": 19600,
+      "budget": 17951,
+      "kasa": 17951,
       "topup": {
-        "amount": 1000,
-        "profit_pct": 5,
+        "amount": 100,
+        "profit_pct": 3.3,
         "days": 1
       },
       "risk": {
@@ -100,22 +99,23 @@
         "max_positions": 7,
         "stop_pct": 5,
         "daily_loss_pct": 50,
-        "kill_pct": 50
+        "kill_pct": 90
       },
       "grid": {
-        "step_pct": 2.5,
-        "lot_pct": 3.3,
-        "lot_tp_pct": 5,
-        "max_lots": 3,
-        "max_coins": 88,
-        "stop_pct": 22,
-        "use_pct": 100,
-        "trend_filter_pct": 0,
+        "step_pct": 3.3,
+        "lot_pct": 3.1,
+        "lot_tp_pct": 5.5,
+        "max_lots": 5,
+        "max_coins": 8,
+        "stop_pct": 50,
+        "use_pct": 85,
+        "trend_filter_pct": 5,
         "instant": true,
-        "step3_pct": 3.5,
-        "lot2_pct": 55,
-        "lot3_pct": 33,
-        "sma_hours": 8
+        "step3_pct": 6.6,
+        "lot2_pct": 45,
+        "lot3_pct": 77,
+        "sma_hours": 16,
+        "vol_filter": 4
       },
       "dip": {
         "dip_pct": 3,
@@ -139,23 +139,90 @@
         "alerts": true,
         "daily": true,
         "daily_hour": 20,
-        "cleared": 1795162671
-      },
-      "sell": {
-        "ts": 1795067644512,
-        "insts": [
-          "TRUMP-TRY"
-        ]
+        "cleared": 1795497754
       },
       "quote": "USDT",
-      "convert": {
-        "ts": 1795069848278
-      },
       "target": {
         "on": true,
-        "amount": 33333,
+        "amount": 44444,
         "mode": "total"
-      }
+      },
+      "theme": "auto",
+      "xfer": {
+        "daily_max": 1000,
+        "sweep_on": true,
+        "sweep_pct": 50,
+        "sweep_days": 1,
+        "sweep_min": 15
+      },
+      "meme": {
+        "on": true,
+        "bank": 100,
+        "size_pct": 20,
+        "max_pos": 3,
+        "min_liq": 10000,
+        "max_fdv": 15000000,
+        "min_age_min": 10,
+        "max_age_h": 168,
+        "tp_pct": 100,
+        "tp_part": 50,
+        "trail_from": 25,
+        "trail_pct": 20,
+        "sl_pct": 15,
+        "max_hold_h": 6,
+        "slip_pct": 1,
+        "fee_pct": 0.5,
+        "max_m5": 8,
+        "wallet": "7YmjQvaZdKDKmfmTPP1vmUxK8ns1CKEim9ovBbwNEKwN",
+        "real": false,
+        "max_loss": 6,
+        "max_slip": 2,
+        "real_reset": 0,
+        "min_ratio": 2.5,
+        "min_buys": 30,
+        "max_h1": 600
+      },
+      "lev": {
+        "on": true,
+        "bank": 100,
+        "lev": 3,
+        "risk_pct": 2,
+        "max_pos": 4,
+        "sl_atr": 1.5,
+        "tp_atr": 3,
+        "daily_loss_pct": 10,
+        "fee_pct": 0.05,
+        "slip_pct": 0.05,
+        "coins": [
+          "BTC",
+          "ETH",
+          "SOL",
+          "XRP",
+          "DOGE",
+          "HYPE",
+          "ZEC",
+          "PEPE",
+          "BNB",
+          "ADA",
+          "LINK",
+          "SUI",
+          "AVAX",
+          "LTC",
+          "DOT",
+          "WIF",
+          "BCH",
+          "TRX"
+        ],
+        "real": true,
+        "real_budget": 20,
+        "real_lev": 3,
+        "max_loss": 8,
+        "real_reset": 0,
+        "brk_h": 12,
+        "trend_h": 100,
+        "trend_on": true
+      },
+      "accent": "violet"
     }
   },
   "theme": "auto",
