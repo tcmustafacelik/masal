@@ -1,4 +1,4 @@
-const APP_VERSION='1.87.0';
+const APP_VERSION='1.87.1';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (kehribar)
@@ -469,11 +469,14 @@ function renderGspot(): string {
   const W = (P?.watch || []).slice(0, 8).map((w: any) => {const d = w.g, ok = d <= 0 && !w.f && (w.h || !full), near = Math.max(4, Math.min(100, 100 - Math.max(0, d) * 12));
     return `<div class="wr ${ok ? 'wu' : 'wd'}"><div><b>${esc(sym(w.i))}</b><em>${w.f ? 'FİLTRE' : ok ? 'ŞART TAMAM' : d <= 0 && full && !w.h ? 'COİN SINIRI' : w.h ? (w.h + 1) + '. KDM' : 'ADAY'}</em></div><div><span>${pf(w.p)}</span><small>${d <= 0 ? 'hedefte' : 'hedefe %' + nf(d, 1)}</small></div><i style="width:${(ok ? 100 : near).toFixed(0)}%"></i></div>`}).join('');
   const warm = P && P.uni && P.warm < P.uni ? `<p class="hint">Mumlar yükleniyor: ${P.warm}/${P.uni} coin hazır. Bir coin, 60 saatlik verisi tamamlanınca alınabilir.</p>` : '';
-  const st = real ? (G.halt ? `<b class="dn">Yeni alım durdu: ${esc(G.halt)}.</b>` : !gs.real ? '<b>Gerçek mod kapalı:</b> yeni alım yok, eldeki coinler kurallarıyla satılır.' : 'Para Global fon hesabından alım anında işlem hesabına geçer; futures masasının parasına dokunulmaz.')
+  const empty = real && !(+G.phys > 0.5) && !(G.positions || []).length;
+  const st = real ? (empty ? `<b class="dn">Henüz para yok.</b> Global fon hesabına USDT gelince ilk alımda en fazla ${usd(G.start)} işlem hesabına geçer (Kasalar'dan Global'e gönder).` : G.halt ? `<b class="dn">Yeni alım durdu: ${esc(G.halt)}.</b>` : !gs.real ? '<b>Gerçek mod kapalı:</b> yeni alım yok, eldeki coinler kurallarıyla satılır.' : 'Para Global fon hesabından alım anında işlem hesabına geçer; futures masasının parasına dokunulmaz.')
     : 'Deneme: gerçek fiyatlarla sanal para. Gerçek işlem için Ayarlar → Global → Gerçek parayla işlem.';
   return `<h2 class="mh">${ic('i-globe')}Global<span class="hsum">${real ? '<em class="rbadge">GERÇEK</em>' : '<em class="rbadge pp">DENEME</em>'}OKX Global</span><button class="mset" type="button" data-sett="gspot">${ic('i-gear')}Ayarlar</button></h2>
     <div class="card mmeme">
-      ${((h: string) => real ? h : h.replace(/<div class="drisk">[\s\S]*?<\/div><\/div>\s*/, ''))(deskHero(real ? 'Masa' : 'Deneme kasası', G.equity, `boşta ${usd(G.cash)} · başlangıç ${usd(G.start)}`, G.pnl, G.start, left, ml,
+      ${((h: string) => real ? h : h.replace(/<div class="drisk">[\s\S]*?<\/div><\/div>\s*/, ''))(deskHero(real ? 'Masada gerçek para' : 'Deneme kasası',
+        real ? (+G.phys || 0) + (G.positions || []).reduce((a: number, p: any) => a + (+p.val || 0), 0) : G.equity,
+        real ? `bütçe ${usd(G.start)} · coin ${usd((G.positions || []).reduce((a: number, p: any) => a + (+p.val || 0), 0))} · USDT ${usd(+G.phys || 0)}` : `boşta ${usd(G.cash)} · başlangıç ${usd(G.start)}`, G.pnl, G.start, left, ml,
         [['Coin', String((G.positions || []).length)], ['Satış', String(G.sells || 0)], ['Kazanma', G.win_rate == null ? '—' : '%' + G.win_rate], ['Kâr', '%' + nf(tp, 1)]]))}
       <p class="mnote">${ic(real ? 'i-lock' : 'i-flask')}${st}${G.err ? ` <b class="dn">Uyarı: ${esc(G.err).slice(0, 90)}</b>` : ''}</p>
     </div>

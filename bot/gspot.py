@@ -665,4 +665,5 @@ def public(G, snap_bid=None):
             "positions": sorted(pos, key=lambda x: -x["val"]), "trades": G["trades"][-40:][::-1], "log": G["log"][-40:][::-1],
             "equity_series": G["equity"][-200:], "sells": len(sells), "realized": round(sum(t["pnl"] for t in sells), 2),
             "win_rate": round(len(wins) / len(sells) * 100) if sells else None, "watch": G.get("watch"),
-            "fav": config.top_earners(G["trades"]), "warm": warm, "uni": n, "stats": G["stats"]}
+            "fav": config.top_earners(G["trades"]), "warm": warm, "uni": n, "stats": G["stats"],
+            "phys": round(max(0.0, G.get("phys", 0.0)), 2), "nousd": bool(G.get("cool") and G.get("nousd_ts"))}
