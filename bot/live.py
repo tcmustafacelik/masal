@@ -25,6 +25,7 @@ def quote_of(inst):
 
 
 _INST = {}
+ALGO_CL = "mslp"  # botun koyduğu koruma emirlerinin kimlik öneki (algoClOrdId): yalnız bu önekli emirler botundur
 
 
 class OrderUnsure(Exception):
@@ -89,15 +90,26 @@ class OkxPrivate:
             body.update(tpTriggerPx=fmt(math.ceil(tp / tick) * tick, tick), tpOrdPx="-1")
         if sl:
             body.update(slTriggerPx=fmt(math.floor(sl / tick) * tick, tick), slOrdPx="-1")
+        # Kendi kimliğimiz: kayıtta karşılığı kalmayan (sahipsiz) koruma emri bu önekle tanınıp iptal edilir;
+        # kullanıcının OKX'ten elle koyduğu emirlerde bu önek olmaz, onlara dokunulmaz.
+        body["algoClOrdId"] = ALGO_CL + os.urandom(12).hex()
         return self._req("POST", "/api/v5/trade/order-algo", body)[0]["algoId"]
 
     def algo(self, algo_id):
         return self._req("GET", f"/api/v5/trade/order-algo?algoId={algo_id}")[0]
 
     def pending_algo_ids(self):
-        """Borsada bekleyen bütün koruma emirlerinin kimlikleri (tek istek). Liste eksik olabilirse None."""
+        """Borsada bekleyen bütün koruma emirlerinin kimlikleri (tek istek). Liste eksik olabilirse None.
+        Aynı yanıttaki botun kendi emirleri (ALGO_CL önekli) self.own_algos'a yazılır: {algoId: (instId, miktar)};
+        liste eksikse None (sahipsiz emir aramasında yeniden istek atılmaz)."""
         rows = self._req("GET", "/api/v5/trade/orders-algo-pending?ordType=oco,conditional&limit=100")
-        return None if len(rows) >= 100 else {r.get("algoId") for r in rows}
+        if len(rows) >= 100:
+            self.own_algos = None
+            return None
+        self.own_algos = {r.get("algoId"): (r.get("instId"), float(r.get("sz") or 0)) for r in rows
+                          if r.get("algoId") and str(r.get("algoClOrdId") or "").startswith(ALGO_CL)
+                          and r.get("instType", "SPOT") == "SPOT" and r.get("side", "sell") == "sell"}
+        return {r.get("algoId") for r in rows}
 
     def cancel_algos(self, items):
         if items:
@@ -154,7 +166,7 @@ def spot_snapshot(api, algos, ccys=None):
     algos: [(inst, algoId)]. Sonuç ana turda LivePortfolio.reconcile(snap=...) ile kayda işlenir; ana tur borsayı beklemez.
     Dönen kayıt: pending = bekleyen koruma kimlikleri (okunamadıysa None), algo = {algoId: (koruma, emir)} (yalnız
     bekleyenler dışındakiler), have = {coin: miktar} (istenmediyse/okunamadıysa None)."""
-    snap = {"ts": int(time.time() * 1000), "pending": None if algos else set(), "algo": {}, "have": None}
+    snap = {"ts": int(time.time() * 1000), "pending": None if algos else set(), "algo": {}, "have": None, "own": None}
     # Önce bakiye, sonra korumalar: arada tetiklenen koruma "coin eksik" sanılmaz (bakiye tam, koruma tetiklenmiş görünür)
     if ccys:
         try:
@@ -162,11 +174,25 @@ def spot_snapshot(api, algos, ccys=None):
             snap["have"] = {d["ccy"]: float(d.get("cashBal") or d.get("eq") or 0) for d in (rows[0].get("details", []) if rows else [])}
         except Exception as e:
             print("Bakiye eşleştirme yapılamadı:", e)
-    if algos:
+    # Bekleyen korumalar kayıtta koruma olmasa da okunur: kayıtta karşılığı kalmayan (sahipsiz) koruma böyle bulunur
+    try:
+        api.own_algos = None
+        pend = api.pending_algo_ids()
+        snap["own"] = getattr(api, "own_algos", None)
+        if algos or pend is not None:
+            snap["pending"] = pend
+    except Exception as e:
+        print("Bekleyen korumalar alınamadı, tek tek bakılıyor:", e)
+    known = {aid for _, aid in algos}
+    extra = sorted({i.split("-")[0] for a, (i, _) in (snap["own"] or {}).items() if a not in known and i} - set(snap["have"] or {}))
+    if extra:  # kayıtta olmayan koruma emri var: o coin hesapta duruyor mu (karar için gerekir; nadir durum, tek istek)
         try:
-            snap["pending"] = api.pending_algo_ids()
+            rows = api._req("GET", "/api/v5/account/balance?ccy=" + ",".join(extra[:20]))
+            got = {d["ccy"]: float(d.get("cashBal") or d.get("eq") or 0) for d in (rows[0].get("details", []) if rows else [])}
+            snap["own_have"] = {c: got.get(c, 0.0) for c in extra[:20]}
         except Exception as e:
-            print("Bekleyen korumalar alınamadı, tek tek bakılıyor:", e)
+            print("Sahipsiz koruma için bakiye okunamadı:", e)
+    if algos:
         for inst, aid in algos:
             if snap["pending"] is not None and aid in snap["pending"]:
                 continue
@@ -581,6 +607,51 @@ class LivePortfolio(Portfolio):
 
     def cancel_items(self, items):
         self.api.cancel_algos(items)
+
+    def cancel_orphans(self, own, have=None):
+        """Sahipsiz koruma emirleri: borsada bekleyen, botun kendi kimliğini taşıyan (ALGO_CL) ama kayıttaki hiçbir
+        kademeye bağlı olmayan kâr al / zarar durdur emirleri iptal edilir (ör. koruma iptali başarısız olup satış
+        kısmi dolduysa ya da koruma kurulurken yanıt kaybolduysa geride kalan emir). Böyle bir emir, kalan kademenin
+        yeni korumasını engeller ya da ileride aynı coinden yapılacak alımı beklenmedik fiyattan satardı.
+        own: {algoId: (instId, miktar)} — yalnız botun koyduğu emirler; kullanıcının elle koyduğu emirler bu listede
+        olmaz, onlara hiç bakılmaz. have: {coin: hesaptaki miktar}.
+        Coin botun kaydında yoksa ama hesapta emrin miktarı kadar duruyorsa emir İPTAL EDİLMEZ (o coinin tek koruması
+        olabilir: kayıt sıfırlanmış olabilir); kullanıcı bir kez uyarılır."""
+        if not self.armed or not own:
+            return 0
+        have = have or {}
+        mine = {l["algo"] for p in self.s["positions"].values() for l in p["lots"] if l.get("algo")}
+        items, kept = [], []
+        for a, (inst, sz) in own.items():
+            if a in mine or not inst or self._is_unsure(inst):
+                continue  # kayıtta karşılığı var / sonucu doğrulanmamış emir var (kayıt birazdan değişecek)
+            if inst not in self.s["positions"]:
+                bal = have.get(inst.split("-")[0])
+                if bal is None:
+                    continue  # bakiye okunamadı: bir sonraki okumada
+                if sz > 0 and bal >= sz * 0.5:
+                    kept.append(inst)
+                    continue
+            items.append((a, inst))
+        now = int(time.time() * 1000)
+        for inst in sorted(set(kept)):
+            if self._once_per_day("orphan_" + inst):
+                sym = inst.split("-")[0]
+                self._note(now, f"{sym}: botun eski bir koruma emri borsada duruyor ama coin botun kaydında yok; coin hesapta olduğu için emre dokunulmadı (OKX'ten kontrol et)")
+                self._emit("alerts", f"Eski koruma emri: {sym}",
+                           f"{sym} için botun koyduğu bir kâr al / zarar durdur emri borsada duruyor ama coin botun kaydında yok. Coin hesapta durduğu için bot emre dokunmadı; OKX'ten kontrol et.", 4, ["mag"])
+        items = items[:10]  # OKX tek istekte en fazla 10 iptal kabul eder; kalanı bir sonraki okumada
+        if not items:
+            return 0
+        try:
+            self.api.cancel_algos(items)
+        except Exception as e:
+            # emir bu arada tetiklenmiş/iptal olmuş olabilir: bir sonraki okumada listede yoksa sorun kalmamıştır
+            print("Sahipsiz koruma iptali:", tr_err(e))
+            return 0
+        syms = sorted({i.split("-")[0] for _, i in items})
+        self._note(now, f"Sahipsiz koruma emri iptal edildi: {', '.join(syms)} ({len(items)} emir; kayıtta karşılığı yoktu)")
+        return len(items)
 
     def reconcile(self, only=None, snap=None):
         """Borsada tetiklenen kâr al / zarar durdur emirlerini kayda geçirir, eksik korumaları yeniden kurar.

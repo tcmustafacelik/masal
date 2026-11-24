@@ -280,17 +280,40 @@ def desk_commands(state, S):
 
 
 def sell_selected(p, S):
-    """Uygulamadan/ayarlardan istenen coinleri bir kez satar (zaman damgası yeniyse)."""
+    """Uygulamadan/ayarlardan istenen coinleri satar (zaman damgası yeniyse; 10 dakikadan eski istek işlenmez).
+    Satılamayan coin (geçici bağlantı hatası, borsada serbest bakiye yok, sonucu doğrulanmamış emir, kısmi dolum)
+    için istek kaybolmaz: 2 dakika boyunca 15 sn arayla yeniden denenir (uygulamadaki "Satılıyor" süresi)."""
     L, req = p.s, S.get("sell") or {}
-    ts_req = int(req.get("ts") or 0)
-    if not ts_req or ts_req <= L.get("sold_sel_at", 0):
+    try:
+        ts_req = int(req.get("ts") or 0)
+    except (TypeError, ValueError):
+        ts_req = 0
+    now = int(time.time() * 1000)
+    if ts_req and ts_req > L.get("sold_sel_at", 0):
+        L["sold_sel_at"] = ts_req
+        insts = [str(i) for i in (req.get("insts") or []) if isinstance(i, str)] if isinstance(req.get("insts"), list) else []
+        if now - ts_req > 600_000:
+            if insts:
+                p._note(now, "Elle satış isteği 10 dakikadan eski; işlenmedi (yeniden iste)")
+        elif insts:
+            L["sell_pend"] = {"t0": now, "try": 0, "insts": insts}
+    sp = L.get("sell_pend")
+    if not sp:
         return
-    L["sold_sel_at"] = ts_req
-    ts = int(time.time() * 1000)
-    for inst in req.get("insts") or []:
+    if now - sp.get("try", 0) < 15_000:
+        return
+    sp["try"] = now
+    for inst in sp["insts"]:
         if inst in L["positions"]:
-            p._sell_lots(ts, inst, L["last_prices"].get(inst, 0), list(L["positions"][inst]["lots"]), "Elle satış")
-
+            p._sell_lots(now, inst, L["last_prices"].get(inst, 0), list(L["positions"][inst]["lots"]), "Elle satış")
+    left = [i for i in sp["insts"] if i in L["positions"]]
+    if not left:
+        L.pop("sell_pend", None)
+    elif now - sp["t0"] > 120_000:
+        L.pop("sell_pend", None)
+        p._note(now, "Elle satış 2 dakikada tamamlanamadı: " + ", ".join(i.split("-")[0] for i in left) + "; yeniden iste")
+    else:
+        sp["insts"] = left
 
 
 def buy_selected(p, S):
@@ -533,13 +556,22 @@ def _spot_sync(live):
             live.check_holdings(have=snap["have"], base=snap.get("qty"), pending=snap.get("pending"))  # kayıttaki coin miktarı OKX'tekiyle aynı mı
         except Exception as e:
             print("Bakiye eşleştirme yapılamadı:", e)
-    if alive or not L["positions"]:
+    if snap and snap.get("own"):
+        try:
+            # kayıtta karşılığı kalmamış (sahipsiz) koruma emirleri; yalnız botun kendi kimliğini taşıyanlar
+            live.cancel_orphans(snap["own"], {**(snap.get("own_have") or {}), **(snap.get("have") or {})})
+        except Exception as e:
+            print("Sahipsiz koruma kontrolü:", e)
+    if alive:
         return
     now = int(time.time() * 1000)
     algos = [(inst, l["algo"]) for inst, p in L["positions"].items() for l in p["lots"] if l.get("algo")]
-    due = now - L.get("hold_ck", 0) >= 60_000  # bakiye eşleştirme dakikada bir
-    if not algos and not due:
+    due = bool(L["positions"]) and now - L.get("hold_ck", 0) >= 60_000  # bakiye eşleştirme dakikada bir
+    # Coin kalmasa da (hepsi satıldı) dakikada bir bekleyen korumalara bakılır: sahipsiz emir kaldıysa iptal edilir
+    orphan_due = not algos and now - _SPOT.get("orph", 0) >= 60_000
+    if not algos and not due and not orphan_due:
         return
+    _SPOT["orph"] = now
     ccys = None
     if due:
         L["hold_ck"] = now

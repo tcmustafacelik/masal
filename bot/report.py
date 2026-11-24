@@ -117,7 +117,7 @@ def build(state, S=None):
             "risk": dict(p.risk, lot=p.cfg.get("lot")),
             "equity": round(eq, 2), "cash": round(s["cash"], 2),
             "pnl": round(eq - start, 2),
-            "pnl_pct": round((eq / start - 1) * 100, 2),
+            "pnl_pct": round((eq / start - 1) * 100, 2) if start else 0,  # bütçe 0 girilmişse özet yine yazılır
             "today_pnl": round(eq - s["day"]["start_equity"], 2),
             "trades": len(sells), "win_rate": round(len(wins) / len(sells) * 100, 1) if sells else None,
             "realized": round(sum(t["pnl"] for t in sells), 2),

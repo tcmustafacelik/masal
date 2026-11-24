@@ -76,9 +76,20 @@ class Ex:
             return 0.0
         return float(d[0].get("bal") or 0) - (0 if total else float(d[0].get("frozenBal") or 0))
 
-    def move(self, ccy, amt, frm, to):
+    def move(self, ccy, amt, frm, to, cid=None):
         if amt > 0:
-            self.req("POST", "/api/v5/asset/transfer", {"ccy": ccy, "amt": f"{math.floor(amt * 1e6) / 1e6:f}", "from": frm, "to": to, "type": "0"})
+            body = {"ccy": ccy, "amt": f"{math.floor(amt * 1e6) / 1e6:f}", "from": frm, "to": to, "type": "0"}
+            if cid:
+                body["clientId"] = cid  # kendi kimliğimiz: yanıt kaybolursa aktarım bu kimlikle sorulur (moved)
+            self.req("POST", "/api/v5/asset/transfer", body)
+
+    def moved(self, cid):
+        """Bu kimlikle yapılmış hesaplar arası aktarım tamamlanmış mı? True: evet; None: bilinmiyor / kayıt yok."""
+        try:
+            rows = self.req("GET", f"/api/v5/asset/transfer-state?clientId={cid}&type=0")
+        except Exception:
+            return None
+        return True if any(r.get("clientId") == cid and r.get("state") == "success" for r in rows or []) else None
 
     def chain(self):
         """USDT'nin Arbitrum One ağı: tam ağ adı, ücret, en az çekim."""
@@ -481,11 +492,15 @@ def _run_jobs(X, C, cfg, state, N, now):
                 if job["stage"] == "new" and X.get("day_sum", 0) + job["amt"] > float(cfg["daily_max"]):
                     job["msg"] = f"günlük sınır ({cfg['daily_max']} $) dolu; yarın gönderilecek"
                     continue
+                if job["stage"] == "new":
+                    # "hepsini gönder"de tutar cüzdandaki SOL'a göre sonradan belirlenir: günlük sınırdan kalan pay
+                    # işe yazılır, gönderim onu aşamaz
+                    job["cap"] = round(float(cfg["daily_max"]) - float(X.get("day_sum", 0)), 2)
                 meme_aktar.run(job, X, C, N, _note)
             except Exception as e:
                 if ((job["stage"] == "sent" and "reddetti" not in str(e) and "ulaşmadı" not in str(e))
-                        or ((job.get("ordId") or job.get("clOrd")) and not isinstance(e, RuntimeError))):
-                    # ağ hatası: SOL alındıysa ya da alım emri gönderilmiş olabilirse iş bırakılmaz, tekrar denenir
+                        or ((job.get("ordId") or job.get("clOrd") or job.get("mv")) and not isinstance(e, RuntimeError))):
+                    # ağ hatası: SOL alındıysa, alım emri ya da hesap içi aktarım gönderilmiş olabilirse iş bırakılmaz, tekrar denenir
                     job["msg"] = f"kontrol edilemedi, tekrar denenecek: {str(e)[:120]}"
                 else:
                     job.update(stage="failed", msg=str(e)[:300])

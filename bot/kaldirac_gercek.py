@@ -13,7 +13,9 @@ Ağ işleri arka planda tek bir işçi iş parçacığında yapılır; ana tur b
 import copy
 import json
 import math
+import os
 import queue
+import re
 import threading
 import time
 
@@ -22,6 +24,8 @@ from . import transfer
 DEFAULT = {"real": False, "real_budget": 30.0, "real_lev": 2, "max_loss": 10.0, "real_reset": 0}
 TITLE = "Futures"
 SYNC = 10
+CL = "mslf"  # masanın açma emirlerinin kimlik öneki (clOrdId): emir ve ondan doğan pozisyon bu önekle tanınır
+OPEN_WAIT = 20_000  # ms: yanıtı kaybolan açma emri borsada bu süre bulunamazsa "ulaşmamış" sayılır
 _Q = queue.Queue()
 _LOCK = threading.Lock()
 _W = {"t": None, "R": None, "cfg": {}}
@@ -80,26 +84,53 @@ class _Desk:
     def _ps(self, side):
         return {"posSide": "long" if side > 0 else "short"} if self.mode() == "long_short_mode" else {}
 
-    def open(self, c, side, contracts, stop, tp, lev):
+    def lever(self, c, side, lev):
+        """Kaldıracı ayarlar (emirden önce; burada hata olursa hiçbir emir gönderilmemiştir)."""
         inst = f"{c}-USDT-SWAP"
-        sp = self.specs()[inst]
         lk = (inst, lev, side if self.mode() == "long_short_mode" else 0)
         if lk not in self.lev_set:
             self.ex.req("POST", "/api/v5/account/set-leverage",
                         {"instId": inst, "lever": str(lev), "mgnMode": "isolated", **self._ps(side)})
             self.lev_set.add(lk)
-        d = self.ex.req("POST", "/api/v5/trade/order", {
+
+    def open(self, c, side, contracts, stop, tp, lev, cl=None):
+        inst = f"{c}-USDT-SWAP"
+        sp = self.specs()[inst]
+        self.lever(c, side, lev)
+        body = {
             "instId": inst, "tdMode": "isolated", "side": "buy" if side > 0 else "sell", "ordType": "market",
             "sz": _fmt(contracts, sp["lotSz"]), **self._ps(side),
             "attachAlgoOrds": [{"tpTriggerPx": _fmt(tp, sp["tickSz"]), "tpOrdPx": "-1", "tpTriggerPxType": "last",
-                                "slTriggerPx": _fmt(stop, sp["tickSz"]), "slOrdPx": "-1", "slTriggerPxType": "last"}]})
+                                "slTriggerPx": _fmt(stop, sp["tickSz"]), "slOrdPx": "-1", "slTriggerPxType": "last"}]}
+        if cl:
+            body["clOrdId"] = cl  # kendi emir kimliğimiz: yanıt kaybolursa emir (ve pozisyonu) bu kimlikle bulunur
+        d = self.ex.req("POST", "/api/v5/trade/order", body)
         oid = d[0]["ordId"]
         for _ in range(5):
             time.sleep(0.6)
             o = self.ex.req("GET", f"/api/v5/trade/order?instId={inst}&ordId={oid}")[0]
             if o["state"] == "filled":
                 return float(o["avgPx"]), float(o["accFillSz"])
-        raise RuntimeError(f"{c} emri dolmadı ({o['state']})")
+        raise OSError(f"{c} emri dolmadı ({o['state']})")  # emir borsada: sonucu kimliğiyle izlenir (reddedilmiş sayılmaz)
+
+    def find(self, c, cl):
+        """Açma emrini kendi kimliğiyle arar. Emir yoksa None; borsaya sorulamadıysa hata yükselir."""
+        try:
+            d = self.ex.req("GET", f"/api/v5/trade/order?instId={c}-USDT-SWAP&clOrdId={cl}")
+        except RuntimeError as e:
+            if "51603" in str(e):
+                return None
+            raise
+        return d[0] if d else None
+
+    def ours(self, c, since):
+        """Bu coinde masanın kendi kimliğiyle (CL) verilmiş, `since` (ms) sonrasında dolmuş açma emri var mı?
+        Varsa emri döndürür. Kayıtta olmayan bir pozisyonun masaya ait olduğunu kanıtlamak için kullanılır."""
+        for o in self.ex.req("GET", f"/api/v5/trade/orders-history?instType=SWAP&instId={c}-USDT-SWAP&ordType=market&state=filled&limit=20"):
+            if (str(o.get("clOrdId") or "").startswith(CL) and float(o.get("accFillSz") or 0) > 0
+                    and str(o.get("reduceOnly")) != "true" and int(o.get("fillTime") or o.get("uTime") or 0) >= since):
+                return o
+        return None
 
     def close(self, c, side):
         self.ex.req("POST", "/api/v5/trade/close-position",
@@ -166,6 +197,7 @@ def _sync(D, R, cfg):
     eq, avail = D.balance()
     live = D.positions()
     R["eq"], R["avail"] = round(eq, 4), round(avail, 4)
+    _opening(D, R, cfg, live)  # yanıtı kaybolan açma emirleri: önce onlar kayda geçer
     for c, p in list(R["pos"].items()):
         if c in live:
             x = live[c]
@@ -187,7 +219,7 @@ def _sync(D, R, cfg):
                     R["err"] = f"{c} stop kontrolü: {e}"[:200]
             gone = c not in cfg.get("_held", [c]) and time.time() * 1000 - p["ts"] > 60000
             lockd = R["dead"].startswith("kayıt açılamadı")  # şifre değişti: pozisyonlar borsadaki stop/hedefle kalır
-            if (gone or R["halt"] or (R["dead"] and not lockd) or not cfg.get("real")) and time.time() - p.get("close_try", 0) > 30:
+            if (gone or p.get("force") or R["halt"] or (R["dead"] and not lockd) or not cfg.get("real")) and time.time() - p.get("close_try", 0) > 30:
                 p["close_try"] = time.time()
                 try:
                     D.close(c, p["side"])
@@ -215,7 +247,7 @@ def _sync(D, R, cfg):
     # kayıtta olmayan pozisyon (ör. bot emir verdikten hemen sonra yeniden başladı): masa sahiplenir, yönetmeye devam eder
     for c, x in live.items():
         if (c not in R["pos"] and c in cfg.get("coins", []) and x.get("mgnMode", "isolated") == "isolated"
-                and cfg.get("real") and c in cfg.get("_held", [])):
+                and cfg.get("real") and c in cfg.get("_held", []) and c not in (R.get("opening") or {})):
             # yalnız masanın açmış olabileceği pozisyon sahiplenilir; elle açılan pozisyona dokunulmaz
             pos = float(x.get("pos") or 0)
             side = (1 if x.get("posSide") == "long" else -1) if x.get("posSide") in ("long", "short") else (1 if pos > 0 else -1)
@@ -225,6 +257,7 @@ def _sync(D, R, cfg):
                            "stop": avg, "tp": avg, "liq": float(x.get("liqPx") or 0), "upl": float(x.get("upl") or 0),
                            "why": "borsada bulundu, sahiplenildi", "lev": int(float(x.get("lever") or 2))}
             _note(R, "info", f"{c} pozisyonu borsada bulundu; masa yönetimine alındı")
+    _orphans(D, R, cfg, live)
     # gün başı ve zarar sınırları
     total = eq + R["harvest"]
     want = float(cfg["real_budget"])
@@ -300,7 +333,8 @@ def _open(D, R, cfg, ev):
     _, c, side, px, dist, tpd, why = ev
     name = "UZUN" if side > 0 else "KISA"
     bad = ("masa durdu" if R["dead"] else "günlük zarar sınırı dolu" if R["halt"] else
-           "zaten açık" if c in R["pos"] else "bütçe henüz aktarılmadı" if R["funded"] <= 0 else None)
+           "zaten açık" if c in R["pos"] else "önceki emrin sonucu doğrulanıyor" if c in (R.get("opening") or {})
+           else "bütçe henüz aktarılmadı" if R["funded"] <= 0 else None)
     if bad:
         _note(R, "risk", f"GERÇEK ENGEL {c} {name}: {bad}")
         return
@@ -320,13 +354,129 @@ def _open(D, R, cfg, ev):
             _note(R, "risk", f"GERÇEK ENGEL {c} {name}: en küçük işlem bile bütçe/risk sınırını aşıyor")
             return
     stop, tp = px - side * dist, px + side * tpd
-    avg, filled = D.open(c, side, n, stop, tp, lev)
-    qty = filled * sp["ctVal"]
-    R["pos"][c] = {"side": side, "ts": int(time.time() * 1000), "entry": avg, "now": avg, "qty": qty, "contracts": filled,
-                   "margin": qty * avg / lev, "stop": stop, "tp": tp, "liq": avg * (1 - side * (1 / lev - 0.005)),
-                   "upl": 0.0, "why": why, "lev": lev}
-    _note(R, "buy", f"GERÇEK AÇ {c} {name} {lev}x · {filled:g} sözleşme · teminat ${qty * avg / lev:.2f} · "
-                    f"borsada zarar durdur {stop:.6g} / kâr al {tp:.6g}")
+    D.lever(c, side, lev)  # burada hata olursa emir gönderilmemiştir (bekleyen kayıt açılmaz)
+    cl = CL + os.urandom(12).hex()
+    # Emir kimliği gönderimden ÖNCE kayda geçer: yanıt kaybolsa da (ya da bot o an yeniden başlasa da) emir ve
+    # pozisyonu bu kimlikle bulunur; pozisyon sahipsiz kalmaz, emir ikinci kez verilmez.
+    R.setdefault("opening", {})[c] = {"cl": cl, "side": side, "ts": int(time.time() * 1000), "stop": stop, "tp": tp,
+                                      "lev": lev, "why": why, "ct": sp["ctVal"]}
+    try:
+        avg, filled = D.open(c, side, n, stop, tp, lev, cl)
+    except Exception as e:
+        if _rejected(e):
+            R["opening"].pop(c, None)  # borsa emri açıkça reddetti: pozisyon yok
+            raise
+        _note(R, "risk", f"GERÇEK {c} {name}: açma emrinin sonucu öğrenilemedi (bağlantı); borsadan doğrulanacak, emir iki kez verilmez")
+        return
+    R["opening"].pop(c, None)
+    _book(R, c, R_pos(side, avg, filled, sp["ctVal"], lev, stop, tp, why))
+
+
+def R_pos(side, avg, filled, ct, lev, stop, tp, why, ts=None):
+    qty = filled * ct
+    return {"side": side, "ts": int(ts or time.time() * 1000), "entry": avg, "now": avg, "qty": qty, "contracts": filled,
+            "margin": qty * avg / lev, "stop": stop, "tp": tp, "liq": avg * (1 - side * (1 / lev - 0.005)),
+            "upl": 0.0, "why": why, "lev": lev}
+
+
+def _book(R, c, p, extra=""):
+    R["pos"][c] = p
+    _note(R, "buy", f"GERÇEK AÇ {c} {'UZUN' if p['side'] > 0 else 'KISA'} {p['lev']}x · {p['contracts']:g} sözleşme · teminat ${p['margin']:.2f} · "
+                    f"borsada zarar durdur {p['stop']:.6g} / kâr al {p['tp']:.6g}{extra}")
+
+
+def _rejected(e):
+    """Borsa emri açıkça reddetti mi (emir kesinlikle yok)? Ağ hatası, zaman aşımı, bozuk yanıt ve borsanın
+    "sonuç belirsiz" kodları (50xxx: sistem meşgul / zaman aşımı) ret sayılmaz."""
+    m = re.match(r"(\d+):", str(e)) if isinstance(e, RuntimeError) else None
+    return bool(m) and not m.group(1).startswith("50")
+
+
+def _opening(D, R, cfg, live):
+    """Sonucu öğrenilemeyen açma emirlerini kendi kimliğiyle borsaya sorar. Dolmuşsa pozisyon masaya alınır; deneme
+    masası o pozisyonu bu arada kapattıysa (ya da masa durduysa) borsadaki pozisyon da hemen kapatılır. Emir borsaya
+    hiç ulaşmamışsa kayıt bırakılır. Borsaya sorulamıyorsa kayıt bekler (o coinde yeni emir verilmez)."""
+    for c, w in list((R.get("opening") or {}).items()):
+        try:
+            o = D.find(c, w["cl"])
+        except Exception:
+            continue
+        age = time.time() * 1000 - w["ts"]
+        if o is None:
+            if age > OPEN_WAIT:
+                del R["opening"][c]
+                _note(R, "info", f"{c}: açma emri borsaya ulaşmamış (doğrulandı)")
+            continue
+        filled = float(o.get("accFillSz") or 0)
+        if o.get("state") not in ("filled", "canceled", "mmp_canceled"):
+            continue  # emir henüz sonuçlanmadı
+        del R["opening"][c]
+        if filled <= 0:
+            _note(R, "info", f"{c}: açma emri dolmadan iptal olmuş (doğrulandı)")
+            continue
+        if c in R["pos"]:
+            continue  # pozisyon zaten masada
+        p = R_pos(w["side"], float(o.get("avgPx") or 0), filled, w.get("ct") or 1, w.get("lev") or 2, w["stop"], w["tp"],
+                  w.get("why") or "", ts=w["ts"])
+        _book(R, c, p, " · emir borsadan doğrulandı")
+        why = (w.get("close") or ("deneme masası kapattı" if c not in cfg.get("_held", [c]) else "")
+               or ("masa kapalı" if not cfg.get("real") else "") or ("zarar sınırı" if R["halt"] or R["dead"] else ""))
+        if why:
+            _shut(D, R, c, why, c in live)
+
+
+def _shut(D, R, c, why, now=True):
+    """Pozisyonu kapatılacak diye işaretler ve (borsa listesinde görünüyorsa) kapatma emrini hemen gönderir.
+    Emir gitmezse ya da pozisyon listede henüz görünmüyorsa eşitleme yeniden dener (force)."""
+    p = R["pos"][c]
+    p["closing"] = why
+    p["force"] = True
+    if not now:
+        return
+    try:
+        p["close_try"] = time.time()
+        D.close(c, p["side"])
+        _note(R, "info", f"GERÇEK kapatma emri {c} · {why}")
+    except Exception as e:
+        R["err"] = f"{c} kapatılamadı, yeniden denenecek: {e}"[:200]
+
+
+_ORPH = {}  # coin -> son sorgu zamanı (kayıtta olmayan pozisyon için emir geçmişi dakikada bir sorulur)
+
+
+def _orphans(D, R, cfg, live):
+    """Borsada olup masanın kaydında olmayan izole pozisyon. Deneme masası o coini tutuyorsa `_sync` sahiplenir
+    (değişmedi). Tutmuyorsa pozisyona yalnız, masanın kendi emir kimliğiyle (CL) açıldığı borsanın emir geçmişinden
+    kanıtlanırsa dokunulur: masaya alınıp hemen kapatılır. Elle açılan pozisyonun böyle bir emri olmaz; dokunulmaz."""
+    if R["dead"].startswith("kayıt açılamadı"):
+        return  # şifre değişti: pozisyonlar borsadaki stop/hedefle kalır
+    chk = _ORPH
+    for c in [c for c in chk if c not in live]:
+        del chk[c]
+    for c, x in live.items():
+        if c in R["pos"] or c in (R.get("opening") or {}) or (cfg.get("real") and c in cfg.get("_held", [])):
+            continue
+        if time.time() - chk.get(c, 0) < 60:
+            continue  # coin başına dakikada bir sorulur
+        chk[c] = time.time()
+        ct = int(float(x.get("cTime") or 0))
+        try:
+            o = D.ours(c, ct - 10_000) if ct else None
+        except Exception:
+            chk[c] = time.time() - 50  # sorulamadı: 10 sn sonra yeniden
+            continue
+        if not o:
+            continue
+        pos = float(x.get("pos") or 0)
+        side = (1 if x.get("posSide") == "long" else -1) if x.get("posSide") in ("long", "short") else (1 if pos > 0 else -1)
+        avg = float(x.get("avgPx") or 0)
+        R["pos"][c] = {"side": side, "ts": ct, "entry": avg, "now": avg, "qty": abs(pos), "contracts": abs(pos),
+                       "margin": float(x.get("margin") or x.get("imr") or 0), "stop": avg, "tp": avg,
+                       "liq": float(x.get("liqPx") or 0), "upl": float(x.get("upl") or 0),
+                       "why": "masanın emriyle açılmış, kayıtta yoktu", "lev": int(float(x.get("lever") or 2))}
+        _note(R, "risk", f"{c}: masanın açtığı pozisyon kayıtta yoktu (emir kimliğiyle doğrulandı); kapatılıyor")
+        _shut(D, R, c, "sahipsiz pozisyon (kayıtta yoktu)")
+        del chk[c]
 
 
 def _loop():
@@ -350,6 +500,10 @@ def _loop():
                     D.close(ev[1], p["side"])
                     p["closing"] = ev[2]
                     _note(R, "info", f"GERÇEK kapatma emri {ev[1]} · {ev[2]}")
+                elif ev and ev[0] == "close" and ev[1] in (R.get("opening") or {}):
+                    # açma emrinin sonucu henüz bilinmiyor: pozisyon doğrulanınca hemen kapatılır (sahipsiz kalmaz)
+                    R["opening"][ev[1]]["close"] = ev[2]
+                    _note(R, "info", f"GERÇEK {ev[1]}: kapatma isteği alındı; açma emri doğrulanınca kapatılacak · {ev[2]}")
                 elif ev and ev[0] == "trail" and ev[1] in R["pos"]:
                     p = R["pos"][ev[1]]
                     if p["side"] * (ev[2] - p["stop"]) > abs(p["stop"]) * 0.002:  # anlamlı ilerleme varsa
@@ -357,6 +511,8 @@ def _loop():
                             p["stop"], p["trailed"] = ev[2], True
                             _note(R, "info", f"{ev[1]} borsadaki stop {ev[2]:.6g} seviyesine taşındı (iz süren)")
                 elif ev and ev[0] == "kill":
+                    for w in (R.get("opening") or {}).values():
+                        w["close"] = w.get("close") or "masa kapatıldı"
                     _close_all(D, R, "masa kapatıldı")
                 if time.time() - last >= SYNC or (ev and ev[0] in ("close", "kill")):
                     _sync(D, R, cfg)

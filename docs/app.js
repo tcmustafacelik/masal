@@ -18,7 +18,7 @@ const tl = (v, d = 2) => nf(v, d) + '\u00a0TL';
 const sgn = v => (v > 0 ? '+' : v < 0 ? '−' : '') + nf(Math.abs(v));
 const spc = (v, d = 2) => (v > 0 ? '+' : v < 0 ? '−' : '') + '%' + nf(Math.abs(v), d);
 const cls = v => v > 0 ? 'up' : v < 0 ? 'dn' : '';
-function px(v) { const a = Math.abs(v); return nf(v, a >= 1000 ? 0 : a >= 10 ? 2 : a >= 1 ? 3 : 5); }
+function px(v) { const a = Math.abs(v); return nf(v, a >= 1000 ? 0 : a >= 10 ? 2 : a >= 1 ? 3 : a >= 0.01 || !(a > 0) ? 5 : Math.min(14, 3 - Math.floor(Math.log10(a)))); }
 function fv(v, dec) { return dec > 0 ? String(Math.round(+v * 100) / 100).replace('.', ',') : Number(v).toLocaleString('tr-TR'); }
 function dt(ts, withYear) {
     const d = new Date(ts);
@@ -1816,6 +1816,8 @@ function renderDeck() {
         setH(b, renderMemeR() || `<div class="empty">${ic('i-flask')}<div>Memecoin masası verisi bekleniyor</div></div>`);
     }
 }
+function hcut(t) { if (t.length <= 60)
+    return t; const c = t.slice(0, 60), i = c.lastIndexOf(' · '); return i > 12 ? c.slice(0, i) : c.trimEnd() + '…'; }
 function renderHome() {
     const box = document.getElementById('homeBody');
     if (!box || !S)
@@ -1853,7 +1855,7 @@ function renderHome() {
         fd.push([ts, 'h3', 'i-flask', t.replace(/^GERÇEK\s+/, '').split(' · ')[0], 'Memecoin', k === 'exit' ? `<span class="hx ${cls(v) || 'z'}">${v >= 0 ? '+' : '−'}$${nf(Math.abs(v), 2)}</span>` : `<span class="hx b">alındı</span>`]);
     }
     fd.sort((a, b) => b[0] - a[0]);
-    h += `<h2 class="mh">${ic('i-list')}Son hareketler<span class="hsum">bütün masalar</span></h2><div class="card hfeed">${fd.length ? fd.slice(0, 8).map(([ts, c, i, t, sub, x]) => `<div class="hr"><span class="hk hi ${c}">${ic(i)}</span><div class="hm"><b>${String(t).replace(/</g, '&lt;')}</b><small>${ago(ts)} · ${String(sub).replace(/</g, '&lt;').slice(0, 60)}</small></div>${x}</div>`).join('') : `<div class="empty">${ic('i-clock')}<div>Henüz hareket yok</div></div>`}</div>`;
+    h += `<h2 class="mh">${ic('i-list')}Son hareketler<span class="hsum">bütün masalar</span></h2><div class="card hfeed">${fd.length ? fd.slice(0, 8).map(([ts, c, i, t, sub, x]) => `<div class="hr"><span class="hk hi ${c}">${ic(i)}</span><div class="hm"><b>${String(t).replace(/</g, '&lt;')}</b><small>${ago(ts)} · ${hcut(String(sub)).replace(/</g, '&lt;')}</small></div>${x}</div>`).join('') : `<div class="empty">${ic('i-clock')}<div>Henüz hareket yok</div></div>`}</div>`;
     h += `<div class="fv">${ic('i-phone')}Masal · sürüm <b>${APP_VERSION}</b>${remoteVer && vcmp(remoteVer.version, APP_VERSION) > 0 ? ` · <em>yeni sürüm var: ${remoteVer.version}</em>` : ''}</div>`;
     setH(box, h);
 }
@@ -1961,7 +1963,7 @@ function renderPositions(x) {
         <div class="rngl"><em class="dn">${lg ? 'Zarar' : 'Zarar durdur'} ${px(p.sl)}</em><em class="up">${lg ? 'Kâr' : 'Kâr al'} ${px(p.tp)}</em></div>`;
         }
         const row = `<div class="row pos${canSell ? ' swc' : ''}">${cico(p.inst)}
-      <div class="mid"><b>${sym(p.inst)}${pq(p.inst)}${prot}${p.lots > 1 ? `<i class="kd">${p.lots} kademe</i>` : ''}</b><span>Alış ${px(p.avg)} → satış ${px(cur)}<br>${ago(p.since)} alındı${volTxt(p.inst) ? ` · hacim ${volTxt(p.inst)}` : ''}</span>${rng}</div>
+      <div class="mid"><b><span class="sy">${sym(p.inst)}</span>${pq(p.inst)}${prot}${p.lots > 1 ? `<i class="kd">${p.lots} kademe</i>` : ''}</b><span>Alış ${px(p.avg)} → satış ${px(cur)}<br>${ago(p.since)} alındı${volTxt(p.inst) ? ` · hacim ${volTxt(p.inst)}` : ''}</span>${rng}</div>
       <div class="end"><b>${tl(val, 0)}</b>${SELLING[p.inst] ? `<span class="sellst"><i class="spn"></i>Satılıyor</span>` : `<span class="pill ${cls(pl) || 'z'}"><i>${pl >= 0 ? '▲' : '▼'}</i>${nf(Math.abs(pl))} TL</span><span class="est ${cls(pl)}">${spc(plp)}</span>`}</div></div>`;
         return canSell ? `<div class="swr${swOpen === p.inst ? ' open' : ''}${SELLING[p.inst] ? ' busy' : ''}" data-i="${p.inst}"><button class="swb" data-sell="${p.inst}">${ic('i-sell')}${SELLING[p.inst] ? 'Satılıyor' : 'Sat'}</button>${row}</div>` : row;
     }).join('')

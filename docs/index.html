@@ -269,7 +269,7 @@ details.setup summary::-webkit-details-marker{display:none}
 .track i{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:5px;background:var(--knob);box-shadow:0 1px 2px rgba(0,0,0,.15);transition:left .15s}
 .sw.on .track{background:var(--acc)}.sw.on .track i{left:21px}
 .coins4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
-.coins4 .tile{min-height:70px;padding:8px 2px 7px;gap:4px}.coins4 .tile .nm{font-size:11.5px}
+.coins4 .tile{min-height:70px;padding:8px 2px 7px;gap:4px}.coins4 .tile .nm{font-size:11.5px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .coins4 .tile .coin{width:30px;height:30px}.coins4 .tile .coin img{inset:2px;width:26px;height:26px}
 .dayh{display:flex;justify-content:space-between;align-items:baseline;margin:16px 2px 6px;font-size:12px;font-weight:600;color:var(--muted)}
 .dayh b{font-size:12px;font-variant-numeric:tabular-nums}
@@ -390,7 +390,7 @@ details.setup summary::-webkit-details-marker{display:none}
 .xf{margin-top:12px}
 
 .xe{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:9px;flex:none}.xe svg{width:16px;height:16px}
-.news>div{padding:10px 0;border-bottom:1px solid var(--line2)}.news>div:last-child{border:0}.news b{font-size:13px}.news ul{margin:6px 0 0;padding-left:18px;font-size:13px;line-height:1.5;color:var(--text)}
+.news{max-height:calc(100vh - 210px);max-height:calc(100dvh - 210px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}.news>div{padding:10px 0;border-bottom:1px solid var(--line2)}.news>div:last-child{border:0}.news b{font-size:13px}.news ul{margin:6px 0 0;padding-left:18px;font-size:13px;line-height:1.5;color:var(--text)}
 
 .xf .xt.x3{grid-template-columns:repeat(3,minmax(0,1fr))}.xe.e5{font-size:10px;font-weight:700;width:auto;min-width:30px;padding:0 6px}
 
@@ -405,7 +405,7 @@ details.setup summary::-webkit-details-marker{display:none}
 .xf .xk{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:9px}
 .xf .xk div{flex-direction:column;border:1px solid var(--line2);border-radius:11px;min-width:0;display:grid;grid-template-columns:28px 1fr;grid-template-rows:auto auto auto;column-gap:8px;text-align:left;justify-items:start;align-items:center;padding:8px 9px}
 .xf .xk span:not(.xe){color:var(--muted);margin-top:0;font-size:10.5px}
-.xf .xk b{font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap;font-size:13.5px;margin-top:0}.xf .xk small{color:var(--faint);font-variant-numeric:tabular-nums;white-space:nowrap;font-size:10px}
+.xf .xk b{font-weight:650;font-variant-numeric:tabular-nums;white-space:normal;overflow-wrap:anywhere;min-width:0;font-size:13.5px;margin-top:0}.xf .xk small{color:var(--faint);font-variant-numeric:tabular-nums;white-space:nowrap;font-size:10px}
 .xf .xt{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:10px}
 .xf .xt button{display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid var(--line2);background:transparent;color:var(--text);font:inherit;text-align:center;-webkit-tap-highlight-color:transparent;user-select:none;cursor:pointer;transition:background .15s;min-height:0;gap:2px;border-radius:11px;padding:7px 6px 6px}
 .xf .xt button:active{background:var(--line2)}
@@ -493,7 +493,7 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 
 .end .plp{display:block;font-size:11.5px;font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums}
 .row.pos{align-items:flex-start}.row.pos .coin{margin-top:2px}
-.row.pos .mid b{display:flex;align-items:center;gap:5px}.row.pos .mid b small{font-size:12px;font-weight:500;color:var(--muted)}
+.row.pos .mid b{display:flex;align-items:center;gap:5px}.row.pos .mid b .sy{min-width:0;overflow:hidden;text-overflow:ellipsis}.row.pos .mid b>:not(.sy){flex:none}.row.pos .mid b small{font-size:12px;font-weight:500;color:var(--muted)}
 .shd{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:5px;background:var(--green-bg);color:var(--green);flex:none}
 .shd svg{width:12px;height:12px}.shd.no{background:var(--amber-bg);color:var(--amber)}
 .rng{position:relative;height:6px;border-radius:3px;margin:9px 4px 0;background:linear-gradient(90deg,color-mix(in srgb,var(--red) 55%,transparent),var(--line) 45%,var(--line) 55%,color-mix(in srgb,var(--green) 55%,transparent))}
@@ -608,7 +608,7 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 [data-theme=dark] .tile.on .ic,[data-theme=dark] .ntiles .tile.on .ck{color:#111827}
 /* ---- toplam varlık kartı ve masa kartları (aynı görsel dil) ---- */
 .ovw .oh{display:flex;align-items:center;gap:7px;font-size:13.5px}.ovw .oh svg{width:16px;height:16px;color:var(--muted)}.ovw .oh span{margin-left:auto;font-size:11.5px;color:var(--faint)}
-.ovw .obig{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-top:8px}
+.ovw .obig{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 10px;margin-top:8px}.ovw .obig>div:first-child{min-width:0}.ovw .obig .adf{margin-left:auto}
 .ovw .obig strong{display:block;font-size:26px;font-weight:700;letter-spacing:-.5px;line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap}
 .ovw .obig small{display:block;font-size:11.5px;color:var(--muted);margin-top:2px}
 .ovw .adf,.dhero .adf{flex:none;text-align:right;font-size:14px;font-weight:700;padding:5px 9px;border-radius:8px;background:var(--line2);font-variant-numeric:tabular-nums;white-space:nowrap}
