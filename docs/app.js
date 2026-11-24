@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.72.3';
+const APP_VERSION = '1.72.4';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -434,7 +434,7 @@ function render() {
         const sell = t.side === 'SAT';
         return `<div class="row">${cico(t.inst, t.side, t.pnl < 0)}
       <div class="mid"><b>${sym(t.inst)}${pq(t.inst)} ${sell ? 'satıldı' : 'alındı'}</b><span>${dt(t.ts)} · ${t.reason} · ${px(t.price)}</span></div>
-      <div class="end"><b>${tl(t.amount, 0)}</b>${sell ? `<span class="plc ${cls(t.pnl) || 'z'}">${sgn(t.pnl)} TL ${t.pnl >= 0 ? 'kâr' : 'zarar'}</span>` : `<span>harcandı</span>`}</div></div>`;
+      <div class="end"><b>${tl(t.amount, 0)}</b>${sell ? `<span class="plc ${cls(t.pnl) || 'z'}">${sgn(t.pnl)} TL ${t.pnl >= 0 ? 'kâr' : 'zarar'}</span>` : `<span class="plc buy">${ic('i-coins')}Alım</span>`}</div></div>`;
     }).join('')
         : `<div class="empty">${ic('i-list')}<div>Henüz işlem yok. Bot fırsat bekliyor.</div></div>`);
     clipList('trades', 4);
@@ -2905,7 +2905,7 @@ function renderHist() {
         }
         const sell = t.side === 'SAT', hm = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
         h += `<div class="row">${cico(t.inst, t.side, t.pnl < 0)}<div class="mid"><b>${sym(t.inst)}${pq(t.inst)} ${sell ? 'satıldı' : 'alındı'}</b><span>${hm} · ${t.reason} · ${px(t.price)}</span></div>
-      <div class="end"><b>${tl(t.amount, 0)}</b>${sell ? `<span class="plc ${cls(t.pnl) || 'z'}">${sgn(t.pnl)} TL ${t.pnl >= 0 ? 'kâr' : 'zarar'}</span>` : `<span>harcandı</span>`}</div></div>`;
+      <div class="end"><b>${tl(t.amount, 0)}</b>${sell ? `<span class="plc ${cls(t.pnl) || 'z'}">${sgn(t.pnl)} TL ${t.pnl >= 0 ? 'kâr' : 'zarar'}</span>` : `<span class="plc buy">${ic('i-coins')}Alım</span>`}</div></div>`;
     }
     if (day)
         h += '</div>';

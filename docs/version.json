@@ -1,10 +1,17 @@
 {
-  "version": "1.72.3",
+  "version": "1.72.4",
   "date": "2026-11-24",
   "notes": [
-    "Elle satışta 'Satış isteği · N sn' yazısı yerine dönen simgeli 'Satılıyor' etiketi ve satırın altında akan çubuk"
+    "Son işlemlerde alımlar artık mavi 'Alım' etiketiyle; satışlardaki yeşil/kırmızı kâr-zarar etiketinden ayırt ediliyor"
   ],
   "history": [
+    {
+      "version": "1.72.4",
+      "date": "2026-11-24",
+      "notes": [
+        "Son işlemlerde alımlar artık mavi 'Alım' etiketiyle; satışlardaki yeşil/kırmızı kâr-zarar etiketinden ayırt ediliyor"
+      ]
+    },
     {
       "version": "1.72.3",
       "date": "2026-11-24",
@@ -108,15 +115,6 @@
       "date": "2026-11-23",
       "notes": [
         "Ayar grupları ve kademe merdiveni hizalandı; çift çizgiler kaldırıldı"
-      ]
-    },
-    {
-      "version": "1.69.0",
-      "date": "2026-11-23",
-      "notes": [
-        "Ana sayfa, Futures ve Memecoin kartları görsel yenilendi (toplam, dağılım çubuğu, risk çubuğu, tarama hunisi, izlenen coin çubukları)",
-        "Kademeli ayarlar gruplandı; 3. ve sonraki kademeler açıkça yazıldı; kademe merdiveni önizlemesi eklendi",
-        "Fable 2. tur: aktarım ve memecoin güvenlik düzeltmeleri, daha hızlı bot turu, uygulamada veri donması ve renk geri dönmesi giderildi"
       ]
     }
   ]
