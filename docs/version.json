@@ -1,10 +1,17 @@
 {
-  "version": "1.80.1",
+  "version": "1.80.2",
   "date": "2026-11-24",
   "notes": [
-    "Aktarım: MEME → KASA / OKX TR zincirinin 2. adımı günlük sınıra ikinci kez sayılmıyor"
+    "Bot verileri ekrana 30 yerine en geç 10 saniyede gidiyor (işlem olunca hemen)"
   ],
   "history": [
+    {
+      "version": "1.80.2",
+      "date": "2026-11-24",
+      "notes": [
+        "Bot verileri ekrana 30 yerine en geç 10 saniyede gidiyor (işlem olunca hemen)"
+      ]
+    },
     {
       "version": "1.80.1",
       "date": "2026-11-24",
@@ -101,13 +108,6 @@
       "date": "2026-11-24",
       "notes": [
         "Bildirim balonları yenilendi: türüne göre simge ve renk (tamam yeşil, hata kırmızı, bilgi pembe), alttan kayarak gelir, kalan süre çizgisi, dokununca kapanır"
-      ]
-    },
-    {
-      "version": "1.74.1",
-      "date": "2026-11-24",
-      "notes": [
-        "Futures ve Memecoin: özet kartı, açık pozisyonlar ve işlem kaydı ayrı kartlarda; memecoin gerçek mod kapalıyken 'DENEME' rozeti"
       ]
     }
   ]

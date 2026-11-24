@@ -18,7 +18,7 @@ from . import run
 
 DURATION = int(os.environ.get("LOOP_MIN", "50")) * 60
 STEP = int(os.environ.get("LOOP_STEP", "2"))  # tur aralığı (sn)
-HEARTBEAT = 30
+HEARTBEAT = 10  # sn: fiyatla değişen kâr/zarar en geç bu sürede ekrana gider (işlem olunca hemen gönderilir)
 
 
 def sh(*args, cwd=None, timeout=None):
