@@ -161,10 +161,12 @@
   "theme": "auto",
   "xfer_req": [
     {
-      "id": "x1a20950a04c",
-      "ts": 1795452608588,
-      "dir": "g2k",
-      "amt": 10,
+      "id": "mclosef0948781",
+      "ts": 1795498005102,
+      "dir": "m2g",
+      "amt": 1,
+      "all": true,
+      "then": "k",
       "src": "bos"
     }
   ],
@@ -178,7 +180,7 @@
     "sweep_min": 15
   },
   "meme": {
-    "on": true,
+    "on": false,
     "bank": 100,
     "size_pct": 20,
     "max_pos": 3,
@@ -196,7 +198,7 @@
     "fee_pct": 0.5,
     "max_m5": 8,
     "wallet": "7YmjQvaZdKDKmfmTPP1vmUxK8ns1CKEim9ovBbwNEKwN",
-    "real": true,
+    "real": false,
     "max_loss": 6,
     "max_slip": 2,
     "real_reset": 0
