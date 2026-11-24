@@ -1,4 +1,4 @@
-const APP_VERSION='1.87.6';
+const APP_VERSION='1.87.7';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (kehribar)
@@ -955,7 +955,7 @@ function openExt(url: string){
   if(!window.open(url,'_blank','noopener'))location.href=url}
 document.addEventListener('click',e=>{const a=(e.target as HTMLElement).closest?.('a[data-ext]') as HTMLAnchorElement;if(!a)return;e.preventDefault();openExt(a.href)});
 /** OKX TR'den iç transfer: alıcı OKX Global hesabının UID'si (bot okur) kopyalanabilir */
-function uidBox(): string {const id=(S as any)?.xfer?.g_uid;return id?`<div class="xuid"><span>OKX Global UID<b>${escH(id)}</b></span><button type="button" data-cp="${escH(id)}">${ic('i-copy')}Kopyala</button></div>`:''}
+function uidBox(k='g'): string {const id=(S as any)?.xfer?.[k==='g'?'g_uid':'tr_uid'];return id?`<div class="xuid"><span>${k==='g'?'OKX Global':'OKX TR'} UID<b>${escH(id)}</b></span><button type="button" data-cp="${escH(id)}">${ic('i-copy')}Kopyala</button></div>`:''}
 document.addEventListener('click',e=>{const b=(e.target as HTMLElement).closest?.('[data-cp]') as HTMLElement;if(!b)return;navigator.clipboard?.writeText(b.dataset.cp).then(()=>toast('UID kopyalandı'),()=>toast('Kopyalanamadı'))});
 const OKX_TR_WD='https://tr.okx.com/balance/withdrawal/usdt';
 function openXfer(dir: string){
@@ -974,7 +974,7 @@ function openXfer(dir: string){
       if(await waitMeme('tr',+inp.value,document.getElementById('tmGo'))){q.hidden=true;openExt(OKX_TR_WD)}};
     q.hidden=false;return}
   if(dir.startsWith('tr')){const q=document.getElementById('qsh');q.dataset.n='';qHead('i-bank','Anladım');document.getElementById('qTitle').textContent=xName(dir);
-    document.getElementById('qText').innerHTML=`<div class="xfs"><p class="xnote">OKX TR, Türkiye kuralı gereği API'den (bottan) yapılan para çıkışlarını kabul etmiyor (hata 58380). Bu yönü <b>OKX TR uygulamasından</b> yap; ücretsiz ve anında:</p>
+    document.getElementById('qText').innerHTML=`<div class="xfs"><p class="xnote">${dir==='tr2g'?`Bottan otomatik gönderim için bir kez: OKX TR → Çek → USDT → <b>Adres Defteri Yönetimi</b> → OKX kullanıcısı → <b>UID</b> olarak Global UID'ni ekle (API çekimine izin ver / doğrulamasız). O zamana kadar elle gönder; ücretsiz ve anında:`:`Bu yönü <b>OKX TR uygulamasından</b> yap:`}</p>
       <div class="xinfo"><div>${ic('i-bank')}<span>1</span><b>${dir==='tr2g'?'Alıcı\'da <u>OKX Global ve OKX TR Kullanıcıları</u> sekmesine dokun':'Çek → USDT → Zincir üstü · Arbitrum One'}</b></div><div>${ic(dir==='tr2g'?'i-globe':'i-vault')}<span>2</span><b>${dir==='tr2g'?'"Telefon Numarası" yerine UID seç, yapıştır (UID kopyalandı)':'Adres defterinden KASA (Arbitrum)'}</b></div><div>${ic('i-check')}<span>3</span><b>Gelince bot kasalarda gösterir</b></div></div>${dir==='tr2g'?uidBox():''}
       <a class="btn primary xgo" href="${OKX_TR_WD}" data-ext="1">${ic('i-out')}OKX TR'yi aç</a>
       ${dir==='tr2g'?`<div class="xtry"><p class="hint">Bottan iç transferi dene: OKX TR kabul ederse bundan sonra otomatik olur. Yalnız TR'deki boş paradan (botun parasına dokunmaz), zincir kullanılmaz.</p>
@@ -997,7 +997,7 @@ function openXfer(dir: string){
     if(v!=null)v=Math.min(v,Math.max(0,(+X.daily_max||1000)-(+X.day_sum||0)));
     return v==null?null:Math.floor(v*100)/100};
   const mx=maxOf();
-  const mm=f==='m'||t==='m',fee=dir==='m2k'?'~0,03 $ ağ + satış ücreti':mm?'~0,02 $ ağ ücreti + alım-satım ücreti':t==='k'?'~0,003 $ ağ ücreti':'Ücretsiz (yedek yol ~0,003 $)',time_=mm||t==='k'?'Birkaç dakika':'Birkaç saniye – birkaç dakika';
+  const mm=f==='m'||t==='m',fee=dir==='m2k'?'~0,03 $ ağ + satış ücreti':mm?'~0,02 $ ağ ücreti + alım-satım ücreti':t==='k'?'~0,003 $ ağ ücreti':'Ücretsiz · OKX iç transfer',time_=mm||t==='k'?'Birkaç dakika':'Birkaç saniye – birkaç dakika';
   const draw=()=>{const tx=document.getElementById('qText'),cur=(document.getElementById('xfAmt') as HTMLInputElement)?.value||'';
     tx.innerHTML=`<div class="xfs">
       <div class="xroute"><div>${xEnd(f)}<b>${XEND[f][0]}</b><small>${bal(f)}</small></div><span class="xar">${ic('i-chev')}</span><div>${xEnd(t)}<b>${XEND[t][0]}</b><small>${bal(t)}</small></div></div>
@@ -1015,7 +1015,7 @@ function openXfer(dir: string){
         ${dir==='m2g'?`<div>${ic('i-info')}<span>Nasıl</span><b>SOL Global'e gider, satılıp USDT olur</b></div>`:''}
         ${dir==='m2k'?`<div>${ic('i-info')}<span>Nasıl</span><b>SOL Global'de USDT olur, oradan KASA'ya gider</b></div>`:''}
         ${dir==='m2tr'?`<div>${ic('i-info')}<span>Nasıl</span><b>SOL Global'de USDT olur, OKX TR'de TL'ye çevrilip Nakit'e konur</b></div>`:''}
-      </div>
+      </div>${dir==='g2tr'?`<p class="hint" style="margin:8px 2px 0">OKX iç transferiyle gider (zincir yok). İlk seferde Global → Çek → USDT → Adres Defteri'ne OKX TR UID'ni "OKX kullanıcısı · UID" olarak ekle, API çekimine izin ver.</p>${uidBox('tr')}`:''}
       <button class="btn primary xgo" id="xfGo">${ic('i-out')}Gönder</button></div>`;
     tx.querySelectorAll<HTMLElement>('[data-q]').forEach(b=>b.onclick=()=>{(document.getElementById('xfAmt') as HTMLInputElement).value=b.dataset.q;upd()});
     const inp=document.getElementById('xfAmt') as HTMLInputElement,upd=()=>{document.getElementById('xfEq').innerHTML=r&&+inp.value?'≈ '+tl(+inp.value*r,0):'&nbsp;'};

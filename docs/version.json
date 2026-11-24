@@ -1,10 +1,17 @@
 {
-  "version": "1.87.6",
+  "version": "1.87.7",
   "date": "2026-11-25",
   "notes": [
-    "OKX TR → Global ekranında 'Botla dene': bottan iç transfer denenir, sonuç Aktarımlar'da adım adım görünür. TR → Global hiçbir zaman zincirden gönderilmez"
+    "Borsalar arası (TR ↔ Global) yalnız OKX iç transferiyle; zincire düşmez. Kasalar'da her iki yön için adres defterine eklenecek UID gösterilir"
   ],
   "history": [
+    {
+      "version": "1.87.7",
+      "date": "2026-11-25",
+      "notes": [
+        "Borsalar arası (TR ↔ Global) yalnız OKX iç transferiyle; zincire düşmez. Kasalar'da her iki yön için adres defterine eklenecek UID gösterilir"
+      ]
+    },
     {
       "version": "1.87.6",
       "date": "2026-11-25",
@@ -101,13 +108,6 @@
       "date": "2026-11-24",
       "notes": [
         "Genel bakım 3: yanıtı kaybolan emir borsadan doğrulanıp kayda geçer, iki kez verilmez (spot, futures bütçe/kâr aktarımı, memecoin); tur hatayla kesilse de kayıt yazılır; bozuk ayar botu yanlış ayarla çalıştırmaz; uygulama verisi ~yarı boyutta iner (özet sıkıştırılıyor); yeni sürüm kurulur kurulmaz çevrimdışı da açılır; İngilizce modda eksik çeviriler ve taşan etiket tamamlandı; bildirim gönderimi bir kez daha denenir"
-      ]
-    },
-    {
-      "version": "1.81.1",
-      "date": "2026-11-24",
-      "notes": [
-        "Günlük aktarım sınırına sabit 1000 $ güvenlik tavanı (ayardan yükseği girilemez, bot da aşmaz)"
       ]
     }
   ]

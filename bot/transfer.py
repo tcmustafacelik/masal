@@ -258,23 +258,13 @@ def _send(ex, side, addr, dest, amt, job, X):
     try:
         res = _wd(ex, body, info, nm, dest)
     except RuntimeError as e:
-        if dest == "g" and ("58207" in str(e) or "58380" in str(e)):
-            # TR → Global yalnız OKX iç transferiyle (kullanıcı tercihi: zincir yok, ücret yok)
-            raise RuntimeError(f"OKX TR iç transferi API'den kabul etmedi ({str(e)[:60]}); OKX TR uygulamasından 'OKX hesabınıza platform içi transfer' ile gönder")
-        if not (dest and ("58207" in str(e) or "58380" in str(e))):
-            raise
-        # Alıcı hesap (UID) adres defterinde "OKX kullanıcısı" olarak kayıtlı değil: doğrulanmış Arbitrum adresine zincirden gönder
-        addr = ROUTES[job["dir"]][1]
-        if addr.lower() not in _clients()[dest].dep_addr():
-            raise RuntimeError(f"{NAMES[dest]} yatırma adresi kayıtlı adresle tutmuyor; güvenlik için gönderilmedi")
-        chain, fee, min_wd = ex.chain()
-        if amt < min_wd:
-            raise RuntimeError(f"en az {min_wd} USDT gönderilebilir")
-        if not _prepare(ex, side, amt + fee, job):
-            raise RuntimeError("zincir ücreti için yeterli USDT yok")
-        body = {"ccy": "USDT", "amt": f"{amt:.2f}", "dest": "4", "toAddr": addr, "chain": chain,
-                "fee": f"{fee:f}".rstrip("0").rstrip(".") or "0", "clientId": job["id"][:32]}
-        res = _wd(ex, body, info, nm, dest)
+        if dest and ("58207" in str(e) or "58380" in str(e)):
+            # Borsalar arası (TR ↔ Global) yalnız OKX iç transferiyle (kullanıcı tercihi: zincir yok, ücret yok).
+            # 58207: alıcı UID gönderen borsanın adres defterinde "OKX kullanıcısı (UID)" olarak doğrulanmış kayıtlı değil
+            src_nm = "OKX TR" if dest == "g" else "OKX Global"
+            raise RuntimeError(f"{src_nm} iç transferi kabul etmedi ({str(e)[:70]}). {src_nm} adres defterine {NAMES[dest]} UID'ni "
+                               f"'OKX kullanıcısı · UID' olarak ekle ve API çekimi için doğrulamasız işaretle; sonra tekrar dene")
+        raise
     job.update(stage="sent", wdId=res.get("wdId"), fee=fee, chain=chain, sent_ts=int(time.time() * 1000))
     if not job.get("link"):  # zincirin 2. adımı günlük sınıra ikinci kez sayılmaz
         X["day_sum"] = round(X.get("day_sum", 0) + amt, 2)
@@ -703,8 +693,15 @@ def _balances(C, o, bot_cash):
             _GUID["v"] = _uid(C["g"])
         except Exception as e:
             print("Global UID okunamadı:", e)
+    if "tr" not in _GUID and C["tr"].ok:
+        try:
+            _GUID["tr"] = _uid(C["tr"])
+        except Exception as e:
+            print("TR UID okunamadı:", e)
     if _GUID.get("v"):
         out["g_uid"] = _GUID["v"]
+    if _GUID.get("tr"):
+        out["tr_uid"] = _GUID["tr"]
     try:
         r = _rate()
         out["usdtry"] = round(r, 4)
@@ -742,6 +739,6 @@ def public(state, S=None):
     return {"jobs": [{k: j.get(k) for k in ("id", "dir", "amt", "src", "ts", "stage", "msg", "got", "tl", "then", "wait", "via", "steps", "txId", "chain", "fee", "sol")}
                      for j in X["jobs"]][::-1][:10],
             "log": X.get("log", [])[:20], "free_tl": X.get("free_tl"), "g_val": X.get("g_val"), "kasa": X.get("kasa"),
-            "tr_total": X.get("tr_total"), "usdtry": X.get("usdtry"), "g_uid": X.get("g_uid"), "g_base": X.get("g_base", 0),
+            "tr_total": X.get("tr_total"), "usdtry": X.get("usdtry"), "g_uid": X.get("g_uid"), "tr_uid": X.get("tr_uid"), "g_base": X.get("g_base", 0),
             "day_sum": X.get("day_sum", 0), "daily_max": cfg["daily_max"], "sweep": {k: cfg[k] for k in ("sweep_on", "sweep_pct", "sweep_days")},
             "sweep_at": int(X.get("sweep_at", 0) * 1000), "dust": X.get("dust")}
