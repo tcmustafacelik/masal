@@ -295,7 +295,16 @@ details.setup summary::-webkit-details-marker{display:none}
 .savebar{position:sticky;bottom:calc(10px + env(safe-area-inset-bottom));margin-top:18px;background:var(--surface);border:1px solid var(--amber-line);border-radius:var(--r);padding:10px;display:flex;align-items:center;gap:8px;box-shadow:0 6px 20px rgba(0,0,0,.08)}
 .savebar span{flex:1;font-size:12.5px;color:var(--amber-ink);display:flex;gap:6px;align-items:center;min-width:0}
 .savebar span svg.i{width:15px;height:15px}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom));background:var(--pri-bg);color:var(--pri-fg);font-size:13px;padding:10px 14px;border-radius:var(--r-sm);max-width:calc(100% - 28px);z-index:20;box-shadow:0 6px 20px rgba(0,0,0,.18)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:10px;width:max-content;max-width:calc(100% - 24px);background:var(--surface);color:var(--text);font-size:12.5px;font-weight:600;line-height:1.35;padding:9px 13px 9px 9px;border:1px solid var(--line);border-radius:12px;z-index:30;box-shadow:0 10px 28px var(--shadow);overflow:hidden;animation:tin .22s ease-out;cursor:pointer}
+.toast .ti{flex:none;width:28px;height:28px;border-radius:8px;display:grid;place-items:center}.toast .ti svg{width:15px;height:15px}
+.toast .tt{min-width:0}
+.toast .tbar{position:absolute;left:0;bottom:0;height:2.5px;width:100%;transform-origin:left;animation:tbar 3.8s linear forwards}
+.toast.t-ok .ti{background:var(--green-bg);color:var(--green)}.toast.t-ok .tbar{background:var(--green)}
+.toast.t-er .ti{background:var(--red-bg);color:var(--red)}.toast.t-er .tbar{background:var(--red)}.toast.t-er{border-color:var(--red-line)}
+.toast.t-in .ti{background:var(--acc-bg);color:var(--acc)}.toast.t-in .tbar{background:var(--acc)}
+@keyframes tin{from{opacity:0;transform:translate(-50%,12px)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes tbar{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+@media (prefers-reduced-motion:reduce){.toast,.toast .tbar{animation:none}}
 .okx{display:flex;gap:7px;align-items:flex-start;font-size:12px;border-radius:var(--r-sm);padding:8px 10px;margin:-2px 0 12px}
 .okx svg.i{width:15px;height:15px;margin-top:1px}.okx.ok{background:var(--green-bg);color:var(--green)}.okx.bad{background:var(--red-bg);color:var(--red)}
 .live{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;text-transform:none;letter-spacing:0;color:var(--muted);font-variant-numeric:tabular-nums}
@@ -884,6 +893,6 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 <div class="toast" id="toast" hidden></div>
 <div class="qsh" id="qsh" hidden><div class="qb"><div class="gr"></div><h3><span><svg class="i" id="qIco"><use href="#i-info"/></svg></span><b id="qTitle"></b></h3><div class="qt" id="qText"></div><button class="btn primary" id="qOk">Anladım</button></div></div>
 
-<script src="app.js?v=1.74.1"></script>
+<script src="app.js?v=1.74.2"></script>
 </body>
 </html>

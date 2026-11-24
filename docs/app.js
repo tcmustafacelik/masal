@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.74.1';
+const APP_VERSION = '1.74.2';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = 'var(--acc)'; // seçili çizgi: tema vurgu rengi (pembe)
@@ -2893,8 +2893,20 @@ async function save(obj, msg, keepDraft, retry = true) {
         btn.innerHTML = ic('i-check') + 'Kaydet';
     }
 }
+/** Bildirim balonu: yazıdan türü anlaşılır (hata kırmızı, tamam yeşil, bilgi pembe), simge + yazı + kalan süre çizgisi */
 let toastT;
-function toast(t) { const el = document.getElementById('toast'); el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => el.hidden = true, 3800); }
+function toast(t) {
+    const el = document.getElementById('toast');
+    const s = String(t);
+    const k = /yanlış|hata|yapılamadı|kaydedilemedi|edilemedi|gönderilemez|alınamadı|bulunamadı|başarısız|yetmez|olmalı|gir$|bağlı değil/i.test(s) ? 'er' : /gönderildi|kaydedildi|açıldı|kapatıldı|kopyalandı|eşitlendi|tamam|silindi|güncellendi|başlatıldı|değişti/i.test(s) ? 'ok' : 'in';
+    el.className = 'toast t-' + k;
+    el.innerHTML = `<span class="ti">${ic(k === 'er' ? 'i-info' : k === 'ok' ? 'i-check' : 'i-bell')}</span><span class="tt"></span><i class="tbar"></i>`;
+    el.querySelector('.tt').textContent = s;
+    el.hidden = false;
+    el.onclick = () => { el.hidden = true; };
+    clearTimeout(toastT);
+    toastT = setTimeout(() => el.hidden = true, 3800);
+}
 let HIST = null, hCoin = '', hSide = '';
 function showHist(on) {
     overlayView(on);

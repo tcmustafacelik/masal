@@ -1,10 +1,17 @@
 {
-  "version": "1.74.1",
+  "version": "1.74.2",
   "date": "2026-11-24",
   "notes": [
-    "Futures ve Memecoin: özet kartı, açık pozisyonlar ve işlem kaydı ayrı kartlarda; memecoin gerçek mod kapalıyken 'DENEME' rozeti"
+    "Bildirim balonları yenilendi: türüne göre simge ve renk (tamam yeşil, hata kırmızı, bilgi pembe), alttan kayarak gelir, kalan süre çizgisi, dokununca kapanır"
   ],
   "history": [
+    {
+      "version": "1.74.2",
+      "date": "2026-11-24",
+      "notes": [
+        "Bildirim balonları yenilendi: türüne göre simge ve renk (tamam yeşil, hata kırmızı, bilgi pembe), alttan kayarak gelir, kalan süre çizgisi, dokununca kapanır"
+      ]
+    },
     {
       "version": "1.74.1",
       "date": "2026-11-24",
@@ -110,13 +117,6 @@
       "date": "2026-11-23",
       "notes": [
         "Varlık özetinde 'Kasada yedek' kutusunun bozulması düzeltildi"
-      ]
-    },
-    {
-      "version": "1.69.4",
-      "date": "2026-11-23",
-      "notes": [
-        "Sayı kutuları bütün sistemde yenilendi: ayrı küçük − / + düğmeleri, ortada sayı ve altında birim; açıklamalar artık kesilmiyor"
       ]
     }
   ]
