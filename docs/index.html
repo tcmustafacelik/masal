@@ -694,6 +694,20 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 
 .rbadge.pp{background:var(--amber-bg);color:var(--amber-ink)}
 .card.mfeed{padding:2px 12px}
+
+/* Kasalar ekranı bölümleri */
+#xfer .card.xf{margin-top:0}
+.xf .xk{margin-top:0}
+.xsend .xg+.xg{margin-top:10px;padding-top:10px;border-top:1px solid var(--line2)}
+.xsend .xgh{display:flex;align-items:center;gap:7px;font-size:11.5px;font-weight:650;color:var(--muted)}
+.xsend .xgh .xe{width:22px;height:22px;border-radius:7px}.xsend .xgh .xe svg{width:12px;height:12px}
+.xsend .xt{margin-top:6px}
+.xsend .hint{margin:10px 2px 0}
+.xf .xj{margin-top:0;border-top:0;padding-top:0}
+.xlogc{padding:4px 12px}
+.xl{display:flex;gap:10px;padding:8px 0;font-size:12px;line-height:1.4}.xl+.xl{border-top:1px solid var(--line2)}
+.xl time{flex:none;color:var(--faint);font-variant-numeric:tabular-nums;font-size:11px;padding-top:1px}
+.xl b{display:block;font-weight:600;color:var(--text)}.xl small{display:block;font-size:11px;color:var(--muted);margin-top:2px}
 </style>
 </head>
 <body>
@@ -770,7 +784,7 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 <main class="wrap" id="homev"><div id="homeBody"></div></main>
 <main class="wrap" id="futv" hidden><div id="futBody"></div></main>
 <main class="wrap" id="memev" hidden><div id="memeBody"></div></main>
-<main class="wrap" id="kasav" hidden><div class="card xf" id="xfer" hidden></div></main>
+<main class="wrap" id="kasav" hidden><div id="xfer" hidden></div></main>
 <main class="wrap" id="mainv" hidden>
   <div id="homeChk"></div>
   <div class="err" id="err"></div>
@@ -893,6 +907,6 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 <div class="toast" id="toast" hidden></div>
 <div class="qsh" id="qsh" hidden><div class="qb"><div class="gr"></div><h3><span><svg class="i" id="qIco"><use href="#i-info"/></svg></span><b id="qTitle"></b></h3><div class="qt" id="qText"></div><button class="btn primary" id="qOk">Anladım</button></div></div>
 
-<script src="app.js?v=1.74.2"></script>
+<script src="app.js?v=1.74.3"></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-const APP_VERSION='1.74.2';
+const APP_VERSION='1.74.3';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (pembe)
@@ -187,7 +187,7 @@ function render(){
     document.getElementById('nowSec').hidden=true;document.getElementById('kasa').innerHTML='';
     document.getElementById('logSec').hidden=true;
     renderBacktest();renderRules(x.risk||S.risk,null);renderMarket();
-    {const k=document.getElementById('xfer');k.hidden=false;setH(k,`<div class="empty">${ic('i-lock')}<div>Kasalar için önce kilidi aç (Spot sekmesi)</div></div>`)}
+    {const k=document.getElementById('xfer');k.hidden=false;setH(k,`<div class="card"><div class="empty">${ic('i-lock')}<div>Kasalar için önce kilidi aç (Spot sekmesi)</div></div></div>`)}
     return;
   }
   let al='';
@@ -661,15 +661,21 @@ function renderXfer(){
   const jobs=(X?.jobs||[]).slice(0,4).map((j: any)=>{const st=XST[j.stage]||[j.stage,'i-info','w'];
     return `<div class="xr"><span class="xs ${st[2]}">${ic(st[1])}</span><div class="xm"><b>${XDIR[j.dir]?xName(j.dir):j.dir}<i>${nf(j.amt,2)} $</i></b>
       <small>${masaClock(j.ts)} · ${st[0]}${j.stage!=='done'&&j.msg&&j.msg!=='sırada'?' · '+j.msg:''}</small></div>${j.stage==='new'?`<button class="xc" data-xc="${j.id}">İptal</button>`:''}</div>`}).join('');
-  if(!setH(box,`<div class="ah">${ic('i-wallet')}<b>Kasalar ve aktarım</b><span>dakikada bir</span></div>
-    ${xKasalar(X)}
-    <div class="xt">${Object.keys(XDIR).map(k=>{const [f,t,sub]=XDIR[k];return `<button data-x="${k}"><span class="xrt">${xEnd(f)}${ic('i-chev')}${xEnd(t)}</span><b>${xName(k)}</b><small>${sub}</small></button>`}).join('')}</div>
-    <div class="xb"><span>TR'de boşta <b>${X?.free_tl!=null?tl(Math.max(0,X.free_tl),0):'—'}</b></span><span>Bugün gönderilen <b>$${nf(X?.day_sum||0,0)} / ${nf(X?.daily_max||1000,0)}</b></span></div>
-    ${jobs?`<div class="xj">${jobs}</div>`:''}
-    <div class="xdh">${ic('i-coins')}<b>Küçük bakiyeleri çevir</b><span>tek dokunuş</span></div>
-    <div class="xt x3">${DUST.map(([k,f,to])=>{const l=(X?.dust||{})[k]||[],u=l.reduce((a: number,x: any)=>a+(+x.usd||0),0);
-      return `<button data-dust="${k}"><span class="xrt">${xEnd(f)}${ic('i-chev')}<span class="xe e5">${to}</span></span><b>${XEND[f][0]}</b><small>${l.length?`${l.length} coin · $${nf(u,2)}`:'artık yok'}</small></button>`}).join('')}</div>
-    ${(X?.log||[]).length?`<div class="xlog">${(X.log as any[]).slice(0,3).map(([t,m]: [number,string])=>`<div><time>${masaClock(t)}</time><span>${String(m).replace(/</g,'&lt;')}</span></div>`).join('')}</div>`:''}`))return;
+  // Kasalar ekranı: her bölüm kendi başlığı ve kartıyla (bakiyeler · para gönder · aktarımlar · küçük bakiyeler · kayıt)
+  const grp: [string,string,string[]][]=[['OKX TR\'den','tr',['tr2g','tr2k']],['OKX Global\'den','g',['g2tr','g2k','g2m']],['MEME\'den','m',['m2g']],['KASA\'dan','k',['k2g','k2tr']]];
+  const tile=(k: string)=>{const [f,t,sub]=XDIR[k];return `<button data-x="${k}"><span class="xrt">${xEnd(f)}${ic('i-chev')}${xEnd(t)}</span><b>${XEND[t][0]}</b><small>${sub}</small></button>`};
+  const logRows=((X?.log||[]) as any[]).slice(0,5).map(([t,m]: [number,string])=>{const parts=String(m).replace(/</g,'&lt;').split(' · ');
+    return `<div class="xl"><time>${masaClock(t)}</time><div><b>${parts[0]}</b>${parts.length>1?`<small>${parts.slice(1).join(' · ')}</small>`:''}</div></div>`}).join('');
+  if(!setH(box,`<h2 class="mh">${ic('i-wallet')}Kasalar<span class="hsum">dakikada bir güncellenir</span></h2>
+    <div class="card xf">${xKasalar(X)}</div>
+    <h2 class="mh">${ic('i-out')}Para gönder<span class="hsum">bugün $${nf(X?.day_sum||0,0)} / ${nf(X?.daily_max||1000,0)}</span></h2>
+    <div class="card xf xsend">${grp.filter(([,,ks])=>ks.some(k=>XDIR[k])).map(([n,f,ks])=>`<div class="xg"><div class="xgh">${xEnd(f)}<span>${n}</span></div><div class="xt">${ks.filter(k=>XDIR[k]).map(tile).join('')}</div></div>`).join('')}
+      ${X?.free_tl!=null?`<p class="hint">OKX TR'de boşta ${tl(Math.max(0,X.free_tl),0)}</p>`:''}</div>
+    ${jobs?`<h2 class="mh">${ic('i-refresh')}Aktarımlar<span class="hsum">son işler</span></h2><div class="card xf"><div class="xj">${jobs}</div></div>`:''}
+    <h2 class="mh">${ic('i-coins')}Küçük bakiyeler<span class="hsum">tek dokunuşla çevir</span></h2>
+    <div class="card xf"><div class="xt x3">${DUST.map(([k,f,to])=>{const l=(X?.dust||{})[k]||[],u=l.reduce((a: number,x: any)=>a+(+x.usd||0),0);
+      return `<button data-dust="${k}"><span class="xrt">${xEnd(f)}${ic('i-chev')}<span class="xe e5">${to}</span></span><b>${XEND[f][0]}</b><small>${l.length?`${l.length} coin · $${nf(u,2)}`:'artık yok'}</small></button>`}).join('')}</div></div>
+    ${logRows?`<h2 class="mh">${ic('i-list')}Kayıt<span class="hsum">son olaylar</span></h2><div class="card xf xlogc">${logRows}</div>`:''}`))return;
   box.querySelectorAll<HTMLElement>('[data-x]').forEach(b=>b.onclick=()=>openXfer(b.dataset.x));
   box.querySelectorAll<HTMLElement>('[data-xc]').forEach(b=>b.onclick=()=>cancelXfer(b.dataset.xc,b as HTMLButtonElement));
   box.querySelectorAll<HTMLElement>('[data-dust]').forEach(b=>b.onclick=()=>openDust(b.dataset.dust));
