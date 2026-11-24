@@ -297,7 +297,7 @@
       "TRX"
     ],
     "real": true,
-    "real_budget": 20,
+    "real_budget": 50,
     "real_lev": 3,
     "max_loss": 8,
     "real_reset": 0,
