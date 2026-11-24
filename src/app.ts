@@ -1,4 +1,4 @@
-const APP_VERSION='1.77.0';
+const APP_VERSION='1.78.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (kehribar)
@@ -342,13 +342,41 @@ function levWatch(): string {
   const lv = (orig || S?.settings as any)?.lev || {};
   const pf = (v: number) => nf(v, v >= 100 ? 2 : v >= 1 ? 4 : Math.min(8, 2 - Math.floor(Math.log10(v || 1))));
   const w = (L.watch || []).map((r: any) => {const d = Math.abs(r.dist || 0), up = r.side === 'UZUN', near = Math.max(4, Math.min(100, 100 - d * 12));
-    return `<div class="wr ${up ? 'wu' : 'wd'}"><div><b>${r.sym}</b><em>${r.open ? 'AÇIK' : up ? '↑ UZUN' : '↓ KISA'}</em></div><div><span>${pf(r.px)}</span><small>${r.open ? 'pozisyon açık' : `sinyale %${nf(d, 1)}`}</small></div><i style="width:${(r.open ? 100 : near).toFixed(0)}%"></i></div>`}).join('');
+    return `<div class="wr ${up ? 'wu' : 'wd'}" data-lo="${r.sym}" data-ls="${up ? 1 : -1}" role="button"><div><b>${r.sym}</b><em>${r.open ? 'AÇIK' : up ? '↑ UZUN' : '↓ KISA'}</em></div><div><span>${pf(r.px)}</span><small>${r.open ? 'pozisyon açık' : `sinyale %${nf(d, 1)}`}</small></div><i style="width:${(r.open ? 100 : near).toFixed(0)}%"></i></div>`}).join('');
   const lg = (L.log || []).slice(0, 8).map(([ts, k, t]: [number, string, string]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : 'not'}">${k === 'buy' ? 'SİNYAL' : k === 'exit' ? 'ÇIKIŞ' : 'ENGEL'}</em><div>${String(t).replace(/^(AÇ|KAPAT|ENGEL) /, '').replace(/</g, '&lt;')}</div></div>`).join('');
   return `<h2 class="mh">${ic('i-eye')}İzlenen coinler<span class="hsum">sinyale uzaklık · saatlik</span></h2>
     <div class="card"><div class="wgrid">${w || `<div class="empty">${ic('i-refresh')}<div>Mumlar yükleniyor</div></div>`}</div>
-    <p class="hint">Çubuk dolu = sinyale yakın. Fiyat son ${lv.brk_h??20} saatin zirvesini aşınca UZUN, dibini kırınca KISA açılır (${lv.trend_on===false?'eğilim filtresi kapalı':`${lv.trend_h??200} saatlik ortalamanın yönünde`}).</p></div>
+    <p class="hint">Elle açmak için coine dokun. Çubuk dolu = sinyale yakın. Fiyat son ${lv.brk_h??20} saatin zirvesini aşınca UZUN, dibini kırınca KISA açılır (${lv.trend_on===false?'eğilim filtresi kapalı':`${lv.trend_h??200} saatlik ortalamanın yönünde`}).</p></div>
     ${lg ? `<h2 class="mh">${ic('i-list')}Son kararlar<span class="hsum">${L.stats?.signals || 0} sinyal · ${L.stats?.entered || 0} giriş</span></h2><div class="card mfeed">${lg}</div>` : ''}`;
 }
+/** Futures elle açma: izlenen coine dokun → yön seç → aç. Sonrası botun kuralıyla yönetilir. */
+function openLevOpen(sym: string, side0: number){
+  const L: any=(S as any)?.lev,R: any=(S as any)?.levr,lv: any=(orig||S?.settings as any)?.lev||{},r: any=(L?.watch||[]).find((w: any)=>w.sym===sym);
+  if(!r)return;if(r.open){toast(`${sym} zaten açık; kapatmak için Pozisyonlar'daki Kapat'ı kullan`);return}
+  let side=side0;const real=!!(R&&+R.funded>0&&lv.real!==false),lev=+(real?(lv.real_lev??2):lv.lev)||3,eq=real?(+R.equity||+R.funded||0):(+L?.equity||+L?.bank||0),risk=+lv.risk_pct||2;
+  const q=document.getElementById('qsh');q.dataset.n='';qHead('i-layers','Vazgeç');document.getElementById('qTitle').textContent=`${sym} · futures`;
+  const draw=()=>{const up=side>0,against=r.up!=null&&r.up!==up;
+    document.getElementById('qText').innerHTML=`<div class="xfs">
+      <div class="seg lseg"><button type="button" data-sd="1" class="${up?'on up':''}">${ic('i-buy')}<b>UZUN</b><small>yükselişe</small></button><button type="button" data-sd="-1" class="${!up?'on dn':''}">${ic('i-sell')}<b>KISA</b><small>düşüşe</small></button></div>
+      ${against?`<div class="warn">${ic('i-info')}<div>Kısa vadeli eğilim (20/50 ortalaması) şu an <b>${r.up?'yukarı':'aşağı'}</b>. Ters yönde açarsan bot bir sonraki saatlik mumda “eğilim döndü” kuralıyla kapatabilir.</div></div>`:''}
+      <div class="xinfo">
+        <div>${ic('i-chart')}<span>Fiyat</span><b>${nf(r.px,r.px>=100?2:4)} $</b></div>
+        <div>${ic('i-layers')}<span>Kaldıraç</span><b>${lev}x · ${real?'gerçek masa':'deneme masası'}</b></div>
+        <div>${ic('i-shield')}<span>Risk</span><b>en fazla %${nf(risk,1)} · ≈ $${nf(eq*risk/100,2)}</b></div>
+        <div>${ic('i-stop')}<span>Zarar durdur</span><b>${nf(+lv.sl_atr||1.5,1)} ATR geride (borsada kurulur)</b></div>
+        <div>${ic('i-target')}<span>Kâr al</span><b>${nf(+lv.tp_atr||3,1)} ATR ileride</b></div>
+      </div>
+      <p class="hint">Açtıktan sonra bot kendi kuralıyla yönetir: kâr al, zarar durdur, iz süren stop; eğilim dönerse kapatır. İstersen Pozisyonlar'dan elle kapatırsın.</p>
+      <button class="btn primary xgo lgo ${up?'up':'dn'}" id="loGo">${ic(up?'i-buy':'i-sell')}${up?'UZUN':'KISA'} aç</button></div>`;
+    document.querySelectorAll<HTMLElement>('[data-sd]').forEach(b=>b.onclick=()=>{side=+b.dataset.sd;draw()});
+    const go=document.getElementById('loGo') as HTMLButtonElement;go.onclick=async()=>{
+      if(!token){toast('Önce Ayarlar\'dan GitHub bağlantısını kur');return}go.disabled=true;fastWatch();
+      const req={id:'o'+Date.now().toString(36),ts:Date.now(),desk:'lev',act:'open',sym,side};
+      const ok=await cloudPatch(o=>{(o as any).desk_cmd=[...((o as any).desk_cmd||[]).filter((x: any)=>Date.now()-(x.ts||0)<600000),req]},'Futures elle aç: '+sym+' '+(side>0?'UZUN':'KISA'));
+      if(ok){q.hidden=true;toast(`${sym} ${side>0?'UZUN':'KISA'} açma isteği gönderildi; bot birkaç saniyede açar`)}else{go.disabled=false;toast('İstek gönderilemedi, tekrar dene')}}};
+  draw();q.hidden=false;
+}
+document.addEventListener('click',e=>{const t=(e.target as HTMLElement).closest?.('[data-lo]') as HTMLElement;if(t)openLevOpen(t.dataset.lo,+t.dataset.ls)});
 /** Futures/Memecoin pozisyonunu elle kapatma düğmesi: istek ayarlara yazılır, bot birkaç saniyede uygular */
 const DESK_BUSY: Record<string, number> = {};
 function deskBtn(desk: string, sym: string, label: string): string {
@@ -1704,12 +1732,12 @@ async function save(obj?: Settings, msg?: string, keepDraft?: boolean, retry = t
       for(const k of ['sell','convert'])if((fr[k]?.ts||0)>(d[k]?.ts||0))d[k]=fr[k];
       if((+fr.liquidate||0)>(+d.liquidate||0))d.liquidate=fr.liquidate;
       if(fr.notify&&d.notify&&(fr.notify.cleared||0)>(d.notify.cleared||0))d.notify.cleared=fr.notify.cleared;
-      for(const k of ['xfer_req','xfer_cancel','dust','desk_cmd'])(d as any)[k]=fr[k]||[];if((+fr.clear||0)>(+(d as any).clear||0))(d as any).clear=fr.clear;for(const k of ['lang','theme','accent'])if(fr[k])(d as any)[k]=fr[k]}catch(e){}
+      for(const k of ['xfer_req','xfer_cancel','dust','desk_cmd','buy'])(d as any)[k]=fr[k]||[];if((+fr.clear||0)>(+(d as any).clear||0))(d as any).clear=fr.clear;for(const k of ['lang','theme','accent'])if(fr[k])(d as any)[k]=fr[k]}catch(e){}
     const body={message:'Ayarlar uygulamadan güncellendi',content:btoa(unescape(encodeURIComponent(JSON.stringify(data,null,2)+'\n'))),sha:cur.sha,branch:'main'};
     const r=await tfetch(API,{method:'PUT',headers:{Authorization:'Bearer '+token,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify(body)});
     if(r.status===409&&retry){btn.innerHTML=ic('i-check')+'Kaydet';return save(obj||data,msg,keepDraft,false)} // çakışma: güncel sürümle bir kez daha
     if(!r.ok)throw r.status;sha=(await r.json()).content.sha;const prev=keepDraft?clean(draft):null;orig=JSON.parse(JSON.stringify(data));draft=JSON.parse(JSON.stringify(data));
-    if(prev)for(const k in prev)if(!['test_req','sell','convert','liquidate','xfer_req','xfer_cancel','dust','desk_cmd','clear'].includes(k))draft[k]=prev[k];
+    if(prev)for(const k in prev)if(!['test_req','sell','convert','liquidate','xfer_req','xfer_cancel','dust','desk_cmd','buy','clear'].includes(k))draft[k]=prev[k];
     renderForm();if(S)render();toast(msg||'Kaydedildi. Bot birkaç saniye içinde yeni ayarlarla çalışır.');
   }catch(e){toast(e===401||e===403?'Yetki hatası: anahtarın Contents yazma izni olmalı':'Kaydedilemedi, tekrar dene ('+e+')')}
   finally{btn.innerHTML=ic('i-check')+'Kaydet'}

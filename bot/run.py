@@ -259,7 +259,10 @@ def desk_commands(state, S):
             continue
         done.append(cid)
         try:
-            if c.get("desk") == "lev":
+            if c.get("desk") == "lev" and c.get("act") == "open":
+                from . import kaldirac
+                kaldirac.manual_open(state, S, str(c.get("sym")), c.get("side"))
+            elif c.get("desk") == "lev":
                 from . import kaldirac
                 kaldirac.manual_close(state, str(c.get("sym")))
             elif c.get("desk") == "meme":

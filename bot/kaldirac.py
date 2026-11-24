@@ -231,28 +231,59 @@ def step(state, S):
             L["stats"]["blocked"] += 1
             _note(L, ts, "risk", f"ENGEL {c} {name}: {bad}")
             continue
-        entry = px[c] * (1 + side * cfg["slip_pct"] / 100)
-        dist = cfg["sl_atr"] * k["atr"]
-        used = sum(q["margin"] for q in L["positions"].values())
-        free = L["bank"] - used
-        qty = min(L["bank"] * cfg["risk_pct"] / 100 / dist, min(L["bank"] / 3, free) * lev / entry)
-        if qty <= 0 or qty * entry / lev < 1:
-            _note(L, ts, "risk", f"ENGEL {c} {name}: boş teminat yetersiz")
-            continue
-        margin = qty * entry / lev
-        L["bank"] -= entry * qty * cfg["fee_pct"] / 100
-        L["positions"][c] = {"side": side, "ts": ts, "entry": entry, "now": px[c], "qty": qty, "margin": margin,
-                             "atr": k["atr"], "stop": entry - side * dist, "tp": entry + side * cfg["tp_atr"] * k["atr"],
-                             "liq": entry * (1 - side * (1 / lev - 0.005)), "why": why}
-        L["stats"]["entered"] += 1
-        L.setdefault("ev", []).append(["open", c, side, px[c], dist, cfg["tp_atr"] * k["atr"], why])
-        _note(L, ts, "buy", f"AÇ {c} {name} {lev:g}x · teminat ${margin:.2f} · {why}")
+        _enter(L, c, side, k, px[c], cfg, lev, ts, why)
 
     L["trades"] = L["trades"][-300:]
     eq = L["bank"] + sum(_upnl(p, p["now"]) for p in L["positions"].values())
     if not L["equity"] or ts - L["equity"][-1][0] >= 15 * 60000:
         L["equity"].append([ts, round(eq, 2)])
         L["equity"] = L["equity"][-700:]
+
+
+def _enter(L, c, side, k, x, cfg, lev, ts, why):
+    """Pozisyon açar (sinyalle ya da elle): risk, stop ve kâr al aynı kurallarla hesaplanır; olay gerçek masaya gider."""
+    name = "UZUN" if side > 0 else "KISA"
+    entry = x * (1 + side * cfg["slip_pct"] / 100)
+    dist = cfg["sl_atr"] * k["atr"]
+    used = sum(q["margin"] for q in L["positions"].values())
+    free = L["bank"] - used
+    qty = min(L["bank"] * cfg["risk_pct"] / 100 / dist, min(L["bank"] / 3, free) * lev / entry)
+    if qty <= 0 or qty * entry / lev < 1:
+        _note(L, ts, "risk", f"ENGEL {c} {name}: boş teminat yetersiz")
+        return False
+    margin = qty * entry / lev
+    L["bank"] -= entry * qty * cfg["fee_pct"] / 100
+    L["positions"][c] = {"side": side, "ts": ts, "entry": entry, "now": x, "qty": qty, "margin": margin,
+                         "atr": k["atr"], "stop": entry - side * dist, "tp": entry + side * cfg["tp_atr"] * k["atr"],
+                         "liq": entry * (1 - side * (1 / lev - 0.005)), "why": why}
+    L["stats"]["entered"] += 1
+    L.setdefault("ev", []).append(["open", c, side, x, dist, cfg["tp_atr"] * k["atr"], why])
+    _note(L, ts, "buy", f"AÇ {c} {name} {lev:g}x · teminat ${margin:.2f} · {why}")
+    return True
+
+
+def manual_open(state, S, sym, side):
+    """Uygulamadan elle açma: botun kurallarıyla (ATR'ye göre zarar durdur, kâr al, iz süren stop, eğilim dönünce kapat)
+    açılır ve sonrasını bot yönetir. Günlük zarar sınırı ve pozisyon sayısı sınırı elle açmada da geçerlidir."""
+    cfg = {**DEFAULT, **(S.get("lev") or {})}
+    L = state.get("lev")
+    side = 1 if int(side or 0) > 0 else -1
+    name = "UZUN" if side > 0 else "KISA"
+    ts = int(time.time() * 1000)
+    if not cfg.get("on") or not L:
+        return
+    with _LOCK:
+        rows = list((_SNAP["c"] or {}).get(sym) or [])
+        x = _SNAP["px"].get(sym)
+    brk, trend, trend_on = _windows(cfg)
+    bad = ("zaten açık" if sym in L["positions"] else "günlük zarar sınırı dolu" if L["halt"]
+           else f"en fazla {cfg['max_pos']} pozisyon" if len(L["positions"]) >= cfg["max_pos"]
+           else "fiyat yok" if not x else "mumlar henüz yüklenmedi" if len(rows) < max(60, brk + 2) else None)
+    if bad:
+        _note(L, ts, "risk", f"ENGEL {sym} {name} (elle): {bad}")
+        return
+    lev = max(1, min(3, float(cfg["lev"])))
+    _enter(L, sym, side, _ind(rows, brk, trend), x, cfg, lev, ts, "elle açıldı")
 
 
 def watch_list(L, px):
@@ -267,7 +298,7 @@ def watch_list(L, px):
         else:  # eğilim süzgeci kapalı: hangi kırılım daha yakınsa o
             side = "UZUN" if abs(w["hh"] - x) <= abs(x - w["ll"]) else "KISA"
         lvl = w["hh"] if side == "UZUN" else w["ll"]
-        out.append({"sym": c, "px": x, "side": side, "lvl": lvl, "dist": round((lvl / x - 1) * 100, 2), "open": c in L["positions"]})
+        out.append({"sym": c, "px": x, "side": side, "lvl": lvl, "dist": round((lvl / x - 1) * 100, 2), "open": c in L["positions"], "up": bool(w.get("up"))})
     return sorted(out, key=lambda r: abs(r["dist"]))
 
 
