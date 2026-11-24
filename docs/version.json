@@ -1,10 +1,17 @@
 {
-  "version": "1.72.2",
+  "version": "1.72.3",
   "date": "2026-11-24",
   "notes": [
-    "Memecoin daha akıllı: alıcı baskısı (alıcı/satıcı oranı), en az alıcı ve tepe sınırı filtreleri; masa yeniden açıldı (deneme)"
+    "Elle satışta 'Satış isteği · N sn' yazısı yerine dönen simgeli 'Satılıyor' etiketi ve satırın altında akan çubuk"
   ],
   "history": [
+    {
+      "version": "1.72.3",
+      "date": "2026-11-24",
+      "notes": [
+        "Elle satışta 'Satış isteği · N sn' yazısı yerine dönen simgeli 'Satılıyor' etiketi ve satırın altında akan çubuk"
+      ]
+    },
     {
       "version": "1.72.2",
       "date": "2026-11-24",
@@ -110,13 +117,6 @@
         "Ana sayfa, Futures ve Memecoin kartları görsel yenilendi (toplam, dağılım çubuğu, risk çubuğu, tarama hunisi, izlenen coin çubukları)",
         "Kademeli ayarlar gruplandı; 3. ve sonraki kademeler açıkça yazıldı; kademe merdiveni önizlemesi eklendi",
         "Fable 2. tur: aktarım ve memecoin güvenlik düzeltmeleri, daha hızlı bot turu, uygulamada veri donması ve renk geri dönmesi giderildi"
-      ]
-    },
-    {
-      "version": "1.68.0",
-      "date": "2026-11-23",
-      "notes": [
-        "Varlık özeti yenilendi: büyük toplam, kâr/zarar rozeti, renkli dağılım çubuğu, borsa eşleşme durumu ve hedef çubuğu"
       ]
     }
   ]

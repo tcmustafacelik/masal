@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.72.2';
+const APP_VERSION = '1.72.3';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = '#D9861A';
@@ -1687,7 +1687,7 @@ function renderPositions(x) {
         }
         const row = `<div class="row pos${canSell ? ' swc' : ''}">${cico(p.inst)}
       <div class="mid"><b>${sym(p.inst)}${pq(p.inst)}${prot}${p.lots > 1 ? `<i class="kd">${p.lots} kademe</i>` : ''}</b><span>Alış ${px(p.avg)} → satış ${px(cur)}<br>${ago(p.since)} alındı${volTxt(p.inst) ? ` · hacim ${volTxt(p.inst)}` : ''}</span>${rng}</div>
-      <div class="end"${SELLING[p.inst] ? ` data-sell="${tx(`Satış isteği · ${Math.round((Date.now() - SELLING[p.inst]) / 1000)} sn`)}"` : ''}><b>${tl(val, 0)}</b><span class="plc ${cls(pl) || 'z'}">${sgn(pl)} TL</span><span class="plp ${cls(pl)}">${spc(plp)}</span></div></div>`;
+      <div class="end"><b>${tl(val, 0)}</b><span class="plc ${cls(pl) || 'z'}">${sgn(pl)} TL</span>${SELLING[p.inst] ? `<span class="sellst"><i class="spn"></i>Satılıyor</span>` : `<span class="plp ${cls(pl)}">${spc(plp)}</span>`}</div></div>`;
         return canSell ? `<div class="swr${swOpen === p.inst ? ' open' : ''}${SELLING[p.inst] ? ' busy' : ''}" data-i="${p.inst}"><button class="swb" data-sell="${p.inst}">${ic('i-sell')}${SELLING[p.inst] ? 'Satılıyor' : 'Sat'}</button>${row}</div>` : row;
     }).join('')
         : `<div class="empty">${ic('i-box')}<div>Şu an açık pozisyon yok</div></div>`);
