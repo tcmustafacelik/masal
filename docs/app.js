@@ -1,8 +1,8 @@
 "use strict";
-const APP_VERSION = '1.76.2';
+const APP_VERSION = '1.77.0';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
-const AMBER = 'var(--acc)'; // seçili çizgi: tema vurgu rengi (pembe)
+const AMBER = 'var(--acc)'; // seçili çizgi: tema vurgu rengi (kehribar)
 let S = null, B = null, sel = 'live', view = 'live';
 function localStore(k, v) { try {
     if (v === undefined)
@@ -3067,7 +3067,7 @@ async function save(obj, msg, keepDraft, retry = true) {
         btn.innerHTML = ic('i-check') + 'Kaydet';
     }
 }
-/** Bildirim balonu: yazıdan türü anlaşılır (hata kırmızı, tamam yeşil, bilgi pembe), simge + yazı + kalan süre çizgisi */
+/** Bildirim balonu: yazıdan türü anlaşılır (hata kırmızı, tamam yeşil, bilgi kehribar), simge + yazı + kalan süre çizgisi */
 let toastT;
 function toast(t) {
     const el = document.getElementById('toast');
@@ -3243,7 +3243,7 @@ const darkMQ = matchMedia('(prefers-color-scheme: dark)');
 function applyTheme() {
     const m = themeMode(), d = m === 'dark' || (m === 'auto' && darkMQ.matches);
     document.documentElement.dataset.theme = d ? 'dark' : 'light';
-    document.querySelector('meta[name=theme-color]').content = d ? '#0F131A' : '#F4F5F7';
+    document.querySelector('meta[name=theme-color]').content = d ? '#13110D' : '#FBF8F2';
 }
 function setAccent(_a) { }
 delete document.documentElement.dataset.accent;

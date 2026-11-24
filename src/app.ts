@@ -1,7 +1,7 @@
-const APP_VERSION='1.76.2';
+const APP_VERSION='1.77.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
-const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (pembe)
+const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (kehribar)
 let S: Summary = null, B: Backtest = null, sel = 'live' as StrategyKey, view: 'live' | 'bt' = 'live';
 
 function localStore(k: string, v?: string): string | null {try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
@@ -1715,7 +1715,7 @@ async function save(obj?: Settings, msg?: string, keepDraft?: boolean, retry = t
   finally{btn.innerHTML=ic('i-check')+'Kaydet'}
 }
 
-/** Bildirim balonu: yazıdan türü anlaşılır (hata kırmızı, tamam yeşil, bilgi pembe), simge + yazı + kalan süre çizgisi */
+/** Bildirim balonu: yazıdan türü anlaşılır (hata kırmızı, tamam yeşil, bilgi kehribar), simge + yazı + kalan süre çizgisi */
 let toastT;function toast(t){const el=document.getElementById('toast');const s=String(t);
   const k=/yanlış|hata|yapılamadı|kaydedilemedi|edilemedi|gönderilemez|alınamadı|bulunamadı|başarısız|yetmez|olmalı|gir$|bağlı değil/i.test(s)?'er':/gönderildi|kaydedildi|açıldı|kapatıldı|kopyalandı|eşitlendi|tamam|silindi|güncellendi|başlatıldı|değişti/i.test(s)?'ok':'in';
   el.className='toast t-'+k;el.innerHTML=`<span class="ti">${ic(k==='er'?'i-info':k==='ok'?'i-check':'i-bell')}</span><span class="tt"></span><i class="tbar"></i>`;
@@ -1810,8 +1810,8 @@ const standalone = () => matchMedia('(display-mode: standalone)').matches || (na
 function themeMode(){try{return localStorage.getItem('masal-tema')||'auto'}catch(e){return 'auto'}}
 const darkMQ=matchMedia('(prefers-color-scheme: dark)');
 function applyTheme(){const m=themeMode(),d=m==='dark'||(m==='auto'&&darkMQ.matches);document.documentElement.dataset.theme=d?'dark':'light';
-  document.querySelector<HTMLMetaElement>('meta[name=theme-color]').content=d?'#0F131A':'#F4F5F7'}
-function setAccent(_a: string){/* tek tema (pembe): renk seçimi kaldırıldı */}
+  document.querySelector<HTMLMetaElement>('meta[name=theme-color]').content=d?'#13110D':'#FBF8F2'}
+function setAccent(_a: string){/* tek tema (kehribar): renk seçimi kaldırıldı */}
 delete document.documentElement.dataset.accent;
 function setTheme(m){try{localStorage.setItem('masal-tema',m)}catch(e){}applyTheme()}
 darkMQ.addEventListener?.('change',applyTheme);applyTheme();

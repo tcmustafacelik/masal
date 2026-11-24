@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#FBF5F8">
+<meta name="theme-color" content="#FBF8F2">
 <script>(function(){var m;try{m=localStorage.getItem('masal-tema')}catch(e){}m=m||'auto';var d=m==='dark'||(m==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=d?'dark':'light';})()</script>
 <title>Masal</title>
 <link rel="manifest" href="manifest.webmanifest">
@@ -11,8 +11,8 @@
 <link rel="apple-touch-icon" href="logo-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <style>
-:root{--bg:#FBF5F8;--surface:#fff;--line:#E3E6EB;--line2:#EEF0F3;--text:#1D2430;--muted:#6A7280;--faint:#9AA1AC;--blue:#2F6FDE;--blue-bg:#EAF1FD;--amber:#D9861A;--amber-bg:#FFF3DF;--amber-line:#F0C27A;--green:#178A5B;--green-bg:#E6F5EE;--red:#C9473F;--red-bg:#FCEBEA;--r:10px;--r-sm:8px;--pri-bg:#1D2430;--pri-fg:#fff;--amber-ink:#93570B;--red-line:#F1C4C0;--header-bg:rgba(251,245,248,.92);--logo-bg:#1D2430;--knob:#fff;--zero:#C9CED6;--shadow:rgba(16,24,40,.10);color-scheme:light;--violet:#7A5AC8;--violet-bg:#F1ECFB;--teal:#11807E;--teal-bg:#E2F4F3;--acc:#E2589C;--acc-bg:#FDEBF4;--acc-line:#F5BCD8;--acc-ink:#B02D6E}
-[data-theme=dark]{--bg:#0F131A;--surface:#171C25;--line:#29303C;--line2:#1F2530;--text:#E8ECF2;--muted:#9AA3B2;--faint:#6B7484;--blue:#6E9BF0;--blue-bg:#1B2840;--amber:#E39A2E;--amber-bg:#2B2215;--amber-line:#6B4A1E;--green:#3DBE84;--green-bg:#13281F;--red:#F0736A;--red-bg:#2E1715;--pri-bg:#E8ECF2;--pri-fg:#0F131A;--amber-ink:#F0B460;--red-line:#5A2A27;--header-bg:rgba(15,19,26,.9);--logo-bg:#222A36;--knob:#E8ECF2;--zero:#3A4250;--shadow:rgba(0,0,0,.45);color-scheme:dark;--violet:#A58BE8;--violet-bg:#251E36;--teal:#3CC4BF;--teal-bg:#122A29;--acc:#F28CBF;--acc-bg:#2C1824;--acc-line:#6A2F4D;--acc-ink:#F7B3D5}
+:root{--bg:#FBF8F2;--surface:#fff;--line:#E3E6EB;--line2:#EEF0F3;--text:#1D2430;--muted:#6A7280;--faint:#9AA1AC;--blue:#2F6FDE;--blue-bg:#EAF1FD;--amber:#D9701F;--amber-bg:#FDEDE0;--amber-line:#F2B88E;--green:#178A5B;--green-bg:#E6F5EE;--red:#C9473F;--red-bg:#FCEBEA;--r:10px;--r-sm:8px;--pri-bg:#1D2430;--pri-fg:#fff;--amber-ink:#9A4710;--red-line:#F1C4C0;--header-bg:rgba(251,248,242,.92);--logo-bg:#1D2430;--knob:#fff;--zero:#C9CED6;--shadow:rgba(16,24,40,.10);color-scheme:light;--violet:#7A5AC8;--violet-bg:#F1ECFB;--teal:#11807E;--teal-bg:#E2F4F3;--acc:#C7861A;--acc-bg:#FCF1DE;--acc-line:#EDCB8E;--acc-ink:#8C5C0E}
+[data-theme=dark]{--bg:#13110D;--surface:#1C1A16;--line:#332E26;--line2:#26231D;--text:#E8ECF2;--muted:#9AA3B2;--faint:#6B7484;--blue:#6E9BF0;--blue-bg:#1B2840;--amber:#EE8A45;--amber-bg:#2E1C12;--amber-line:#6E3A1C;--green:#3DBE84;--green-bg:#13281F;--red:#F0736A;--red-bg:#2E1715;--pri-bg:#E8ECF2;--pri-fg:#0F131A;--amber-ink:#F5AD7A;--red-line:#5A2A27;--header-bg:rgba(19,17,13,.9);--logo-bg:#2A2620;--knob:#E8ECF2;--zero:#433D33;--shadow:rgba(0,0,0,.45);color-scheme:dark;--violet:#A58BE8;--violet-bg:#251E36;--teal:#3CC4BF;--teal-bg:#122A29;--acc:#E8AE4C;--acc-bg:#2B2215;--acc-line:#6B4F1E;--acc-ink:#F5D49B}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 [hidden]{display:none!important}
 .pinv{position:fixed;inset:0;z-index:70;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 20px calc(24px + env(safe-area-inset-bottom));animation:pinIn .3s cubic-bezier(.2,.8,.2,1)}
@@ -924,6 +924,6 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 <div class="toast" id="toast" hidden></div>
 <div class="qsh" id="qsh" hidden><div class="qb"><div class="gr"></div><h3><span><svg class="i" id="qIco"><use href="#i-info"/></svg></span><b id="qTitle"></b></h3><div class="qt" id="qText"></div><button class="btn primary" id="qOk">Anladım</button></div></div>
 
-<script src="app.js?v=1.76.2"></script>
+<script src="app.js?v=1.77.0"></script>
 </body>
 </html>
