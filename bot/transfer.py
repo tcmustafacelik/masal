@@ -360,7 +360,14 @@ def _poll(C, job, X, N):
             job["msg"] = f"{NAMES[dest]}'e ulaşması bekleniyor"
             return
         if str(hit.get("state")) not in ("1", "2"):
-            job["msg"] = f"{NAMES[dest]} onayı bekleniyor"
+            if dest == "tr":
+                # OKX TR gelen parayı gönderici bilgisi (seyahat kuralı) verilene kadar kilitler; bunu yalnız kullanıcı yapabilir
+                job["msg"] = "OKX TR gönderici bilgisi istiyor: OKX TR'de bildirime dokun, gönderici kendin (OKX Global) seç; onaylayınca bot TL'ye çevirir"
+                if not job.get("tr_asked"):
+                    job["tr_asked"] = 1
+                    N.add("money", "OKX TR onayın gerekiyor", f"{float(hit.get('amt') or job['amt']):.2f} USDT OKX TR'ye ulaştı ama kilitli. OKX TR uygulamasında bildirime dokun, gönderici olarak kendini (OKX Global) seç.", 5, ["key"])
+            else:
+                job["msg"] = f"{NAMES[dest]} onayı bekleniyor"
             return
         got = float(hit.get("amt") or 0)
         job["got"] = got
