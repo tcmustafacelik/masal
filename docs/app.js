@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.74.3';
+const APP_VERSION = '1.74.4';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = 'var(--acc)'; // seçili çizgi: tema vurgu rengi (pembe)
@@ -2009,8 +2009,14 @@ function renderLog(x) {
     }
     sec.hidden = false;
     document.getElementById('logSum').textContent = x.log.length ? 'Son not: ' + x.log[0][1] : 'Henüz kayıt yok';
-    document.getElementById('log').innerHTML = x.log.length ? x.log.map(([ts, t]) => `<div class="row"><div class="mid"><b style="white-space:normal;font-weight:500">${t}</b><span>${dt(ts)}</span></div></div>`).join('')
-        : `<div class="empty">${ic('i-info')}<div>Henüz kayıt yok</div></div>`;
+    // kayıtlar Kasalar'daki kayıtla aynı düzende: saat · türe göre renkli etiket · kalın başlık + küçük ayrıntı
+    const kind = (t) => /^AL /.test(t) ? ['b', 'AL'] : /^SAT /.test(t) ? (/sonuç −|sonuç -/.test(t) ? ['dn', 'SAT'] : ['up', 'SAT'])
+        : /koruma/i.test(t) ? ['sh', 'KORUMA'] : /HATA|uyarı|alınamad|yapılamad/i.test(t) ? ['dn', 'UYARI'] : ['z', 'BİLGİ'];
+    setH(document.getElementById('log'), x.log.length ? x.log.map(([ts, t]) => {
+        const s = String(t).replace(/</g, '&lt;').replace(/^\[deneme\] /, ''), [c, lb] = kind(s), parts = s.split(' · ');
+        return `<div class="xl lg"><time>${dt(ts).split(' ')[1]}<small>${dt(ts).split(' ')[0]}</small></time><em class="lk ${c}">${lb}</em><div><b>${parts[0].replace(/^(AL|SAT) /, '')}</b>${parts.length > 1 ? `<small>${parts.slice(1).join(' · ')}</small>` : ''}</div></div>`;
+    }).join('')
+        : `<div class="empty">${ic('i-info')}<div>Henüz kayıt yok</div></div>`);
 }
 function renderBacktest() {
     const box = document.getElementById('backtest');

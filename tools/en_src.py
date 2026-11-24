@@ -702,6 +702,8 @@ EN = {
     "Küçük bakiyeler": "Small balances",
     "tek dokunuşla çevir": "convert in one tap",
     "son olaylar": "recent events",
+    "KORUMA": "PROTECT",
+    "UYARI": "WARN",
     "Memecoin masası": "Memecoin desk", "deneme · sanal para": "test · virtual money", "Sanal kasa": "Virtual bank", "Sonuç": "Result",
     "İşlem": "Trades", "Kazanma": "Win rate", "AÇIK": "OPEN", "ENGEL": "BLOCK", "Gözcü {0} kontrol": "Scout {0} checks", "Bekçi {0} engel": "Guard {0} blocks", "Giriş {0}": "Entries {0}",
     "Solana'daki yeni tokenler DexScreener ve RugCheck verisiyle 20 sn'de bir taranır. Gerçek para, cüzdan ya da anahtar yok; sonuçlar birkaç gün izlenip karar verilecek.": "New Solana tokens are scanned every 20 s with DexScreener and RugCheck data. No real money, wallet or keys; results will be watched for a few days before deciding.",

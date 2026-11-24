@@ -708,6 +708,13 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 .xl{display:flex;gap:10px;padding:8px 0;font-size:12px;line-height:1.4}.xl+.xl{border-top:1px solid var(--line2)}
 .xl time{flex:none;color:var(--faint);font-variant-numeric:tabular-nums;font-size:11px;padding-top:1px}
 .xl b{display:block;font-weight:600;color:var(--text)}.xl small{display:block;font-size:11px;color:var(--muted);margin-top:2px}
+
+/* Bot kayıtları: Kasalar kaydıyla aynı düzen */
+#log{padding:0 12px}
+.xl.lg{align-items:flex-start}.xl.lg time{display:flex;flex-direction:column;line-height:1.25;min-width:38px}.xl.lg time small{font-size:9.5px;color:var(--faint)}
+.lk{flex:none;font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.3px;padding:2px 6px;border-radius:5px;margin-top:1px}
+.lk.b{background:var(--blue-bg);color:var(--blue)}.lk.up{background:var(--green-bg);color:var(--green)}.lk.dn{background:var(--red-bg);color:var(--red)}.lk.sh{background:var(--violet-bg);color:var(--violet)}.lk.z{background:var(--line2);color:var(--muted)}
+.xl.lg>div{min-width:0}
 </style>
 </head>
 <body>
@@ -907,6 +914,6 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 <div class="toast" id="toast" hidden></div>
 <div class="qsh" id="qsh" hidden><div class="qb"><div class="gr"></div><h3><span><svg class="i" id="qIco"><use href="#i-info"/></svg></span><b id="qTitle"></b></h3><div class="qt" id="qText"></div><button class="btn primary" id="qOk">Anladım</button></div></div>
 
-<script src="app.js?v=1.74.3"></script>
+<script src="app.js?v=1.74.4"></script>
 </body>
 </html>

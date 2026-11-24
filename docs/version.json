@@ -1,10 +1,17 @@
 {
-  "version": "1.74.3",
+  "version": "1.74.4",
   "date": "2026-11-24",
   "notes": [
-    "Kasalar ekranı bölümlere ayrıldı: Kasalar, Para gönder (nereden gönderileceğine göre gruplu), Aktarımlar, Küçük bakiyeler, Kayıt (her olay başlık + ayrıntı)"
+    "Bot kayıtları Kasalar kaydıyla aynı düzende: saat, renkli tür etiketi (AL/SAT/KORUMA/UYARI/BİLGİ), kalın başlık ve küçük ayrıntı"
   ],
   "history": [
+    {
+      "version": "1.74.4",
+      "date": "2026-11-24",
+      "notes": [
+        "Bot kayıtları Kasalar kaydıyla aynı düzende: saat, renkli tür etiketi (AL/SAT/KORUMA/UYARI/BİLGİ), kalın başlık ve küçük ayrıntı"
+      ]
+    },
     {
       "version": "1.74.3",
       "date": "2026-11-24",
@@ -109,14 +116,6 @@
         "Sayı kutuları yenilendi: tek parça, renkli, hepsi aynı boyda; sayı ve birim yan yana",
         "Memecoin kademeli kâr al: kâr alda belirlediğin kısım satılır, kalanı iz süren stopla yükselişte tutulur",
         "Futures izleme listesi 8'den 18 coine çıktı; Fable 3. tur bot düzeltmeleri"
-      ]
-    },
-    {
-      "version": "1.69.6",
-      "date": "2026-11-23",
-      "notes": [
-        "Para hareketi kontrolü arka planda; bot turu daha kısa",
-        "İngilizce modda Futures, Memecoin ve Aktarım ayar açıklamaları çevrildi"
       ]
     }
   ]
