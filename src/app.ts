@@ -1,4 +1,4 @@
-const APP_VERSION='1.83.0';
+const APP_VERSION='1.84.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (kehribar)
@@ -1541,6 +1541,7 @@ const STRAT_F={
   ['grid.lot2_pct','2. kademe tutarı',()=>`1. kademenin; ${tl(draft.budget*draft.grid.lot_pct/100*(draft.grid.lot2_pct??100)/100,0)}`,'%',5,10,100,0],
   ['grid.lot3_pct','3. ve sonraki kademe tutarı',()=>`1. kademenin; her biri ${tl(draft.budget*draft.grid.lot_pct/100*(draft.grid.lot3_pct??100)/100,0)}`,'%',5,10,100,0],
   ['grid.lot_tp_pct','Kademe kârı','Her kademe kendi alış fiyatının bu kadar üstünde ayrı satılır','%',.5,.5,50,1],
+  ['grid.pos_tp_pct','Toplu kâr al','Açıkken kademeler tek tek satılmaz; fiyat bütün kademelerin alış ortalamasının bu kadar üstüne çıkınca hepsi birden satılır. 0 kapalı','%',.1,0,30,1],
   ['grid.max_lots','En fazla kademe','Bir coinde en çok kaç alım','adet',1,1,10,0],
   ['grid.max_coins','En fazla coin','Aynı anda tutulan coin','adet',1,1,100,0],
   ['grid.use_pct','Toplam kullanım sınırı',()=>`Coinlere en fazla; şu an ${pctTL(draft.grid.use_pct??40)}`,'%',1,5,100,2],
@@ -1707,7 +1708,7 @@ function renderForm(){
       +`${ff.map(field).join('')}</div>`+ACC_END}
   const sf=STRAT_F[draft.strategy];
   const grid=draft.strategy==='grid';
-  const GG: [string,string,string[]][]=[['i-coins','Alım',['grid.sma_hours','grid.step_pct','grid.step3_pct','grid.lot_pct','grid.lot2_pct','grid.lot3_pct']],['i-pnl','Satış',['grid.lot_tp_pct','grid.stop_pct']],['i-shield','Sınırlar',['grid.max_lots','grid.max_coins','grid.use_pct']],['i-eye','Filtreler',['grid.trend_filter_pct','grid.vol_filter']]];
+  const GG: [string,string,string[]][]=[['i-coins','Alım',['grid.sma_hours','grid.step_pct','grid.step3_pct','grid.lot_pct','grid.lot2_pct','grid.lot3_pct']],['i-pnl','Satış',['grid.lot_tp_pct','grid.pos_tp_pct','grid.stop_pct']],['i-shield','Sınırlar',['grid.max_lots','grid.max_coins','grid.use_pct']],['i-eye','Filtreler',['grid.trend_filter_pct','grid.vol_filter']]];
   const sfH=grid?GG.map(([i,t,ks])=>`<div class="fgrp"><div class="fgh">${ic(i)}${t}</div>${ks.map(k=>sf.find(f=>f[0]===k)).filter(Boolean).map(field).join('')}${t==='Alım'?'<div id="ladder"></div>':''}</div>`).join(''):sf.map(field).join('');
   if(STAB==='spot')h+=accOpen('strat',SNAMES[draft.strategy]+' ayarları',ICON[draft.strategy],'blue',SUMS[draft.strategy](),secDirty([...sf.map(x=>x[0]),...(grid?['grid.instant']:[])]))+`<div class="card">${sfH}`
     +(grid?`<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line2)">${swRow('instSw',!!draft.grid.instant,'Anlık alım','Fiyat değince hemen alır')}</div>`:'')+`</div>`+ACC_END;
@@ -1768,11 +1769,11 @@ function ladder(){const el=document.getElementById('ladder');if(!el||!draft||dra
   let px=1,cost=0,qty=0,rows='',stopAt=0;
   for(let i=0;i<n;i++){px*=1-(i<2?g.step_pct:Math.max(g.step_pct,g.step3_pct||g.step_pct))/100;const amt=l1*(i===0?1:i===1?(g.lot2_pct??100)/100:(g.lot3_pct??100)/100);
     const avg=cost?cost/qty:0,dead=i>0&&px<=avg*(1-g.stop_pct/100);if(dead&&!stopAt)stopAt=i+1;
-    cost+=amt;qty+=amt/px;const drop=(1-px)*100;
-    rows+=`<div class="lr${dead?' off':''}"><em>${i+1}</em><span><b>−%${nf(drop,1)}</b><small>ortalamadan</small></span><span><b>${tl(amt,0)}</b><small>alım</small></span><span><b class="up">+%${nf(g.lot_tp_pct,1)}</b><small>${dead?'ulaşılmaz':'kârla satılır'}</small></span><i style="width:${Math.min(100,drop*2.2).toFixed(1)}%"></i></div>`}
+    cost+=amt;qty+=amt/px;const drop=(1-px)*100,pt=+g.pos_tp_pct||0,hep=(cost/qty*(1+pt/100)-1)*100;
+    rows+=`<div class="lr${dead?' off':''}"><em>${i+1}</em><span><b>−%${nf(drop,1)}</b><small>ortalamadan</small></span><span><b>${tl(amt,0)}</b><small>alım</small></span><span>${pt>0?`<b class="up">${hep<0?'−':'+'}%${nf(Math.abs(hep),1)}</b><small>${dead?'ulaşılmaz':'hepsi satılır'}</small>`:`<b class="up">+%${nf(g.lot_tp_pct,1)}</b><small>${dead?'ulaşılmaz':'kârla satılır'}</small>`}</span><i style="width:${Math.min(100,drop*2.2).toFixed(1)}%"></i></div>`}
   const avg=cost/qty,stopPx=(1-avg*(1-g.stop_pct/100))*100;
   setH(el,`<div class="ldh">Kademe merdiveni<span>${n} kademe · hepsi dolarsa ${tl(cost,0)}</span></div>${rows}
-    <p class="hint">Fiyat düştükçe sırayla alır; her kademe kendi fiyatından %${nf(g.lot_tp_pct,1)} yükselince ayrı satılır. Fiyat alış ortalamasının %${nf(g.stop_pct,1)} altına (ortalamadan −%${nf(stopPx,1)}) inerse hepsi satılır.${stopAt?` <b class="dn">${stopAt}. kademeden itibaren zarar sınırına önce ulaşılır; bu kademeler hiç alınmaz.</b>`:''}</p>`)}
+    <p class="hint">Fiyat düştükçe sırayla alır; ${+g.pos_tp_pct>0?`kademeler tek tek satılmaz: fiyat o ana kadar alınan bütün kademelerin alış ortalamasının %${nf(g.pos_tp_pct,1)} üstüne çıkınca hepsi birden kârla satılır (son sütun: ortalamaya göre satış yeri). `:`her kademe kendi fiyatından %${nf(g.lot_tp_pct,1)} yükselince ayrı satılır. `}Fiyat alış ortalamasının %${nf(g.stop_pct,1)} altına (ortalamadan −%${nf(stopPx,1)}) inerse hepsi satılır.${stopAt?` <b class="dn">${stopAt}. kademeden itibaren zarar sınırına önce ulaşılır; bu kademeler hiç alınmaz.</b>`:''}</p>`)}
 function clean(o){const c=JSON.parse(JSON.stringify(o,(k,v)=>k==='_bad'?undefined:v));return c}
 function refresh(){
   const d=clean(draft),ch=JSON.stringify(orig)!==JSON.stringify(d);

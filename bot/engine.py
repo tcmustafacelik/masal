@@ -228,7 +228,8 @@ class Portfolio:
     def _grid(self, ts, inst, closes, price, pos):
         c = self.cfg
         if pos:
-            done = [l for l in pos["lots"] if price >= l["entry"] * (1 + c["lot_tp"])]
+            # Toplu kâr al açıkken kademeler tek tek satılmaz; bütün kademelerin ortalamasına göre hepsi birlikte satılır
+            done = [] if (c.get("pos_tp") or 0) > 0 else [l for l in pos["lots"] if price >= l["entry"] * (1 + c["lot_tp"])]
             if done:
                 self._sell_lots(ts, inst, price, done, "Kademe kârı")
                 pos = self.s["positions"].get(inst)
@@ -237,6 +238,11 @@ class Portfolio:
             cost = sum(l["cost"] for l in pos["lots"])
             qty = sum(l["qty"] for l in pos["lots"])
             avg = cost / qty
+            ptp = c.get("pos_tp") or 0
+            if ptp > 0 and price >= avg * (1 + ptp):
+                # Toplu kâr al: fiyat bütün kademelerin alış ortalamasının bu kadar üstüne çıkınca hepsi birden satılır
+                self._sell_lots(ts, inst, price, list(pos["lots"]), "Toplu kâr")
+                return
             if price <= avg * (1 - c["stop"]):
                 self._sell_lots(ts, inst, price, list(pos["lots"]), "Zarar sınırı")
             elif (len(pos["lots"]) < c["max_lots"] and not self.s["halted"] and not self.s["blocked_today"]

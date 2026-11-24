@@ -1,10 +1,17 @@
 {
-  "version": "1.83.0",
+  "version": "1.84.0",
   "date": "2026-11-24",
   "notes": [
-    "Genel bakım 4: yanıtı kaybolan futures açma emri sahipsiz kalmıyor; Spot'ta sahipsiz koruma emirleri iptal ediliyor (yalnız botunkiler); MEME → Global SOL satışı ve hesap içi aktarımlar tek seferlik; elle satış 2 dk yeniden deneniyor; hata balonlarında sebep; küçük fiyatlar ve uzun adlar düzgün"
+    "Spot: Toplu kâr al — açıkken kademeler tek tek satılmaz, fiyat bütün kademelerin alış ortalamasının %X üstüne çıkınca hepsi birden satılır (borsadaki korumalar yalnız zarar durdur olarak yeniden kurulur); kademe merdiveninde satış yeri"
   ],
   "history": [
+    {
+      "version": "1.84.0",
+      "date": "2026-11-24",
+      "notes": [
+        "Spot: Toplu kâr al — açıkken kademeler tek tek satılmaz, fiyat bütün kademelerin alış ortalamasının %X üstüne çıkınca hepsi birden satılır (borsadaki korumalar yalnız zarar durdur olarak yeniden kurulur); kademe merdiveninde satış yeri"
+      ]
+    },
     {
       "version": "1.83.0",
       "date": "2026-11-24",
@@ -101,13 +108,6 @@
       "date": "2026-11-24",
       "notes": [
         "Sürüm yazısı Özet sayfasının en altına taşındı"
-      ]
-    },
-    {
-      "version": "1.76.1",
-      "date": "2026-11-24",
-      "notes": [
-        "Uygulama sürümü sayfanın en altında; yeni sürüm varsa yanında yazar"
       ]
     }
   ]

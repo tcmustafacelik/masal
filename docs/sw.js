@@ -1,5 +1,5 @@
 // Masal: sürüm numaralı dosyalar önbellekten anında, sayfa önce ağdan (yavaşsa önbellekten) gelir; çevrimdışıyken son kopya açılır.
-const CACHE = 'masal-1.83.0';
+const CACHE = 'masal-1.84.0';
 const VER = CACHE.slice(6);
 // Kabuk, sayfanın istediği adreslerle (app.js?v=sürüm) saklanır: yeni sürüm kurulur kurulmaz çevrimdışı da açılır,
 // güncellemede kod yeniden indirilmez. Tarayıcının kendi ara belleği atlanır (eski kopya yeni sürüm diye saklanmasın).

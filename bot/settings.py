@@ -37,7 +37,7 @@ DEFAULTS = {
     "kasa": 10000,          # hesaptaki toplam kasa (TL)
     "topup": {"amount": 250, "profit_pct": 5, "days": 7},
     "risk": {"trade_pct": 10, "max_positions": 5, "stop_pct": 5, "daily_loss_pct": 3, "kill_pct": 15},
-    "grid": {"step_pct": 2, "lot_pct": 4, "lot_tp_pct": 2.5, "max_lots": 3, "max_coins": 3, "stop_pct": 7, "use_pct": 40, "trend_filter_pct": 1, "instant": True, "step3_pct": 3, "lot2_pct": 100, "lot3_pct": 100, "sma_hours": 20, "vol_filter": 2},
+    "grid": {"step_pct": 2, "lot_pct": 4, "lot_tp_pct": 2.5, "max_lots": 3, "max_coins": 3, "stop_pct": 7, "use_pct": 40, "trend_filter_pct": 1, "instant": True, "step3_pct": 3, "lot2_pct": 100, "lot3_pct": 100, "sma_hours": 20, "vol_filter": 2, "pos_tp_pct": 0},
     "dip": {"dip_pct": 3, "rsi_max": 35, "take_profit_pct": 4, "max_hold_hours": 48},
     "trend": {"trailing_pct": 4},
     "notify": {"enabled": False, "topic": "", "trades": True, "alerts": True, "daily": True, "money": True, "daily_hour": 21, "cleared": 0},
@@ -165,6 +165,7 @@ def apply(s):
     g, d, t = s["grid"], s["dip"], s["trend"]
     config.STRATEGIES["grid"].update(step=g["step_pct"] / 100, lot=base * g["lot_pct"] / 100,
                                      lot_tp=g["lot_tp_pct"] / 100, max_lots=int(g["max_lots"]),
+                                     pos_tp=max(0.0, float(g.get("pos_tp_pct") or 0)) / 100,
                                      max_coins=int(g["max_coins"]), stop=g["stop_pct"] / 100,
                                      max_use=g.get("use_pct", 40) / 100,
                                      coin_filter=g.get("trend_filter_pct", 0) / 100,

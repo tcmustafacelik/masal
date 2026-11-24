@@ -519,7 +519,8 @@ class LivePortfolio(Portfolio):
     def _targets(self, entry):
         k, c, r = self.s["key"], self.cfg, self.risk
         if k == "grid":
-            return entry * (1 + c["lot_tp"]), entry * (1 - c["stop"])
+            # Toplu kâr al açıkken borsaya kademe başına kâr al emri konmaz (yalnız zarar durdur); kâr, ortalamaya göre bot satar
+            return (None if (c.get("pos_tp") or 0) > 0 else entry * (1 + c["lot_tp"])), entry * (1 - c["stop"])
         if k == "dip":
             return entry * (1 + c["take_profit"]), entry * (1 - r["stop_loss"])
         return None, entry * (1 - r["stop_loss"])
@@ -675,8 +676,20 @@ class LivePortfolio(Portfolio):
             if inst not in self.s["positions"] or self._is_unsure(inst):
                 continue  # sonucu doğrulanmamış emri olan coin: önce emir kayda geçer, koruma sonra kurulur
             pos = self.s["positions"][inst]
+            want_tp = self.s.get("key") != "grid" or not ((self.cfg.get("pos_tp") or 0) > 0)
             for lot in list(pos["lots"]):
                 if not lot.get("algo"):
+                    self._protect(now, inst, lot)
+                    continue
+                if (pending is not None and lot["algo"] in pending and self.s.get("key") == "grid"
+                        and (lot.get("tp") is not None) != want_tp):
+                    # Toplu kâr al açıldı/kapandı: borsadaki koruma yeni kurala göre (kâr al'lı ya da kâr al'sız) yeniden kurulur
+                    try:
+                        self.cancel_items([(lot["algo"], inst)])
+                    except Exception as e:
+                        self._note(now, f"Koruma güncellenemedi {inst}: {tr_err(e)}")
+                        continue
+                    lot["algo"] = None
                     self._protect(now, inst, lot)
                     continue
                 if pending is not None and lot["algo"] in pending:
