@@ -385,5 +385,12 @@
   ],
   "desk_cmd": [],
   "accent": "violet",
-  "buy": []
+  "buy": [],
+  "ban": {
+    "spot": [
+      "IRYS"
+    ],
+    "lev": [],
+    "meme": []
+  }
 }
