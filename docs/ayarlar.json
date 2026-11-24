@@ -236,7 +236,9 @@
       "src": "bos"
     }
   ],
-  "xfer_cancel": [],
+  "xfer_cancel": [
+    "gs1795557828089"
+  ],
   "clear": 1795556517151,
   "xfer": {
     "daily_max": 1000,
