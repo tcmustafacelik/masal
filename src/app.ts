@@ -1,4 +1,4 @@
-const APP_VERSION='1.80.2';
+const APP_VERSION='1.80.3';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (kehribar)
@@ -718,7 +718,9 @@ function renderXfer(){
   const grp: [string,string,string[]][]=[['OKX TR\'den','tr',['tr2g','tr2k','tr2m']],['OKX Global\'den','g',['g2tr','g2k','g2m']],['MEME\'den','m',['m2g','m2k','m2tr']],['KASA\'dan','k',['k2g','k2tr','k2m']]];
   const tile=(k: string)=>{const [f,t,sub]=XDIR[k];return `<button data-x="${k}"><span class="xrt">${xEnd(f)}${ic('i-chev')}${xEnd(t)}</span><b>${XEND[t][0]}</b><small>${sub}</small></button>`};
   const logRows=((X?.log||[]) as any[]).slice(0,5).map(([t,m]: [number,string])=>{const parts=String(m).replace(/</g,'&lt;').split(' · ');
-    return `<div class="xl"><time>${masaClock(t)}</time><div><b>${parts[0]}</b>${parts.length>1?`<small>${parts.slice(1).join(' · ')}</small>`:''}</div></div>`}).join('');
+    const [c,lb]: [string,string]=/başarısız|hata|reddetti|yapılamadı|ulaşmadı/i.test(m)?['dn','HATA']:/ulaştı|tamamlandı/i.test(m)?['up','ULAŞTI']:/gönderildi|aktarıldı/i.test(m)?['b','GÖNDER']
+      :/çevrildi|satıldı|alındı/i.test(m)?['ac','ÇEVİR']:/bekle|sınır|iptal/i.test(m)?['wn','BEKLE']:['z','BİLGİ'];
+    return `<div class="xl lg"><time>${masaClock(t)}</time><em class="lk ${c}">${lb}</em><div><b>${parts[0]}</b>${parts.length>1?`<small>${parts.slice(1).join(' · ')}</small>`:''}</div></div>`}).join('');
   if(!setH(box,`<h2 class="mh">${ic('i-wallet')}Kasalar<span class="hsum">dakikada bir güncellenir</span></h2>
     <div class="card xf">${xKasalar(X)}</div>
     <h2 class="mh">${ic('i-out')}Para gönder<span class="hsum">bugün $${nf(X?.day_sum||0,0)} / ${nf(X?.daily_max||1000,0)}</span></h2>

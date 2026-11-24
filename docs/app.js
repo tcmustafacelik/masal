@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.80.2';
+const APP_VERSION = '1.80.3';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = 'var(--acc)'; // seçili çizgi: tema vurgu rengi (kehribar)
@@ -1178,7 +1178,9 @@ function renderXfer() {
     const tile = (k) => { const [f, t, sub] = XDIR[k]; return `<button data-x="${k}"><span class="xrt">${xEnd(f)}${ic('i-chev')}${xEnd(t)}</span><b>${XEND[t][0]}</b><small>${sub}</small></button>`; };
     const logRows = (X?.log || []).slice(0, 5).map(([t, m]) => {
         const parts = String(m).replace(/</g, '&lt;').split(' · ');
-        return `<div class="xl"><time>${masaClock(t)}</time><div><b>${parts[0]}</b>${parts.length > 1 ? `<small>${parts.slice(1).join(' · ')}</small>` : ''}</div></div>`;
+        const [c, lb] = /başarısız|hata|reddetti|yapılamadı|ulaşmadı/i.test(m) ? ['dn', 'HATA'] : /ulaştı|tamamlandı/i.test(m) ? ['up', 'ULAŞTI'] : /gönderildi|aktarıldı/i.test(m) ? ['b', 'GÖNDER']
+            : /çevrildi|satıldı|alındı/i.test(m) ? ['ac', 'ÇEVİR'] : /bekle|sınır|iptal/i.test(m) ? ['wn', 'BEKLE'] : ['z', 'BİLGİ'];
+        return `<div class="xl lg"><time>${masaClock(t)}</time><em class="lk ${c}">${lb}</em><div><b>${parts[0]}</b>${parts.length > 1 ? `<small>${parts.slice(1).join(' · ')}</small>` : ''}</div></div>`;
     }).join('');
     if (!setH(box, `<h2 class="mh">${ic('i-wallet')}Kasalar<span class="hsum">dakikada bir güncellenir</span></h2>
     <div class="card xf">${xKasalar(X)}</div>
