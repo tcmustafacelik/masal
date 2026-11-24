@@ -3,8 +3,8 @@
   "paused": false,
   "liquidate": 0,
   "strategy": "grid",
-  "budget": 17753,
-  "kasa": 17753,
+  "budget": 14208,
+  "kasa": 14208,
   "topup": {
     "amount": 100,
     "profit_pct": 3,
@@ -255,6 +255,13 @@
       "dir": "g2tr",
       "amt": 2,
       "src": "bos"
+    },
+    {
+      "id": "g1795562745277",
+      "ts": 1795562745277,
+      "dir": "tr2g",
+      "amt": 70,
+      "src": "bot"
     }
   ],
   "xfer_cancel": [
@@ -387,6 +394,6 @@
   "gspot": {
     "on": true,
     "real": true,
-    "budget": 50
+    "budget": 70
   }
 }
