@@ -31,6 +31,7 @@ ROUTES = {  # yön: (kaynak, hedef adres, hedef borsa ya da None)
 NAMES = {"tr": "OKX TR", "g": "OKX Global", None: "KASA", "m": "MEME"}
 MEME_DIRS = {"g2m": ("g", "m"), "m2g": ("m", "g")}  # SOL ile; ayrıntı meme_aktar.py
 FUNDING, TRADING = "6", "18"
+HARD_DAILY_MAX = 1000  # $: güvenlik tavanı — ayardan daha yükseği girilse de günlük aktarım bunu aşamaz
 DEFAULT = {"daily_max": 1000, "sweep_on": True, "sweep_pct": 50, "sweep_days": 7, "sweep_min": 10}
 
 
@@ -549,6 +550,7 @@ def _run_jobs(X, C, cfg, state, N, now):
 
 def step(state, S, N):
     cfg = {**DEFAULT, **(S.get("xfer") or {})}
+    cfg["daily_max"] = min(float(cfg.get("daily_max") or HARD_DAILY_MAX), HARD_DAILY_MAX)
     X = state.setdefault("xfer", {"jobs": [], "seen": [], "log": [], "g_base": 0})
     C = _clients()
     if not C["tr"].ok:
@@ -673,6 +675,7 @@ def public(state, S=None):
     if not X:
         return None
     cfg = {**DEFAULT, **((S or {}).get("xfer") or {})}
+    cfg["daily_max"] = min(float(cfg.get("daily_max") or HARD_DAILY_MAX), HARD_DAILY_MAX)
     return {"jobs": [{k: j.get(k) for k in ("id", "dir", "amt", "src", "ts", "stage", "msg", "got", "tl", "then", "wait", "via")} for j in X["jobs"]][::-1][:10],
             "log": X.get("log", [])[:20], "free_tl": X.get("free_tl"), "g_val": X.get("g_val"), "kasa": X.get("kasa"),
             "tr_total": X.get("tr_total"), "usdtry": X.get("usdtry"), "g_base": X.get("g_base", 0),

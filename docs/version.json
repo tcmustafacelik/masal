@@ -1,10 +1,17 @@
 {
-  "version": "1.81.0",
+  "version": "1.81.1",
   "date": "2026-11-24",
   "notes": [
-    "Genel bakım 2: uzun pencereler (Futures aç, elle alım) küçük ekranda üstten kesilmiyor, kendi içinde kayıyor; Ayarlar → Hesaplar ve anahtarlar kutuları düzeldi; çift dokunuş ve kaybolan yanıtta istek iki kez gitmiyor (elle alım, TR/KASA → MEME); aktarım satırı gerçek yönü yazıyor (MEME → KASA); akışta kâr/zarar renkli, etiketler tek genişlik; ekran çizimi ~7 kat hızlı; bot veri gönderimi takılırsa güncel kayıtla yeniden deniyor"
+    "Günlük aktarım sınırına sabit 1000 $ güvenlik tavanı (ayardan yükseği girilemez, bot da aşmaz)"
   ],
   "history": [
+    {
+      "version": "1.81.1",
+      "date": "2026-11-24",
+      "notes": [
+        "Günlük aktarım sınırına sabit 1000 $ güvenlik tavanı (ayardan yükseği girilemez, bot da aşmaz)"
+      ]
+    },
     {
       "version": "1.81.0",
       "date": "2026-11-24",
@@ -101,13 +108,6 @@
       "date": "2026-11-24",
       "notes": [
         "Kaydırınca çıkan Sat düğmesi yenilendi: yumuşak kırmızı kart, dolu yuvarlak simge, açılırken ölçeklenerek belirir"
-      ]
-    },
-    {
-      "version": "1.75.0",
-      "date": "2026-11-24",
-      "notes": [
-        "Kasalar arası her yön: OKX TR/KASA → MEME (Global üzerinden kendiliğinden SOL), MEME → KASA ve MEME → OKX TR (zincirleme); Para gönder kartları 3'lü düzen"
       ]
     }
   ]
