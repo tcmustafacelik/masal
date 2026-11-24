@@ -526,6 +526,7 @@ def _spot_sync(live):
     th = _SPOT.get("t")
     alive = bool(th and th.is_alive())  # önce bakılır: bu arada biten okumanın sonucu aşağıda alınır
     snap = _SPOT.pop("out", None)
+    live.resolve_unsure()  # yanıtı kaybolan emir varsa önce o doğrulanıp kayda geçer
     live.reconcile(snap=snap or {})  # borsada tetiklenen korumaları kayda geçir
     if snap and snap.get("have") is not None:
         try:
@@ -650,6 +651,26 @@ def main():
     S = settings.load()
     N = Notifier(S)
     state = load_state()
+    try:
+        return _turn(state, S, N, t_start)
+    except Exception:
+        # Tur yarıda kesildi. Bu turda verilmiş gerçek emir olabilir: kayıt o ana kadarki hâliyle yazılır (yazılmazsa
+        # bir sonraki tur diskteki eski kayıtla başlar; alınan coin kayıtsız kalır ve aynı emir yeniden verilebilirdi).
+        if not state.get("_saved"):
+            try:
+                state["updated"] = int(time.time() * 1000)
+                save_state(state)
+                print("Tur hatayla kesildi; o ana kadarki kayıt yazıldı.")
+            except Exception as e:
+                print("Kayıt yazılamadı:", e)
+            try:
+                N.flush()
+            except Exception:
+                pass
+        raise
+
+
+def _turn(state, S, N, t_start):
     if state.get("locked") and not state.get("locked_notified"):
         state["locked_notified"] = True
         N.add("alerts", "Eski gerçek hesap kaydı açılamadı",
@@ -833,6 +854,7 @@ def main():
     state["updated"] = int(time.time() * 1000)
     state["universe"] = sorted(series)
     save_state(state)
+    state["_saved"] = True  # (diske yazılmaz) bundan sonraki hata kaydı etkilemez
     try:
         report.build(state, S)
     except Exception as e:  # özet yazılamasa da işlemler kayıtlı kalır, bildirimler gider

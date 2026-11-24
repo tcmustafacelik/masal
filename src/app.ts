@@ -1,4 +1,4 @@
-const APP_VERSION='1.81.1';
+const APP_VERSION='1.82.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (kehribar)
@@ -28,7 +28,11 @@ let LANG: 'tr' | 'en' = (localStore('masal_lang') === 'en' ? 'en' : 'tr');
 let EN: Record<string, string> = {};
 const I18N_TOK = /[+−-]?%?\d[\d.,:]*%?|\b[A-Z][A-Z0-9]{1,11}\b/g;
 const I18N_MISS = new Set<string>();
+// Botun büyük harfli işlem sözcükleri kalıpta "değer" sayılır (coin adı gibi); İngilizcede karşılığı yazılır.
+// AL ve SAT yalnız satır başındaysa çevrilir (coin adı olabilir: tx() içinde).
+const I18N_CAPS: Record<string, string> = {KAPAT: 'CLOSE', KISA: 'SHORT', UZUN: 'LONG'};
 function enNum(v: string): string {
+  if (I18N_CAPS[v]) return I18N_CAPS[v];
   if (/^\d+\.$/.test(v)) return v.slice(0, -1); // sıra sayısı: "2." → "2"
   if (/\.(\d{1,2}|\d{4,})(?!\d)/.test(v)) return v; // nokta 3 haneyi ayırmıyorsa tarih (19.11), sayı değil
   if (!/\d/.test(v) || v.includes(':') || !/^[+−-]?%?[\d.,]+%?$/.test(v)) return v;
@@ -42,10 +46,13 @@ function tx(s: string): string {
   if (LANG === 'tr' || !s) return s;
   const core = s.replace(/\s+/g, ' ').trim(); if (!core) return s;
   if (EN[core] != null) return s.replace(s.trim(), EN[core]);
-  const [key, vals] = trKey(core); const e = EN[key];
+  const [key, vals] = trKey(core);
+  // sıra sayılı kalıp ("1. kademe" → "Step 1") sayı kalıbından ("3 kademe" → "3 steps") ayrı aranır
+  const e = (vals.some(v => /^\d+\.$/.test(v)) ? EN[key + '#ord'] : null) ?? EN[key];
+  if (/^(AL|SAT) [A-Z0-9%]/.test(core) && vals[0]) vals[0] = vals[0] === 'AL' ? 'BUY' : 'SELL'; // "AL CHIRP 0.038 SOL" → "BUY CHIRP…"
   if (e == null) {
     // sadece sayı/kısaltma olan yazılar (15.644 · %73 · ,04 TL): sayılar İngilizce biçime çevrilir
-    if (!/[a-zçğıöşü]/.test(key)) return s.replace(/^(\s*),(?=\d)/, '$1.').replace(I18N_TOK, m => enNum(m));
+    if (!/[a-zçğıöşü]/.test(key)) { let n = 0; return s.replace(/^(\s*),(?=\d)/, '$1.').replace(I18N_TOK, m => enNum(n++ === 0 && (m === 'AL' || m === 'SAT') && vals[0] !== m ? vals[0] : m)); }
     I18N_MISS.add(key); return s;
   }
   const lead = s.match(/^\s*/)[0], tail = s.match(/\s*$/)[0];
@@ -86,7 +93,40 @@ const KEYS=new Map<string,Promise<CryptoKey>>(); // aynı tuz için anahtar bir 
 async function unseal(box: Sealed, pw: string): Promise<any> {const id=pw+'|'+box.salt+'|'+(box.iter||150000);
   if(!KEYS.has(id)){if(KEYS.size>20)KEYS.clear();KEYS.set(id,deriveKey(pw,b64d(box.salt),box.iter||150000))}
   let k:CryptoKey;try{k=await KEYS.get(id)}catch(e){KEYS.delete(id);throw e}
-  return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:b64d(box.iv)},k,b64d(box.ct))))}
+  let raw: Uint8Array=new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:b64d(box.iv)},k,b64d(box.ct)));
+  if(box.z)raw=await inflate(raw); // bot özeti şifrelemeden önce sıkıştırır (şifreli veri sıkışmaz: ~4 kat küçük indirme)
+  return JSON.parse(new TextDecoder().decode(raw))}
+/** zlib (deflate) açma: tarayıcının kendi açıcısı; yoksa (eski telefon) aşağıdaki küçük açıcı. */
+async function inflate(u: Uint8Array): Promise<Uint8Array> {
+  const DS=(window as any).DecompressionStream;
+  if(DS){try{return new Uint8Array(await new Response(new Blob([u as any]).stream().pipeThrough(new DS('deflate'))).arrayBuffer())}catch(e){}}
+  return inflateRaw(u.subarray(2))}
+function inflateRaw(src: Uint8Array): Uint8Array {
+  let pos=0,bit=0,out=new Uint8Array(src.length*6+64),n=0;
+  const need=(k: number)=>{if(n+k>out.length){const o=new Uint8Array(Math.max(out.length*2,n+k));o.set(out);out=o}};
+  const bits=(k: number)=>{let v=0;for(let i=0;i<k;i++){if(pos>=src.length)throw new Error('inflate');v|=((src[pos]>>bit)&1)<<i;if(++bit===8){bit=0;pos++}}return v};
+  const build=(lens: Uint8Array)=>{const count=new Uint16Array(16),offs=new Uint16Array(16),sym=new Uint16Array(lens.length);
+    for(let i=0;i<lens.length;i++)count[lens[i]]++;count[0]=0;for(let i=1;i<16;i++)offs[i]=offs[i-1]+count[i-1];
+    for(let i=0;i<lens.length;i++)if(lens[i])sym[offs[lens[i]]++]=i;return {count,sym}};
+  const decode=(h: {count: Uint16Array; sym: Uint16Array})=>{let code=0,first=0,index=0;
+    for(let len=1;len<16;len++){code|=bits(1);const c=h.count[len];if(code-c<first)return h.sym[index+(code-first)];index+=c;first+=c;first<<=1;code<<=1}throw new Error('inflate')};
+  const LB=[3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258],LE=[0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0];
+  const DB=[1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577],DE=[0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13];
+  const ORD=[16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15];
+  let last=0;
+  do{last=bits(1);const type=bits(2);
+    if(type===0){if(bit){bit=0;pos++}const len=src[pos]|src[pos+1]<<8;pos+=4;need(len);out.set(src.subarray(pos,pos+len),n);n+=len;pos+=len}
+    else if(type===3)throw new Error('inflate');
+    else{let lh,dh;
+      if(type===1){const l=new Uint8Array(288);l.fill(8,0,144);l.fill(9,144,256);l.fill(7,256,280);l.fill(8,280,288);lh=build(l);dh=build(new Uint8Array(30).fill(5))}
+      else{const hlit=bits(5)+257,hdist=bits(5)+1,hclen=bits(4)+4,cl=new Uint8Array(19);for(let i=0;i<hclen;i++)cl[ORD[i]]=bits(3);
+        const ch=build(cl),l=new Uint8Array(hlit+hdist);let i=0;
+        while(i<hlit+hdist){const sy=decode(ch);if(sy<16)l[i++]=sy;else{let v=0,r=0;if(sy===16){v=l[i-1];r=3+bits(2)}else if(sy===17)r=3+bits(3);else r=11+bits(7);while(r--)l[i++]=v}}
+        lh=build(l.subarray(0,hlit));dh=build(l.subarray(hlit))}
+      for(;;){const sy=decode(lh);if(sy<256){need(1);out[n++]=sy}else if(sy===256)break;
+        else{const len=LB[sy-257]+bits(LE[sy-257]),ds=decode(dh),dist=DB[ds]+bits(DE[ds]);if(dist>n)throw new Error('inflate');need(len);for(let i=0;i<len;i++,n++)out[n]=out[n-dist]}}}
+  }while(!last);
+  return out.subarray(0,n)}
 async function seal(obj: unknown, pw: string, iter = 150000): Promise<Sealed> {const salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12));
   const k=await deriveKey(pw,salt,iter);const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},k,new TextEncoder().encode(JSON.stringify(obj)));
   return {enc:1,iter,salt:b64e(salt),iv:b64e(iv),ct:b64e(ct)}}
@@ -94,13 +134,19 @@ let pw=localStore('masal_pw')||'';
 /** Gelen özetin şifreli kısmını açar. Özet ekrana (S) ancak bu bittikten sonra verilir: çözme sürerken araya giren
  *  bir çizim "kilitli" ekranı bir an gösterip geri almasın. */
 async function openLive(s: Summary){
-  if(!s.live_enc)return;
+  if(!s.live_enc&&!s.live_z)return;
   const pub = s.live_public || {armed: false, paused: false};
   s.strategies.live = {locked: true,name:'Gerçek hesap',live:true,armed:pub.armed,paused:pub.paused,pnl_pct:0};
   if(!pw)return;
-  try{const o=await unseal(s.live_enc,pw);s.strategies.live=o.strategy;s.okx=o.okx;(s as any).xfer=o.xfer;(s as any).levr=o.levr;(s as any).memer=o.memer}
+  try{const o=await unsealLive(s,pw);s.strategies.live=o.strategy;s.okx=o.okx;(s as any).xfer=o.xfer;(s as any).levr=o.levr;(s as any).memer=o.memer}
   catch(e){pw='';localStorage.removeItem('masal_pw');toast('Şifre uyuşmadı, gerçek hesap kilitli kaldı')}
 }
+
+/** Gerçek hesap kutusu: yeni bot sıkıştırılmış kutu (live_z) yazar; eski botun kutusu (live_enc) da açılır.
+ *  Sıkıştırılmış kutu açılamazsa (şifre doğru ama açıcı çalışmadı) küçük yedek kutuya (live_enc) dönülür; şifre silinmez. */
+async function unsealLive(s: Summary, p: string): Promise<any> {
+  if(s.live_z){try{return await unseal(s.live_z,p)}catch(e){if(!s.live_enc||(e as any)?.name==='OperationError')throw e}}
+  return unseal(s.live_enc,p)}
 
 // Bot kayıtları ayrı "data" dalında tutulur (site her turda yeniden yayınlanmasın diye)
 /** Süre sınırlı istek: VPN ya da zayıf bağlantıda askıda kalan istek sonsuza kadar beklenmez. */
@@ -175,7 +221,7 @@ function render(){
      :real?`<span class="mi">${ic('i-coins')}</span><span><b>Gerçek</b><small>OKX TR'de</small></span>`
      :`<span class="mi">${ic('i-flask')}</span><span><b>Deneme</b><small>Emir gitmez</small></span>`);
    m.onclick=()=>document.getElementById('openSet').click()}
-  setH(document.getElementById('foot'),'Fiyatlar uygulama açıkken OKX TR\'den anlık güncellenir; bot kesintisiz çalışır, yaklaşık 5 saniyede bir kontrol eder.<br>'+(L&&L.armed?'Ekrandaki rakamlar OKX TR hesabındaki gerçek işlemlerdir.':'Gerçek para kullanılmıyor; tüm işlemler sanal.'));
+  setH(document.getElementById('foot'),'Fiyatlar uygulama açıkken OKX TR\'den anlık güncellenir; bot kesintisiz çalışır, yaklaşık 2 saniyede bir kontrol eder.<br>'+(L&&L.armed?'Ekrandaki rakamlar OKX TR hesabındaki gerçek işlemlerdir.':'Gerçek para kullanılmıyor; tüm işlemler sanal.'));
   if(S.strategies.live&&sel!=='live')sel='live'; // sanal stratejiler kapalı: her zaman gerçek hesap
   const x=S.strategies[sel];
   const locked=!!x.locked;
@@ -187,7 +233,7 @@ function render(){
       <p>Bakiye ve işlemlerin herkese açık sayfada şifreli duruyor. Görmek için OKX'te API anahtarını oluştururken belirlediğin şifreyi (Passphrase) gir. Şifre sadece bu cihazda saklanır.</p>
       <input class="inp" id="pwIn" type="password" placeholder="OKX şifresi" autocomplete="off"><button class="btn primary" id="pwBtn" style="width:100%">${ic('i-lock')}Kilidi aç</button></div>`))
     document.getElementById('pwBtn').onclick=async()=>{const v = (document.getElementById('pwIn') as HTMLInputElement).value;if(!v)return toast('Şifreyi gir');
-      try{const o=await unseal(S.live_enc,v);pw=v;localStore('masal_pw',v);S.strategies.live=o.strategy;S.okx=o.okx;(S as any).xfer=o.xfer;(S as any).levr=o.levr;(S as any).memer=o.memer;render();toast('Kilit açıldı')}
+      try{const o=await unsealLive(S,v);pw=v;localStore('masal_pw',v);S.strategies.live=o.strategy;S.okx=o.okx;(S as any).xfer=o.xfer;(S as any).levr=o.levr;(S as any).memer=o.memer;render();toast('Kilit açıldı')}
       catch(e){toast('Şifre yanlış')}};
     setH(document.getElementById('alerts'),'');
     ['positions','trades','coins'].forEach(id=>setH(document.getElementById(id),`<div class="empty">${ic('i-lock')}<div>Kilitli</div></div>`));
@@ -225,7 +271,7 @@ function gloss(k: string): [string, string] {
   const L=S?.strategies?.live,c=(L&&!L.locked&&L.cfg)||null;
   const step=c?pp(c.step):'%1,5',tp=c?pp(c.lot_tp):'%4',stop=c?pp(c.stop):'%12',ml=c?c.max_lots:4,mc=c?c.max_coins:20,lot=c?tl(c.lot,0):'bir kademe',use=c?pp(c.max_use,0):'%40',cf=c?.coin_filter?pp(c.coin_filter):'%1',qt=S?.settings?.quote||S?.okx?.quote||'USDT';
   const G={
-    nasil:['Bot nasıl alıp satar?',`${c?.instant?'<p>Bot <b>5 saniyede bir</b> fiyatlara bakar; fiyat alım seviyesine değdiği an alır. Alım seviyesi son kapanan 15 dakikalık mumlara göre hesaplanır.</p>':'<p>Bot <b>5 saniyede bir</b> piyasaya bakar, kararını <b>15 dakikalık mum</b> kapanınca verir.</p>'}
+    nasil:['Bot nasıl alıp satar?',`${c?.instant?'<p>Bot <b>2 saniyede bir</b> fiyatlara bakar; fiyat alım seviyesine değdiği an alır. Alım seviyesi son kapanan 15 dakikalık mumlara göre hesaplanır.</p>':'<p>Bot <b>2 saniyede bir</b> piyasaya bakar, kararını <b>15 dakikalık mum</b> kapanınca verir.</p>'}
       <ul><li><b>Alım:</b> Bir coin son ${c?.sma_h||20} saatin ortalamasından <b>${step}</b> aşağı inince ${lot}'lik bir parça (kademe) alır.</li>
       <li><b>Düşerse:</b> ${step} düşüşte 2. kademeyi${c?.step3&&c.step3>c.step?`, ${pp(c.step3)} daha düşüşte 3. kademeyi`:''} alır; bir coinde en fazla <b>${ml}</b> kademe.${c&&((c.lot2??1)<1||(c.lot3??1)<1)?` Kademe tutarları: ${tl(c.lot,0)} → ${tl(c.lot*(c.lot2??1),0)} → ${tl(c.lot*(c.lot3??1),0)}.`:''}</li>
       <li><b>Satış:</b> Her kademe kendi alış fiyatının <b>${tp}</b> üstüne çıkınca ayrı satılır.</li>
@@ -324,7 +370,7 @@ function deskHero(lbl: string, val: number, sub: string, pnl: number, base: numb
 }
 function renderLevR(): string {
   const R = (S as any)?.levr;
-  if (!R) return (S as any)?.live_enc && !pw ? `<div class="warn">${ic('i-lock')}<div>Gerçek futures masasını görmek için kilidi aç.</div></div>` : '';
+  if (!R) return ((S as any)?.live_enc || (S as any)?.live_z) && !pw ? `<div class="warn">${ic('i-lock')}<div>Gerçek futures masasını görmek için kilidi aç.</div></div>` : '';
   const usd = (v: number, d = 2) => '$' + nf(v, d), esc = escH;
   const pf = (v: number) => nf(v, v >= 100 ? 2 : v >= 1 ? 4 : Math.min(8, 2 - Math.floor(Math.log10(v || 1))));
   const lv = (orig || S?.settings as any)?.lev || {}, ml = +lv.max_loss || 10, left = Math.max(0, ml + Math.min(0, R.pnl));
@@ -448,7 +494,7 @@ function memeOff(): string {
 function renderMemeR(): string {
   if (((orig || S?.settings as any)?.meme || {}).on === false) return memeOff();
   const R = (S as any)?.memer;
-  if (!R) return (S as any)?.live_enc && !pw ? `<div class="warn">${ic('i-lock')}<div>Gerçek memecoin masasını görmek için kilidi aç.</div></div>` : '';
+  if (!R) return ((S as any)?.live_enc || (S as any)?.live_z) && !pw ? `<div class="warn">${ic('i-lock')}<div>Gerçek memecoin masasını görmek için kilidi aç.</div></div>` : '';
   const usd = (v: number, d = 2) => '$' + nf(v, d), esc = escH;
   const mm = (orig || S?.settings as any)?.meme || {}, ml = +mm.max_loss || 10, left = Math.max(0, ml + Math.min(0, R.pnl));
   const pos = (R.positions || []).map((p: any) => {const g = p.cost ? (p.val / p.cost - 1) * 100 : 0;
@@ -620,8 +666,8 @@ function renderNow(x: Strategy){
     h+='</div>';
     if(items.length>5)h+=`<button class="more" id="nowMore">${nowAll?'Daha az göster':`Tümünü göster (${items.length} coin)`}</button>`;
   }
-  h+=c?.instant?`<div class="nf">${ic('i-clock')}Anlık alım açık: fiyat alım seviyesine değdiği an alır (5 sn'de bir kontrol)</div>`
-    :`<div class="nf">${ic('i-clock')}Sonraki karar ${nextBar()}'te (15 dakikalık mum kapanışı) · fiyatlar 5 sn'de bir kontrol edilir</div>`;
+  h+=c?.instant?`<div class="nf">${ic('i-clock')}Anlık alım açık: fiyat alım seviyesine değdiği an alır (2 sn'de bir kontrol)</div>`
+    :`<div class="nf">${ic('i-clock')}Sonraki karar ${nextBar()}'te (15 dakikalık mum kapanışı) · fiyatlar 2 sn'de bir kontrol edilir</div>`;
   if(setH(box,h)){const mb=document.getElementById('nowMore');if(mb)mb.onclick=()=>{nowAll=!nowAll;renderNow(x)}}
 }
 
@@ -1638,7 +1684,7 @@ function renderForm(){
    <div class="card" style="margin-top:8px"><div class="sw ${draft.paused?'on':''}" id="pauseSw"><div class="lb"><b>Botu durdur</b><span>Yeni alım yapılmaz; açık pozisyonların zarar sınırı çalışmaya devam eder</span></div><div class="track"><i></i></div></div>
    <div class="field" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line2)"><div class="lb"><b>Hepsini sat ve dur</b><span>Gerçek hesaptaki tüm coinleri hemen satar, botu durdurur</span></div>
    <button class="btn danger ${sellArm?'arm':''}" id="sellAll">${ic('i-sell')}${sellArm?'Emin misin? Dokun':'Hepsini sat'}</button></div></div></section>
-   <div class="hint" style="margin:8px 2px 4px">Bot kesintisiz çalışır: yaklaşık 5 saniyede bir piyasayı, borsadaki korumaları ve para hareketlerini kontrol eder. Uygulama kapalı olsa da çalışır.</div>
+   <div class="hint" style="margin:8px 2px 4px">Bot kesintisiz çalışır: yaklaşık 2 saniyede bir piyasayı, borsadaki korumaları ve para hareketlerini kontrol eder. Uygulama kapalı olsa da çalışır.</div>
    <section><h2><span class="hb c-amber">${ic('i-coins')}</span>İşlem paritesi</h2><div class="tiles qtiles" data-g="quote">${QUOTES.map(([q,g,sub])=>`<button class="tile ${(draft.quote||'USDT')===q?'on':''}" data-t="${q}"><span class="ic"><b class="qg">${g}</b></span><span class="nm">${q}</span><span class="pc" style="color:var(--muted);font-weight:500">${sub}</span></button>`).join('')}</div>
    <div class="hint" style="margin:8px 2px 0">Yeni alımlar bu paritede yapılır; gereken para TL'den otomatik çevrilir. Eldeki coinler kendi paritesinde satılır. Bütün tutarlar TL karşılığıyla görünür.</div></section>
    <section><h2><span class="hb c-blue">${ic('i-target')}</span>Strateji</h2><div class="tiles" data-g="strat">${['grid','dip','trend'].map(k=>tile(draft.strategy===k,k,ICON[k],SNAMES[k])).join('')}</div>
@@ -1717,7 +1763,7 @@ function memeExtra(){const R=(S as any)?.memer,m=(draft as any).meme||{};let h='
 function ladder(){const el=document.getElementById('ladder');if(!el||!draft||draft.strategy!=='grid')return;
   const g=draft.grid,b=+draft.budget||0,l1=b*g.lot_pct/100,n=Math.max(1,Math.min(10,+g.max_lots||1));
   let px=1,cost=0,qty=0,rows='',stopAt=0;
-  for(let i=0;i<n;i++){px*=1-(i<2?g.step_pct:(g.step3_pct||g.step_pct))/100;const amt=l1*(i===0?1:i===1?(g.lot2_pct??100)/100:(g.lot3_pct??100)/100);
+  for(let i=0;i<n;i++){px*=1-(i<2?g.step_pct:Math.max(g.step_pct,g.step3_pct||g.step_pct))/100;const amt=l1*(i===0?1:i===1?(g.lot2_pct??100)/100:(g.lot3_pct??100)/100);
     const avg=cost?cost/qty:0,dead=i>0&&px<=avg*(1-g.stop_pct/100);if(dead&&!stopAt)stopAt=i+1;
     cost+=amt;qty+=amt/px;const drop=(1-px)*100;
     rows+=`<div class="lr${dead?' off':''}"><em>${i+1}</em><span><b>−%${nf(drop,1)}</b><small>ortalamadan</small></span><span><b>${tl(amt,0)}</b><small>alım</small></span><span><b class="up">+%${nf(g.lot_tp_pct,1)}</b><small>${dead?'ulaşılmaz':'kârla satılır'}</small></span><i style="width:${Math.min(100,drop*2.2).toFixed(1)}%"></i></div>`}

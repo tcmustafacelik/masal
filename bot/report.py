@@ -140,7 +140,15 @@ def build(state, S=None):
     if vault.password() and "live" in strategies:
         # Gerçek hesap bilgileri herkese açık sayfada şifreli durur; uygulama OKX şifresiyle çözer
         lv = strategies.pop("live")
-        out["live_enc"] = vault.seal({"strategy": lv, "okx": state.get("okx"), "xfer": out.pop("xfer", None), "levr": out.pop("levr", None), "memer": out.pop("memer", None)})
+        okx_, xfer_, levr_, memer_ = state.get("okx"), out.pop("xfer", None), out.pop("levr", None), out.pop("memer", None)
+        # Sıkıştırılıp şifrelenen tam kutu (uygulama 1.82+ bunu okur): şifreli veri sıkışmadığı için önce sıkıştırılır
+        out["live_z"] = vault.seal({"strategy": lv, "okx": okx_, "xfer": xfer_, "levr": levr_, "memer": memer_}, z=True)
+        # Eski biçimde küçük yedek kutu: henüz güncellenmemiş açık uygulama (ve sıkıştırma açamayan cihaz) bozulmasın;
+        # bakiye, pozisyonlar ve masalar durur, uzun listeler (bildirim, geçmiş, izleme) boş gider
+        lite = dict(lv, recent=lv["recent"][:5], coins=[], notifs=[], watch=None, equity_series=lv["equity_series"][-48:],
+                    log=[[state.get("updated") or 0, "Uygulamanın yeni sürümü var: listelerin tamamı için uygulamayı güncelle"]] + lv["log"][:3])
+        cut = lambda d: {**d, "trades": (d.get("trades") or [])[:5], "log": (d.get("log") or [])[:5], "equity_series": (d.get("equity_series") or [])[-48:]} if d else d
+        out["live_enc"] = vault.seal({"strategy": lite, "okx": okx_, "xfer": xfer_, "levr": cut(levr_), "memer": cut(memer_)})
         out["live_public"] = {"armed": lv["armed"], "paused": lv["paused"]}
         out["okx"] = None
     with open(OUT, "w", encoding="utf-8") as f:

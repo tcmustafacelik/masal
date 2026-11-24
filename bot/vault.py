@@ -7,6 +7,7 @@ import base64
 import hashlib
 import json
 import os
+import zlib
 
 ITER = 150_000
 
@@ -22,7 +23,10 @@ def _key(pw, salt):
 _SEAL = {}  # oturum boyunca aynı tuz ve anahtar: PBKDF2 (150 bin tur) her kayıtta yeniden hesaplanmaz
 
 
-def seal(obj, pw=None):
+def seal(obj, pw=None, z=False):
+    """z: veri şifrelenmeden önce sıkıştırılır (zlib). Şifreli metin sıkışmadığı için uygulamanın indirdiği özet ~4 kat
+    küçülür. Yalnız uygulamanın okuduğu özet için kullanılır; botun kendi kaydı (state.json) eski biçimde kalır
+    (eski bot koduna dönülürse de okunabilsin)."""
     pw = pw if pw is not None else password()
     if not pw:
         return obj
@@ -32,9 +36,15 @@ def seal(obj, pw=None):
         _SEAL[pw] = (salt, _key(pw, salt))
     salt, key = _SEAL[pw]
     iv = os.urandom(12)  # her kayıtta yeni IV (AES-GCM güvenliği için şart)
-    ct = AESGCM(key).encrypt(iv, json.dumps(obj, ensure_ascii=False, separators=(",", ":")).encode(), None)
+    raw = json.dumps(obj, ensure_ascii=False, separators=(",", ":")).encode()
+    if z:
+        raw = zlib.compress(raw, 6)
+    ct = AESGCM(key).encrypt(iv, raw, None)
     b = lambda x: base64.b64encode(x).decode()
-    return {"enc": 1, "iter": ITER, "salt": b(salt), "iv": b(iv), "ct": b(ct)}
+    box = {"enc": 1, "iter": ITER, "salt": b(salt), "iv": b(iv), "ct": b(ct)}
+    if z:
+        box["z"] = 1
+    return box
 
 
 def is_sealed(x):
@@ -60,4 +70,6 @@ def unseal(box, pw=None):
         raw = AESGCM(_OPEN[ck]).decrypt(d("iv"), d("ct"), None)
     except Exception:
         raise ValueError("Şifre uyuşmuyor")
+    if box.get("z"):
+        raw = zlib.decompress(raw)
     return json.loads(raw)

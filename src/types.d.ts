@@ -108,7 +108,7 @@ interface OkxStatus {
   ts?: number;
 }
 
-interface Sealed { enc: 1; iter: number; salt: string; iv: string; ct: string }
+interface Sealed { enc: 1; iter: number; salt: string; iv: string; ct: string; z?: 1 }
 
 interface Settings {
   live: boolean;
@@ -147,6 +147,7 @@ interface Summary {
   settings: Settings;
   okx: OkxStatus | null;
   live_enc?: Sealed;
+  live_z?: Sealed;
   live_public?: { armed: boolean; paused: boolean };
 }
 

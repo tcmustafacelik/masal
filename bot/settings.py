@@ -4,6 +4,7 @@ Tutarlar yüzde olarak tutulur; böylece bottaki para değiştikçe hepsi kendil
 """
 import copy
 import json
+import math
 import os
 
 from . import config
@@ -43,42 +44,106 @@ DEFAULTS = {
 }
 
 
-def _merge(base, extra):
+_BAD = object()
+
+
+def _coerce(d, v):
+    """Dosyadaki değeri varsayılanın türüne getirir; getirilemiyorsa (boş, bozuk, yanlış tür) _BAD döner."""
+    if isinstance(d, bool):
+        return bool(v) if isinstance(v, (bool, int)) else _BAD
+    if isinstance(d, (int, float)):
+        if isinstance(v, str):
+            try:
+                v = float(v.replace(",", "."))
+            except ValueError:
+                return _BAD
+        if isinstance(v, bool):
+            return int(v)
+        return v if isinstance(v, (int, float)) and math.isfinite(v) else _BAD
+    if isinstance(d, str):
+        return v if isinstance(v, (str, dict)) else _BAD  # şifreli alanlar (bildirim konusu) sözlük olarak durur
+    if isinstance(d, list):
+        return v if isinstance(v, list) else _BAD
+    if isinstance(d, dict):
+        return v if isinstance(v, dict) else _BAD
+    return v
+
+
+def _merge(base, extra, bad=None, path=""):
     out = copy.deepcopy(base)
     for k, v in (extra or {}).items():
-        if isinstance(v, dict) and isinstance(out.get(k), dict):
-            out[k] = _merge(out[k], v)
-        elif k in out:
-            out[k] = v
+        if k not in out:
+            continue
+        if isinstance(v, dict) and isinstance(out[k], dict):
+            out[k] = _merge(out[k], v, bad, path + k + ".")
+            continue
+        c = _coerce(out[k], v)
+        if c is _BAD:
+            if bad is not None:
+                bad.append(path + k)
+        else:
+            out[k] = c
     return out
 
 
 _GOOD = {}
+# Bozuk gelirse varsayılanı zararsız olan alanlar (görünüm, bildirim, tek seferlik istek listeleri)
+_SOFT = {"lang", "theme", "accent", "notify", "dust", "buy", "desk_cmd", "xfer_cancel", "xfer_req", "sell", "convert", "clear", "liquidate"}
+
+
+def _get(d, path):
+    for k in path.split("."):
+        d = d[k]
+    return d
+
+
+def _put(d, path, v):
+    ks = path.split(".")
+    for k in ks[:-1]:
+        d = d[k]
+    d[ks[-1]] = v
 
 
 def load():
-    data = {}
+    """Ayarları okur. Dosya bozuksa ya da bir değer kullanılamaz durumdaysa (boş/yanlış tür) işlem ayarlarında
+    varsayılana DÖNÜLMEZ: varsayılanda gerçek mod kapalı, bütçe ve zarar sınırları farklıdır; gerçek hesap yanlış
+    ayarla işlem yapardı. Bozuk alan için oturumda en son okunan değer kullanılır (diğer alanlar, ör. durdur / hepsini
+    sat, güncel okunur); hiç okunmadıysa tur hata verir (bot işlem yapmaz, borsadaki korumalar çalışır, "bot durdu"
+    uyarısı gelir)."""
+    data, bad = {}, []
     if os.path.exists(PATH):
         try:
             with open(PATH, encoding="utf-8") as f:
                 data = json.load(f)
             if not isinstance(data, dict):
                 raise ValueError("beklenmeyen biçim")
-            _GOOD["d"] = data
         except Exception as e:
-            # Bozuk/yarım dosyada varsayılanlara dönülmez (varsayılanda gerçek mod kapalıdır; gerçek hesap kaydı
-            # "denemeye geçildi" sanılıp sıfırlanabilirdi): oturumda en son okunabilen ayarlarla devam edilir.
-            if "d" in _GOOD:
-                print("Ayar dosyası okunamadı, son okunan ayarlar kullanılıyor:", e)
-                data = _GOOD["d"]
-            else:
-                print("Ayar dosyası okunamadı, varsayılanlar kullanılıyor:", e)
-                data = {}
-    s = _merge(DEFAULTS, data)
+            if "d" not in _GOOD:
+                raise RuntimeError(f"Ayar dosyası okunamadı; bot bu ayarlarla çalışmaz (docs/ayarlar.json düzeltilmeli): {e}")
+            _warn(f"Ayar dosyası okunamadı, son okunan ayarlar kullanılıyor: {e}")
+            data = _GOOD["d"]
+    s = _merge(DEFAULTS, data, bad)
+    for path in bad:
+        if "s" in _GOOD:
+            _put(s, path, copy.deepcopy(_get(_GOOD["s"], path)))
+        elif path.split(".")[0] not in _SOFT:
+            raise RuntimeError(f"Ayar kullanılamıyor: {path}; bot bu ayarlarla çalışmaz (docs/ayarlar.json düzeltilmeli)")
+    if bad:
+        _warn("Kullanılamayan ayar değeri atlandı (son geçerli değer kullanılıyor): " + ", ".join(bad[:6]))
+    else:
+        _GOOD.pop("warn", None)
+    _GOOD["d"] = data
     if s["strategy"] not in config.STRATEGIES:
         s["strategy"] = "grid"
     apply(s)
+    _GOOD["s"] = copy.deepcopy(s)
     return s
+
+
+def _warn(text):
+    if _GOOD.get("warn") != text:  # her turda (2 sn) değil, uyarı değişince yazılır
+        _GOOD["warn"] = text
+        print(text)
 
 
 def apply(s):

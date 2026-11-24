@@ -185,11 +185,28 @@ def step(state, S, N=None):
     seen_l = list(X.get("dust_seen") or [])
     seen = set(seen_l)
     for r in S.get("dust") or []:
+        if not isinstance(r, dict):
+            continue  # bozuk kayıt turu düşürmesin
         rid = str(r.get("id") or "")
-        if not rid or rid in seen or rid in _SEEN or time.time() * 1000 - float(r.get("ts") or 0) > 3600_000:
+        try:
+            old = time.time() * 1000 - float(r.get("ts") or 0) > 3600_000
+        except (TypeError, ValueError):
+            old = True
+        if not rid or rid in seen or rid in _SEEN or old:
             continue
         _SEEN.add(rid)
         seen.add(rid)
         seen_l.append(rid)
         X["dust_seen"] = seen_l[-50:]
-        threading.Thread(target=_run, args=(r, X), daemon=True).start()
+        _TH["t"] = threading.Thread(target=_run, args=(r, X), daemon=True)
+        _TH["t"].start()
+
+
+_TH = {}
+
+
+def quiesce(timeout=30):
+    """Yeniden başlamadan önce: süren çevirme işi bitsin (yarıda kesilip sonucu kayıtsız kalmasın)."""
+    th = _TH.get("t")
+    if th and th.is_alive():
+        th.join(timeout)

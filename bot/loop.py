@@ -196,8 +196,9 @@ def weekly_backtest():
 def flush_desks():
     """Yeniden başlamadan / oturum bitmeden önce: aktarım işleri ve gerçek masaların son hâli kayda yazılır."""
     try:
-        from . import kaldirac_gercek, meme_gercek, transfer
+        from . import dust, kaldirac_gercek, meme_gercek, transfer
         transfer.quiesce()
+        dust.quiesce()
         a, b = kaldirac_gercek.quiesce(), meme_gercek.quiesce()
         st = run.load_state()
         if st.get("xfer") is not None:

@@ -131,7 +131,7 @@ class Portfolio:
         eq = self.equity()
         if not self.s["halted"] and eq < self.risk["kill_switch"]:
             for inst in list(self.s["positions"]):
-                px = self.s["last_prices"][inst]
+                px = self.s["last_prices"].get(inst) or self.s["positions"][inst]["lots"][-1]["entry"]  # fiyatı henüz gelmemiş coin acil freni düşürmesin
                 self._sell_lots(ts, inst, px, list(self.s["positions"][inst]["lots"]), "Acil fren")
             self.s["halted"] = True
             self.s["halt_reason"] = f"Bakiye {self.risk['kill_switch']:,.0f} TL altına indi"

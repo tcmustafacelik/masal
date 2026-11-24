@@ -1,8 +1,8 @@
 "use strict";
-const APP_VERSION = '1.81.1';
+const APP_VERSION = '1.82.0';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
-const AMBER = 'var(--acc)'; // seçili çizgi: tema vurgu rengi (kehribar)
+const AMBER = 'var(--acc)';
 let S = null, B = null, sel = 'live', view = 'live';
 function localStore(k, v) { try {
     if (v === undefined)
@@ -12,14 +12,14 @@ function localStore(k, v) { try {
 catch (e) {
     return null;
 } }
-const NF = {}; // biçimleyici ondalık sayısına göre bir kez kurulur (her çizimde yüzlerce kez çağrılır)
+const NF = {};
 const nf = (v, d = 2) => (NF[d] || (NF[d] = new Intl.NumberFormat('tr-TR', { minimumFractionDigits: d, maximumFractionDigits: d }))).format(v);
-const tl = (v, d = 2) => nf(v, d) + '\u00a0TL'; // bölünmez boşluk: "TL" satır sonunda tek başına kalmasın
+const tl = (v, d = 2) => nf(v, d) + '\u00a0TL';
 const sgn = v => (v > 0 ? '+' : v < 0 ? '−' : '') + nf(Math.abs(v));
-const spc = (v, d = 2) => (v > 0 ? '+' : v < 0 ? '−' : '') + '%' + nf(Math.abs(v), d); // işaretli yüzde: +%0,14 / −%1,86
+const spc = (v, d = 2) => (v > 0 ? '+' : v < 0 ? '−' : '') + '%' + nf(Math.abs(v), d);
 const cls = v => v > 0 ? 'up' : v < 0 ? 'dn' : '';
 function px(v) { const a = Math.abs(v); return nf(v, a >= 1000 ? 0 : a >= 10 ? 2 : a >= 1 ? 3 : 5); }
-function fv(v, dec) { return dec > 0 ? String(Math.round(+v * 100) / 100).replace('.', ',') : Number(v).toLocaleString('tr-TR'); } // en fazla 2 ondalık: kutudan taşmasın
+function fv(v, dec) { return dec > 0 ? String(Math.round(+v * 100) / 100).replace('.', ',') : Number(v).toLocaleString('tr-TR'); }
 function dt(ts, withYear) {
     const d = new Date(ts);
     const p = n => String(n).padStart(2, '0');
@@ -30,20 +30,19 @@ function ago(ts) { const m = Math.round((Date.now() - ts) / 60000); if (m < 1)
     return m + ' dk önce'; const h = Math.floor(m / 60); return h < 24 ? h + ' sa önce' : Math.floor(h / 24) + ' gün önce'; }
 const ic = (id, c = 'i') => `<svg class="${c}"><use href="#${id}"/></svg>`;
 const sym = inst => inst.split('-')[0];
-/** Dış kaynaktan gelen yazı (token adı, borsa hata mesajı) ekrana yazılmadan önce: HTML olarak yorumlanmaz */
 const escH = (t) => String(t ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-/* ---------- dil: varsayılan Türkçe; İngilizce seçilince ekrandaki yazılar sözlükle (docs/en.json) çevrilir ----------
-   Kodda bütün yazılar Türkçe kalır. Çeviri, ekrana gelen her yazıya uygulanır: sayılar ve coin adları yer tutucu
-   olur ({0}, {1}…), kalıp sözlükte aranır, sayılar İngilizce biçime (1,234.5 · 1.5%) çevrilerek geri konur. */
 let LANG = (localStore('masal_lang') === 'en' ? 'en' : 'tr');
 let EN = {};
 const I18N_TOK = /[+−-]?%?\d[\d.,:]*%?|\b[A-Z][A-Z0-9]{1,11}\b/g;
 const I18N_MISS = new Set();
+const I18N_CAPS = { KAPAT: 'CLOSE', KISA: 'SHORT', UZUN: 'LONG' };
 function enNum(v) {
+    if (I18N_CAPS[v])
+        return I18N_CAPS[v];
     if (/^\d+\.$/.test(v))
-        return v.slice(0, -1); // sıra sayısı: "2." → "2"
+        return v.slice(0, -1);
     if (/\.(\d{1,2}|\d{4,})(?!\d)/.test(v))
-        return v; // nokta 3 haneyi ayırmıyorsa tarih (19.11), sayı değil
+        return v;
     if (!/\d/.test(v) || v.includes(':') || !/^[+−-]?%?[\d.,]+%?$/.test(v))
         return v;
     const pct = v.includes('%');
@@ -66,11 +65,14 @@ function tx(s) {
     if (EN[core] != null)
         return s.replace(s.trim(), EN[core]);
     const [key, vals] = trKey(core);
-    const e = EN[key];
+    const e = (vals.some(v => /^\d+\.$/.test(v)) ? EN[key + '#ord'] : null) ?? EN[key];
+    if (/^(AL|SAT) [A-Z0-9%]/.test(core) && vals[0])
+        vals[0] = vals[0] === 'AL' ? 'BUY' : 'SELL';
     if (e == null) {
-        // sadece sayı/kısaltma olan yazılar (15.644 · %73 · ,04 TL): sayılar İngilizce biçime çevrilir
-        if (!/[a-zçğıöşü]/.test(key))
-            return s.replace(/^(\s*),(?=\d)/, '$1.').replace(I18N_TOK, m => enNum(m));
+        if (!/[a-zçğıöşü]/.test(key)) {
+            let n = 0;
+            return s.replace(/^(\s*),(?=\d)/, '$1.').replace(I18N_TOK, m => enNum(n++ === 0 && (m === 'AL' || m === 'SAT') && vals[0] !== m ? vals[0] : m));
+        }
         I18N_MISS.add(key);
         return s;
     }
@@ -129,13 +131,12 @@ async function initLang() {
 }
 window.__miss = I18N_MISS;
 function setLang(l) { localStore('masal_lang', l); location.reload(); }
-/* ---------- şifreleme (bot ile aynı: PBKDF2-SHA256 + AES-GCM) ---------- */
 const b64d = s => Uint8Array.from(atob(s), c => c.charCodeAt(0)), b64e = u => btoa(String.fromCharCode(...new Uint8Array(u)));
 async function deriveKey(pw, salt, iter) {
     const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
     return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: iter, hash: 'SHA-256' }, km, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
 }
-const KEYS = new Map(); // aynı tuz için anahtar bir kez türetilir (bot oturum boyunca aynı tuzu kullanır)
+const KEYS = new Map();
 async function unseal(box, pw) {
     const id = pw + '|' + box.salt + '|' + (box.iter || 150000);
     if (!KEYS.has(id)) {
@@ -151,7 +152,142 @@ async function unseal(box, pw) {
         KEYS.delete(id);
         throw e;
     }
-    return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64d(box.iv) }, k, b64d(box.ct))));
+    let raw = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64d(box.iv) }, k, b64d(box.ct)));
+    if (box.z)
+        raw = await inflate(raw);
+    return JSON.parse(new TextDecoder().decode(raw));
+}
+async function inflate(u) {
+    const DS = window.DecompressionStream;
+    if (DS) {
+        try {
+            return new Uint8Array(await new Response(new Blob([u]).stream().pipeThrough(new DS('deflate'))).arrayBuffer());
+        }
+        catch (e) { }
+    }
+    return inflateRaw(u.subarray(2));
+}
+function inflateRaw(src) {
+    let pos = 0, bit = 0, out = new Uint8Array(src.length * 6 + 64), n = 0;
+    const need = (k) => { if (n + k > out.length) {
+        const o = new Uint8Array(Math.max(out.length * 2, n + k));
+        o.set(out);
+        out = o;
+    } };
+    const bits = (k) => { let v = 0; for (let i = 0; i < k; i++) {
+        if (pos >= src.length)
+            throw new Error('inflate');
+        v |= ((src[pos] >> bit) & 1) << i;
+        if (++bit === 8) {
+            bit = 0;
+            pos++;
+        }
+    } return v; };
+    const build = (lens) => {
+        const count = new Uint16Array(16), offs = new Uint16Array(16), sym = new Uint16Array(lens.length);
+        for (let i = 0; i < lens.length; i++)
+            count[lens[i]]++;
+        count[0] = 0;
+        for (let i = 1; i < 16; i++)
+            offs[i] = offs[i - 1] + count[i - 1];
+        for (let i = 0; i < lens.length; i++)
+            if (lens[i])
+                sym[offs[lens[i]]++] = i;
+        return { count, sym };
+    };
+    const decode = (h) => {
+        let code = 0, first = 0, index = 0;
+        for (let len = 1; len < 16; len++) {
+            code |= bits(1);
+            const c = h.count[len];
+            if (code - c < first)
+                return h.sym[index + (code - first)];
+            index += c;
+            first += c;
+            first <<= 1;
+            code <<= 1;
+        }
+        throw new Error('inflate');
+    };
+    const LB = [3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258], LE = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0];
+    const DB = [1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577], DE = [0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13];
+    const ORD = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15];
+    let last = 0;
+    do {
+        last = bits(1);
+        const type = bits(2);
+        if (type === 0) {
+            if (bit) {
+                bit = 0;
+                pos++;
+            }
+            const len = src[pos] | src[pos + 1] << 8;
+            pos += 4;
+            need(len);
+            out.set(src.subarray(pos, pos + len), n);
+            n += len;
+            pos += len;
+        }
+        else if (type === 3)
+            throw new Error('inflate');
+        else {
+            let lh, dh;
+            if (type === 1) {
+                const l = new Uint8Array(288);
+                l.fill(8, 0, 144);
+                l.fill(9, 144, 256);
+                l.fill(7, 256, 280);
+                l.fill(8, 280, 288);
+                lh = build(l);
+                dh = build(new Uint8Array(30).fill(5));
+            }
+            else {
+                const hlit = bits(5) + 257, hdist = bits(5) + 1, hclen = bits(4) + 4, cl = new Uint8Array(19);
+                for (let i = 0; i < hclen; i++)
+                    cl[ORD[i]] = bits(3);
+                const ch = build(cl), l = new Uint8Array(hlit + hdist);
+                let i = 0;
+                while (i < hlit + hdist) {
+                    const sy = decode(ch);
+                    if (sy < 16)
+                        l[i++] = sy;
+                    else {
+                        let v = 0, r = 0;
+                        if (sy === 16) {
+                            v = l[i - 1];
+                            r = 3 + bits(2);
+                        }
+                        else if (sy === 17)
+                            r = 3 + bits(3);
+                        else
+                            r = 11 + bits(7);
+                        while (r--)
+                            l[i++] = v;
+                    }
+                }
+                lh = build(l.subarray(0, hlit));
+                dh = build(l.subarray(hlit));
+            }
+            for (;;) {
+                const sy = decode(lh);
+                if (sy < 256) {
+                    need(1);
+                    out[n++] = sy;
+                }
+                else if (sy === 256)
+                    break;
+                else {
+                    const len = LB[sy - 257] + bits(LE[sy - 257]), ds = decode(dh), dist = DB[ds] + bits(DE[ds]);
+                    if (dist > n)
+                        throw new Error('inflate');
+                    need(len);
+                    for (let i = 0; i < len; i++, n++)
+                        out[n] = out[n - dist];
+                }
+            }
+        }
+    } while (!last);
+    return out.subarray(0, n);
 }
 async function seal(obj, pw, iter = 150000) {
     const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12));
@@ -160,17 +296,15 @@ async function seal(obj, pw, iter = 150000) {
     return { enc: 1, iter, salt: b64e(salt), iv: b64e(iv), ct: b64e(ct) };
 }
 let pw = localStore('masal_pw') || '';
-/** Gelen özetin şifreli kısmını açar. Özet ekrana (S) ancak bu bittikten sonra verilir: çözme sürerken araya giren
- *  bir çizim "kilitli" ekranı bir an gösterip geri almasın. */
 async function openLive(s) {
-    if (!s.live_enc)
+    if (!s.live_enc && !s.live_z)
         return;
     const pub = s.live_public || { armed: false, paused: false };
     s.strategies.live = { locked: true, name: 'Gerçek hesap', live: true, armed: pub.armed, paused: pub.paused, pnl_pct: 0 };
     if (!pw)
         return;
     try {
-        const o = await unseal(s.live_enc, pw);
+        const o = await unsealLive(s, pw);
         s.strategies.live = o.strategy;
         s.okx = o.okx;
         s.xfer = o.xfer;
@@ -183,8 +317,18 @@ async function openLive(s) {
         toast('Şifre uyuşmadı, gerçek hesap kilitli kaldı');
     }
 }
-// Bot kayıtları ayrı "data" dalında tutulur (site her turda yeniden yayınlanmasın diye)
-/** Süre sınırlı istek: VPN ya da zayıf bağlantıda askıda kalan istek sonsuza kadar beklenmez. */
+async function unsealLive(s, p) {
+    if (s.live_z) {
+        try {
+            return await unseal(s.live_z, p);
+        }
+        catch (e) {
+            if (!s.live_enc || e?.name === 'OperationError')
+                throw e;
+        }
+    }
+    return unseal(s.live_enc, p);
+}
 async function tfetch(url, opt = {}, ms = 8000) {
     const c = new AbortController(), t = setTimeout(() => c.abort(), ms);
     try {
@@ -195,7 +339,6 @@ async function tfetch(url, opt = {}, ms = 8000) {
     }
 }
 const CACHE_KEY = 'masal_cache_';
-/** Bot kayıtları sırayla üç kaynaktan denenir; hepsi başarısızsa telefonda saklanan son veri kullanılır. */
 async function getData(f) {
     const t = Date.now();
     const tries = [];
@@ -228,15 +371,12 @@ async function getData(f) {
 }
 let offlineData = false, retryTimer = null;
 let lastLoad = 0, dataSha = '', dataTag = '', lastB = 0;
-// Botun her kaydı "data" dalında yeni bir sürüm oluşturur; uygulama 2 saniyede bir bakar, değiştiyse hemen yeniler
 let watching = false, watchHold = 0;
 async function watchData() {
     if (document.hidden || !S || watching)
         return;
     watching = true;
     try {
-        // ETag ile sorulur: değişiklik yoksa GitHub 304 döner ve bu, saatlik istek hakkından düşmez (2 sn'de bir bakmak güvenli)
-        // GitHub isteği başarısızsa (anahtar süresi doldu, sınır, sunucu hatası) veriler yine 15 sn'de bir doğrudan yenilenir
         if (token && Date.now() >= watchHold) {
             try {
                 const h = { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github.sha' };
@@ -269,7 +409,6 @@ async function watchData() {
         watching = false;
     }
 }
-// otomatik eşitleme her zaman açık: 2 sn'de bir buluta bakılır; bir istek gönderildikten sonraki 40 sn boyunca saniyede bir
 let fastUntil = 0;
 const fastWatch = () => { fastUntil = Date.now() + 40000; };
 (function tick() { watchData(); setTimeout(tick, Date.now() < fastUntil ? 1000 : 2000); })();
@@ -287,7 +426,6 @@ async function load_(quiet) {
     const err = document.getElementById('err');
     err.style.display = 'none';
     try {
-        // açılışta son kayıtlı veri hemen gösterilir (bekleme yok), taze veri gelince yerine yazılır
         if (!S) {
             try {
                 const c = localStorage.getItem(CACHE_KEY + 'summary.json');
@@ -308,7 +446,6 @@ async function load_(quiet) {
                 S = null;
             }
         }
-        // geçmiş test haftada bir değişir: 10 dakikada bir yeterli
         const needB = !B || Date.now() - lastB > 6e5;
         const [s, b] = await Promise.all([getData('summary.json'), needB ? getData('backtest.json').catch(() => null) : Promise.resolve(B)]);
         if (needB)
@@ -317,7 +454,6 @@ async function load_(quiet) {
         S = s;
         B = b;
         syncMark(!offlineData);
-        // dil ve tema buluttan: başka cihazda değiştirildiyse bu cihaz da uyar (az önce burada değiştirildiyse bekler)
         {
             const st = S.settings, recent = Date.now() - +(localStore('masal_pref_ts') || 0) < 180000;
             if (st && !recent) {
@@ -357,7 +493,6 @@ async function load_(quiet) {
         cloudUI();
     }
 }
-/** Spot ekranı görünür mü (başka sekme ya da tam ekran pencere açıkken ayrıntıları boşuna çizilmez) */
 const spotOn = () => VIEW === 'spot' && !document.getElementById('mainv').hidden;
 function render() {
     updLine();
@@ -380,15 +515,14 @@ function render() {
                     : `<span class="mi">${ic('i-flask')}</span><span><b>Deneme</b><small>Emir gitmez</small></span>`);
         m.onclick = () => document.getElementById('openSet').click();
     }
-    setH(document.getElementById('foot'), 'Fiyatlar uygulama açıkken OKX TR\'den anlık güncellenir; bot kesintisiz çalışır, yaklaşık 5 saniyede bir kontrol eder.<br>' + (L && L.armed ? 'Ekrandaki rakamlar OKX TR hesabındaki gerçek işlemlerdir.' : 'Gerçek para kullanılmıyor; tüm işlemler sanal.'));
+    setH(document.getElementById('foot'), 'Fiyatlar uygulama açıkken OKX TR\'den anlık güncellenir; bot kesintisiz çalışır, yaklaşık 2 saniyede bir kontrol eder.<br>' + (L && L.armed ? 'Ekrandaki rakamlar OKX TR hesabındaki gerçek işlemlerdir.' : 'Gerçek para kullanılmıyor; tüm işlemler sanal.'));
     if (S.strategies.live && sel !== 'live')
-        sel = 'live'; // sanal stratejiler kapalı: her zaman gerçek hesap
+        sel = 'live';
     const x = S.strategies[sel];
     const locked = !!x.locked;
     document.getElementById('chartSec').hidden = locked;
     if (locked) {
         document.getElementById('hero').className = 'hero';
-        // setH: içerik aynıysa yeniden yazılmaz (veri yenilenirken yazılmakta olan şifre silinmesin)
         if (setH(document.getElementById('hero'), `<div class="hh"><span class="hn">${ic('i-lock')}Gerçek hesap</span></div><div class="lock" style="margin-top:10px"><b>${ic('i-lock')}Veriler şifreli</b>
       <p>Bakiye ve işlemlerin herkese açık sayfada şifreli duruyor. Görmek için OKX'te API anahtarını oluştururken belirlediğin şifreyi (Passphrase) gir. Şifre sadece bu cihazda saklanır.</p>
       <input class="inp" id="pwIn" type="password" placeholder="OKX şifresi" autocomplete="off"><button class="btn primary" id="pwBtn" style="width:100%">${ic('i-lock')}Kilidi aç</button></div>`))
@@ -397,7 +531,7 @@ function render() {
                 if (!v)
                     return toast('Şifreyi gir');
                 try {
-                    const o = await unseal(S.live_enc, v);
+                    const o = await unsealLive(S, v);
                     pw = v;
                     localStore('masal_pw', v);
                     S.strategies.live = o.strategy;
@@ -434,7 +568,7 @@ function render() {
     if (VIEW === 'kasa')
         renderXfer();
     if (!spotOn())
-        return; // Spot ekranı açık değilken ayrıntıları çizilmez; sekmeye geçince (showView) çizilir
+        return;
     renderMetrics(x);
     renderNow(x);
     renderKasa(x);
@@ -455,13 +589,12 @@ function render() {
     renderRules(x.risk || S.risk, x.cfg);
     renderMarket();
 }
-/* ---------- açıklamalar ("?" düğmeleri) ---------- */
 const pp = (v, d = 1) => '%' + nf(v * 100, Math.round(v * 1000) % 10 ? d : 0);
 function gloss(k) {
     const L = S?.strategies?.live, c = (L && !L.locked && L.cfg) || null;
     const step = c ? pp(c.step) : '%1,5', tp = c ? pp(c.lot_tp) : '%4', stop = c ? pp(c.stop) : '%12', ml = c ? c.max_lots : 4, mc = c ? c.max_coins : 20, lot = c ? tl(c.lot, 0) : 'bir kademe', use = c ? pp(c.max_use, 0) : '%40', cf = c?.coin_filter ? pp(c.coin_filter) : '%1', qt = S?.settings?.quote || S?.okx?.quote || 'USDT';
     const G = {
-        nasil: ['Bot nasıl alıp satar?', `${c?.instant ? '<p>Bot <b>5 saniyede bir</b> fiyatlara bakar; fiyat alım seviyesine değdiği an alır. Alım seviyesi son kapanan 15 dakikalık mumlara göre hesaplanır.</p>' : '<p>Bot <b>5 saniyede bir</b> piyasaya bakar, kararını <b>15 dakikalık mum</b> kapanınca verir.</p>'}
+        nasil: ['Bot nasıl alıp satar?', `${c?.instant ? '<p>Bot <b>2 saniyede bir</b> fiyatlara bakar; fiyat alım seviyesine değdiği an alır. Alım seviyesi son kapanan 15 dakikalık mumlara göre hesaplanır.</p>' : '<p>Bot <b>2 saniyede bir</b> piyasaya bakar, kararını <b>15 dakikalık mum</b> kapanınca verir.</p>'}
       <ul><li><b>Alım:</b> Bir coin son ${c?.sma_h || 20} saatin ortalamasından <b>${step}</b> aşağı inince ${lot}'lik bir parça (kademe) alır.</li>
       <li><b>Düşerse:</b> ${step} düşüşte 2. kademeyi${c?.step3 && c.step3 > c.step ? `, ${pp(c.step3)} daha düşüşte 3. kademeyi` : ''} alır; bir coinde en fazla <b>${ml}</b> kademe.${c && ((c.lot2 ?? 1) < 1 || (c.lot3 ?? 1) < 1) ? ` Kademe tutarları: ${tl(c.lot, 0)} → ${tl(c.lot * (c.lot2 ?? 1), 0)} → ${tl(c.lot * (c.lot3 ?? 1), 0)}.` : ''}</li>
       <li><b>Satış:</b> Her kademe kendi alış fiyatının <b>${tp}</b> üstüne çıkınca ayrı satılır.</li>
@@ -494,8 +627,6 @@ function gloss(k) {
     };
     return G[k] || ['', ''];
 }
-/* ---------- Ajan masası: botun her parçası bir "ajan" kartı; ne yaptığı ve neden yaptığı canlı görünür ----------
-   Veriler botun gerçek kaydından gelir (izlenen coinler, koruma durumu, işlemler, bot kayıtları); uydurma rakam yok. */
 let masaOn = false;
 function showMasa(on) {
     masaOn = on;
@@ -557,7 +688,6 @@ function renderMasa() {
         ['cash', 'i-wallet', 'Kasadar', 'Parayı ve hedefi izler', st(today >= 0, 'KÂRDA', 'ZARARDA'),
             ln('Bottaki para', tl(eq, 0)) + ln('Bugün', `<span class="${cls(today)}">${sgn(today)} TL</span>`) + ln('Günlük sınır', dayLim ? tl(dayLim, 0) : '—')],
     ];
-    // canlı akış: işlemler (sebebiyle) + bot notları, zamana göre
     const feed = [];
     for (const t of rec.slice(0, 25))
         feed.push([t.ts, t.side === 'AL' ? 'al' : (t.pnl || 0) >= 0 ? 'sat' : 'zar', t.side === 'AL' ? 'AL' : 'SAT',
@@ -573,7 +703,6 @@ function renderMasa() {
     <h2 class="mh">${ic('i-list')}Canlı akış<span class="hsum">her işlem sebebiyle</span></h2>
     <div class="card mfeed">${feed.length ? feed.slice(0, 30).map(([ts, k, tag, txt]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k}">${tag}</em><div>${txt}</div></div>`).join('') : `<div class="empty">${ic('i-list')}<div>Henüz kayıt yok</div></div>`}</div>`);
 }
-/** Masa kartı üst kısmı (Varlık özetiyle aynı dil): büyük değer + kâr/zarar rozeti + kalan risk çubuğu + küçük bilgiler */
 function deskHero(lbl, val, sub, pnl, base, left, ml, chips) {
     const usd = (v) => '$' + nf(v, 2), pc = base > 0 ? pnl / base * 100 : 0, r = ml > 0 ? Math.max(0, Math.min(100, left / ml * 100)) : 0;
     return `<div class="dhero"><div><small>${lbl}</small><strong>${usd(val)}</strong><span>${sub}</span></div>
@@ -584,7 +713,7 @@ function deskHero(lbl, val, sub, pnl, base, left, ml, chips) {
 function renderLevR() {
     const R = S?.levr;
     if (!R)
-        return S?.live_enc && !pw ? `<div class="warn">${ic('i-lock')}<div>Gerçek futures masasını görmek için kilidi aç.</div></div>` : '';
+        return (S?.live_enc || S?.live_z) && !pw ? `<div class="warn">${ic('i-lock')}<div>Gerçek futures masasını görmek için kilidi aç.</div></div>` : '';
     const usd = (v, d = 2) => '$' + nf(v, d), esc = escH;
     const pf = (v) => nf(v, v >= 100 ? 2 : v >= 1 ? 4 : Math.min(8, 2 - Math.floor(Math.log10(v || 1))));
     const lv = (orig || S?.settings)?.lev || {}, ml = +lv.max_loss || 10, left = Math.max(0, ml + Math.min(0, R.pnl));
@@ -605,7 +734,6 @@ function renderLevR() {
       ${feed ? feed : `<div class="empty">${ic('i-eye')}<div>Henüz gerçek işlem yok; sinyal gelince açılır</div></div>`}
     </div>${levWatch()}`;
 }
-/** Futures: izlenen coinler ve sinyale uzaklık; deneme masasının son kararları */
 function levWatch() {
     const L = S?.lev;
     if (!L)
@@ -614,7 +742,7 @@ function levWatch() {
     const pf = (v) => nf(v, v >= 100 ? 2 : v >= 1 ? 4 : Math.min(8, 2 - Math.floor(Math.log10(v || 1))));
     const w = (L.watch || []).map((r) => {
         const d = Math.abs(r.dist || 0), up = r.side === 'UZUN', near = Math.max(4, Math.min(100, 100 - d * 12));
-        const ps = pf(r.px), lg = ps.length > 9; // uzun fiyat (0,00000335): alt yazı kısalır, kutu tek satırda ve eşit boyda kalır
+        const ps = pf(r.px), lg = ps.length > 9;
         return `<div class="wr ${up ? 'wu' : 'wd'}" data-lo="${escH(r.sym)}" data-ls="${up ? 1 : -1}" role="button"><div><b>${escH(r.sym)}</b><em>${r.open ? 'AÇIK' : up ? '↑ UZUN' : '↓ KISA'}</em></div><div><span>${ps}</span><small>${r.open ? (lg ? 'açık' : 'pozisyon açık') : `${lg ? '' : 'sinyale '}%${nf(d, 1)}`}</small></div><i style="width:${(r.open ? 100 : near).toFixed(0)}%"></i></div>`;
     }).join('');
     const lg = (L.log || []).slice(0, 8).map(([ts, k, t]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : 'not'}">${k === 'buy' ? 'SİNYAL' : k === 'exit' ? 'ÇIKIŞ' : 'ENGEL'}</em><div>${feedTxt(String(t).replace(/^(AÇ|KAPAT|ENGEL) /, ''))}</div></div>`).join('');
@@ -623,7 +751,6 @@ function levWatch() {
     <p class="hint">Elle açmak için coine dokun. Çubuk dolu = sinyale yakın. Fiyat son ${lv.brk_h ?? 20} saatin zirvesini aşınca UZUN, dibini kırınca KISA açılır (${lv.trend_on === false ? 'eğilim filtresi kapalı' : `${lv.trend_h ?? 200} saatlik ortalamanın yönünde`}).</p></div>
     ${lg ? `<h2 class="mh">${ic('i-list')}Son kararlar<span class="hsum">${L.stats?.signals || 0} sinyal · ${L.stats?.entered || 0} giriş</span></h2><div class="card mfeed">${lg}</div>` : ''}`;
 }
-/** Futures elle açma: izlenen coine dokun → yön seç → aç. Sonrası botun kuralıyla yönetilir. */
 function openLevOpen(sym, side0) {
     const L = S?.lev, R = S?.levr, lv = (orig || S?.settings)?.lev || {}, r = (L?.watch || []).find((w) => w.sym === sym);
     if (!r)
@@ -683,7 +810,6 @@ function openLevOpen(sym, side0) {
 }
 document.addEventListener('click', e => { const t = e.target.closest?.('[data-lo]'); if (t)
     openLevOpen(t.dataset.lo, +t.dataset.ls); });
-/** Futures/Memecoin pozisyonunu elle kapatma düğmesi: istek ayarlara yazılır, bot birkaç saniyede uygular */
 const DESK_BUSY = {};
 function deskBtn(desk, sym, label) {
     const k = desk + ':' + sym, busy = DESK_BUSY[k] && Date.now() - DESK_BUSY[k] < 60000;
@@ -704,7 +830,6 @@ document.addEventListener('click', async (e) => {
     const req = { id: 'c' + Date.now().toString(36), ts: Date.now(), desk, act: desk === 'lev' ? 'close' : 'sell', sym };
     const ok = await cloudPatch(o => { o.desk_cmd = [...(o.desk_cmd || []).filter((r) => r.id !== req.id && Date.now() - (r.ts || 0) < 600000), req]; }, 'Masa komutu: ' + desk + ' ' + sym);
     toast(ok ? 'İstek gönderildi; bot birkaç saniyede piyasa fiyatından kapatır' : 'İstek gönderilemedi, tekrar dene');
-    // liste bu arada yeniden çizilmiş olabilir (eski düğme ekranda değil): durum kayıttan silinir ve masa yeniden çizilir
     if (!ok) {
         delete DESK_BUSY[desk + ':' + sym];
         b.disabled = false;
@@ -712,7 +837,6 @@ document.addEventListener('click', async (e) => {
         renderDeck();
     }
 });
-/** Memecoin pozisyonuna dokununca: botun kâr al / zarar kes noktalarında ve fiyat değişirse ne olur */
 function openMemeCalc(mint) {
     const p = (S?.memer?.positions || []).find((x) => x.mint === mint);
     if (!p)
@@ -722,7 +846,7 @@ function openMemeCalc(mint) {
     q.dataset.n = '';
     qHead('i-flask', 'Kapat');
     document.getElementById('qTitle').textContent = `${p.sym} · memecoin`;
-    const toEntry = (x) => ((1 + x / 100) / (1 + g) - 1) * 100; // girişe göre hedefin şimdiki fiyata uzaklığı
+    const toEntry = (x) => ((1 + x / 100) / (1 + g) - 1) * 100;
     document.getElementById('qText').innerHTML = `<div class="xfs">
     <div class="pavg"><div><span>Yatırılan</span><b>$${nf(cost, 2)}</b></div><div><span>Şimdi</span><b>$${nf(val, 2)}</b></div><div><span>Durum</span><b class="${cls(g)}">${spc(g * 100, 1)}</b></div></div>
     ${pnlCalc({ u: '$', now: val - cost, size: val, side: 1, ref: cost, min: -60, max: 300, what: 'Token şimdiden',
@@ -734,7 +858,6 @@ function openMemeCalc(mint) {
 document.addEventListener('click', e => { const t = e.target; if (t.closest?.('[data-desk]'))
     return; const r = t.closest?.('[data-mc]'); if (r)
     openMemeCalc(r.dataset.mc); });
-/** Memecoin: tarama özeti ve son kararlar (hangi token neden alındı / engellendi) */
 function memeScan() {
     const M = S?.meme;
     if (!M)
@@ -746,7 +869,6 @@ function memeScan() {
         .map(([i, n, v, c]) => `<div class="${c}">${ic(i)}<b>${nf(v, 0)}</b><span>${n}</span><i style="width:${Math.max(6, Math.min(100, Math.log10(v + 1) / Math.log10((st.scanned || 0) + 1 || 10) * 100)).toFixed(0)}%"></i></div>`).join('')}</div>
     ${lg ? `<div class="mfeed">${lg}</div>` : ''}</div>`;
 }
-/** Memecoin masasını elle aç/kapat: kapatınca gerçek mod da kapanır (eldeki tokenler satılır) */
 async function memeToggle(on) {
     const ok = await cloudPatch(o => { const m = o.meme = o.meme || {}; m.on = on; if (!on)
         m.real = false; }, on ? 'Memecoin masası açıldı' : 'Memecoin masası kapatıldı');
@@ -782,7 +904,7 @@ function renderMemeR() {
         return memeOff();
     const R = S?.memer;
     if (!R)
-        return S?.live_enc && !pw ? `<div class="warn">${ic('i-lock')}<div>Gerçek memecoin masasını görmek için kilidi aç.</div></div>` : '';
+        return (S?.live_enc || S?.live_z) && !pw ? `<div class="warn">${ic('i-lock')}<div>Gerçek memecoin masasını görmek için kilidi aç.</div></div>` : '';
     const usd = (v, d = 2) => '$' + nf(v, d), esc = escH;
     const mm = (orig || S?.settings)?.meme || {}, ml = +mm.max_loss || 10, left = Math.max(0, ml + Math.min(0, R.pnl));
     const pos = (R.positions || []).map((p) => {
@@ -804,8 +926,6 @@ function renderMemeR() {
 }
 document.getElementById('masaBtn').onclick = () => showMasa(true);
 document.getElementById('closeMasa').onclick = () => showMasa(false);
-/* ---------- bulut: verilerin GitHub'la eşitlenme durumu (üst çubuktaki bulut simgesi) ----------
-   Bot her değişiklikte (en geç 10 sn'de bir) kayıtları buluta yedekler; uygulama birkaç saniyede bir kontrol eder. */
 let syncOk = 0, syncBad = false;
 function syncMark(ok) { if (ok) {
     syncOk = Date.now();
@@ -842,14 +962,11 @@ function openCloud() {
     q.hidden = false;
     document.getElementById('syncNow').onclick = async () => { q.hidden = true; await load(); toast(syncBad ? 'Eşitlenemedi, bağlantını kontrol et' : 'Eşitlendi'); };
 }
-/* Bildirimler buluttan gelir: bot gönderdiği her bildirimi gerçek hesabın şifreli kaydına yazar (her cihaz aynı listeyi görür).
-   Uygulama açıkken ntfy canlı akışından gelenler de anında eklenir. Süre seçimi 1/6/12/24 saat. */
 const NOTES = [];
 let nES = null, nTopic = '', nHours = +(localStore('masal_nh') || 24);
 const nSeen = () => +(localStore('masal_nseen') || 0);
-const nClr = () => Math.max(+(S?.settings?.notify?.cleared || 0), +(localStore('masal_nclr') || 0)); // temizleme zamanı bulutta (ayarlarda)
+const nClr = () => Math.max(+(S?.settings?.notify?.cleared || 0), +(localStore('masal_nclr') || 0));
 const nKey = (m) => m.title + '|' + m.message;
-/** Buluttaki listeyi (bot kaydı) canlı akıştan gelenlerle birleştirir; aynı bildirim iki kez görünmez. */
 function nMerge() {
     const cloud = (S?.strategies?.live?.notifs || []);
     for (const c of cloud) {
@@ -887,9 +1004,8 @@ let nBusy = false;
 async function startNotes() {
     if (nES || nBusy || !pw)
         return;
-    nBusy = true; // aynı anda iki çağrı iki canlı bağlantı açmasın
+    nBusy = true;
     try {
-        // konu adı botun özetindeki ayarlarda zaten var (şifreli): her veri yenilemesinde ayrı istek atılmaz
         const st = (S?.settings || await tfetch('ayarlar.json?t=' + Date.now()).then(r => r.json()));
         const tp = st?.notify?.topic;
         if (!st?.notify?.enabled || !tp)
@@ -951,7 +1067,6 @@ function openNotes() {
         localStore('masal_nclr', String(top));
         NOTES.length = 0;
         openNotes();
-        // temizleme bütün cihazlarda geçerli olsun: zaman ayarlara (buluta) yazılır
         await cloudPatch(o => { o.notify = { ...(o.notify || {}), cleared: top }; }, 'Bildirim geçmişi temizlendi');
         toast('Bildirim geçmişi temizlendi');
     };
@@ -977,13 +1092,11 @@ document.addEventListener('click', e => { const q = e.target.closest('.qm'); if 
     openGloss(q.dataset.q);
 } });
 document.getElementById('qOk').onclick = () => document.getElementById('qsh').hidden = true;
-// alt pencere her açılışta baştan başlar (uzun pencere kendi içinde kayar; önceki pencerenin kaydırma konumu kalmasın)
 new MutationObserver(() => { const q = document.getElementById('qsh'); if (!q.hidden)
     q.firstElementChild.scrollTop = 0; }).observe(document.getElementById('qsh'), { attributes: true, attributeFilter: ['hidden'] });
 document.getElementById('qsh').onclick = e => { if (e.target === e.currentTarget)
     e.currentTarget.hidden = true; };
 document.querySelectorAll('.adv .acch').forEach(b => b.onclick = () => b.parentElement.classList.toggle('open'));
-/* ---------- "Bot şimdi ne yapıyor" ---------- */
 let nowAll = false;
 function nextBar() { const m = 15 * 6e4, t = Math.ceil((Date.now() + 1000) / m) * m, d = new Date(t); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
 function renderNow(x) {
@@ -1017,7 +1130,6 @@ function renderNow(x) {
     if (w && w.items.length) {
         const items = w.items.map(it => { const cur = livePrice(it.i, it.p); return { ...it, cur, gap: (cur / it.t - 1) * 100 }; }).sort((a, b) => (a.f ? 1 : 0) - (b.f ? 1 : 0) || a.gap - b.gap);
         const show = nowAll ? items : items.slice(0, 5);
-        // alım şartı var ama alım yapılamıyorsa gerçek sebep yazılır (elde olan coine kademe eklemeyi coin sınırı engellemez)
         const why = (it) => x.halted ? 'acil fren' : x.paused ? 'beklemede' : x.blocked_today ? 'bugünlük durdu' : !w.room ? 'bütçe dolu' : (!it.h && w.coins >= w.max_coins) ? 'coin sınırı dolu' : '';
         h += `<div class="wh">${ic('i-list')}Alıma en yakın coinler<button class="qm" data-q="yakin" aria-label="Açıklama">?</button></div><div class="list">`;
         h += show.map(it => {
@@ -1042,8 +1154,8 @@ function renderNow(x) {
         if (items.length > 5)
             h += `<button class="more" id="nowMore">${nowAll ? 'Daha az göster' : `Tümünü göster (${items.length} coin)`}</button>`;
     }
-    h += c?.instant ? `<div class="nf">${ic('i-clock')}Anlık alım açık: fiyat alım seviyesine değdiği an alır (5 sn'de bir kontrol)</div>`
-        : `<div class="nf">${ic('i-clock')}Sonraki karar ${nextBar()}'te (15 dakikalık mum kapanışı) · fiyatlar 5 sn'de bir kontrol edilir</div>`;
+    h += c?.instant ? `<div class="nf">${ic('i-clock')}Anlık alım açık: fiyat alım seviyesine değdiği an alır (2 sn'de bir kontrol)</div>`
+        : `<div class="nf">${ic('i-clock')}Sonraki karar ${nextBar()}'te (15 dakikalık mum kapanışı) · fiyatlar 2 sn'de bir kontrol edilir</div>`;
     if (setH(box, h)) {
         const mb = document.getElementById('nowMore');
         if (mb)
@@ -1063,7 +1175,6 @@ function updLine() {
 }
 function volTxt(inst) { const v = LP[inst]?.vol; return v == null ? '' : v >= 1e9 ? nf(v / 1e9, 1) + '\u00a0Mr\u00a0TL' : v >= 1e6 ? nf(v / 1e6, 1) + '\u00a0Mn\u00a0TL' : nf(v / 1e3, 0) + '\u00a0B\u00a0TL'; }
 function livePrice(inst, fallback) { return LP[inst]?.last ?? fallback; }
-// Elde tutulan coinin değeri: şimdi satılsa alınacak fiyat (alıcıların en iyi teklifi). Az işlem gören TL paritelerinde son işlem fiyatı yanıltır.
 function sellPrice(inst, fallback) { return LP[inst]?.bid || LP[inst]?.last || fallback; }
 function liveEquity(x) { return x.cash + x.positions.reduce((a, p) => a + p.qty * sellPrice(p.inst, p.price), 0); }
 function renderMetrics(x) {
@@ -1095,8 +1206,6 @@ function renderMetrics(x) {
             sb.onclick = () => syncReal();
     }
 }
-/** Gerçek hesap kartının alt kısmı (eski ayrı "Varlık özeti" kartı birleştirildi; aynı rakamlar iki kez gösterilmez):
- *  kasada yedek varsa kasa dahil toplam, OKX TR'deki gerçek toplamla eşleşme ve hedef çubuğu. */
 function assetsExtra(x, eq) {
     const kasa = +(x.kasa || S?.settings?.kasa || 0);
     if (sel !== 'live' || !kasa)
@@ -1114,7 +1223,6 @@ function assetsExtra(x, eq) {
     }
     return h + '</div>';
 }
-/** Borsadaki gerçek toplam: uygulamadaki kayıtla tutmuyorsa açıkça gösterilir (bot fazlasını kullanmaz). */
 function realLine(x, now) {
     const o = S?.okx || {}, real = +(o.total_tl || x.real_total || 0);
     if (!real)
@@ -1124,9 +1232,6 @@ function realLine(x, now) {
     return `<div class="areal${bad ? ' bad' : ''}">${ic('i-bank')}<div><span>OKX TR'de gerçek</span><b>${tl(real, 0)}</b>${f >= 1 ? `<small>fon hesabında ${tl(f, 0)}</small>` : ''}</div>
     <em>${bad ? 'Tutmuyor' : ic('i-check') + 'Eşleşik'}</em><button class="btn xsync" id="syncBtn" aria-label="Borsayla eşleştir">${ic('i-refresh')}Eşleştir</button></div>${warn}`;
 }
-/** "Borsayla eşleştir": bütçe ve kasa borsadaki gerçek paraya göre ayarlanır.
- *  Bütçe öyle seçilir ki bottaki nakit = alım-satım hesabındaki gerçek boş para olur (kâr/zarar geçmişi bozulmaz);
- *  kasa = bütçe + fon hesabındaki nakit (yedek). */
 async function syncReal() {
     const x = S?.strategies?.live, o = S?.okx;
     if (!x || !o || o.try == null) {
@@ -1150,18 +1255,14 @@ async function syncReal() {
     if (btn)
         btn.disabled = false;
 }
-/* ---------- Para aktarımı: TR ↔ Global ↔ KASA (USDT, Arbitrum One). İstek bulut ayar dosyasına yazılır, bot gönderir. ---------- */
-/* Uçlar: her kasanın simgesi, rengi ve kısa adı (kartlarda ve pencerede aynı standart) */
 const XEND = { tr: ['OKX TR', 'i-bank', 'e1'], g: ['OKX Global', 'i-globe', 'e2'], k: ['KASA', 'i-vault', 'e3'], m: ['MEME', 'i-flask', 'e4'] };
 const XDIR = { tr2g: ['tr', 'g', 'Uygulamadan'], g2tr: ['g', 'tr', 'TL olur'], tr2k: ['tr', 'k', 'Uygulamadan'], g2k: ['g', 'k', 'Soğuk cüzdan'], g2m: ['g', 'm', 'SOL olarak'], m2g: ['m', 'g', 'USDT olur'], k2g: ['k', 'g', 'Trust Wallet'], k2tr: ['k', 'tr', 'Trust Wallet'],
     tr2m: ['tr', 'm', 'Global ile'], m2k: ['m', 'k', 'USDT olarak'], m2tr: ['m', 'tr', 'TL olur'], k2m: ['k', 'm', 'Global ile'] };
 const xName = (d) => `${XEND[XDIR[d][0]][0]} → ${XEND[XDIR[d][1]][0]}`;
 const XST = { new: ['Sırada', 'i-clock', 'w'], sent: ['Yolda', 'i-out', 'w'], arriving: ['Ulaşıyor', 'i-in', 'w'], done: ['Tamam', 'i-check', 'ok'], failed: ['Olmadı', 'i-stop', 'bad'] };
 function xEnd(k) { const e = XEND[k]; return `<span class="xe ${e[2]}">${ic(e[1])}</span>`; }
-/** innerHTML sadece içerik değiştiyse yazılır (2 sn'lik yenilemede düğmeler sıfırlanmasın, dokunuş kaybolmasın) */
 function setH(el, h) { if (el._h === h)
     return false; el.innerHTML = h; el._h = h; return true; }
-/** Düz yazı ve sınıf için aynısı: değişmediyse dokunulmaz */
 function setT(el, t, c) { if (el._t !== t) {
     el.textContent = t;
     el._t = t;
@@ -1182,7 +1283,6 @@ function renderXfer() {
         return `<div class="xr"><span class="xs ${st[2]}">${ic(st[1])}</span><div class="xm"><b>${j.dir === 'm2g' && XEND[j.then] ? `MEME → ${XEND[j.then][0]}` : j.dir === 'g2m' && j.wait && XEND[j.via] ? `${XEND[j.via][0]} → MEME` : XDIR[j.dir] ? xName(j.dir) : escH(j.dir)}<i>${nf(+j.amt || 0, 2)} $</i></b>
       <small>${masaClock(j.ts)} · ${escH(st[0])}${j.stage !== 'done' && j.msg && j.msg !== 'sırada' ? ' · ' + escH(j.msg) : ''}</small></div>${j.stage === 'new' ? `<button class="xc" data-xc="${escH(j.id)}">İptal</button>` : ''}</div>`;
     }).join('');
-    // Kasalar ekranı: her bölüm kendi başlığı ve kartıyla (bakiyeler · para gönder · aktarımlar · küçük bakiyeler · kayıt)
     const grp = [['OKX TR\'den', 'tr', ['tr2g', 'tr2k', 'tr2m']], ['OKX Global\'den', 'g', ['g2tr', 'g2k', 'g2m']], ['MEME\'den', 'm', ['m2g', 'm2k', 'm2tr']], ['KASA\'dan', 'k', ['k2g', 'k2tr', 'k2m']]];
     const tile = (k) => { const [f, t, sub] = XDIR[k]; return `<button data-x="${k}"><span class="xrt">${xEnd(f)}${ic('i-chev')}${xEnd(t)}</span><b>${XEND[t][0]}</b><small>${sub}</small></button>`; };
     const logRows = (X?.log || []).slice(0, 5).map(([t, m]) => {
@@ -1209,7 +1309,6 @@ function renderXfer() {
     box.querySelectorAll('[data-dust]').forEach(b => b.onclick = () => openDust(b.dataset.dust));
 }
 const DUST = [['tr', 'tr', 'TL'], ['g', 'g', 'USDT'], ['m', 'm', 'SOL']], DUST_MAX = 100;
-/** Küçük bakiyeler: tek tek ya da hepsi seçilir; tek seferde en fazla DUST_MAX coin çevrilir (fazlası uyarılır). */
 function openDust(k) {
     const X = S?.xfer || {}, d = DUST.find(x => x[0] === k), list = (X.dust || {})[k] || [], q = document.getElementById('qsh');
     q.dataset.n = '';
@@ -1264,7 +1363,6 @@ function openDust(k) {
     q.hidden = false;
 }
 let USDTTRY = 0, xfId = '';
-/** Üç kasa yan yana: OKX TR, OKX Global, KASA (soğuk cüzdan); dolar ve TL karşılığı, dakikada bir borsadan/zincirden. */
 function xKasalar(X) {
     const r = +(X?.usdtry || USDTTRY || 0), o = S?.okx || {};
     const trUsd = X?.tr_total != null ? +X.tr_total : (o.total_tl && r ? o.total_tl / r : null), gUsd = X?.g_val != null ? +X.g_val : null, kUsd = X?.kasa?.usd != null ? +X.kasa.usd : null;
@@ -1274,7 +1372,6 @@ function xKasalar(X) {
     return `<div class="xk${mUsd != null ? ' x4' : ''}">${cell('tr', trUsd)}${cell('g', gUsd)}${cell('k', kUsd)}${mUsd != null ? cell('m', mUsd) : ''}</div>
     ${all != null ? `<div class="xb"><span>Hepsi birlikte <b>$${nf(all, 2)}</b>${r ? ` · <b>${tl(all * r, 0)}</b>` : ''}</span>${X?.kasa ? `<span>KASA'da komisyon için <b>${nf(X.kasa.eth || 0, 4)} ETH</b></span>` : ''}</div>` : ''}`;
 }
-/** KASA'nın anahtarı sistemde yok: gönderimi Trust Wallet'ta sen onaylarsın. Bu sayfa tutarı ve adresi hazırlar. */
 const KDEST = { k2g: ['OKX Global', '0x74877903737257289dc07e7baf1f4b078c2a82a3'], k2m: ['OKX Global', '0x74877903737257289dc07e7baf1f4b078c2a82a3'], k2tr: ['OKX TR', '0x1e194face9b26c78f75d854d741cf6547730b705'] };
 function openKasaSend(dir) {
     const X = S?.xfer || {}, [nm, addr] = KDEST[dir], q = document.getElementById('qsh'), have = +(X.kasa?.usd || 0), eth = +(X.kasa?.eth || 0), sh = addr.slice(0, 6) + '…' + addr.slice(-4);
@@ -1321,11 +1418,10 @@ function openKasaSend(dir) {
     draw();
     q.hidden = false;
 }
-/** Elle gönderilen (KASA / OKX TR) para Global'e ulaşınca bot SOL alıp MEME'ye geçirsin diye bekleyen istek kaydedilir */
 let waitBusy = false;
 async function waitMeme(via, amt, btn) {
     if (waitBusy)
-        return false; // çift dokunuş: istek bir kez kaydedilir (iki kayıt = iki kez SOL alımı olurdu)
+        return false;
     amt = Math.round((amt || 0) * 100) / 100;
     if (!(amt >= 1)) {
         toast('Tutarı yaz (en az 1 USDT)');
@@ -1414,7 +1510,6 @@ function openXfer(dir) {
     document.getElementById('qTitle').textContent = 'Para gönder';
     xfId = 'x' + Date.now().toString(36);
     const bal = (k) => { const o = S?.okx || {}; const u = k === 'tr' ? (X.tr_total ?? (o.total_tl && r ? o.total_tl / r : null)) : k === 'g' ? X.g_val : k === 'm' ? S?.memer?.value : X.kasa?.usd; return u == null ? '—' : '$' + nf(u, 2); };
-    // "Tümü": kaynaktan gönderilebilecek en fazla tutar (MEME: boş SOL − ağ payı; Global: fon hesabındaki boş USDT − ücret payı)
     const MR = S?.memer, maxOf = () => {
         let v = null;
         if (f === 'm' && MR)
@@ -1457,7 +1552,6 @@ function openXfer(dir) {
     q.hidden = false;
     XF_OPEN = { dir, ts: Date.now() };
 }
-/** Açık gönder sayfası yeni bakiyelerle güncellenir ("Tümü" tutarı ve kaynak/hedef bakiyesi senkron kalır) */
 let XF_OPEN = null;
 function xfRefresh() {
     const q = document.getElementById('qsh');
@@ -1525,12 +1619,11 @@ async function sendXfer(dir) {
     }
     const btn = document.getElementById('xfGo');
     if (btn?.disabled)
-        return; // çift dokunuş: istek bir kez gider
+        return;
     if (btn) {
         btn.disabled = true;
         btn.lastChild.textContent = 'Gönderiliyor…';
     }
-    // xfId pencere açılırken üretilir: önceki deneme aslında kaydedildiyse aynı istek ikinci kez eklenmez
     const req = { id: xfId, ts: Date.now(), dir: dir.startsWith('m') ? 'm2g' : dir, amt, src: 'bos', ...(dir === 'm2k' ? { then: 'k' } : dir === 'm2tr' ? { then: 'tr' } : {}) };
     const ok = await cloudPatch((o) => { const l = o.xfer_req || []; if (!l.some(r => r.id === req.id))
         o.xfer_req = [...l.filter(r => Date.now() - (r.ts || 0) < 3600000), req]; }, 'Uygulamadan aktarım: ' + dir + ' ' + amt + ' USDT');
@@ -1546,7 +1639,6 @@ async function sendXfer(dir) {
         }
     }
 }
-/* ---------- Coin ayrıntısı: dokununca canlı fiyat, grafik ve parite seçimi (OKX TR herkese açık verisi) ---------- */
 let CD = null;
 const CQ = ['TRY', 'USDT', 'USDC', 'EUR'], CBAR = [['15m', '15 dk'], ['1H', '1 sa'], ['4H', '4 sa'], ['1D', '1 gün']];
 function openCoin(inst) {
@@ -1632,7 +1724,6 @@ function bindCoin() {
 function coinSvg(rows) {
     if (rows.length < 2)
         return '';
-    // Mum grafiği: yeşil = kapanış açılıştan yüksek, kırmızı = düşük; altta hacim çubukları; sağda fiyat ölçeği
     const W = 340, H = 170, VH = 26, PW = W - 44, n = rows.length, hi = Math.max(...rows.map(r => r[2])), lo = Math.min(...rows.map(r => r[3])), sp = (hi - lo) || 1, vmax = Math.max(...rows.map(r => r[5])) || 1;
     const cw = PW / n, y = (v) => 4 + (hi - v) / sp * (H - VH - 12), dec = hi >= 100 ? 2 : hi >= 1 ? 4 : Math.min(8, 3 - Math.floor(Math.log10(hi || 1)));
     let g = '';
@@ -1662,9 +1753,7 @@ document.addEventListener('click', e => {
     if (c)
         openCoin(c.dataset.coin);
 });
-/* ---------- Bölümler: Spot (OKX TR botu), Futures (kaldıraç masası), Memecoin, Kasalar — her biri ayrı ekranda ---------- */
 let VIEW = 'home';
-/** Tam ekran bir pencere (ayarlar, geçmiş, ajan masası) açılınca bölümler ve sekmeler gizlenir; kapanınca kalınan bölüme dönülür */
 function overlayView(on) {
     document.getElementById('deck').hidden = on;
     if (on)
@@ -1694,7 +1783,6 @@ function renderDeck() {
     if (!S)
         return;
     const X = S.xfer, sp = S.strategies?.live;
-    // son yazılan Türkçe metin saklanır: İngilizcede ekrandaki yazı çevrildiği için ekranla karşılaştırmak her turda yeniden yazdırırdı
     const set = (id, t) => { const e = document.getElementById(id); if (e && e._t !== t) {
         e.textContent = t;
         e._t = t;
@@ -1728,8 +1816,6 @@ function renderDeck() {
         setH(b, renderMemeR() || `<div class="empty">${ic('i-flask')}<div>Memecoin masası verisi bekleniyor</div></div>`);
     }
 }
-/** Özet (ana sayfa): toplam varlık kartının altında dört masanın kısa durumu ve bütün masalardan son hareketler.
- *  Spot ekranındaki ayrıntılar burada tekrarlanmaz; bir masaya dokununca kendi ekranı açılır. */
 function renderHome() {
     const box = document.getElementById('homeBody');
     if (!box || !S)
@@ -1773,8 +1859,6 @@ function renderHome() {
 }
 document.addEventListener('click', e => { const b = e.target.closest?.('[data-goto]'); if (b)
     showView(b.dataset.goto); });
-/** Ana sayfa üstü: bütün kasaların toplamı ve her masanın kâr/zararı ayrı ayrı (dolar ve TL) */
-/** Toplam varlık para birimi (USDT / BTC / TRY) ve gizle-göster: bu cihazda hatırlanır */
 let OV_CUR = localStore('masal-ovcur') || 'usd', OV_HIDE = localStore('masal-ovhide') === '1';
 document.addEventListener('click', e => {
     const t = e.target.closest?.('[data-ovc],[data-ovh]');
@@ -1799,10 +1883,8 @@ function renderOverview() {
         el.hidden = true;
         return;
     }
-    // BTC fiyatı (USD): OKX TR canlı fiyatı TL'den çevrilir; yoksa futures izleme listesindeki fiyat
     const btcTL = +(LP['BTC-USDT']?.last || LP['BTC-TRY']?.last || 0), btcUsd = btcTL && r ? btcTL / r : +((S.lev?.watch || []).find((w) => w.sym === 'BTC')?.px || 0);
     const cur = OV_CUR === 'btc' && !btcUsd ? 'usd' : OV_CUR;
-    /** USD tutarını seçili birimde yazar; gizliyse yıldız */
     const cv = (usd, d) => OV_HIDE ? '••••' : cur === 'try' ? tl(usd * r, d ?? 0) : cur === 'btc' ? '₿' + nf(usd / btcUsd, d ?? (Math.abs(usd / btcUsd) < 0.01 ? 6 : 4)) : '$' + nf(usd, d ?? 2);
     const parts = [['tr', 'Spot · OKX TR', 'i-bank', +X.tr_total || 0], ['g', 'Futures · Global', 'i-layers', +X.g_val || 0], ['m', 'Memecoin', 'i-flask', +M?.value || 0], ['k', 'Kasa', 'i-vault', +X.kasa?.usd || 0]];
     const tot = [X.tr_total, X.g_val, X.kasa?.usd].every((v) => v != null) ? parts.reduce((a, p) => a + p[3], 0) : null;
@@ -1819,7 +1901,6 @@ function renderOverview() {
     el.hidden = false;
 }
 const ICON_BAD = new Set(), ICON_OK = new Set();
-// Coinin hangi paritede alınıp satıldığını gösteren küçük etiket (TRY, USDT, USDC, EUR)
 function pq(inst) { const q = String(inst).split('-')[1] || ''; return q ? `<span class="pq q-${q}">${q}</span>` : ''; }
 function cico(inst, side, loss) {
     const b = sym(inst), t = b.slice(0, 4), lc = b.toLowerCase();
@@ -1845,7 +1926,6 @@ function renderCoins(x) {
             parts.push(`${c.buys} alım`);
         if (c.bought)
             parts.push(tl(c.bought, 0) + ' alındı');
-        // sağ alt kısa: kapandı / elde / açıktaki kâr-zarar (sağ sütun dar kalsın, sol satır bölünmesin)
         const det = c.open_qty ? (c.sells ? `açıkta ${sgn(c.op)}` : 'elde') : 'kapandı';
         return `<div class="row">${cico(c.inst)}
       <div class="mid"><b>${sym(c.inst)}${pq(c.inst)}</b><span>${parts.join(' · ')}</span></div>
@@ -1853,7 +1933,6 @@ function renderCoins(x) {
     }).join(''));
     clipList('coins', 5);
 }
-// Satırı sola kaydırınca "Sat" düğmesi çıkar (sadece gerçek hesapta). Kaydırılırken liste yenilenmez.
 let swOpen = '', swDrag = false, swJust = 0;
 const SELLING = {}, BUYING = {};
 function renderPositions(x) {
@@ -1862,12 +1941,12 @@ function renderPositions(x) {
     const pos = x.positions, ps = document.getElementById('posSum'), canSell = sel === 'live' && !!x.armed;
     for (const k in SELLING)
         if (!pos.some(p => p.inst === k))
-            delete SELLING[k]; // satıldı: "Satılıyor" kalksın
+            delete SELLING[k];
     for (const k in BUYING) {
         const p0 = pos.find(p => p.inst === k);
         if (p0 && (p0.lots || 1) > BUYING[k].n)
             delete BUYING[k];
-    } // alındı: "Alınıyor" kalksın
+    }
     {
         const T = pos.reduce((a, p) => a + p.qty * sellPrice(p.inst, p.price) - p.cost, 0);
         setT(ps, pos.length ? `${pos.length} coin · ${sgn(T)} TL` : '', 'hsum ' + cls(T));
@@ -1888,7 +1967,6 @@ function renderPositions(x) {
     }).join('')
         : `<div class="empty">${ic('i-box')}<div>Şu an açık pozisyon yok</div></div>`);
 }
-/** Sola kaydırınca düğme açılan satırlar (Elimdeki coinler: Sat · Alıma yakın coinler: Al) — tek davranış */
 function swipeBox(box, act) {
     let sx = 0, sy = 0, el = null, dx = 0, lock = '';
     const start = (x, y, t) => { const w = t.closest('.swr'); if (!w)
@@ -1942,7 +2020,7 @@ function swipeBox(box, act) {
             return;
         }
         if (Date.now() - swJust < 400)
-            return; // kaydırmanın bıraktığı tıklama satırı kapatmasın
+            return;
         if (swOpen && !e.target.closest('.swr.open .swb')) {
             swOpen = '';
             box.querySelectorAll('.swr.open').forEach(w => w.classList.remove('open'));
@@ -1951,7 +2029,6 @@ function swipeBox(box, act) {
 }
 swipeBox(document.getElementById('positions'), b => sellCoin(b.dataset.sell));
 swipeBox(document.getElementById('now'), b => openBuy(b.dataset.buy));
-// Tek coini sat: ayarlar.json'a satış isteği yazılır, bot ~5 sn içinde piyasa fiyatından satar
 async function sellCoin(inst) {
     if (SELLING[inst])
         return;
@@ -1964,7 +2041,6 @@ async function sellCoin(inst) {
     swOpen = '';
     if (S)
         render();
-    // Az önce başka bir coin için istek verildiyse o da listede kalsın (arka arkaya iki satış birbirini silmesin)
     let req = null;
     const ok = await cloudPatch((o, remote) => {
         if (remote) {
@@ -1982,7 +2058,6 @@ async function sellCoin(inst) {
         return;
     }
     toast(`${sym(inst)} satış isteği gönderildi; bot birkaç saniye içinde satar.`);
-    // coin listeden düşünce "Satılıyor" kendiliğinden kalkar (renderPositions); 2 dakikada satılmazsa düğme geri gelir
     const t0 = SELLING[inst];
     setTimeout(() => { if (SELLING[inst] === t0) {
         delete SELLING[inst];
@@ -1990,8 +2065,6 @@ async function sellCoin(inst) {
             render();
     } }, 120000);
 }
-/** Elle alım: "Alıma en yakın coinler"de satırı sola kaydır → Al. Tutar varsayılanı botun sıradaki kademe tutarıdır.
- *  Alınan coin botun kendi kademesi gibi yönetilir (kademe kârı, zarar durdur, sonraki kademeler). */
 function openBuy(inst) {
     const x = S?.strategies?.live;
     if (!x)
@@ -2054,7 +2127,7 @@ async function buyCoin(inst, amt, h, btn, id) {
         return;
     }
     if (btn?.disabled)
-        return; // çift dokunuş: istek bir kez gider
+        return;
     if (btn)
         btn.disabled = true;
     fastWatch();
@@ -2101,12 +2174,10 @@ function pcUpd(el) {
 document.addEventListener('input', e => { const el = e.target.closest?.('.pcs'); if (el)
     pcUpd(el); });
 function pcInit() { document.querySelectorAll('#qText .pcs').forEach(pcUpd); }
-/** Akış satırı metnini düzenler: "SEMBOL $fiyat · ±kâr$ · sebep…" → kalın başlık (+ renkli kâr/zarar), altında küçük ayrıntı */
 function feedTxt(raw) {
     const parts = escH(String(raw).replace(/^kapatma emri (\S+)/, '$1 kapatma emri')).split(' · ');
     let head = parts.shift() || '';
-    head = head.replace(/^((?:%\d+\s+)?[^\s:]+)(:?)/, '<b>$1</b>$2'); // "%50 WAFF" (kısmi satış) birlikte kalın
-    // kâr/zarar parçası: "+1.15$" ya da "-0.72$ (teminata göre %-2)"; parantez içi küçük ayrıntıya iner
+    head = head.replace(/^((?:%\d+\s+)?[^\s:]+)(:?)/, '<b>$1</b>$2');
     const m = parts.length ? /^([+\-−]\$?\d[\d.,]*\$?|\$?\d[\d.,]*\$)(?:\s+\((.+)\))?$/.exec(parts[0].trim()) : null;
     if (m) {
         parts.shift();
@@ -2137,7 +2208,6 @@ function renderRules(R, c) {
     setH(document.getElementById('rules'), rows.map(([i, b, s]) => `<div class="rule"><div class="ic">${ic(i)}</div><div><b>${b}</b><span>${s}</span></div></div>`).join(''));
     setT(document.getElementById('rulesSum'), c ? `Zarar kes ${pp(c.stop)} · acil fren ${tl(R.kill_switch, 0)} · günlük sınır ${tl(R.daily_loss_limit, 0)}` : `Zarar kes %${nf(R.stop_loss * 100, 1)} · acil fren ${tl(R.kill_switch, 0)}`);
 }
-/* ---------- anlık piyasa: uygulama açıkken OKX TR'den doğrudan ---------- */
 const LP = {};
 let mkTimer = null, mkBusy = false, lastTick = 0;
 function marketList() {
@@ -2157,12 +2227,10 @@ async function pollMarket() {
         mkBusy = true;
         try {
             const list = new Set(marketList());
-            // tek istekle OKX TR'deki tüm TL paritelerinin anlık fiyatı ve 24 saatlik hacmi
             const r = await tfetch('https://tr.okx.com/api/v5/market/tickers?instType=SPOT', { cache: 'no-store' }, 6000).then(r => r.json()).catch(() => null);
             const all = r?.data || [], byId = new Map(all.map(t => [t.instId, t])), L_ = i => +(byId.get(i)?.last || 0), usd = L_('USDT-TRY');
             if (usd)
                 USDTTRY = usd;
-            // Fiyatlar TL karşılığıyla: USDT kuru USDT-TRY'den, USDC ve EUR farkı düşük USDT pariteleri üzerinden
             const K = { TRY: 1, USDT: usd, USDC: usd * L_('USDC-USDT'), EUR: L_('USDT-EUR') ? usd / L_('USDT-EUR') : 0 };
             const rows = all.filter(t => K[String(t.instId).split('-')[1]]);
             okxDown = !rows.length;
@@ -2206,7 +2274,6 @@ async function pollMarket() {
         }
         mkBusy = false;
     }
-    // ana ekran açıkken 2 sn'de bir; ayarlar ya da geçmiş açıkken fiyat gösterilmediği için seyrek (veri tasarrufu)
     mkTimer = setTimeout(pollMarket, document.getElementById('mainv').hidden ? 8000 : 2000);
 }
 let okxDown = false;
@@ -2271,7 +2338,6 @@ function renderLog(x) {
     }
     sec.hidden = false;
     setT(document.getElementById('logSum'), x.log.length ? 'Son not: ' + x.log[0][1] : 'Henüz kayıt yok');
-    // kayıtlar Kasalar'daki kayıtla aynı düzende: saat · türe göre renkli etiket · kalın başlık + küçük ayrıntı
     const kind = (t) => /^AL /.test(t) ? ['b', 'AL'] : /^SAT /.test(t) ? (/sonuç −|sonuç -/.test(t) ? ['dn', 'SAT'] : ['up', 'SAT'])
         : /koruma/i.test(t) ? ['sh', 'KORUMA'] : /HATA|uyarı|alınamad|yapılamad/i.test(t) ? ['dn', 'UYARI'] : ['z', 'BİLGİ'];
     setH(document.getElementById('log'), x.log.length ? x.log.map(([ts, t]) => {
@@ -2318,7 +2384,7 @@ function renderChart() {
     const path = s => s.map((p, i) => (i ? 'L' : 'M') + X(p[0]).toFixed(1) + ' ' + Y(p[1]).toFixed(1)).join(' ');
     let g = `<line x1="0" x2="${W}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--zero)" stroke-dasharray="4 4" stroke-width="1"/>`;
     {
-        const z = Y(0), zl = z + 12 > H - pb - 16 ? z - 5 : z + 12; // sıfır etiketi alttaki etiketle çakışmasın
+        const z = Y(0), zl = z + 12 > H - pb - 16 ? z - 5 : z + 12;
         g += `<text x="2" y="${zl}" font-size="10" fill="var(--faint)">Başlangıç %0</text>`;
         if (pt + 8 < zl - 14)
             g += `<text x="2" y="${pt + 8}" font-size="10" fill="var(--faint)">${spc(y1, 1)}</text>`;
@@ -2350,7 +2416,6 @@ document.getElementById('seg').onclick = e => {
     renderChart();
 };
 document.getElementById('reload').onclick = openCloud;
-/* ---------------- Ayarlar ---------------- */
 const REPO = (() => {
     const h = location.hostname, m = h.match(/^([^.]+)\.github\.io$/);
     const seg = location.pathname.split('/').filter(Boolean)[0];
@@ -2374,7 +2439,7 @@ function checks(d = draft, o = orig || {}, diff = true) {
         add('bad', 'Hiç alım yapılmaz', `Her alım ${T(per, 2)} çıkıyor; bot ${MIN_ORDER} TL'nin altındaki emirleri göndermez. ${st === 'grid' ? 'Kademe büyüklüğünü' : 'İşlem büyüklüğünü'} en az %${Math.ceil(MIN_ORDER * 100 / Math.max(b, 1))} yap ya da bottaki parayı artır.`);
     const L = S?.strategies?.live, inv = L && !L.locked ? (L.positions || []).reduce((a, p) => a + (p.cost || 0), 0) : 0;
     if (d.live && S?.okx && S.okx.try != null) {
-        const free = S.okx.try + (S.okx.usdt_tl || 0); // TL + boştaki USDT/USDC/EUR'nun TL karşılığı
+        const free = S.okx.try + (S.okx.usdt_tl || 0);
         if (free < per)
             add('bad', 'OKX\'te para yetmiyor', `Alım-satım hesabında ${T(free, 2)} var; bir alım için ${T(per)} gerekir. Fonlama'dan Alım-satım'a aktar.`);
         else if (free + inv < b * 0.97)
@@ -2527,9 +2592,7 @@ const SECTIONS = [
             ['xfer.sweep_min', 'En az süpürme kârı', 'Kâr bundan azsa gönderilmez', '$', 5, 1, 10000, 0]
         ] },
 ];
-// "Kasa dahil toplam" seçiliyken hedef alanı: bottaki para + kasadaki yedek
 const TGT_TOTAL = ['target.amount', 'Hedef toplam para', () => `Bot + kasa bu tutara ulaşınca her şey satılır`, 'TL', 500, 100, 1e8, 0];
-// Kademeli stratejide zarar sınırı, coin sayısı ve alım tutarı kendi ayarlarından gelir; genel alanlar gizlenir
 const GRID_HIDE = new Set(['risk.stop_pct', 'risk.max_positions', 'risk.trade_pct']);
 function secFields(sec) { return draft?.strategy === 'grid' ? sec.f.filter(f => !GRID_HIDE.has(f[0])) : sec.f; }
 const STRAT_F = {
@@ -2580,10 +2643,8 @@ function field([k, label, hint, u, step, min, max, dec]) {
    <label class="sv"><input inputmode="decimal" value="${fv(v, dec)}" data-step="${step}" data-min="${min}" data-max="${max}" data-dec="${dec}">
    ${u ? `<span class="u">${u}</span>` : ''}</label><button data-d="1" aria-label="Artır">${ic('i-plus')}</button></div></div>`;
 }
-// En çok coin bulunan pariteler (OKX TR): USDT ~300, EUR ~270, USDC ~270, TRY ~130
 const QUOTES = [['USDT', '₮', 'Önerilen'], ['USDC', '$', 'Düşük fark'], ['EUR', '€', 'Düşük fark'], ['TRY', '₺', 'Fark yüksek']];
 function tile(on, key, icon, name, sub) { return `<button class="tile ${on ? 'on' : ''}" data-t="${key}"><span class="ic">${ic(icon)}</span><span class="nm">${name}</span>${sub ? `<span class="pc" style="color:var(--muted);font-weight:500">${sub}</span>` : ''}</button>`; }
-// ---- PIN girişi (animasyonlu) ----
 function pinPad(o) {
     return new Promise(res => {
         const v = document.createElement('div');
@@ -2656,8 +2717,6 @@ async function makeLink() {
     const p2 = await pinPad({ title: 'PIN\'i tekrar gir', sub: 'Aynı 6 haneyi bir kez daha gir.', check: v => v === p1 || 'PIN\'ler aynı değil' });
     if (!p2)
         return;
-    // Kısa link: linkte sadece 16 baytlık rastgele anahtar durur; şifreli paket depoda saklanır.
-    // Paket ancak link + PIN birlikte olursa açılır; yeni link oluşunca eskisi silinir.
     const rnd = crypto.getRandomValues(new Uint8Array(16)), key = b64u(String.fromCharCode(...rnd)), id = await bagId(key);
     const box = await seal({ t: token, p: pw || '' }, key + ':' + p1, 300000);
     try {
@@ -2812,7 +2871,7 @@ function renderForm() {
    <div class="card" style="margin-top:8px"><div class="sw ${draft.paused ? 'on' : ''}" id="pauseSw"><div class="lb"><b>Botu durdur</b><span>Yeni alım yapılmaz; açık pozisyonların zarar sınırı çalışmaya devam eder</span></div><div class="track"><i></i></div></div>
    <div class="field" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line2)"><div class="lb"><b>Hepsini sat ve dur</b><span>Gerçek hesaptaki tüm coinleri hemen satar, botu durdurur</span></div>
    <button class="btn danger ${sellArm ? 'arm' : ''}" id="sellAll">${ic('i-sell')}${sellArm ? 'Emin misin? Dokun' : 'Hepsini sat'}</button></div></div></section>
-   <div class="hint" style="margin:8px 2px 4px">Bot kesintisiz çalışır: yaklaşık 5 saniyede bir piyasayı, borsadaki korumaları ve para hareketlerini kontrol eder. Uygulama kapalı olsa da çalışır.</div>
+   <div class="hint" style="margin:8px 2px 4px">Bot kesintisiz çalışır: yaklaşık 2 saniyede bir piyasayı, borsadaki korumaları ve para hareketlerini kontrol eder. Uygulama kapalı olsa da çalışır.</div>
    <section><h2><span class="hb c-amber">${ic('i-coins')}</span>İşlem paritesi</h2><div class="tiles qtiles" data-g="quote">${QUOTES.map(([q, g, sub]) => `<button class="tile ${(draft.quote || 'USDT') === q ? 'on' : ''}" data-t="${q}"><span class="ic"><b class="qg">${g}</b></span><span class="nm">${q}</span><span class="pc" style="color:var(--muted);font-weight:500">${sub}</span></button>`).join('')}</div>
    <div class="hint" style="margin:8px 2px 0">Yeni alımlar bu paritede yapılır; gereken para TL'den otomatik çevrilir. Eldeki coinler kendi paritesinde satılır. Bütün tutarlar TL karşılığıyla görünür.</div></section>
    <section><h2><span class="hb c-blue">${ic('i-target')}</span>Strateji</h2><div class="tiles" data-g="strat">${['grid', 'dip', 'trend'].map(k => tile(draft.strategy === k, k, ICON[k], SNAMES[k])).join('')}</div>
@@ -2979,7 +3038,6 @@ function memeExtra() {
         h += `<div style="margin:4px 0 8px"><button class="btn xsync" type="button" id="memeReset">${ic('i-refresh')}Yeniden başlat</button><p class="hint">Masa durdu: ${String(R.dead).replace(/</g, '&lt;')}. Yeniden başlatınca kayıp sayacı sıfırlanır.</p></div>`;
     return h;
 }
-/** Kademe merdiveni: ayarlara göre bir coinde her kademenin nerede, ne kadarla alınıp nerede satılacağı */
 function ladder() {
     const el = document.getElementById('ladder');
     if (!el || !draft || draft.strategy !== 'grid')
@@ -2987,7 +3045,7 @@ function ladder() {
     const g = draft.grid, b = +draft.budget || 0, l1 = b * g.lot_pct / 100, n = Math.max(1, Math.min(10, +g.max_lots || 1));
     let px = 1, cost = 0, qty = 0, rows = '', stopAt = 0;
     for (let i = 0; i < n; i++) {
-        px *= 1 - (i < 2 ? g.step_pct : (g.step3_pct || g.step_pct)) / 100;
+        px *= 1 - (i < 2 ? g.step_pct : Math.max(g.step_pct, g.step3_pct || g.step_pct)) / 100;
         const amt = l1 * (i === 0 ? 1 : i === 1 ? (g.lot2_pct ?? 100) / 100 : (g.lot3_pct ?? 100) / 100);
         const avg = cost ? cost / qty : 0, dead = i > 0 && px <= avg * (1 - g.stop_pct / 100);
         if (dead && !stopAt)
@@ -3070,12 +3128,10 @@ async function loadSettings() {
     renderConn();
     renderForm();
 }
-/** Ayarlardaki tek bir şeyi buluta yazar (bekleyen başka değişikliklere dokunmadan): dil, tema, bildirim temizleme. */
 let patchQ = Promise.resolve(), patchErr = '';
 function cloudPatch(fn, msg) { const p = patchQ.then(() => cloudPatch_(fn, msg)); patchQ = p.catch(() => { }); return p; }
 const ghHead = (json) => ({ Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', ...(json ? { 'Content-Type': 'application/json' } : {}) });
 const utf8d = (t) => decodeURIComponent(escape(atob(t.replace(/\n/g, '')))), utf8e = (t) => btoa(unescape(encodeURIComponent(t)));
-/** Buluttaki ayar dosyasının güncel hâli: [ayarlar, sürüm kimliği] */
 async function cloudGet() {
     const cur = await tfetch(API + '?t=' + Date.now(), { headers: ghHead(), cache: 'no-store' }).then(r => { if (!r.ok)
         throw r.status; return r.json(); });
@@ -3093,7 +3149,7 @@ async function cloudPatch_(fn, msg, retry = true) {
         fn(o, true);
         const r = await cloudPut(o, msg, sha0);
         if (r.status === 409 && retry)
-            return cloudPatch_(fn, msg, false); // aynı anda başka kayıt: güncel hâli alıp bir kez daha dene
+            return cloudPatch_(fn, msg, false);
         if (!r.ok)
             throw r.status;
         if (orig)
@@ -3127,7 +3183,6 @@ async function save_(obj, msg, keepDraft, retry = true) {
     btn.textContent = 'Kaydediliyor…';
     try {
         const [fr, sha0] = await cloudGet();
-        // Başka cihazdan/ekrandan gelmiş bekleyen istekler (satış, alım, aktarım, masa komutu, çevirme, hepsini sat, bildirim temizleme) bu kayıtla silinmesin
         {
             const d = data;
             for (const k of ['sell', 'convert'])
@@ -3149,7 +3204,7 @@ async function save_(obj, msg, keepDraft, retry = true) {
         if (r.status === 409 && retry) {
             btn.innerHTML = ic('i-check') + 'Kaydet';
             return save_(obj || data, msg, keepDraft, false);
-        } // çakışma: güncel sürümle bir kez daha
+        }
         if (!r.ok)
             throw r.status;
         const prev = keepDraft ? clean(draft) : null;
@@ -3171,7 +3226,6 @@ async function save_(obj, msg, keepDraft, retry = true) {
         btn.innerHTML = ic('i-check') + 'Kaydet';
     }
 }
-/** Bildirim balonu: yazıdan türü anlaşılır (hata kırmızı, tamam yeşil, bilgi kehribar), simge + yazı + kalan süre çizgisi */
 let toastT;
 function toast(t) {
     const el = document.getElementById('toast');
@@ -3272,7 +3326,6 @@ document.getElementById('closeSet').onclick = () => { if (draft && JSON.stringif
 let leaveArm = 0;
 function confirmLeave() { if (leaveArm)
     return true; leaveArm = 1; toast('Kaydedilmemiş değişiklik var. Çıkmak için geri tuşuna tekrar dokun.'); setTimeout(() => leaveArm = 0, 3500); return false; }
-/* ---------- bildirimler ---------- */
 let topicPlain = '';
 const swRow = (id, on, title, sub) => `<div class="sw ${on ? 'on' : ''}" id="${id}"><div class="lb"><b>${title}</b><span>${sub}</span></div><div class="track"><i></i></div></div>`;
 function notifySection() {
@@ -3330,7 +3383,6 @@ function bindNotify() {
         }
     });
 }
-/* ---------- ana ekrana ekleme ---------- */
 let installEvt = null;
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; if (!document.getElementById('setv').hidden && draft)
     renderForm(); });
@@ -3378,7 +3430,6 @@ function bindInstall() {
         const l = t.dataset.lg;
         if (l === LANG)
             return;
-        // dil bulutta tutulur: bütün cihazlar ve bildirimler aynı dilde
         localStore('masal_pref_ts', String(Date.now()));
         await cloudPatch(o => { o.lang = l; }, 'Dil değişti');
         setLang(l);
@@ -3394,7 +3445,6 @@ function bindInstall() {
     if (b)
         b.onclick = async () => { installEvt.prompt(); await installEvt.userChoice; installEvt = null; renderForm(); };
 }
-/* ---------- sürüm ---------- */
 let remoteVer = null;
 const vcmp = (a, b) => { const x = a.split('.').map(Number), y = b.split('.').map(Number); for (let i = 0; i < 3; i++) {
     if ((x[i] || 0) !== (y[i] || 0))
@@ -3425,7 +3475,6 @@ async function checkVersion(manual) {
     if (remoteVer.version !== was && !document.getElementById('setv').hidden && draft)
         renderForm();
 }
-/** Yenilikler: uygulama yeni sürümle ilk açıldığında, görülmemiş sürümlerin notları bir kez gösterilir. */
 function showNews() {
     const seen = localStore('masal_seen_ver') || '1.51.1';
     if (!remoteVer || remoteVer.version !== APP_VERSION)
@@ -3464,7 +3513,6 @@ setInterval(() => { if (!document.hidden)
 document.addEventListener('visibilitychange', () => { if (!document.hidden)
     checkVersion(); });
 checkVersion();
-/* ---------- açılış, logo, çevrimdışı ---------- */
 let splashT0 = Date.now();
 function hideSplash() {
     const sp = document.getElementById('splash');
@@ -3479,10 +3527,6 @@ if ('serviceWorker' in navigator && location.protocol === 'https:')
 document.getElementById('save').onclick = () => save();
 document.getElementById('undo').onclick = () => { draft = JSON.parse(JSON.stringify(orig)); renderForm(); };
 (async () => { await initLang(); await openLink(); load(); })();
-/* ---------- telefonun geri tuşu / geri kaydırma ----------
-   Uygulama tek sayfa: geri tuşu tarayıcı geçmişinde geri gider ve uygulama kapanırdı. Her zaman bir "nöbetçi" geçmiş kaydı
-   tutulur; geri basılınca en üstteki açık katman (PIN, alt pencere, açık satır, ayarlar, geçmiş, ajan masası) kapanır.
-   Ana ekrandayken ilk geri bir uyarı gösterir, 2 sn içinde ikinci geri uygulamadan çıkar. */
 let backExit = 0;
 function backLayer() {
     const pin = document.querySelector('.pinv:not(.out) [data-k="x"]');
@@ -3534,7 +3578,6 @@ addEventListener('popstate', () => {
     toast('Çıkmak için geri tuşuna tekrar bas');
     history.pushState({ masal: 1 }, '');
 });
-/* ---------- sayfa yenilenince aynı yerde kal: bölüm, ayarlar sekmesi ve kaydırma konumu (bu sekmede saklanır) ---------- */
 let navReady = false;
 function navSave() { if (!navReady)
     return; try {
@@ -3569,7 +3612,6 @@ catch (e) { } }
         setTimeout(go, 300);
     }, 60);
 })();
-/** Uzun listeler kısa görünür (ilk n satır); "Tümünü göster" ile açılır, tercih bu oturumda hatırlanır. */
 const CLIP_OPEN = new Set();
 function clipList(id, n) {
     const el = document.getElementById(id);

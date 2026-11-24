@@ -3,6 +3,7 @@ import json
 import os
 import re
 import threading
+import time
 import urllib.request
 
 from . import vault
@@ -12,7 +13,12 @@ _TOK = re.compile(r"[+−-]?%?\d[\d.,:]*%?|\b[A-Z][A-Z0-9]{1,11}\b")
 _EN = None
 
 
+_CAPS = {"KAPAT": "CLOSE", "KISA": "SHORT", "UZUN": "LONG"}
+
+
 def _en_num(v):
+    if v in _CAPS:
+        return _CAPS[v]
     if re.fullmatch(r"\d+\.", v):  # sıra sayısı: "2." → "2" (İngilizcede "step 2")
         return v[:-1]
     if re.search(r"\.(\d{1,2}|\d{4,})(?!\d)", v):  # tarih (19.11), sayı değil
@@ -41,7 +47,9 @@ def to_en(text):
             continue
         vals = []
         key = _TOK.sub(lambda m: (vals.append(m.group(0)), "{%d}" % (len(vals) - 1))[1], core)
-        e = _EN.get(key)
+        if re.match(r"(AL|SAT) [A-Z0-9%]", core) and vals:  # "AL CHIRP 0.038 SOL" → "BUY CHIRP…" (satır başındaki işlem sözcüğü)
+            vals[0] = "BUY" if vals[0] == "AL" else "SELL"
+        e = (_EN.get(key + "#ord") if any(re.fullmatch(r"\d+\.", v) for v in vals) else None) or _EN.get(key)
         out.append(re.sub(r"\{(\d+)\}", lambda m: _en_num(vals[int(m.group(1))]), e) if e is not None else line)
     return "\n".join(out)
 
@@ -97,12 +105,17 @@ def _sender(own=True):
                     _SND["t"] = None  # çıkış kilit altında işaretlenir: bu andan sonra eklenen bildirim yeni gönderici başlatır
                 return
             m = _OUTQ.pop(0)
-        try:
-            req = urllib.request.Request("https://ntfy.sh/", data=json.dumps(m).encode(), method="POST",
-                                         headers={"Content-Type": "application/json", "User-Agent": "masal/1.0"})
-            urllib.request.urlopen(req, timeout=10).read()
-        except Exception as e:
-            print("Bildirim gönderilemedi:", e)
+        for attempt in (0, 1):  # geçici ağ hatasında bildirim kaybolmasın: bir kez daha denenir (sıra bozulmaz)
+            try:
+                req = urllib.request.Request("https://ntfy.sh/", data=json.dumps(m).encode(), method="POST",
+                                             headers={"Content-Type": "application/json", "User-Agent": "masal/1.0"})
+                urllib.request.urlopen(req, timeout=10).read()
+                break
+            except Exception as e:
+                if attempt:
+                    print("Bildirim gönderilemedi:", e)
+                else:
+                    time.sleep(2)
 
 
 def _start_sender():

@@ -199,14 +199,14 @@ def _sync(D, R, cfg):
             continue
         if not p.get("closing") and time.time() * 1000 - p["ts"] < 15000:
             continue  # yeni açıldı, borsa listesi henüz güncellenmedi
-        h = None
+        h, herr = None, False
         try:
             h = D.last_closed(c)
         except Exception:
-            pass
+            herr = True  # kapanış kaydı okunamadı (ağ): sonuç 0 yazılmaz, 10 dk boyunca yeniden sorulur
         if h and int(h.get("uTime") or 0) < p["ts"]:
             h = None  # eski bir pozisyonun kaydı
-        if h is None and time.time() - p.setdefault("gone_ts", time.time()) < 20:
+        if h is None and time.time() - p.setdefault("gone_ts", time.time()) < (600 if herr else 20):
             continue  # borsanın kapanış kaydı birkaç saniye gecikebilir; kâr/zarar 0 yazılmasın
         pnl = float(h.get("realizedPnl") or h.get("pnl") or 0) if h else 0.0
         reason = p.get("closing") or ("borsadaki zarar durdur / kâr al" if h else "borsada kapanmış")
@@ -241,7 +241,17 @@ def _sync(D, R, cfg):
         _note(R, "risk", f"MASA DURDU: {R['dead']}. Ayarlardan yeniden başlatılana kadar işlem yok")
         _close_all(D, R, "toplam zarar sınırı")
     # bütçe: fon hesabından işlem hesabına (yalnız bir kez / bütçe artınca); kâr: pozisyon yokken fona geri
-    if cfg.get("real") and not R["dead"] and R["funded"] < want:
+    ht = R.pop("harv_try", None)
+    if ht and (R["pos"] or time.time() - ht.get("ts", 0) > 300):
+        ht = None  # yalnız hemen sonraki eşitlemelerde ve pozisyon yokken geçerli (sonraki bir zarar "kâr alındı" sanılmasın)
+    ft = R.pop("fund_try", None) if cfg.get("real") and not R["dead"] and R["funded"] < want else None
+    if ft and eq >= ft["eq"] + ft["amt"] * 0.9:
+        # Önceki bütçe aktarımının yanıtı ağda kaybolmuştu ama para işlem hesabına ulaşmış: ikinci kez gönderilmez
+        R["funded"] = round(ft["base"] + ft["amt"], 4)
+        _note(R, "info", f"{ft['amt']:.2f} USDT fon hesabından işlem hesabına geçmiş (doğrulandı; gerçek masa bütçesi {R['funded']:.2f} $)")
+        if R["day_eq"]:
+            R["day_eq"] += ft["amt"]
+    elif cfg.get("real") and not R["dead"] and R["funded"] < want:
         free = D.ex.funding("USDT")
         base = eq if R["funded"] <= 0 else R["funded"]
         amt = min(max(0.0, want - base), free)
@@ -249,16 +259,34 @@ def _sync(D, R, cfg):
             R["funded"] = round(min(base, want), 4)
         if amt >= 1:
             R["funded"] = base
-            D.ex.move("USDT", amt, transfer.FUNDING, transfer.TRADING)
+            R["fund_try"] = {"eq": eq, "amt": amt, "base": base}  # yanıt kaybolursa: bir sonraki eşitlemede bakiyeden doğrulanır
+            try:
+                D.ex.move("USDT", amt, transfer.FUNDING, transfer.TRADING)
+            except RuntimeError:
+                R.pop("fund_try", None)  # borsa açıkça reddetti: para gitmedi
+                raise
+            R.pop("fund_try", None)
             R["funded"] = round(R["funded"] + amt, 4)
             _note(R, "info", f"{amt:.2f} USDT fon hesabından işlem hesabına geçti (gerçek masa bütçesi {R['funded']:.2f} $)")
             R["eq"], R["avail"] = round(eq + amt, 4), round(avail + amt, 4)
             if R["day_eq"]:
                 R["day_eq"] += amt
+    elif ht and eq <= ht["eq"] - ht["amt"] * 0.9:
+        # Önceki kâr aktarımının yanıtı kaybolmuştu ama para fona geçmiş: kâr sayılır (zarar sanılıp masa durmasın)
+        amt = ht["amt"]
+        R["harvest"] = round(R["harvest"] + amt, 4)
+        _note(R, "info", f"Kâr {amt:.2f} USDT fon hesabına alınmış (doğrulandı; KASA süpürmesine dahil olur)")
+        R["day_eq"] = max(0.0, R["day_eq"] - amt)
     elif not R["pos"] and R.get("realized", 0) - R["harvest"] >= 1 and eq > want + 1:
         amt = math.floor(min(eq - want, R.get("realized", 0) - R["harvest"]) * 100) / 100  # yalnız gerçekleşen kâr
         if amt >= 1 and avail >= amt:
-            D.ex.move("USDT", amt, transfer.TRADING, transfer.FUNDING)
+            R["harv_try"] = {"eq": eq, "amt": amt, "ts": time.time()}
+            try:
+                D.ex.move("USDT", amt, transfer.TRADING, transfer.FUNDING)
+            except RuntimeError:
+                R.pop("harv_try", None)
+                raise
+            R.pop("harv_try", None)
             R["harvest"] = round(R["harvest"] + amt, 4)
             _note(R, "info", f"Kâr {amt:.2f} USDT fon hesabına alındı (KASA süpürmesine dahil olur)")
             R["eq"] = round(eq - amt, 4)

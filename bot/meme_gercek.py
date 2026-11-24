@@ -148,7 +148,17 @@ def _swap(key, addr, inp, out, amount):
 
 
 def _execute(key, o):
-    r = _post(f"{JUP}/execute", {"signedTransaction": sign_tx(o["transaction"], key), "requestId": o["requestId"]})
+    body = {"signedTransaction": sign_tx(o["transaction"], key), "requestId": o["requestId"]}
+    for i in range(3):
+        try:
+            r = _post(f"{JUP}/execute", body)
+            break
+        except Exception:
+            # Yanıt gelmedi: işlem zincire gitmiş olabilir. Aynı imzalı işlem yeniden sorulur (aynı imza zincirde iki kez
+            # gerçekleşemez); böylece alınan/satılan token "olmadı" sanılıp kayıtsız kalmaz.
+            if i == 2:
+                raise
+            time.sleep(2)
     if r.get("status") != "Success":
         raise RuntimeError(f"işlem başarısız: {r.get('error') or r.get('code') or r}"[:160])
     return r
@@ -313,7 +323,11 @@ def _buy(key, R, ev, cfg):
 
 
 def _sync(R, cfg, prices, held_paper, key):
-    R["solpx"] = _solpx()
+    try:
+        R["solpx"] = _solpx()
+    except Exception:
+        if not R.get("solpx"):
+            raise  # SOL fiyatı hiç okunamadıysa değer hesaplanamaz; okunmuşsa son fiyatla devam (satışlar beklemesin)
     R["sol"] = _sol(R["addr"])
     h = _holdings(R["addr"])
     for m, p in list(R["pos"].items()):
@@ -330,7 +344,7 @@ def _sync(R, cfg, prices, held_paper, key):
             _note(R, "info", f"{p['sym']} artık cüzdanda yok; kayıttan çıkarıldı")
             del R["pos"][m]  # görülmüştü ve artık yok ya da 10 dk'dır hiç görünmedi
     for m in held_paper:  # cüzdanda olup kayıtta olmayan (ör. yanıt gelmeden yeniden başladı): sahiplen
-        if m in h and m not in R["pos"]:
+        if m in h and m not in R["pos"] and cfg.get("real"):
             px = prices.get(m, 0)
             R["pos"][m] = {"sym": m[:4] + "…", "ts": int(time.time() * 1000), "sol_in": 0, "cost": h[m]["ui"] * px,
                            "raw": h[m]["raw"], "ui": h[m]["ui"], "px": px, "val": 0.0, "why": "cüzdanda bulundu"}
@@ -431,9 +445,13 @@ def _loop():
                 elif ev and ev[0] == "dust":
                     _dust(key, R, set(ev[1]) if len(ev) > 1 else None)
                 elif ev and ev[0] == "kill":
-                    for m in list(R["pos"]):
+                    for m in list(R["pos"]):  # önce hepsi işaretlenir: biri satılamazsa kalanlar da eşitlemede yeniden denenir
                         R["pos"][m]["closing"] = "masa kapatıldı"
-                        _sell(key, R, m, "masa kapatıldı", cfg)
+                    for m in list(R["pos"]):
+                        try:
+                            _sell(key, R, m, "masa kapatıldı", cfg)
+                        except Exception as e:
+                            R["err"] = f"{R['pos'].get(m, {}).get('sym', m[:4])} satılamadı: {e}"[:160]
                 if time.time() - last >= SYNC:
                     _sync(R, cfg, prices, held, key)
                     last = time.time()

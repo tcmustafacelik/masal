@@ -6,7 +6,7 @@
     "moduleDetection": "legacy",
     "rootDir": "src",
     "outDir": "docs",
-    "removeComments": false,
+    "removeComments": true,
     "strict": false,
     "noImplicitAny": false,
     "strictNullChecks": false,

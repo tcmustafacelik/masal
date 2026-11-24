@@ -27,6 +27,15 @@ def quote_of(inst):
 _INST = {}
 
 
+class OrderUnsure(Exception):
+    """Emir gönderildi ama sonucu öğrenilemedi (yanıt ağda kayboldu ve borsaya sorulamadı). Emir "olmadı" sayılmaz ve
+    yeniden verilmez: kendi kimliğiyle (clOrdId) kayda alınır, borsaya ulaşılınca sonucu işlenir."""
+
+    def __init__(self, cl, oid=None, cause=None):
+        super().__init__(f"emrin sonucu doğrulanamadı ({cause})")
+        self.cl, self.oid = cl, oid
+
+
 class OkxPrivate:
     def __init__(self):
         self.key = os.environ.get("OKX_API_KEY", "")
@@ -108,7 +117,7 @@ class OkxPrivate:
         except RuntimeError:
             raise  # borsa emri açıkça reddetti
         except Exception as e:
-            oid = None
+            oid, gone = None, False
             for _ in range(4):
                 time.sleep(0.7)
                 try:
@@ -117,11 +126,14 @@ class OkxPrivate:
                     break
                 except RuntimeError as e2:
                     if "51603" in str(e2):  # emir yok: borsaya ulaşmamış
+                        gone = True
                         break
                 except Exception:
                     continue
             if not oid:
-                raise e
+                if gone:
+                    raise e
+                raise OrderUnsure(cl, None, e)  # borsaya sorulamadı: emir verilmiş olabilir
         o = {"ordId": oid, "state": "bilinmiyor"}
         for _ in range(20):  # piyasa emri genelde anında dolar; ağ hatasında da emri kaybetmeden ~12 sn sorulur
             time.sleep(0.6)
@@ -132,6 +144,8 @@ class OkxPrivate:
                 continue
             if o["state"] in ("filled", "canceled", "mmp_canceled"):
                 break
+        if o.get("state") == "bilinmiyor":
+            raise OrderUnsure(cl, oid, "emir durumu okunamadı")  # emir borsada ama doldu mu bilinmiyor
         return o
 
 
@@ -178,11 +192,12 @@ def tr_err(e):
     low = t.lower()
     code = t.split(":")[0].replace("OKX", "").strip() if t.startswith("OKX") else ""
     rules = [
+        (("doğrulanamadı",), "emrin sonucu borsadan doğrulanamadı (bağlantı)"),
         (("compliance", "51155", "51087"), "OKX TR bu coinde bu hesaba işlem izni vermiyor (yerel düzenleme kısıtı)"),
         (("insufficient", "51008", "51131"), "hesapta yeterli bakiye yok"),
         (("minimum", "51020", "order amount", "order size"), "emir tutarı borsanın alt sınırının altında"),
         (("too many", "50011", "rate limit"), "borsa çok sık istek uyarısı verdi, biraz sonra yeniden denenecek"),
-        (("timed out", "timeout", "veri alınamadı", "urlopen", "connection"), "borsaya bağlanılamadı"),
+        (("timed out", "timeout", "veri alınamadı", "urlopen", "connection", "remote end", "incompleteread", "name resolution", "eof occurred", "reset by peer"), "borsaya bağlanılamadı"),
         (("50113", "50111", "50110", "api key", "passphrase", "sign"), "API anahtarı kabul edilmedi"),
         (("suspend", "51001", "51015", "instrument"), "bu coin borsada şu an işleme kapalı"),
     ]
@@ -211,6 +226,11 @@ def fmt(x, step):
 
 def floor_to(x, step):
     return math.floor(x / step + 1e-9) * step
+
+
+def _lot_id(l):
+    """Kademenin kimliği (alım emrinin numarası; yoksa alım zamanı)."""
+    return l.get("ordId") or l.get("ts")
 
 
 _MIN = {}
@@ -265,6 +285,8 @@ class LivePortfolio(Portfolio):
     def _buy(self, ts, inst, price, amount, reason):
         if inst in self.s.get("blocked", {}):
             return False
+        if self.armed and self._is_unsure(inst):
+            return False  # bu coinde sonucu doğrulanmamış emir var: ikinci emir verilmez
         amount = round(min(amount, self.s["cash"]), 2)
         if amount < 10:
             return False
@@ -303,26 +325,15 @@ class LivePortfolio(Portfolio):
                 self.api.market("USDT-TRY", "sell", f"{math.ceil(need_usdt * 100) / 100:.2f}")
                 self._note(ts, f"{need_usdt:.2f} USDT → TL çevrildi")
                 spend = min(spend, self.api.available(q))
-            o = self.api.market(inst, "buy", f"{math.floor(spend * 100) / 100:.2f}", quote=True)
-            filled = float(o.get("accFillSz") or 0)
-            if filled <= 0:
+            try:
+                o = self.api.market(inst, "buy", f"{math.floor(spend * 100) / 100:.2f}", quote=True)
+            except OrderUnsure as u:
+                self._unsure_add(ts, inst, "buy", u, {"reason": reason})
+                return False
+            if float(o.get("accFillSz") or 0) <= 0:
                 self._note(ts, f"{inst} alım emri dolmadı ({o['state']})")
                 return False
-            base = inst.split("-")[0]
-            fee = float(o.get("fee") or 0)
-            qty = filled + (fee if o.get("feeCcy") == base else 0)  # alım komisyonu coin cinsinden düşülür
-            avg_q = float(o["avgPx"])  # paritenin kendi fiyatı (USDT ya da TL)
-            avg = avg_q * k  # TL karşılığı
-            spent = filled * avg
-            self.s["cash"] -= spent
-            pos = self.s["positions"].setdefault(inst, {"lots": [], "peak": avg, "bars": 0})
-            lot = {"qty": qty, "entry": avg, "entry_q": avg_q, "cost": spent, "ts": ts, "ordId": o["ordId"]}
-            pos["lots"].append(lot)
-            self.s["trades"].append({"ts": ts, "inst": inst, "side": "AL", "price": avg, "qty": qty,
-                                     "amount": round(spent, 2), "reason": reason, "real": True})
-            self._note(ts, f"AL {inst.split('-')[0]} {para(spent)} TL · fiyat {fiyat(avg)}")
-            self._protect(ts, inst, lot)
-            self._emit("trades", f"Alındı: {inst.split('-')[0]}", f"{para(spent)} TL · fiyat {fiyat(avg)} · {reason}", 3, ["shopping_cart"])
+            self._book_buy(ts, inst, o, k, reason)
             return True
         except Exception as e:
             print("Alım hatası:", inst, e)
@@ -338,6 +349,86 @@ class LivePortfolio(Portfolio):
             if self._once_per_day("err_buy"):
                 self._emit("alerts", "Alım yapılamadı", f"{sym}: {why}", 4, ["warning"])
             return False
+
+    def _book_buy(self, ts, inst, o, k, reason):
+        """Dolmuş alım emrini kayda geçirir (nakit, kademe, işlem, borsa koruması, bildirim)."""
+        filled = float(o.get("accFillSz") or 0)
+        base = inst.split("-")[0]
+        fee = float(o.get("fee") or 0)
+        qty = filled + (fee if o.get("feeCcy") == base else 0)  # alım komisyonu coin cinsinden düşülür
+        avg_q = float(o["avgPx"])  # paritenin kendi fiyatı (USDT ya da TL)
+        avg = avg_q * k  # TL karşılığı
+        spent = filled * avg
+        self.s["cash"] -= spent
+        pos = self.s["positions"].setdefault(inst, {"lots": [], "peak": avg, "bars": 0})
+        lot = {"qty": qty, "entry": avg, "entry_q": avg_q, "cost": spent, "ts": ts, "ordId": o["ordId"]}
+        pos["lots"].append(lot)
+        self.s["last_prices"].setdefault(inst, avg)  # mumu henüz gelmemiş coin (elle alım) değeri 0 sayılmasın
+        self.s["trades"].append({"ts": ts, "inst": inst, "side": "AL", "price": avg, "qty": qty,
+                                 "amount": round(spent, 2), "reason": reason, "real": True})
+        self._note(ts, f"AL {inst.split('-')[0]} {para(spent)} TL · fiyat {fiyat(avg)}")
+        self._protect(ts, inst, lot)
+        self._emit("trades", f"Alındı: {inst.split('-')[0]}", f"{para(spent)} TL · fiyat {fiyat(avg)} · {reason}", 3, ["shopping_cart"])
+
+    # ---------- sonucu öğrenilemeyen emirler ----------
+    def _is_unsure(self, inst):
+        return any(u.get("inst") == inst for u in self.s.get("unsure") or [])
+
+    def _unsure_add(self, ts, inst, side, u, extra):
+        self.s.setdefault("unsure", []).append({"cl": u.cl, "oid": u.oid, "inst": inst, "side": side, "ts": ts, **extra})
+        sym, what = inst.split("-")[0], ("alım" if side == "buy" else "satış")
+        self._note(ts, f"{sym}: {what} emrinin sonucu öğrenilemedi (bağlantı); borsadan doğrulanana kadar bu coinde yeni emir verilmez")
+        self._emit("alerts", "Emir sonucu doğrulanamadı",
+                   f"{sym}: {what} emri gönderildi ama borsanın yanıtı alınamadı. Bot emri borsadan kendisi doğrulayıp kayda geçirecek; emir iki kez verilmez.",
+                   4, ["warning"])
+
+    def resolve_unsure(self, every=5):
+        """Sonucu öğrenilemeyen emirleri kendi kimliğiyle borsaya sorar: dolduysa kayda geçirir, borsaya hiç
+        ulaşmadıysa bırakır. Borsaya ulaşılamıyorsa kayıt bekler (o coinde yeni emir verilmez)."""
+        if not self.armed or not self.s.get("unsure"):
+            return
+        now = int(time.time() * 1000)
+        if now - self.s.get("unsure_ck", 0) < every * 1000:
+            return
+        self.s["unsure_ck"] = now
+        keep = []
+        for u in self.s["unsure"]:
+            inst = u["inst"]
+            sym, what = inst.split("-")[0], ("alım" if u["side"] == "buy" else "satış")
+            try:
+                q = f"ordId={u['oid']}" if u.get("oid") else f"clOrdId={u['cl']}"
+                o = self.api._req("GET", f"/api/v5/trade/order?instId={inst}&{q}")[0]
+                k = okx.tl_factor(inst)
+            except RuntimeError as e:
+                if "51603" in str(e):  # emir borsada yok: hiç ulaşmamış
+                    self._note(now, f"{sym}: {what} emri borsaya ulaşmamış (doğrulandı); bot normal devam ediyor")
+                else:
+                    keep.append(u)
+                continue
+            except Exception:
+                keep.append(u)
+                continue
+            if o.get("state") not in ("filled", "canceled", "mmp_canceled"):
+                keep.append(u)
+                continue
+            if float(o.get("accFillSz") or 0) <= 0:
+                self._note(now, f"{sym}: {what} emri dolmadan iptal olmuş (doğrulandı)")
+            elif u["side"] == "buy":
+                self._note(now, f"{sym}: alım emri borsada dolmuş (doğrulandı); kayda geçiriliyor")
+                self._book_buy(now, inst, o, k, u.get("reason") or "doğrulanan emir")
+            else:
+                ids = set(u.get("lots") or [])
+                pos = self.s["positions"].get(inst)
+                lots = [l for l in (pos or {}).get("lots", []) if _lot_id(l) in ids]
+                if lots:
+                    self._note(now, f"{sym}: satış emri borsada dolmuş (doğrulandı); kayda geçiriliyor")
+                    self._book_sell(now, inst, o, lots, u.get("want") or sum(l["qty"] for l in lots), u.get("reason") or "doğrulanan emir")
+                else:
+                    self._note(now, f"{sym}: satış emri borsada dolmuş ama kademesi kayıtta bulunamadı; OKX'ten kontrol et")
+        if keep:
+            self.s["unsure"] = keep
+        else:
+            self.s.pop("unsure", None)
 
     def _usdt(self, ts, amount):
         """En az `amount` USDT olsun: önce boştaki USDC, yetmezse TL çevrilir."""
@@ -445,6 +536,8 @@ class LivePortfolio(Portfolio):
         miss = self.s.setdefault("missing", {})
         for inst in list(self.s["positions"]):
             pos = self.s["positions"][inst]
+            if self._is_unsure(inst):
+                continue  # sonucu doğrulanmamış emir var: önce o kayda geçmeli (satış geliri kaybolmasın)
             if pre and (base is None or abs(sum(l["qty"] for l in pos["lots"]) - base.get(inst, -1.0)) > 1e-12):
                 continue  # ölçümden sonra kayıt değişti (ya da ölçümde bu coin yoktu): bir sonraki ölçümde bakılır
             if pre and (pending is None or any(l.get("algo") and l["algo"] not in pending for l in pos["lots"])):
@@ -508,8 +601,8 @@ class LivePortfolio(Portfolio):
                 print("Bekleyen korumalar alınamadı, tek tek bakılıyor:", e)
                 pending = None
         for inst in ([only] if only else list(self.s["positions"])):
-            if inst not in self.s["positions"]:
-                continue
+            if inst not in self.s["positions"] or self._is_unsure(inst):
+                continue  # sonucu doğrulanmamış emri olan coin: önce emir kayda geçer, koruma sonra kurulur
             pos = self.s["positions"][inst]
             for lot in list(pos["lots"]):
                 if not lot.get("algo"):
@@ -564,6 +657,8 @@ class LivePortfolio(Portfolio):
                 del self.s["positions"][inst]
 
     def _sell_lots(self, ts, inst, price, lots, reason):
+        if self.armed and self._is_unsure(inst):
+            return  # sonucu doğrulanmamış emir var: doğrulanınca (birkaç sn) satış yeniden denenir
         if self.armed:  # bot kendisi satacaksa önce borsadaki korumaları iptal et
             try:
                 items = [(l["algo"], inst) for l in lots if l.get("algo")]
@@ -601,38 +696,47 @@ class LivePortfolio(Portfolio):
                 if not pos["lots"]:
                     del self.s["positions"][inst]
                 return
-            o = self.api.market(inst, "sell", fmt(sz, lot_sz))
-            filled = float(o.get("accFillSz") or 0)
-            if filled <= 0:
+            try:
+                o = self.api.market(inst, "sell", fmt(sz, lot_sz))
+            except OrderUnsure as u:
+                self._unsure_add(ts, inst, "sell", u, {"reason": reason, "lots": [_lot_id(l) for l in lots], "want": want})
+                return
+            if float(o.get("accFillSz") or 0) <= 0:
                 self._note(ts, f"{inst} satış emri dolmadı ({o['state']})")
                 return
-            k = okx.tl_factor(inst)
-            avg = float(o["avgPx"]) * k
-            fee = float(o.get("fee") or 0)
-            proceeds = (filled * float(o["avgPx"]) + (fee if o.get("feeCcy") == quote_of(inst) else 0)) * k
-            cost = sum(l["cost"] for l in lots) * (filled / want if want else 1)
-            self.s["cash"] += proceeds
-            pnl = proceeds - cost
-            self.s["trades"].append({"ts": ts, "inst": inst, "side": "SAT", "price": avg, "qty": filled,
-                                     "amount": round(proceeds, 2), "pnl": round(pnl, 2),
-                                     "pnl_pct": round(pnl / cost * 100, 2) if cost else 0,
-                                     "reason": reason, "real": True})
-            share = filled / want if want else 1
-            if share < 0.995:
-                # kısmi dolum: satılmayan kısım kayıtta kalır (oranla küçültülür) ve yeniden korunur
-                for l in lots:
-                    l["qty"] *= (1 - share)
-                    l["cost"] *= (1 - share)
-                    l["algo"] = None
-            else:
-                pos["lots"] = [l for l in pos["lots"] if l not in lots]
-            if not pos["lots"]:
-                del self.s["positions"][inst]
-            sign = "+" if pnl >= 0 else "−"
-            self._note(ts, f"SAT {inst.split('-')[0]} {para(proceeds)} TL · fiyat {fiyat(avg)} · sonuç {sign}{para(abs(pnl))} TL")
-            self._emit("trades", f"Satıldı: {inst.split('-')[0]} ({sign}{para(abs(pnl))} TL)",
-                       f"{para(proceeds)} TL · fiyat {fiyat(avg)} · {reason}", 4 if reason == "Acil fren" else 3,
-                       ["chart_with_upwards_trend" if pnl >= 0 else "chart_with_downwards_trend"])
+            self._book_sell(ts, inst, o, lots, want, reason)
         except Exception as e:
             self._note(ts, f"HATA satış {inst}: {tr_err(e)}")
             self._emit("alerts", "Satış hatası", f"{inst}: {tr_err(e)}", 5, ["rotating_light"])
+
+    def _book_sell(self, ts, inst, o, lots, want, reason):
+        """Dolmuş satış emrini kayda geçirir (nakit, işlem, kısmi dolumda kalan kademe, bildirim)."""
+        pos = self.s["positions"][inst]
+        filled = float(o.get("accFillSz") or 0)
+        k = okx.tl_factor(inst)
+        avg = float(o["avgPx"]) * k
+        fee = float(o.get("fee") or 0)
+        proceeds = (filled * float(o["avgPx"]) + (fee if o.get("feeCcy") == quote_of(inst) else 0)) * k
+        cost = sum(l["cost"] for l in lots) * (filled / want if want else 1)
+        self.s["cash"] += proceeds
+        pnl = proceeds - cost
+        self.s["trades"].append({"ts": ts, "inst": inst, "side": "SAT", "price": avg, "qty": filled,
+                                 "amount": round(proceeds, 2), "pnl": round(pnl, 2),
+                                 "pnl_pct": round(pnl / cost * 100, 2) if cost else 0,
+                                 "reason": reason, "real": True})
+        share = filled / want if want else 1
+        if share < 0.995:
+            # kısmi dolum: satılmayan kısım kayıtta kalır (oranla küçültülür) ve yeniden korunur
+            for l in lots:
+                l["qty"] *= (1 - share)
+                l["cost"] *= (1 - share)
+                l["algo"] = None
+        else:
+            pos["lots"] = [l for l in pos["lots"] if l not in lots]
+        if not pos["lots"]:
+            del self.s["positions"][inst]
+        sign = "+" if pnl >= 0 else "−"
+        self._note(ts, f"SAT {inst.split('-')[0]} {para(proceeds)} TL · fiyat {fiyat(avg)} · sonuç {sign}{para(abs(pnl))} TL")
+        self._emit("trades", f"Satıldı: {inst.split('-')[0]} ({sign}{para(abs(pnl))} TL)",
+                   f"{para(proceeds)} TL · fiyat {fiyat(avg)} · {reason}", 4 if reason == "Acil fren" else 3,
+                   ["chart_with_upwards_trend" if pnl >= 0 else "chart_with_downwards_trend"])
