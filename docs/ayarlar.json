@@ -394,6 +394,13 @@
   "gspot": {
     "on": true,
     "real": true,
-    "budget": 70
+    "budget": 72,
+    "lot_pct": 12,
+    "lot2_pct": 70,
+    "lot3_pct": 100,
+    "max_lots": 4,
+    "max_coins": 4,
+    "use_pct": 90,
+    "max_loss": 15
   }
 }
