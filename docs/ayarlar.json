@@ -343,6 +343,42 @@
         "MENGO"
       ],
       "to": "USDT"
+    },
+    {
+      "id": "dmwub0zy7",
+      "ts": 1795501152511,
+      "ex": "tr",
+      "ccys": [
+        "LIT",
+        "MON",
+        "PONS",
+        "INJ",
+        "ENA",
+        "JUP",
+        "TRUMP",
+        "DATA",
+        "BREV",
+        "ACE",
+        "APT",
+        "BTC",
+        "BCH",
+        "LTC",
+        "ETHFI",
+        "ONDO",
+        "XRP",
+        "UNI",
+        "OP",
+        "ETH",
+        "PEPE",
+        "SOL",
+        "ARB",
+        "ICP",
+        "MENGO",
+        "ADA",
+        "NEAR",
+        "GRASS"
+      ],
+      "to": "USDT"
     }
   ],
   "desk_cmd": [],
