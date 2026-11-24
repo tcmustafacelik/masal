@@ -1,10 +1,17 @@
 {
-  "version": "1.79.0",
+  "version": "1.79.1",
   "date": "2026-11-24",
   "notes": [
-    "Kazanç hesabı: Spot elle alım, Futures elle açma ve Memecoin pozisyonunda (dokun) botun kâr al / zarar durdur noktasında ne kazanır ne kaybedersin, kaydırıcıyla fiyat %X değişirse; Spot'ta alımdan sonraki yeni ortalama"
+    "Futures: eğilim döndü kuralı artık 2 saatlik mum art arda ters kalınca kapatır (tek mumluk sahte dönüşlerde küçük zararla çıkmasın)"
   ],
   "history": [
+    {
+      "version": "1.79.1",
+      "date": "2026-11-24",
+      "notes": [
+        "Futures: eğilim döndü kuralı artık 2 saatlik mum art arda ters kalınca kapatır (tek mumluk sahte dönüşlerde küçük zararla çıkmasın)"
+      ]
+    },
     {
       "version": "1.79.0",
       "date": "2026-11-24",
@@ -103,13 +110,6 @@
         "Pembe tema: renk seçimi kaldırıldı, açık ve koyu mod (otomatik) pembe vurgulu",
         "Listelerin sağ sütunu tek standart: tutar + yönlü (▲/▼) renkli etiket (piyasa, coinler, işlemler, coin bazında kâr/zarar)",
         "Bakiye seyri grafiği geriye giden çizgiler düzeltildi"
-      ]
-    },
-    {
-      "version": "1.72.4",
-      "date": "2026-11-24",
-      "notes": [
-        "Son işlemlerde alımlar artık mavi 'Alım' etiketiyle; satışlardaki yeşil/kırmızı kâr-zarar etiketinden ayırt ediliyor"
       ]
     }
   ]

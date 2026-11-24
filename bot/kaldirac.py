@@ -201,8 +201,14 @@ def step(state, S):
         L["stats"]["checked"] += 1
         p = L["positions"].get(c)
         if p and ((p["side"] > 0 and k["e20"] < k["e50"]) or (p["side"] < 0 and k["e20"] > k["e50"])):
-            _close(L, c, px.get(c, k["c"]), ts, "eğilim döndü (20/50 ort.)", cfg)
+            # Tek mumluk dönüş çoğu zaman sahte çıkıyordu (giriş sonrası 1 saatte küçük zararla kapanma):
+            # eğilim art arda 2 saatlik mum ters kalırsa kapatılır; arada zarar durdur zaten borsada korur.
+            p["against"] = p.get("against", 0) + 1
+            if p["against"] >= 2:
+                _close(L, c, px.get(c, k["c"]), ts, "eğilim döndü (20/50 ort., 2 saat)", cfg)
             continue
+        if p:
+            p["against"] = 0
         if p:
             continue
         if trend_on:

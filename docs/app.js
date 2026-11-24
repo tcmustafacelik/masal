@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.79.0';
+const APP_VERSION = '1.79.1';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = 'var(--acc)'; // seçili çizgi: tema vurgu rengi (kehribar)
@@ -630,7 +630,7 @@ function openLevOpen(sym, side0) {
       ${pnlCalc({ u: '$', now: 0, size: nt, side, ref: mg, min: -15, max: 15, what: 'Fiyat', marks: [['Kâr al', side * tpd / r.px * 100, tpd * qty], ['Zarar durdur', -side * dist / r.px * 100, -dist * qty]] })}` : '';
         document.getElementById('qText').innerHTML = `<div class="xfs">
       <div class="seg lseg"><button type="button" data-sd="1" class="${up ? 'on up' : ''}">${ic('i-buy')}<b>UZUN</b><small>yükselişe</small></button><button type="button" data-sd="-1" class="${!up ? 'on dn' : ''}">${ic('i-sell')}<b>KISA</b><small>düşüşe</small></button></div>
-      ${against ? `<div class="warn">${ic('i-info')}<div>Kısa vadeli eğilim (20/50 ortalaması) şu an <b>${r.up ? 'yukarı' : 'aşağı'}</b>. Ters yönde açarsan bot bir sonraki saatlik mumda “eğilim döndü” kuralıyla kapatabilir.</div></div>` : ''}
+      ${against ? `<div class="warn">${ic('i-info')}<div>Kısa vadeli eğilim (20/50 ortalaması) şu an <b>${r.up ? 'yukarı' : 'aşağı'}</b>. Ters yönde açarsan eğilim 2 saat böyle kalırsa bot “eğilim döndü” kuralıyla kapatır.</div></div>` : ''}
       <div class="xinfo">
         <div>${ic('i-chart')}<span>Fiyat</span><b>${nf(r.px, r.px >= 100 ? 2 : 4)} $</b></div>
         <div>${ic('i-layers')}<span>Kaldıraç</span><b>${lev}x · ${real ? 'gerçek masa' : 'deneme masası'}</b></div>
@@ -639,7 +639,7 @@ function openLevOpen(sym, side0) {
         <div>${ic('i-target')}<span>Kâr al</span><b>${nf(+lv.tp_atr || 3, 1)} ATR ileride</b></div>
       </div>
       ${calc}
-      <p class="hint">Açtıktan sonra bot kendi kuralıyla yönetir: kâr al, zarar durdur, iz süren stop; eğilim dönerse kapatır. İstersen Pozisyonlar'dan elle kapatırsın.</p>
+      <p class="hint">Açtıktan sonra bot kendi kuralıyla yönetir: kâr al, zarar durdur, iz süren stop; eğilim 2 saat ters kalırsa kapatır. İstersen Pozisyonlar'dan elle kapatırsın.</p>
       <button class="btn primary xgo lgo ${up ? 'up' : 'dn'}" id="loGo">${ic(up ? 'i-buy' : 'i-sell')}${up ? 'UZUN' : 'KISA'} aç</button></div>`;
         pcInit();
         document.querySelectorAll('[data-sd]').forEach(b => b.onclick = () => { side = +b.dataset.sd; draw(); });
