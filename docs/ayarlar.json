@@ -56,7 +56,7 @@
     "alerts": true,
     "daily": true,
     "daily_hour": 20,
-    "cleared": 1795562595
+    "cleared": 1795563386
   },
   "sell": {
     "ts": 1795558156295,
@@ -267,7 +267,7 @@
   "xfer_cancel": [
     "gs1795557828089"
   ],
-  "clear": 1795556517151,
+  "clear": 1795563385574,
   "xfer": {
     "daily_max": 1000,
     "sweep_on": true,
@@ -434,5 +434,6 @@
     "max_coins": 4,
     "use_pct": 90,
     "max_loss": 15
-  }
+  },
+  "clear_all": 1795563385574
 }
