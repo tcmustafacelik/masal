@@ -230,7 +230,15 @@ def _equity(G, px):
                            for i, p in G["positions"].items())
 
 
-def decide(G, c, snap, base, can_buy, ts):
+def _fut_short(state):
+    """Futures masasının KISA olduğu coinler (gerçek masa varsa onun, yoksa deneme masasının): Global spot bu coinlerde
+    alım yapmaz; biri yükselişe biri düşüşe oynayıp kâr ve zararı birbirini götürmesin, ücret iki kez ödenmesin."""
+    R = (state or {}).get("levr") or {}
+    pos = R.get("pos") if R.get("pos") else ((state or {}).get("lev") or {}).get("positions") or {}
+    return {f"{c}-USDT" for c, p in pos.items() if (p.get("side") or 0) < 0}
+
+
+def decide(G, c, snap, base, can_buy, ts, avoid=()):
     """Bir masanın bu turdaki kararları: [("sell", inst, lots, sebep, fiyat), ("buy", inst, $, sebep, fiyat)].
     Satışlar alış tahtası (bid), alımlar satış tahtası (ask) fiyatıyla kontrol edilir."""
     acts = []
@@ -258,7 +266,7 @@ def decide(G, c, snap, base, can_buy, ts):
     n_coins = len(G["positions"])
     cands = []
     for inst in list(dict.fromkeys(list(snap["uni"]) + list(G["positions"]))):
-        if inst in G["pending"] or inst in cool or config.banned("gspot", inst):
+        if inst in G["pending"] or inst in cool or inst in avoid or config.banned("gspot", inst):
             continue
         rows = snap["c"].get(inst) or []
         a = ask.get(inst)
@@ -584,9 +592,9 @@ def step(state, S, N=None):
     ts = int(time.time() * 1000)
     # Deneme masası: kararlar hemen uygulanır
     if c["on"]:
-        _paper(P, decide(P, c, snap, P["start"], True, ts), ts)
+        _paper(P, decide(P, c, snap, P["start"], True, ts, _fut_short(state)), ts)
         _mark(P, snap, ts)
-        P["watch"] = watch(P, c, snap)
+        P["watch"] = watch(P, c, snap, _fut_short(state))
         P["err"] = snap["err"]
     # Gerçek masa
     if c["real"] and not R and _ex().ok:
@@ -618,7 +626,7 @@ def step(state, S, N=None):
         elif R["halt"] and eq > R["start"] - c["max_loss"] * 0.8:
             R["halt"] = ""
         can = c["real"] and not R["halt"] and not S.get("paused")
-        acts = decide(R, c, snap, R["start"], can, ts)
+        acts = decide(R, c, snap, R["start"], can, ts, _fut_short(state))
         if acts:
             _send(R, acts)
         _mark(R, snap, ts)
@@ -626,7 +634,7 @@ def step(state, S, N=None):
         PHYS["v"] = max(0.0, R.get("phys", 0.0))
 
 
-def watch(G, c, snap):
+def watch(G, c, snap, avoid=()):
     """Uygulama için: alım şartına en yakın coinler (fiyatın alım fiyatına uzaklığı, %)."""
     out = []
     for inst in snap["uni"]:
@@ -641,7 +649,7 @@ def watch(G, c, snap):
         if not t:
             continue
         out.append({"i": inst, "p": a, "t": t, "g": round((a / t - 1) * 100, 2), "h": len(pos["lots"]) if pos else 0,
-                    "f": not _entry_ok(c, rows, bool(pos))})
+                    "f": not _entry_ok(c, rows, bool(pos)), "fs": inst in avoid})
     out.sort(key=lambda x: x["g"])
     return out[:12]
 

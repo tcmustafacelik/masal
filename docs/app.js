@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.88.0';
+const APP_VERSION = '1.88.1';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = 'var(--acc)';
@@ -847,8 +847,8 @@ function renderGspot() {
     const feed = (G.log || []).slice(0, 15).map(([ts, k, t]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : /^HATA/.test(t) ? 'err' : 'not'}">${k === 'buy' ? 'AL' : k === 'exit' ? 'SAT' : k === 'risk' ? (/^HATA/.test(t) ? 'HATA' : 'ENGEL') : 'BİLGİ'}</em><div>${feedTxt(String(t).replace(/^(?:AL|SAT|HATA|ENGEL:?|DUR:) ?/, ''))}</div></div>`).join('');
     const full = (G.positions || []).length >= +(gs.max_coins ?? 5);
     const W = (P?.watch || []).slice(0, 8).map((w) => {
-        const d = w.g, ok = d <= 0 && !w.f && (w.h || !full), near = Math.max(4, Math.min(100, 100 - Math.max(0, d) * 12));
-        return `<div class="wr ${ok ? 'wu' : 'wd'}"><div><b>${esc(sym(w.i))}</b><em>${w.f ? 'FİLTRE' : ok ? 'ŞART TAMAM' : d <= 0 && full && !w.h ? 'COİN SINIRI' : w.h ? (w.h + 1) + '. KDM' : 'ADAY'}</em></div><div><span>${pf(w.p)}</span><small>${d <= 0 ? 'hedefte' : 'hedefe %' + nf(d, 1)}</small></div><i style="width:${(ok ? 100 : near).toFixed(0)}%"></i></div>`;
+        const d = w.g, ok = d <= 0 && !w.f && !w.fs && (w.h || !full), near = Math.max(4, Math.min(100, 100 - Math.max(0, d) * 12));
+        return `<div class="wr ${ok ? 'wu' : 'wd'}"><div><b>${esc(sym(w.i))}</b><em>${w.fs ? 'FUTURES KISA' : w.f ? 'FİLTRE' : ok ? 'ŞART TAMAM' : d <= 0 && full && !w.h ? 'COİN SINIRI' : w.h ? (w.h + 1) + '. KDM' : 'ADAY'}</em></div><div><span>${pf(w.p)}</span><small>${d <= 0 ? 'hedefte' : 'hedefe %' + nf(d, 1)}</small></div><i style="width:${(ok ? 100 : near).toFixed(0)}%"></i></div>`;
     }).join('');
     const warm = P && P.uni && P.warm < P.uni ? `<p class="hint">Mumlar yükleniyor: ${P.warm}/${P.uni} coin hazır. Bir coin, 60 saatlik verisi tamamlanınca alınabilir.</p>` : '';
     const empty = real && gReal(G) < 0.5;
