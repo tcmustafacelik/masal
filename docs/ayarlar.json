@@ -73,7 +73,7 @@
     "mode": "total"
   },
   "test_req": {
-    "ts": 1795510519658,
+    "ts": 1795511164594,
     "s": {
       "live": true,
       "paused": false,
@@ -105,7 +105,7 @@
         "step3_pct": 6.6,
         "lot2_pct": 45,
         "lot3_pct": 77,
-        "sma_hours": 24,
+        "sma_hours": 48,
         "vol_filter": 4
       },
       "dip": {
@@ -130,7 +130,7 @@
         "alerts": true,
         "daily": true,
         "daily_hour": 20,
-        "cleared": 1795510322
+        "cleared": 1795510602
       },
       "quote": "USDT",
       "target": {
