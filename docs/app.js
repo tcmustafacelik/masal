@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.87.1';
+const APP_VERSION = '1.87.2';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = 'var(--acc)';
@@ -1317,7 +1317,7 @@ function xjBar(j) {
 function xjTime(t) { const d = new Date(t), n = new Date(); return d.toDateString() === n.toDateString() ? masaClock(t) : d.toLocaleDateString(LANG === 'en' ? 'en-GB' : 'tr-TR', { day: 'numeric', month: 'short' }) + ' ' + masaClock(t); }
 function xjSheet(j) {
     const k = xjIdx(j), bad = j.stage === 'failed', sol = /m/.test(String(j.dir).slice(0, 3)) || j.sol;
-    const link = j.txId ? `<a class="xtx" href="${sol ? 'https://solscan.io/tx/' : 'https://arbiscan.io/tx/'}${encodeURIComponent(j.txId)}" target="_blank" rel="noopener">${ic('i-link')}Zincirde gör · ${escH(String(j.txId).slice(0, 10))}…</a>` : '';
+    const link = j.txId ? `<a class="xtx" href="${sol ? 'https://solscan.io/tx/' : 'https://arbiscan.io/tx/'}${encodeURIComponent(j.txId)}" data-ext="1">${ic('i-link')}Zincirde gör · ${escH(String(j.txId).slice(0, 10))}…</a>` : '';
     const cap = (x) => x ? x.charAt(0).toLocaleUpperCase('tr-TR') + x.slice(1) : x;
     const steps = (j.steps || []).slice().reverse().map(([t, sg, m], i) => `<div class="xst${i === 0 ? ' cur' : ''}${sg === 'failed' ? ' bad' : sg === 'done' ? ' ok' : ''}"><time>${xjTime(t)}</time><i></i><div><b>${escH(cap(m) || (XST[sg] || [sg])[0])}</b>${sg !== 'req' ? `<small>${escH((XST[sg] || [sg])[0])}</small>` : ''}</div></div>`).join('');
     return `<div class="xsh"><div class="xsum"><b>${nf(+j.amt || 0, 2)} USDT</b><span>${xjTime(j.ts)}${j.chain ? ' · ' + escH(j.chain) : ''}${j.fee ? ` · ücret ${nf(+j.fee, 2)}` : ''}${j.got ? ` · ulaşan ${nf(+j.got, 2)}` : ''}</span></div>
@@ -1543,6 +1543,21 @@ async function waitMeme(via, amt, btn) {
         toast('İstek gönderilemedi, tekrar dene', patchWhy());
     return ok;
 }
+function openExt(url) {
+    if (/Android/i.test(navigator.userAgent)) {
+        const u = new URL(url);
+        location.href = `intent://${u.host}${u.pathname}${u.search}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(url)};end`;
+        return;
+    }
+    if (!window.open(url, '_blank', 'noopener'))
+        location.href = url;
+}
+document.addEventListener('click', e => { const a = e.target.closest?.('a[data-ext]'); if (!a)
+    return; e.preventDefault(); openExt(a.href); });
+function uidBox() { const id = S?.xfer?.g_uid; return id ? `<div class="xuid"><span>OKX Global UID<b>${escH(id)}</b></span><button type="button" data-cp="${escH(id)}">${ic('i-copy')}Kopyala</button></div>` : ''; }
+document.addEventListener('click', e => { const b = e.target.closest?.('[data-cp]'); if (!b)
+    return; navigator.clipboard?.writeText(b.dataset.cp).then(() => toast('UID kopyalandı'), () => toast('Kopyalanamadı')); });
+const OKX_TR_WD = 'https://tr.okx.com/balance/withdrawal/usdt';
 function openXfer(dir) {
     if (dir.startsWith('k')) {
         openKasaSend(dir);
@@ -1558,23 +1573,17 @@ function openXfer(dir) {
       <p class="xnote">OKX TR bottan para çıkışına izin vermiyor. USDT'yi <b>OKX TR uygulamasından OKX Global</b>'e gönder (ücretsiz, anında); ulaşınca bot kendiliğinden SOL alıp <b>MEME</b>'ye gönderir.</p>
       <div class="xlab">Tutar</div><div class="xamt"><input id="tmAmt" type="number" inputmode="decimal" min="1" step="1" placeholder="0"><span>USDT</span></div>
       <div class="xq">${[5, 10, 25, 50].map(v => `<button data-tq="${v}">${v} $</button>`).join('')}</div>
-      <div class="xinfo"><div>${ic('i-bank')}<span>1</span><b>OKX TR → Varlıklar → Çek → USDT</b></div><div>${ic('i-globe')}<span>2</span><b>OKX kullanıcıları → OKX Global hesabın</b></div><div>${ic('i-flask')}<span>3</span><b>Gelince bot SOL alıp MEME'ye gönderir</b></div></div>
+      <div class="xinfo"><div>${ic('i-bank')}<span>1</span><b>Çek → USDT → <u>İç transfer</u> (OKX kullanıcısı)</b></div><div>${ic('i-globe')}<span>2</span><b>Alıcı: OKX Global UID'n (aşağıdan kopyala)</b></div><div>${ic('i-flask')}<span>3</span><b>Gelince bot SOL alıp MEME'ye gönderir</b></div></div>${uidBox()}
       <button class="btn primary xgo" id="tmGo">${ic('i-out')}Kaydet ve OKX TR'yi aç</button></div>`;
         const inp = document.getElementById('tmAmt');
         document.querySelectorAll('[data-tq]').forEach(b => b.onclick = () => { inp.value = b.dataset.tq; });
         document.getElementById('tmGo').onclick = async () => {
             if (waitBusy)
                 return;
-            const w = window.open('about:blank', '_blank');
             if (await waitMeme('tr', +inp.value, document.getElementById('tmGo'))) {
-                if (w)
-                    w.location.href = 'https://tr.okx.com/balance/withdrawal';
-                else
-                    location.href = 'https://tr.okx.com/balance/withdrawal';
                 q.hidden = true;
+                openExt(OKX_TR_WD);
             }
-            else
-                w?.close();
         };
         q.hidden = false;
         return;
@@ -1585,8 +1594,8 @@ function openXfer(dir) {
         qHead('i-bank', 'Anladım');
         document.getElementById('qTitle').textContent = xName(dir);
         document.getElementById('qText').innerHTML = `<div class="xfs"><p class="xnote">OKX TR, Türkiye kuralı gereği API'den (bottan) yapılan para çıkışlarını kabul etmiyor (hata 58380). Bu yönü <b>OKX TR uygulamasından</b> yap; ücretsiz ve anında:</p>
-      <div class="xinfo"><div>${ic('i-bank')}<span>1</span><b>OKX TR → Varlıklar → Çek → USDT</b></div><div>${ic(dir === 'tr2g' ? 'i-globe' : 'i-vault')}<span>2</span><b>${dir === 'tr2g' ? 'OKX kullanıcıları → OKX Global hesabın' : 'Adres defterinden KASA (Arbitrum)'}</b></div><div>${ic('i-check')}<span>3</span><b>Gelince bot kasalarda gösterir</b></div></div>
-      <a class="btn primary xgo" href="https://tr.okx.com/balance/withdrawal" target="_blank" rel="noopener">${ic('i-out')}OKX TR'yi aç</a></div>`;
+      <div class="xinfo"><div>${ic('i-bank')}<span>1</span><b>Çek → USDT → ${dir === 'tr2g' ? '<u>İç transfer</u> (OKX kullanıcısı)' : 'Zincir üstü · Arbitrum One'}</b></div><div>${ic(dir === 'tr2g' ? 'i-globe' : 'i-vault')}<span>2</span><b>${dir === 'tr2g' ? 'Alıcı: OKX Global UID\'n (aşağıdan kopyala)' : 'Adres defterinden KASA (Arbitrum)'}</b></div><div>${ic('i-check')}<span>3</span><b>Gelince bot kasalarda gösterir</b></div></div>${dir === 'tr2g' ? uidBox() : ''}
+      <a class="btn primary xgo" href="${OKX_TR_WD}" data-ext="1">${ic('i-out')}OKX TR'yi aç</a></div>`;
         q.hidden = false;
         return;
     }

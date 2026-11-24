@@ -690,8 +690,18 @@ def step(state, S, N):
 _BAL = {}
 
 
+_GUID = {}
+
+
 def _balances(C, o, bot_cash):
     out = {}
+    if "v" not in _GUID and C["g"].ok:
+        try:  # OKX Global hesap numarası (UID): uygulamada OKX TR'den iç transferde alıcı olarak kopyalanır
+            _GUID["v"] = _uid(C["g"])
+        except Exception as e:
+            print("Global UID okunamadı:", e)
+    if _GUID.get("v"):
+        out["g_uid"] = _GUID["v"]
     try:
         r = _rate()
         out["usdtry"] = round(r, 4)
@@ -729,6 +739,6 @@ def public(state, S=None):
     return {"jobs": [{k: j.get(k) for k in ("id", "dir", "amt", "src", "ts", "stage", "msg", "got", "tl", "then", "wait", "via", "steps", "txId", "chain", "fee", "sol")}
                      for j in X["jobs"]][::-1][:10],
             "log": X.get("log", [])[:20], "free_tl": X.get("free_tl"), "g_val": X.get("g_val"), "kasa": X.get("kasa"),
-            "tr_total": X.get("tr_total"), "usdtry": X.get("usdtry"), "g_base": X.get("g_base", 0),
+            "tr_total": X.get("tr_total"), "usdtry": X.get("usdtry"), "g_uid": X.get("g_uid"), "g_base": X.get("g_base", 0),
             "day_sum": X.get("day_sum", 0), "daily_max": cfg["daily_max"], "sweep": {k: cfg[k] for k in ("sweep_on", "sweep_pct", "sweep_days")},
             "sweep_at": int(X.get("sweep_at", 0) * 1000), "dust": X.get("dust")}

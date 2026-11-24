@@ -1,10 +1,17 @@
 {
-  "version": "1.87.1",
+  "version": "1.87.2",
   "date": "2026-11-25",
   "notes": [
-    "Global spot gerçek masada ekranda gerçek para gösterilir (bütçe sınırı ayrı yazar); para yokken 'Henüz para yok' uyarısı"
+    "OKX ve zincir sayfaları Android'de Chrome'da açılır (Chrome yoksa uygulamanın içinde). OKX TR → Global ekranı iç transferi anlatır, OKX Global UID'n kopyalanabilir"
   ],
   "history": [
+    {
+      "version": "1.87.2",
+      "date": "2026-11-25",
+      "notes": [
+        "OKX ve zincir sayfaları Android'de Chrome'da açılır (Chrome yoksa uygulamanın içinde). OKX TR → Global ekranı iç transferi anlatır, OKX Global UID'n kopyalanabilir"
+      ]
+    },
     {
       "version": "1.87.1",
       "date": "2026-11-25",
@@ -101,13 +108,6 @@
       "date": "2026-11-24",
       "notes": [
         "Bot verileri ekrana 30 yerine en geç 10 saniyede gidiyor (işlem olunca hemen)"
-      ]
-    },
-    {
-      "version": "1.80.1",
-      "date": "2026-11-24",
-      "notes": [
-        "Aktarım: MEME → KASA / OKX TR zincirinin 2. adımı günlük sınıra ikinci kez sayılmıyor"
       ]
     }
   ]
