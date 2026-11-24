@@ -1,10 +1,17 @@
 {
-  "version": "1.74.0",
+  "version": "1.74.1",
   "date": "2026-11-24",
   "notes": [
-    "Yeni Özet ana sayfası: toplam varlık, dört masanın kısa durumu ve bütün masalardan son hareketler; Spot artık ayrı sekme"
+    "Futures ve Memecoin: özet kartı, açık pozisyonlar ve işlem kaydı ayrı kartlarda; memecoin gerçek mod kapalıyken 'DENEME' rozeti"
   ],
   "history": [
+    {
+      "version": "1.74.1",
+      "date": "2026-11-24",
+      "notes": [
+        "Futures ve Memecoin: özet kartı, açık pozisyonlar ve işlem kaydı ayrı kartlarda; memecoin gerçek mod kapalıyken 'DENEME' rozeti"
+      ]
+    },
     {
       "version": "1.74.0",
       "date": "2026-11-24",
@@ -110,13 +117,6 @@
       "date": "2026-11-23",
       "notes": [
         "Sayı kutuları bütün sistemde yenilendi: ayrı küçük − / + düğmeleri, ortada sayı ve altında birim; açıklamalar artık kesilmiyor"
-      ]
-    },
-    {
-      "version": "1.69.3",
-      "date": "2026-11-23",
-      "notes": [
-        "Ayar kutularında birim (adet, saat, %, kat) artık sayının altında küçük ve ortalı; + düğmesine değmiyor"
       ]
     }
   ]
