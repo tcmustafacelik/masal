@@ -56,7 +56,7 @@
     "alerts": true,
     "daily": true,
     "daily_hour": 20,
-    "cleared": 1795556138
+    "cleared": 1795556518
   },
   "sell": {
     "ts": 1795502996023,
@@ -232,7 +232,7 @@
     }
   ],
   "xfer_cancel": [],
-  "clear": 1795465907884,
+  "clear": 1795556517151,
   "xfer": {
     "daily_max": 1000,
     "sweep_on": true,
