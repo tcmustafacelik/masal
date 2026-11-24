@@ -20,7 +20,7 @@
   "grid": {
     "step_pct": 3.3,
     "lot_pct": 3.1,
-    "lot_tp_pct": 3.5,
+    "lot_tp_pct": 5.5,
     "max_lots": 9,
     "max_coins": 25,
     "stop_pct": 50,
@@ -32,7 +32,7 @@
     "lot3_pct": 77,
     "sma_hours": 72,
     "vol_filter": 10,
-    "pos_tp_pct": 3.6
+    "pos_tp_pct": 3
   },
   "dip": {
     "dip_pct": 3,
