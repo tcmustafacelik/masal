@@ -1,4 +1,4 @@
-const APP_VERSION='1.80.3';
+const APP_VERSION='1.80.4';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (kehribar)
@@ -303,7 +303,7 @@ function renderMasa() {
   const feed: [number, string, string, string][] = [];
   for (const t of rec.slice(0, 25)) feed.push([t.ts, t.side === 'AL' ? 'al' : (t.pnl || 0) >= 0 ? 'sat' : 'zar', t.side === 'AL' ? 'AL' : 'SAT',
     `<b>${sym(t.inst)}</b> ${tl(t.amount, 0)}${t.side === 'SAT' ? ` · <span class="${cls(t.pnl || 0)}">${sgn(t.pnl || 0)} TL</span>` : ''}<small>sebep: ${(t.reason || '—').replace(/</g, '&lt;')}</small>`]);
-  for (const [ts, msg] of (x.log || []).slice(0, 20)) if (!/^(AL|SAT|\[deneme\]) /.test(msg)) feed.push([ts, /HATA|uyarı|alınamıyor/i.test(msg) ? 'err' : 'not', /HATA/i.test(msg) ? 'HATA' : 'NOT', msg.replace(/</g, '&lt;')]);
+  for (const [ts, msg] of (x.log || []).slice(0, 20)) if (!/^(AL|SAT|\[deneme\]) /.test(msg)) feed.push([ts, /HATA|uyarı|alınamıyor/i.test(msg) ? 'err' : 'not', /HATA/i.test(msg) ? 'HATA' : 'NOT', feedTxt(msg)]);
   feed.sort((a, b) => b[0] - a[0]);
   setH(box, `<div class="mtop"><div><span>Bottaki para</span><b>${tl(eq, 0)}</b></div><div><span>Bugün</span><b class="${cls(today)}">${sgn(today)} TL</b></div>
       <div><span>İşlem</span><b>${x.trades}</b></div><div><span>Kazanma</span><b>${x.win_rate == null ? '—' : '%' + nf(x.win_rate, 0)}</b></div></div>
@@ -329,7 +329,7 @@ function renderLevR(): string {
   const pos = (R.positions || []).map((p: any) => {const g = p.margin ? p.pnl / p.margin * 100 : 0;
     return `<div class="fr"><time>${masaClock(p.ts)}</time><em class="ft ${p.side === 'UZUN' ? 'al' : 'zar'}">${p.side}</em><div><b>${p.sym}</b> ${p.lev || ''}x · teminat ${usd(p.margin)} · <span class="${cls(p.pnl)}">${p.pnl < 0 ? '−' : '+'}${usd(Math.abs(p.pnl))} (${spc(g, 0)})</span><small>giriş ${pf(p.entry)} · borsada stop ${pf(p.stop)} · hedef ${pf(p.tp)}</small></div>${deskBtn('lev', p.sym, 'Kapat')}</div>`}).join('');
   const feed = (R.log || []).slice(0, 15).map(([ts, k, t]: [number, string, string]) =>
-    `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : 'not'}">${k === 'buy' ? 'AÇ' : k === 'exit' ? 'KAPAT' : k === 'risk' ? 'ENGEL' : 'BİLGİ'}</em><div>${esc(t).replace(/^GERÇEK (AÇ|KAPAT|ENGEL) ?/, '')}</div></div>`).join('');
+    `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : 'not'}">${k === 'buy' ? 'AÇ' : k === 'exit' ? 'KAPAT' : k === 'risk' ? 'ENGEL' : 'BİLGİ'}</em><div>${feedTxt(String(t).replace(/^GERÇEK (AÇ|KAPAT|ENGEL) ?/, ''))}</div></div>`).join('');
   const st = R.dead ? `<b class="dn">Durdu: ${esc(R.dead)}. Ayarlar → Futures → Yeniden başlat.</b>` : R.halt ? `<b class="dn">Bugün durduruldu: günlük zarar sınırı.</b>` : !R.on ? '<b>Kapalı.</b> Ayarlar → Futures\'tan açılır.' : '';
   return `<h2 class="mh">${ic('i-layers')}Futures<span class="hsum"><em class="rbadge">GERÇEK</em>OKX Global</span><button class="mset" type="button" data-sett="fut">${ic('i-gear')}Ayarlar</button></h2>
     <div class="card mmeme">
@@ -350,7 +350,7 @@ function levWatch(): string {
   const pf = (v: number) => nf(v, v >= 100 ? 2 : v >= 1 ? 4 : Math.min(8, 2 - Math.floor(Math.log10(v || 1))));
   const w = (L.watch || []).map((r: any) => {const d = Math.abs(r.dist || 0), up = r.side === 'UZUN', near = Math.max(4, Math.min(100, 100 - d * 12));
     return `<div class="wr ${up ? 'wu' : 'wd'}" data-lo="${r.sym}" data-ls="${up ? 1 : -1}" role="button"><div><b>${r.sym}</b><em>${r.open ? 'AÇIK' : up ? '↑ UZUN' : '↓ KISA'}</em></div><div><span>${pf(r.px)}</span><small>${r.open ? 'pozisyon açık' : `sinyale %${nf(d, 1)}`}</small></div><i style="width:${(r.open ? 100 : near).toFixed(0)}%"></i></div>`}).join('');
-  const lg = (L.log || []).slice(0, 8).map(([ts, k, t]: [number, string, string]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : 'not'}">${k === 'buy' ? 'SİNYAL' : k === 'exit' ? 'ÇIKIŞ' : 'ENGEL'}</em><div>${String(t).replace(/^(AÇ|KAPAT|ENGEL) /, '').replace(/</g, '&lt;')}</div></div>`).join('');
+  const lg = (L.log || []).slice(0, 8).map(([ts, k, t]: [number, string, string]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : 'not'}">${k === 'buy' ? 'SİNYAL' : k === 'exit' ? 'ÇIKIŞ' : 'ENGEL'}</em><div>${feedTxt(String(t).replace(/^(AÇ|KAPAT|ENGEL) /, ''))}</div></div>`).join('');
   return `<h2 class="mh">${ic('i-eye')}İzlenen coinler<span class="hsum">sinyale uzaklık · saatlik</span></h2>
     <div class="card"><div class="wgrid">${w || `<div class="empty">${ic('i-refresh')}<div>Mumlar yükleniyor</div></div>`}</div>
     <p class="hint">Elle açmak için coine dokun. Çubuk dolu = sinyale yakın. Fiyat son ${lv.brk_h??20} saatin zirvesini aşınca UZUN, dibini kırınca KISA açılır (${lv.trend_on===false?'eğilim filtresi kapalı':`${lv.trend_h??200} saatlik ortalamanın yönünde`}).</p></div>
@@ -421,8 +421,8 @@ document.addEventListener('click',e=>{const t=e.target as HTMLElement;if(t.close
 /** Memecoin: tarama özeti ve son kararlar (hangi token neden alındı / engellendi) */
 function memeScan(): string {
   const M = (S as any)?.meme; if (!M) return '';
-  const st = M.stats || {}, esc = (t: any) => String(t).replace(/</g, '&lt;');
-  const lg = (M.log || []).slice(0, 10).map(([ts, k, t]: [number, string, string]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : 'not'}">${k === 'buy' ? 'SİNYAL' : k === 'exit' ? 'ÇIKIŞ' : 'ENGEL'}</em><div>${esc(t).replace(/^(AL|SAT|ENGEL) /, '')}</div></div>`).join('');
+  const st = M.stats || {};
+  const lg = (M.log || []).slice(0, 10).map(([ts, k, t]: [number, string, string]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : 'not'}">${k === 'buy' ? 'SİNYAL' : k === 'exit' ? 'ÇIKIŞ' : 'ENGEL'}</em><div>${feedTxt(String(t).replace(/^(AL|SAT|ENGEL) /, ''))}</div></div>`).join('');
   return `<h2 class="mh">${ic('i-eye')}Tarama<span class="hsum">10 sn'de bir · Solana</span></h2>
     <div class="card"><div class="funnel">${([['i-eye', 'Taranan', st.scanned || 0, 'f1'], ['i-shield', 'Engellenen', st.blocked || 0, 'f2'], ['i-flag', 'Sinyal', st.entered || 0, 'f3']] as [string, string, number, string][])
       .map(([i, n, v, c]) => `<div class="${c}">${ic(i)}<b>${nf(v, 0)}</b><span>${n}</span><i style="width:${Math.max(6, Math.min(100, Math.log10(v + 1) / Math.log10((st.scanned || 0) + 1 || 10) * 100)).toFixed(0)}%"></i></div>`).join('')}</div>
@@ -451,7 +451,7 @@ function renderMemeR(): string {
   const pos = (R.positions || []).map((p: any) => {const g = p.cost ? (p.val / p.cost - 1) * 100 : 0;
     return `<div class="fr mpc" data-mc="${esc(p.mint)}" role="button"><time>${masaClock(p.ts)}</time><em class="ft al">${p.part ? 'KALAN' : 'AÇIK'}</em><div><b>${esc(p.sym)}</b> ${usd(p.val)} · <span class="${cls(g)}">${spc(g, 1)}</span><small>giriş ${usd(p.cost)} · ${esc(p.why)}</small></div>${deskBtn('meme', p.mint, 'Sat')}</div>`}).join('');
   const feed = (R.log || []).slice(0, 15).map(([ts, k, t]: [number, string, string]) =>
-    `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : 'not'}">${k === 'buy' ? 'AL' : k === 'exit' ? 'SAT' : k === 'risk' ? 'ENGEL' : 'BİLGİ'}</em><div>${esc(t).replace(/^GERÇEK (AL|SAT|ENGEL) ?/, '')}</div></div>`).join('');
+    `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : 'not'}">${k === 'buy' ? 'AL' : k === 'exit' ? 'SAT' : k === 'risk' ? 'ENGEL' : 'BİLGİ'}</em><div>${feedTxt(String(t).replace(/^GERÇEK (AL|SAT|ENGEL) ?/, ''))}</div></div>`).join('');
   const st = R.dead ? `<b class="dn">Durdu: ${esc(R.dead)}. Ayarlar → Memecoin → Yeniden başlat.</b>` : !R.on ? '<b>Kapalı.</b> Ayarlar → Memecoin\'den açılır.' : '';
   return `<h2 class="mh">${ic('i-flask')}Memecoin<span class="hsum">${mm.real ? '<em class="rbadge">GERÇEK</em>' : '<em class="rbadge pp">DENEME</em>'}</span><button class="mset ico" type="button" data-memeon="0" aria-label="Masayı kapat">${ic('i-power')}</button><button class="mset" type="button" data-sett="meme">${ic('i-gear')}Ayarlar</button></h2>
     <div class="card mmeme">
@@ -1195,6 +1195,18 @@ function pcUpd(el: HTMLElement){
 }
 document.addEventListener('input',e=>{const el=(e.target as HTMLElement).closest?.('.pcs') as HTMLElement;if(el)pcUpd(el)});
 function pcInit(){document.querySelectorAll<HTMLElement>('#qText .pcs').forEach(pcUpd)}
+
+/** Akış satırı metnini düzenler: "SEMBOL $fiyat · ±kâr$ · sebep…" → kalın başlık (+ renkli kâr/zarar), altında küçük ayrıntı */
+function feedTxt(raw: string): string {
+  const parts = String(raw).replace(/&/g, '&amp;').replace(/</g, '&lt;').split(' · ');
+  let head = parts.shift() || '';
+  head = head.replace(/^([^\s:]+)(:?)/, '<b>$1</b>$2');
+  if (parts.length && /^[+\-−]?\$?\d[\d.,]*\$?$/.test(parts[0].trim())) {
+    const v = parts.shift().trim(), neg = /^[-−]/.test(v);
+    head += ` <span class="${neg ? 'dn' : 'up'}">${v.replace(/^-/, '−')}</span>`;
+  }
+  return `<span class="fh">${head}</span>${parts.length ? `<small>${parts.join(' · ')}</small>` : ''}`;
+}
 
 function renderRules(R: Risk, c?: GridCfg | null){
   const rows=c?[
