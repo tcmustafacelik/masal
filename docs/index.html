@@ -122,13 +122,13 @@ h2 svg.i{width:15px;height:15px}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 11px}
 .tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:1fr;gap:8px}
 .tile{background:var(--surface);border:1px solid var(--line);text-align:center;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;font:inherit;color:inherit;transition:background .15s,border-color .15s;text-decoration:none;min-height:0;padding:7px 3px 6px;gap:3px;border-radius:11px}
-.deck{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));padding-bottom:2px;gap:6px}#deck{padding-top:8px}
+.deck{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding-bottom:2px;gap:6px}#deck{padding-top:8px}
 .deck button{display:flex;flex-direction:column;align-items:center;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--text);font:inherit;-webkit-tap-highlight-color:transparent;user-select:none;cursor:pointer;min-width:0;padding:7px 3px 6px;gap:1px}
 .deck .dic{display:inline-flex;align-items:center;justify-content:center;border-radius:9px;width:26px;height:26px;margin-bottom:1px}.deck .dic svg{width:15px;height:15px}
 .deck .d1{background:var(--blue-bg);color:var(--blue)}.deck .d2{background:var(--violet-bg);color:var(--violet)}.deck .d3{background:var(--green-bg);color:var(--green)}.deck .d4{background:var(--amber-bg);color:var(--amber)}
 .deck b{font-weight:650;font-size:11.5px}.deck small{font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .deck button.on{border-color:var(--acc-line);background:var(--acc-bg)}.deck button.on b{color:var(--acc-ink)}
-#futv,#kasav{padding-top:4px}
+#futv,#memev,#kasav{padding-top:4px}
 a.btn{text-decoration:none}
 .clr{margin-top:14px}.clr .xsync{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;color:var(--red)}.clr .xsync svg{width:16px;height:16px}.clr .hint{font-size:11.5px;color:var(--muted);margin:6px 2px 0;line-height:1.45}
 .row:has([data-coin]){cursor:pointer}
@@ -645,8 +645,12 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 .hero .atg .th{display:flex;justify-content:space-between;font-size:10.5px;color:var(--faint);margin-top:4px;font-variant-numeric:tabular-nums}
 .hero .atg .th span:nth-child(2){color:var(--muted);font-weight:600}
 
-/* Memecoin kaldırıldı: üç masa */
-.ovw .og{grid-template-columns:repeat(3,minmax(0,1fr))}
+/* Memecoin kapalıyken */
+.moff{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;padding:18px 14px}
+.moff .moi{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;background:var(--violet-bg,var(--line2));color:var(--violet,var(--muted))}
+.moff .moi svg{width:20px;height:20px}.moff b{font-size:14.5px}.moff p{font-size:12px;color:var(--muted);line-height:1.5;margin:0 0 4px}
+.moff .btn{width:auto;padding:9px 16px;display:inline-flex;align-items:center;gap:6px}
+.mh .mset+.mset{margin-left:5px}.mh .mset.ico{padding-left:8px;padding-right:8px;color:var(--red)}.mh .mset.ico svg{margin:0}
 </style>
 </head>
 <body>
@@ -715,11 +719,12 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 <nav class="deck wrap" id="deck">
   <button data-v="spot" class="on"><span class="dic d1"><svg class="i"><use href="#i-coins"/></svg></span><b>Spot</b><small id="dkSpot">OKX TR</small></button>
   <button data-v="fut"><span class="dic d2"><svg class="i"><use href="#i-layers"/></svg></span><b>Futures</b><small id="dkFut">—</small></button>
+  <button data-v="meme"><span class="dic d3"><svg class="i"><use href="#i-flask"/></svg></span><b>Memecoin</b><small id="dkMeme">—</small></button>
   <button data-v="kasa"><span class="dic d4"><svg class="i"><use href="#i-vault"/></svg></span><b>Kasalar</b><small id="dkKasa">aktarım</small></button>
 </nav>
 <section class="wrap ovw" id="ovw" hidden></section>
 <main class="wrap" id="futv" hidden><div id="futBody"></div></main>
-
+<main class="wrap" id="memev" hidden><div id="memeBody"></div></main>
 <main class="wrap" id="kasav" hidden><div class="card xf" id="xfer" hidden></div></main>
 <main class="wrap" id="mainv">
   <div id="homeChk"></div>
@@ -843,6 +848,6 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 <div class="toast" id="toast" hidden></div>
 <div class="qsh" id="qsh" hidden><div class="qb"><div class="gr"></div><h3><span><svg class="i" id="qIco"><use href="#i-info"/></svg></span><b id="qTitle"></b></h3><div class="qt" id="qText"></div><button class="btn primary" id="qOk">Anladım</button></div></div>
 
-<script src="app.js?v=1.72.0"></script>
+<script src="app.js?v=1.72.1"></script>
 </body>
 </html>

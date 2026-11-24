@@ -1,10 +1,17 @@
 {
-  "version": "1.72.0",
+  "version": "1.72.1",
   "date": "2026-11-24",
   "notes": [
-    "Memecoin bölümü kaldırıldı: sekme, ayarlar, MEME aktarım yönleri ve toplamdaki payı"
+    "Memecoin bölümü geri geldi; masa artık elle açılıp kapanır (Memecoin sekmesinde Aç / güç düğmesi, Ayarlar'da 'Memecoin masası açık')"
   ],
   "history": [
+    {
+      "version": "1.72.1",
+      "date": "2026-11-24",
+      "notes": [
+        "Memecoin bölümü geri geldi; masa artık elle açılıp kapanır (Memecoin sekmesinde Aç / güç düğmesi, Ayarlar'da 'Memecoin masası açık')"
+      ]
+    },
     {
       "version": "1.72.0",
       "date": "2026-11-24",
@@ -113,13 +120,6 @@
         "Memecoin: DexScreener fiyat vermezse Jupiter fiyatı kullanılır; deneme masası çalışmasa da yedek zarar kes / kâr al devrede",
         "Aktarım işleri arka planda: borsa beklerken bot turu durmuyor",
         "İngilizce çeviriler tamamlandı; kullanılmayan eski aktarım kodu temizlendi"
-      ]
-    },
-    {
-      "version": "1.66.2",
-      "date": "2026-11-23",
-      "notes": [
-        "Açılır bölümlerde uzun özet yazısı ok simgesini sıkıştırıyordu; düzeltildi"
       ]
     }
   ]
