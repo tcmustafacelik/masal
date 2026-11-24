@@ -1,4 +1,4 @@
-const APP_VERSION='1.87.2';
+const APP_VERSION='1.87.3';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (kehribar)
@@ -451,6 +451,8 @@ function openLevOpen(sym: string, side0: number){
 document.addEventListener('click',e=>{const t=(e.target as HTMLElement).closest?.('[data-lo]') as HTMLElement;if(t)openLevOpen(t.dataset.lo,+t.dataset.ls)});
 /** Global spot masası (OKX Global, USDT pariteleri, kademeli strateji). Gerçek mod açıksa ya da gerçek masada coin
  *  varsa gerçek masa, değilse deneme masası gösterilir; alım adayları ve favoriler deneme masasının taramasından. */
+/** Gerçek Global masasında borsadaki gerçek para: kendi USDT'si + eldeki coinlerin değeri (bütçe değil) */
+const gReal=(G: any)=>(+G?.phys||0)+((G?.positions||[]) as any[]).reduce((a,p)=>a+(+p.val||0),0);
 function renderGspot(): string {
   const gs: any = (orig || S?.settings as any)?.gspot || {}, P: any = (S as any)?.gspot, RR: any = (S as any)?.gspotr;
   const real = !!(RR && (gs.real || (RR.positions || []).length)), G: any = real ? RR : P, desk = real ? 'gspotr' : 'gspot';
@@ -474,7 +476,7 @@ function renderGspot(): string {
     : 'Deneme: gerçek fiyatlarla sanal para. Gerçek işlem için Ayarlar → Global → Gerçek parayla işlem.';
   return `<h2 class="mh">${ic('i-globe')}Global<span class="hsum">${real ? '<em class="rbadge">GERÇEK</em>' : '<em class="rbadge pp">DENEME</em>'}OKX Global</span><button class="mset" type="button" data-sett="gspot">${ic('i-gear')}Ayarlar</button></h2>
     <div class="card mmeme">
-      ${((h: string) => real ? h : h.replace(/<div class="drisk">[\s\S]*?<\/div><\/div>\s*/, ''))(deskHero(real ? 'Masada gerçek para' : 'Deneme kasası',
+      ${((h: string) => real && !empty ? h : h.replace(/<div class="drisk">[\s\S]*?<\/div><\/div>\s*/, ''))(deskHero(real ? 'Masada gerçek para' : 'Deneme kasası',
         real ? (+G.phys || 0) + (G.positions || []).reduce((a: number, p: any) => a + (+p.val || 0), 0) : G.equity,
         real ? `bütçe ${usd(G.start)} · coin ${usd((G.positions || []).reduce((a: number, p: any) => a + (+p.val || 0), 0))} · USDT ${usd(+G.phys || 0)}` : `boşta ${usd(G.cash)} · başlangıç ${usd(G.start)}`, G.pnl, G.start, left, ml,
         [['Coin', String((G.positions || []).length)], ['Satış', String(G.sells || 0)], ['Kazanma', G.win_rate == null ? '—' : '%' + G.win_rate], ['Kâr', '%' + nf(tp, 1)]]))}
@@ -1120,7 +1122,7 @@ function renderDeck(){
   // son yazılan Türkçe metin saklanır: İngilizcede ekrandaki yazı çevrildiği için ekranla karşılaştırmak her turda yeniden yazdırırdı
   const set=(id: string,t: string)=>{const e=document.getElementById(id) as any;if(e&&e._t!==t){e.textContent=t;e._t=t}};
   if(sp&&!sp.locked){const p=liveEquity(sp)-sp.start_cash;set('dkSpot',Math.abs(p)<0.5?'0 TL':(p>=0?'+':'−')+nf(Math.abs(p),0)+' TL')}
-  {const R2: any=(S as any).levr;set('dkFut',R2?.on?'$'+nf(R2.equity,2):'kapalı')}{const G2: any=(S as any).gspotr,P2: any=(S as any).gspot,gs2: any=((S?.settings as any)?.gspot)||{};set('dkG',gs2.on===false&&!G2?'kapalı':G2&&gs2.real?'$'+nf(G2.equity,2):P2?'deneme':'—')}{const R3: any=(S as any).memer,on3=((S?.settings as any)?.meme||{}).on!==false;set('dkMeme',on3&&R3?.on?'$'+nf(R3.value,2):on3?'deneme':'kapalı')}
+  {const R2: any=(S as any).levr;set('dkFut',R2?.on?'$'+nf(R2.equity,2):'kapalı')}{const G2: any=(S as any).gspotr,P2: any=(S as any).gspot,gs2: any=((S?.settings as any)?.gspot)||{};set('dkG',gs2.on===false&&!G2?'kapalı':G2&&gs2.real?(gReal(G2)>0.005?'$'+nf(gReal(G2),2):'para yok'):P2?'deneme':'—')}{const R3: any=(S as any).memer,on3=((S?.settings as any)?.meme||{}).on!==false;set('dkMeme',on3&&R3?.on?'$'+nf(R3.value,2):on3?'deneme':'kapalı')}
   if(X){const a=[X.tr_total,X.g_val,X.kasa?.usd];if(a.every((v: any)=>v!=null))set('dkKasa','$'+nf(a.reduce((x: number,y: number)=>x+y,0)+(+(S as any).memer?.value||0),0))}
   renderOverview();
   if(VIEW==='home')renderHome();
@@ -1142,7 +1144,7 @@ function renderHome(){
   const spP=liveEquity(sp)-sp.start_cash,spT=(sp as any).today_pnl??0;
   const desks=[
     ['spot','h1','i-coins','Spot',tl(liveEquity(sp),0),pill(spP,nf(Math.abs(spP),0)+' TL'),sp.halted?['','durdu']:sp.paused?['pp','beklemede']:['on',`${(sp.positions||[]).length} coin · bugün ${sgn(spT)} TL`]],
-    ['gspot','h5','i-globe','Global',(()=>{const G: any=(S as any).gspotr,P: any=(S as any).gspot,gs: any=ms&&(S.settings as any)?.gspot||{};return G&&gs.real?usd(+G.equity||0):P?'Deneme':'—'})(),
+    ['gspot','h5','i-globe','Global',(()=>{const G: any=(S as any).gspotr,P: any=(S as any).gspot,gs: any=ms&&(S.settings as any)?.gspot||{};return G&&gs.real?usd(gReal(G)):P?'Deneme':'—'})(),
       (()=>{const G: any=(S as any).gspotr,gs: any=(S.settings as any)?.gspot||{};return G&&gs.real?pill(+G.pnl||0,usd(Math.abs(+G.pnl||0))):''})(),
       (()=>{const G: any=(S as any).gspotr,P: any=(S as any).gspot,gs: any=(S.settings as any)?.gspot||{},X=G&&gs.real?G:P;return gs.on===false&&!G?['','kapalı']:X?[G&&gs.real?'on':'pp',`${(X.positions||[]).length} coin · ${G&&gs.real?'gerçek':'deneme'}`]:['','hazırlanıyor']})()],
     ['fut','h2','i-layers','Futures',R?.on||R?.funded?usd(+R.equity||0):'—',R?.funded?pill(+R.pnl||0,usd(Math.abs(+R.pnl||0))):'',R?.dead?['','durdu']:R?.on?['on',`${(R.positions||[]).length} pozisyon · ${(S as any).lev?.watch?.length||0} coin izleniyor`]:['','kapalı']],
@@ -1182,7 +1184,7 @@ function renderOverview(){
   /** USD tutarını seçili birimde yazar; gizliyse yıldız */
   const cv=(usd: number,d?: number)=>OV_HIDE?'••••':cur==='try'?tl(usd*r,d??0):cur==='btc'?'₿'+nf(usd/btcUsd,d??(Math.abs(usd/btcUsd)<0.01?6:4)):'$'+nf(usd,d??2);
   // Global hesap değeri futures ve Global spot masasını birlikte içerir: gerçek Global spot masası ayrı gösterilir
-  const GS: any=(S as any).gspotr,gE=GS&&(+GS.equity||0)>0?+GS.equity:0;
+  const GS: any=(S as any).gspotr,gE=GS?gReal(GS):0;
   const parts: [string,string,string,number][]=[['tr','Spot · OKX TR','i-bank',+X.tr_total||0],['g','Futures · Global','i-layers',Math.max(0,(+X.g_val||0)-gE)],...(gE?[['gs','Global spot','i-globe',gE]] as [string,string,string,number][]:[]),['m','Memecoin','i-flask',+M?.value||0],['k','Kasa','i-vault',+X.kasa?.usd||0]];
   const tot=[X.tr_total,X.g_val,X.kasa?.usd].every((v: any)=>v!=null)?parts.reduce((a,p)=>a+p[3],0):null;
   const sP=(liveEquity(sp)-sp.start_cash)/r,fP=R?.funded?+R.pnl||0:0,mP=M?.start?+M.pnl||0:0,gP=GS?.funded?+GS.pnl||0:0,all=sP+fP+mP+gP;

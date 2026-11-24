@@ -1,10 +1,17 @@
 {
-  "version": "1.87.2",
+  "version": "1.87.3",
   "date": "2026-11-25",
   "notes": [
-    "OKX ve zincir sayfaları Android'de Chrome'da açılır (Chrome yoksa uygulamanın içinde). OKX TR → Global ekranı iç transferi anlatır, OKX Global UID'n kopyalanabilir"
+    "Global kutusu ve Özet'teki toplam, bütçeyi değil masadaki gerçek parayı gösterir (para yokken 'para yok')"
   ],
   "history": [
+    {
+      "version": "1.87.3",
+      "date": "2026-11-25",
+      "notes": [
+        "Global kutusu ve Özet'teki toplam, bütçeyi değil masadaki gerçek parayı gösterir (para yokken 'para yok')"
+      ]
+    },
     {
       "version": "1.87.2",
       "date": "2026-11-25",
@@ -101,13 +108,6 @@
       "date": "2026-11-24",
       "notes": [
         "Kasalar kaydı renkli: GÖNDER, ULAŞTI, ÇEVİR, BEKLE, HATA, BİLGİ etiketleri (Bot kayıtlarıyla aynı düzen)"
-      ]
-    },
-    {
-      "version": "1.80.2",
-      "date": "2026-11-24",
-      "notes": [
-        "Bot verileri ekrana 30 yerine en geç 10 saniyede gidiyor (işlem olunca hemen)"
       ]
     }
   ]
