@@ -169,8 +169,19 @@ def _m2g(g, job, X, N, note):
         raise RuntimeError("MEME cüzdanı bağlı değil")
     if job["stage"] == "new":
         px = _px()
-        sol = job["amt"] / px
-        free = G._sol(addr) - G.RESERVE
+        if job.get("all"):
+            # "hepsini gönder" (memecoin kapatılırken): önce masadaki tokenler satılmış olmalı
+            if (W.get("R") or {}).get("pos") and time.time() * 1000 - job["ts"] < 30 * 60_000:
+                job["msg"] = "MEME'deki tokenler satılıyor; bekleniyor"
+                return  # 30 dk içinde satılamayan token kalırsa eldeki SOL yine gönderilir
+            free = G._sol(addr) - 0.002  # yalnız ağ ücreti payı kalır (masa kapalı, yedek gerekmez)
+            if free * px < 1:
+                raise RuntimeError(f"MEME'de gönderilecek SOL kalmadı ({max(0, free):.4f} SOL)")
+            job["amt"] = math.floor(free * px * 100) / 100
+            sol = free
+        else:
+            sol = job["amt"] / px
+            free = G._sol(addr) - G.RESERVE
         if sol > free:
             raise RuntimeError(f"MEME'de boşta {max(0, free):.4f} SOL var (~{max(0, free) * px:.2f} $); daha fazlası gönderilemez")
         chain, _, _, _, can_dep = _g_sol_chain(g)
@@ -238,7 +249,7 @@ def _m2g(g, job, X, N, note):
                     k_amt = math.floor((usd - k_fee) * 100) / 100  # zincir ücreti Global fonundan düşer
                     if job.get("then") == "k" and k_amt >= 1:  # kâr süpürme: Global'den KASA'ya devam
                         X["jobs"].append({"id": job["id"] + "k", "dir": "g2k", "amt": k_amt, "src": "kar",
-                                          "ts": int(time.time() * 1000), "stage": "new", "msg": "memecoin kârı KASA'ya"})
+                                          "ts": int(time.time() * 1000), "stage": "new", "msg": "MEME'den gelen para KASA'ya" if job.get("all") else "memecoin kârı KASA'ya"})
                     X["g_base"] = round(X.get("g_base", 0) + usd, 2)
                     note(X, f"Global'e ulaştı: {usd:.2f} USDT")
                     N.add("money", "MEME'den Global'e ulaştı", f"{usd:.2f} USDT", 3, ["x"])

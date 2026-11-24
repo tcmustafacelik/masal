@@ -568,8 +568,13 @@ def step(state, S, N):
             continue
         if not (1 <= amt <= 1e6):
             continue
-        X["jobs"].append({"id": rid, "dir": r["dir"], "amt": amt, "src": r.get("src") or "bos", "ts": int(r.get("ts") or now * 1000),
-                          "stage": "new", "msg": "sırada"})
+        job = {"id": rid, "dir": r["dir"], "amt": amt, "src": r.get("src") or "bos", "ts": int(r.get("ts") or now * 1000),
+               "stage": "new", "msg": "sırada"}
+        if r["dir"] == "m2g" and r.get("all"):
+            job["all"] = True  # MEME'deki bütün SOL (tokenler satıldıktan sonra)
+        if r["dir"] == "m2g" and r.get("then") == "k":
+            job["then"] = "k"  # Global'e gelince satılıp KASA'ya devam eder
+        X["jobs"].append(job)
         a, b = MEME_DIRS.get(r["dir"]) or (ROUTES[r["dir"]][0], ROUTES[r["dir"]][2])
         _note(X, f"İstek: {NAMES[a]} → {NAMES[b]} {amt:.2f} USDT")
     # iptal istekleri: henüz gönderilmemiş işler durdurulur, fon hesabına ayrılan para alım-satım hesabına geri döner
