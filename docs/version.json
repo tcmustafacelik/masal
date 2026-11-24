@@ -1,10 +1,17 @@
 {
-  "version": "1.74.4",
+  "version": "1.75.0",
   "date": "2026-11-24",
   "notes": [
-    "Bot kayıtları Kasalar kaydıyla aynı düzende: saat, renkli tür etiketi (AL/SAT/KORUMA/UYARI/BİLGİ), kalın başlık ve küçük ayrıntı"
+    "Kasalar arası her yön: OKX TR/KASA → MEME (Global üzerinden kendiliğinden SOL), MEME → KASA ve MEME → OKX TR (zincirleme); Para gönder kartları 3'lü düzen"
   ],
   "history": [
+    {
+      "version": "1.75.0",
+      "date": "2026-11-24",
+      "notes": [
+        "Kasalar arası her yön: OKX TR/KASA → MEME (Global üzerinden kendiliğinden SOL), MEME → KASA ve MEME → OKX TR (zincirleme); Para gönder kartları 3'lü düzen"
+      ]
+    },
     {
       "version": "1.74.4",
       "date": "2026-11-24",
@@ -107,15 +114,6 @@
         "Toplam varlıkta USDT / BTC / TRY seçimi ve tutarları gizle-göster",
         "Para gönderme sayfalarında 'Tümü' kısayolu; bakiye değiştikçe kendiliğinden güncellenir",
         "Fable 3. tur: değişen/hatalı ayar kutusu belirgin, kesilen açıklamalar, Ajan masası hizası, renk ayrımı"
-      ]
-    },
-    {
-      "version": "1.70.0",
-      "date": "2026-11-23",
-      "notes": [
-        "Sayı kutuları yenilendi: tek parça, renkli, hepsi aynı boyda; sayı ve birim yan yana",
-        "Memecoin kademeli kâr al: kâr alda belirlediğin kısım satılır, kalanı iz süren stopla yükselişte tutulur",
-        "Futures izleme listesi 8'den 18 coine çıktı; Fable 3. tur bot düzeltmeleri"
       ]
     }
   ]

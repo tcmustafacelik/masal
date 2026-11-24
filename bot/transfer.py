@@ -572,8 +572,10 @@ def step(state, S, N):
                "stage": "new", "msg": "sırada"}
         if r["dir"] == "m2g" and r.get("all"):
             job["all"] = True  # MEME'deki bütün SOL (tokenler satıldıktan sonra)
-        if r["dir"] == "m2g" and r.get("then") == "k":
-            job["then"] = "k"  # Global'e gelince satılıp KASA'ya devam eder
+        if r["dir"] == "m2g" and r.get("then") in ("k", "tr"):
+            job["then"] = r["then"]  # Global'e gelince satılıp KASA'ya / OKX TR'ye devam eder
+        if r["dir"] == "g2m" and r.get("wait") and r.get("via") in ("k", "tr"):
+            job.update(wait=True, via=r["via"], msg=f"{ {'k': 'KASA', 'tr': 'OKX TR'}[r['via']]}'dan Global'e gelmesi bekleniyor")  # elle gönderilen para gelince MEME'ye geçer
         X["jobs"].append(job)
         a, b = MEME_DIRS.get(r["dir"]) or (ROUTES[r["dir"]][0], ROUTES[r["dir"]][2])
         _note(X, f"İstek: {NAMES[a]} → {NAMES[b]} {amt:.2f} USDT")

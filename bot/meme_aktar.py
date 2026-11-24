@@ -105,6 +105,9 @@ def _g2m(g, job, X, N, note):
             if not job.get("ordId"):
                 if not job.get("moved"):
                     if g.funding("USDT") < usd - 0.01:
+                        if job.get("wait") and time.time() * 1000 - job["ts"] < 3 * 3600_000:
+                            job["msg"] = f"{ {'k': 'KASA', 'tr': 'OKX TR'}.get(job.get('via'), 'kaynak')}'dan Global'e gelmesi bekleniyor"
+                            return
                         raise RuntimeError(f"Global fon hesabında {usd:.2f} USDT yok (futures teminatına dokunulmaz)")
                     g.move("USDT", usd, transfer.FUNDING, transfer.TRADING)
                     job["moved"] = True
@@ -247,9 +250,13 @@ def _m2g(g, job, X, N, note):
                     except Exception:
                         k_fee = 1.0
                     k_amt = math.floor((usd - k_fee) * 100) / 100  # zincir ücreti Global fonundan düşer
-                    if job.get("then") == "k" and k_amt >= 1:  # kâr süpürme: Global'den KASA'ya devam
+                    if job.get("then") == "k" and k_amt >= 1:  # Global'den KASA'ya devam (kâr süpürme ya da elle MEME → KASA)
                         X["jobs"].append({"id": job["id"] + "k", "dir": "g2k", "amt": k_amt, "src": "kar",
-                                          "ts": int(time.time() * 1000), "stage": "new", "msg": "MEME'den gelen para KASA'ya" if job.get("all") else "memecoin kârı KASA'ya"})
+                                          "ts": int(time.time() * 1000), "stage": "new", "msg": "memecoin kârı KASA'ya" if job.get("src") == "kar" and not job.get("all") else "MEME'den gelen para KASA'ya"})
+                    tr_amt = math.floor(usd * 100) / 100  # Global → TR iç transfer ücretsiz
+                    if job.get("then") == "tr" and tr_amt >= 1:
+                        X["jobs"].append({"id": job["id"] + "t", "dir": "g2tr", "amt": tr_amt, "src": "bos",
+                                          "ts": int(time.time() * 1000), "stage": "new", "msg": "MEME'den gelen para OKX TR'ye"})
                     X["g_base"] = round(X.get("g_base", 0) + usd, 2)
                     note(X, f"Global'e ulaştı: {usd:.2f} USDT")
                     N.add("money", "MEME'den Global'e ulaştı", f"{usd:.2f} USDT", 3, ["x"])

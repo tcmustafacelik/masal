@@ -1,4 +1,4 @@
-const APP_VERSION='1.74.4';
+const APP_VERSION='1.75.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (pembe)
@@ -647,7 +647,8 @@ async function syncReal(retry = true){
 /* ---------- Para aktarımı: TR ↔ Global ↔ KASA (USDT, Arbitrum One). İstek bulut ayar dosyasına yazılır, bot gönderir. ---------- */
 /* Uçlar: her kasanın simgesi, rengi ve kısa adı (kartlarda ve pencerede aynı standart) */
 const XEND: Record<string, [string, string, string]> = {tr:['OKX TR','i-bank','e1'], g:['OKX Global','i-globe','e2'], k:['KASA','i-vault','e3'], m:['MEME','i-flask','e4']};
-const XDIR: Record<string, [string, string, string]> = {tr2g:['tr','g','OKX TR uygulamasından'], g2tr:['g','tr','TL\'ye çevrilir'], tr2k:['tr','k','OKX TR uygulamasından'], g2k:['g','k','Soğuk cüzdana'], g2m:['g','m','SOL alınıp gönderilir'], m2g:['m','g','SOL satılıp USDT olur'], k2g:['k','g','Trust Wallet\'tan'], k2tr:['k','tr','Trust Wallet\'tan']};
+const XDIR: Record<string, [string, string, string]> = {tr2g:['tr','g','Uygulamadan'], g2tr:['g','tr','TL olur'], tr2k:['tr','k','Uygulamadan'], g2k:['g','k','Soğuk cüzdan'], g2m:['g','m','SOL olarak'], m2g:['m','g','USDT olur'], k2g:['k','g','Trust Wallet'], k2tr:['k','tr','Trust Wallet'],
+  tr2m:['tr','m','Global ile'], m2k:['m','k','USDT olarak'], m2tr:['m','tr','TL olur'], k2m:['k','m','Global ile']};
 const xName=(d: string)=>`${XEND[XDIR[d][0]][0]} → ${XEND[XDIR[d][1]][0]}`;
 const XST: Record<string, [string, string, string]> = {new:['Sırada','i-clock','w'],sent:['Yolda','i-out','w'],arriving:['Ulaşıyor','i-in','w'],done:['Tamam','i-check','ok'],failed:['Olmadı','i-stop','bad']};
 function xEnd(k: string){const e=XEND[k];return `<span class="xe ${e[2]}">${ic(e[1])}</span>`}
@@ -659,17 +660,17 @@ function renderXfer(){
   if(sel!=='live'||!S?.strategies?.live||S.strategies.live.locked){box.hidden=true;return}
   box.hidden=false;
   const jobs=(X?.jobs||[]).slice(0,4).map((j: any)=>{const st=XST[j.stage]||[j.stage,'i-info','w'];
-    return `<div class="xr"><span class="xs ${st[2]}">${ic(st[1])}</span><div class="xm"><b>${XDIR[j.dir]?xName(j.dir):j.dir}<i>${nf(j.amt,2)} $</i></b>
+    return `<div class="xr"><span class="xs ${st[2]}">${ic(st[1])}</span><div class="xm"><b>${j.dir==='m2g'&&j.then?`MEME → ${XEND[j.then][0]}`:j.dir==='g2m'&&j.wait?`${XEND[j.via]?.[0]||''} → MEME`:XDIR[j.dir]?xName(j.dir):j.dir}<i>${nf(j.amt,2)} $</i></b>
       <small>${masaClock(j.ts)} · ${st[0]}${j.stage!=='done'&&j.msg&&j.msg!=='sırada'?' · '+j.msg:''}</small></div>${j.stage==='new'?`<button class="xc" data-xc="${j.id}">İptal</button>`:''}</div>`}).join('');
   // Kasalar ekranı: her bölüm kendi başlığı ve kartıyla (bakiyeler · para gönder · aktarımlar · küçük bakiyeler · kayıt)
-  const grp: [string,string,string[]][]=[['OKX TR\'den','tr',['tr2g','tr2k']],['OKX Global\'den','g',['g2tr','g2k','g2m']],['MEME\'den','m',['m2g']],['KASA\'dan','k',['k2g','k2tr']]];
+  const grp: [string,string,string[]][]=[['OKX TR\'den','tr',['tr2g','tr2k','tr2m']],['OKX Global\'den','g',['g2tr','g2k','g2m']],['MEME\'den','m',['m2g','m2k','m2tr']],['KASA\'dan','k',['k2g','k2tr','k2m']]];
   const tile=(k: string)=>{const [f,t,sub]=XDIR[k];return `<button data-x="${k}"><span class="xrt">${xEnd(f)}${ic('i-chev')}${xEnd(t)}</span><b>${XEND[t][0]}</b><small>${sub}</small></button>`};
   const logRows=((X?.log||[]) as any[]).slice(0,5).map(([t,m]: [number,string])=>{const parts=String(m).replace(/</g,'&lt;').split(' · ');
     return `<div class="xl"><time>${masaClock(t)}</time><div><b>${parts[0]}</b>${parts.length>1?`<small>${parts.slice(1).join(' · ')}</small>`:''}</div></div>`}).join('');
   if(!setH(box,`<h2 class="mh">${ic('i-wallet')}Kasalar<span class="hsum">dakikada bir güncellenir</span></h2>
     <div class="card xf">${xKasalar(X)}</div>
     <h2 class="mh">${ic('i-out')}Para gönder<span class="hsum">bugün $${nf(X?.day_sum||0,0)} / ${nf(X?.daily_max||1000,0)}</span></h2>
-    <div class="card xf xsend">${grp.filter(([,,ks])=>ks.some(k=>XDIR[k])).map(([n,f,ks])=>`<div class="xg"><div class="xgh">${xEnd(f)}<span>${n}</span></div><div class="xt">${ks.filter(k=>XDIR[k]).map(tile).join('')}</div></div>`).join('')}
+    <div class="card xf xsend">${grp.filter(([,,ks])=>ks.some(k=>XDIR[k])).map(([n,f,ks])=>`<div class="xg"><div class="xgh">${xEnd(f)}<span>${n}</span></div><div class="xt x3">${ks.filter(k=>XDIR[k]).map(tile).join('')}</div></div>`).join('')}
       ${X?.free_tl!=null?`<p class="hint">OKX TR'de boşta ${tl(Math.max(0,X.free_tl),0)}</p>`:''}</div>
     ${jobs?`<h2 class="mh">${ic('i-refresh')}Aktarımlar<span class="hsum">son işler</span></h2><div class="card xf"><div class="xj">${jobs}</div></div>`:''}
     <h2 class="mh">${ic('i-coins')}Küçük bakiyeler<span class="hsum">tek dokunuşla çevir</span></h2>
@@ -722,15 +723,15 @@ function xKasalar(X: any): string {
     ${all!=null?`<div class="xb"><span>Hepsi birlikte <b>$${nf(all,2)}</b>${r?` · <b>${tl(all*r,0)}</b>`:''}</span>${X?.kasa?`<span>KASA'da komisyon için <b>${nf(X.kasa.eth||0,4)} ETH</b></span>`:''}</div>`:''}`;
 }
 /** KASA'nın anahtarı sistemde yok: gönderimi Trust Wallet'ta sen onaylarsın. Bu sayfa tutarı ve adresi hazırlar. */
-const KDEST: Record<string,[string,string]>={k2g:['OKX Global','0x74877903737257289dc07e7baf1f4b078c2a82a3'],k2tr:['OKX TR','0x1e194face9b26c78f75d854d741cf6547730b705']};
+const KDEST: Record<string,[string,string]>={k2g:['OKX Global','0x74877903737257289dc07e7baf1f4b078c2a82a3'],k2m:['OKX Global','0x74877903737257289dc07e7baf1f4b078c2a82a3'],k2tr:['OKX TR','0x1e194face9b26c78f75d854d741cf6547730b705']};
 function openKasaSend(dir: string){
   const X: any=(S as any)?.xfer||{},[nm,addr]=KDEST[dir],q=document.getElementById('qsh'),have=+(X.kasa?.usd||0),eth=+(X.kasa?.eth||0),sh=addr.slice(0,6)+'…'+addr.slice(-4);
-  q.dataset.n='';qHead('i-vault','Kapat');document.getElementById('qTitle').textContent=`KASA → ${nm}`;
+  q.dataset.n='';qHead('i-vault','Kapat');document.getElementById('qTitle').textContent=dir==='k2m'?'KASA → MEME':`KASA → ${nm}`;
   const draw=()=>{const a=(document.getElementById('kAmt') as HTMLInputElement)?.value||(have?String(Math.floor(have*100)/100):'');
     const link=`trust://send?asset=c10042221_t0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9&address=${addr}${+a?`&amount=${+a}`:''}`;
     document.getElementById('qText').innerHTML=`<div class="xfs">
-      <div class="xroute"><div>${xEnd('k')}<b>KASA</b><small>$${nf(have,2)}</small></div><span class="xar">${ic('i-chev')}</span><div>${xEnd(dir==='k2g'?'g':'tr')}<b>${nm}</b><small>Arbitrum</small></div></div>
-      <p class="xnote">KASA'nın anahtarı güvenlik için sistemde yok; gönderimi <b>Trust Wallet'ta sen onaylarsın</b>. Tutar ve adres hazır gelir.</p>
+      <div class="xroute"><div>${xEnd('k')}<b>KASA</b><small>$${nf(have,2)}</small></div><span class="xar">${ic('i-chev')}</span><div>${xEnd(dir==='k2tr'?'tr':dir==='k2m'?'m':'g')}<b>${dir==='k2m'?'MEME':nm}</b><small>${dir==='k2m'?'Solana':'Arbitrum'}</small></div></div>
+      <p class="xnote">KASA'nın anahtarı güvenlik için sistemde yok; gönderimi <b>Trust Wallet'ta sen onaylarsın</b>. Tutar ve adres hazır gelir.${dir==='k2m'?` Para önce <b>OKX Global</b>'e gider; ulaşınca bot kendiliğinden SOL alıp <b>MEME</b>'ye gönderir (3 saat bekler).`:''}</p>
       <div class="xlab">Tutar</div><div class="xamt"><input id="kAmt" type="number" inputmode="decimal" min="1" step="1" value="${a}"><span>USDT</span></div>
       <div class="xq">${[5,10,25,50].map(v=>`<button data-kq="${v}"${v>have?' class="off"':''}>${v} $</button>`).join('')}<button class="xall" data-kq="${Math.floor(have*100)/100}"${have?'':' disabled'}>Tümü<small>$${nf(have,2)}</small></button></div>
       <div class="xinfo">
@@ -739,16 +740,44 @@ function openKasaSend(dir: string){
         <div>${ic('i-shield')}<span>Ücret</span><b>~0,01 $ ETH${eth<0.00005?' · <span class="dn">ETH yok!</span>':''}</b></div>
         <div>${ic('i-info')}<span>Önce</span><b>Trust Wallet'ta üstte KASA seçili olsun</b></div>
       </div>
-      <a class="btn primary xgo" href="${link}" target="_blank" rel="noopener">${ic('i-out')}Trust Wallet'ta gönderimi aç</a>
+      <a class="btn primary xgo" href="${link}" target="_blank" rel="noopener">${ic('i-out')}${dir==='k2m'?'Kaydet ve Trust Wallet\'ı aç':'Trust Wallet\'ta gönderimi aç'}</a>
       <p class="hint">Açılmazsa: Trust Wallet → KASA → USDT (Arbitrum) → Gönder → adres defterinden ${nm} ARB. Ulaşınca Kasalar'da görünür.</p></div>`;
     const inp=document.getElementById('kAmt') as HTMLInputElement,base=link.replace(/&amount=[^&]*/,'');
     inp.oninput=()=>{const v=+inp.value;(document.querySelector('#qText a.xgo') as HTMLAnchorElement).href=base+(v>0?`&amount=${v}`:'')};
     document.querySelectorAll<HTMLElement>('[data-kq]').forEach(b=>b.onclick=()=>{inp.value=b.dataset.kq;inp.oninput(null as any)});
-    document.querySelectorAll<HTMLElement>('[data-cp]').forEach(b=>b.onclick=async()=>{try{await navigator.clipboard.writeText(b.dataset.cp);toast('Adres kopyalandı')}catch(e){toast(b.dataset.cp)}})};
+    document.querySelectorAll<HTMLElement>('[data-cp]').forEach(b=>b.onclick=async()=>{try{await navigator.clipboard.writeText(b.dataset.cp);toast('Adres kopyalandı')}catch(e){toast(b.dataset.cp)}});
+    if(dir==='k2m'){const a=document.querySelector('#qText a.xgo') as HTMLAnchorElement;a.onclick=async ev=>{ev.preventDefault();const href=a.href;
+      if(await waitMeme('k',+inp.value,a))location.href=href}}};
   document.getElementById('qText').innerHTML='';draw();q.hidden=false;
+}
+/** Elle gönderilen (KASA / OKX TR) para Global'e ulaşınca bot SOL alıp MEME'ye geçirsin diye bekleyen istek kaydedilir */
+async function waitMeme(via: string, amt: number, btn?: HTMLElement): Promise<boolean>{
+  amt=Math.round((amt||0)*100)/100;
+  if(!(amt>=1)){toast('Tutarı yaz (en az 1 USDT)');return false}
+  if(!(S as any)?.memer?.addr){toast('MEME cüzdanı bağlı değil');return false}
+  if(!token){toast('Önce Ayarlar\'dan GitHub bağlantısını kur');return false}
+  if(btn)btn.classList.add('off');
+  const req={id:'w'+Date.now().toString(36),ts:Date.now(),dir:'g2m',amt,src:'bos',wait:true,via};
+  const ok=await cloudPatch(o=>{(o as any).xfer_req=[...((o as any).xfer_req||[]).filter((r: any)=>Date.now()-(r.ts||0)<3600000),req]},'Aktarım: '+via+' → MEME '+amt+' USDT');
+  if(btn)btn.classList.remove('off');
+  if(ok){toast(`Kaydedildi: ${nf(amt,2)} USDT Global'e ulaşınca MEME'ye geçecek`);fastWatch()}else toast('İstek gönderilemedi, tekrar dene');
+  return ok;
 }
 function openXfer(dir: string){
   if(dir.startsWith('k')){openKasaSend(dir);return}
+  if(dir==='tr2m'){const q=document.getElementById('qsh');q.dataset.n='';qHead('i-bank','Kapat');document.getElementById('qTitle').textContent='OKX TR → MEME';
+    document.getElementById('qText').innerHTML=`<div class="xfs">
+      <div class="xroute"><div>${xEnd('tr')}<b>OKX TR</b><small>uygulamadan</small></div><span class="xar">${ic('i-chev')}</span><div>${xEnd('m')}<b>MEME</b><small>Solana</small></div></div>
+      <p class="xnote">OKX TR bottan para çıkışına izin vermiyor. USDT'yi <b>OKX TR uygulamasından OKX Global</b>'e gönder (ücretsiz, anında); ulaşınca bot kendiliğinden SOL alıp <b>MEME</b>'ye gönderir.</p>
+      <div class="xlab">Tutar</div><div class="xamt"><input id="tmAmt" type="number" inputmode="decimal" min="1" step="1" placeholder="0"><span>USDT</span></div>
+      <div class="xq">${[5,10,25,50].map(v=>`<button data-tq="${v}">${v} $</button>`).join('')}</div>
+      <div class="xinfo"><div>${ic('i-bank')}<span>1</span><b>OKX TR → Varlıklar → Çek → USDT</b></div><div>${ic('i-globe')}<span>2</span><b>OKX kullanıcıları → OKX Global hesabın</b></div><div>${ic('i-flask')}<span>3</span><b>Gelince bot SOL alıp MEME'ye gönderir</b></div></div>
+      <button class="btn primary xgo" id="tmGo">${ic('i-out')}Kaydet ve OKX TR'yi aç</button></div>`;
+    const inp=document.getElementById('tmAmt') as HTMLInputElement;
+    document.querySelectorAll<HTMLElement>('[data-tq]').forEach(b=>b.onclick=()=>{inp.value=b.dataset.tq});
+    document.getElementById('tmGo').onclick=async()=>{const w=window.open('about:blank','_blank');
+      if(await waitMeme('tr',+inp.value,document.getElementById('tmGo'))){if(w)w.location.href='https://tr.okx.com/balance/withdrawal';else location.href='https://tr.okx.com/balance/withdrawal';q.hidden=true}else w?.close()};
+    q.hidden=false;return}
   if(dir.startsWith('tr')){const q=document.getElementById('qsh');q.dataset.n='';qHead('i-bank','Anladım');document.getElementById('qTitle').textContent=xName(dir);
     document.getElementById('qText').innerHTML=`<div class="xfs"><p class="xnote">OKX TR, Türkiye kuralı gereği API'den (bottan) yapılan para çıkışlarını kabul etmiyor (hata 58380). Bu yönü <b>OKX TR uygulamasından</b> yap; ücretsiz ve anında:</p>
       <div class="xinfo"><div>${ic('i-bank')}<span>1</span><b>OKX TR → Varlıklar → Çek → USDT</b></div><div>${ic(dir==='tr2g'?'i-globe':'i-vault')}<span>2</span><b>${dir==='tr2g'?'OKX kullanıcıları → OKX Global hesabın':'Adres defterinden KASA (Arbitrum)'}</b></div><div>${ic('i-check')}<span>3</span><b>Gelince bot kasalarda gösterir</b></div></div>
@@ -764,7 +793,7 @@ function openXfer(dir: string){
     if(v!=null)v=Math.min(v,Math.max(0,(+X.daily_max||1000)-(+X.day_sum||0)));
     return v==null?null:Math.floor(v*100)/100};
   const mx=maxOf();
-  const mm=f==='m'||t==='m',fee=mm?'~0,02 $ ağ ücreti + alım-satım ücreti':t==='k'?'~0,003 $ ağ ücreti':'Ücretsiz (yedek yol ~0,003 $)',time_=mm||t==='k'?'Birkaç dakika':'Birkaç saniye – birkaç dakika';
+  const mm=f==='m'||t==='m',fee=dir==='m2k'?'~0,03 $ ağ + satış ücreti':mm?'~0,02 $ ağ ücreti + alım-satım ücreti':t==='k'?'~0,003 $ ağ ücreti':'Ücretsiz (yedek yol ~0,003 $)',time_=mm||t==='k'?'Birkaç dakika':'Birkaç saniye – birkaç dakika';
   const draw=()=>{const tx=document.getElementById('qText'),cur=(document.getElementById('xfAmt') as HTMLInputElement)?.value||'';
     tx.innerHTML=`<div class="xfs">
       <div class="xroute"><div>${xEnd(f)}<b>${XEND[f][0]}</b><small>${bal(f)}</small></div><span class="xar">${ic('i-chev')}</span><div>${xEnd(t)}<b>${XEND[t][0]}</b><small>${bal(t)}</small></div></div>
@@ -780,6 +809,8 @@ function openXfer(dir: string){
         ${t==='k'?`<div>${ic('i-lock')}<span>Adres</span><b>0x0113…7db7 (sabit)</b></div>`:''}
         ${dir==='g2m'?`<div>${ic('i-info')}<span>Nasıl</span><b>Global fonundaki USDT ile SOL alınır, MEME'ye gider</b></div><div>${ic('i-lock')}<span>Adres</span><b>7Ymj…EKwN (sabit)</b></div>`:''}
         ${dir==='m2g'?`<div>${ic('i-info')}<span>Nasıl</span><b>SOL Global'e gider, satılıp USDT olur</b></div>`:''}
+        ${dir==='m2k'?`<div>${ic('i-info')}<span>Nasıl</span><b>SOL Global'de USDT olur, oradan KASA'ya gider</b></div>`:''}
+        ${dir==='m2tr'?`<div>${ic('i-info')}<span>Nasıl</span><b>SOL Global'de USDT olur, OKX TR'de TL'ye çevrilip Nakit'e konur</b></div>`:''}
       </div>
       <button class="btn primary xgo" id="xfGo">${ic('i-out')}Gönder</button></div>`;
     tx.querySelectorAll<HTMLElement>('[data-q]').forEach(b=>b.onclick=()=>{(document.getElementById('xfAmt') as HTMLInputElement).value=b.dataset.q;upd()});
@@ -815,7 +846,7 @@ async function sendXfer(dir: string, retry = true){fastWatch();
   if(!(amt>=1)){toast('Tutarı yaz (en az 1 USDT)');return}
   {const X: any=(S as any)?.xfer||{},freeUsd=X.free_tl!=null&&USDTTRY?Math.max(0,X.free_tl)/USDTTRY:null;
    const MR: any=(S as any)?.memer;
-   if(dir==='m2g'&&MR&&amt>Math.max(0,(MR.sol-0.02)*(MR.solpx||0))){toast(`MEME'de boşta ~$${nf(Math.max(0,(MR.sol-0.02)*(MR.solpx||0)),2)} SOL var (tokenler hariç)`);return}
+   if(dir.startsWith('m')&&MR&&amt>Math.max(0,(MR.sol-0.02)*(MR.solpx||0))){toast(`MEME'de boşta ~$${nf(Math.max(0,(MR.sol-0.02)*(MR.solpx||0)),2)} SOL var (tokenler hariç)`);return}
    if(dir==='g2m'&&!MR?.addr){toast('MEME cüzdanı bağlı değil');return}
    if(dir.startsWith('g')&&X.g_fund!=null&&amt>+X.g_fund){toast(`OKX Global fon hesabında boşta ~$${nf(+X.g_fund,2)} var (futures teminatı hariç); daha fazlası gönderilemez`);return}
    if(dir.startsWith('g')&&X.g_fund==null&&X.g_val!=null&&amt>+X.g_val){toast(`OKX Global'de ~$${nf(+X.g_val,2)} var; daha fazlası gönderilemez`);return}
@@ -828,7 +859,7 @@ async function sendXfer(dir: string, retry = true){fastWatch();
     const data=JSON.parse(decodeURIComponent(escape(atob(cur.content.replace(/\n/g,'')))));
     const src=dir.startsWith('tr')?xfSrc:'bos';
     const dup=(data.xfer_req||[]).some((r: any)=>r.id===xfId); // önceki deneme aslında kaydedildiyse ikinci kez eklenmez
-    if(!dup){data.xfer_req=[...(data.xfer_req||[]).filter((r: any)=>Date.now()-(r.ts||0)<3600000),{id:xfId,ts:Date.now(),dir,amt,src}];
+    if(!dup){data.xfer_req=[...(data.xfer_req||[]).filter((r: any)=>Date.now()-(r.ts||0)<3600000),{id:xfId,ts:Date.now(),dir:dir.startsWith('m')?'m2g':dir,amt,src,...(dir==='m2k'?{then:'k'}:dir==='m2tr'?{then:'tr'}:{})}];
       if(src==='bot'){const tlv=Math.ceil(amt*(USDTTRY||0)*1.01);if(!tlv)throw 'kur yok';
         data.budget=Math.max(0,(+data.budget||0)-tlv);data.kasa=Math.max(0,(+data.kasa||0)-tlv)}}
     const body={message:'Uygulamadan aktarım: '+dir+' '+amt+' USDT',content:btoa(unescape(encodeURIComponent(JSON.stringify(data,null,2)+'\n'))),sha:cur.sha,branch:'main'};
