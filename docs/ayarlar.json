@@ -73,13 +73,13 @@
     "mode": "total"
   },
   "test_req": {
-    "ts": 1795499233140,
+    "ts": 1795510519658,
     "s": {
       "live": true,
       "paused": false,
       "strategy": "grid",
-      "budget": 17951,
-      "kasa": 17951,
+      "budget": 17952,
+      "kasa": 17952,
       "topup": {
         "amount": 100,
         "profit_pct": 3.3,
@@ -105,7 +105,7 @@
         "step3_pct": 6.6,
         "lot2_pct": 45,
         "lot3_pct": 77,
-        "sma_hours": 16,
+        "sma_hours": 24,
         "vol_filter": 4
       },
       "dip": {
@@ -130,7 +130,7 @@
         "alerts": true,
         "daily": true,
         "daily_hour": 20,
-        "cleared": 1795497754
+        "cleared": 1795510322
       },
       "quote": "USDT",
       "target": {
@@ -139,6 +139,7 @@
         "mode": "total"
       },
       "theme": "auto",
+      "clear": 1795465907884,
       "xfer": {
         "daily_max": 1000,
         "sweep_on": true,
