@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.86.0';
+const APP_VERSION = '1.87.0';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = 'var(--acc)';
@@ -1306,6 +1306,39 @@ const XEND = { tr: ['OKX TR', 'i-bank', 'e1'], g: ['OKX Global', 'i-globe', 'e2'
 const XDIR = { tr2g: ['tr', 'g', 'Uygulamadan'], g2tr: ['g', 'tr', 'TL olur'], tr2k: ['tr', 'k', 'Uygulamadan'], g2k: ['g', 'k', 'Soğuk cüzdan'], g2m: ['g', 'm', 'SOL olarak'], m2g: ['m', 'g', 'USDT olur'], k2g: ['k', 'g', 'Trust Wallet'], k2tr: ['k', 'tr', 'Trust Wallet'],
     tr2m: ['tr', 'm', 'Global ile'], m2k: ['m', 'k', 'USDT olarak'], m2tr: ['m', 'tr', 'TL olur'], k2m: ['k', 'm', 'Global ile'] };
 const xName = (d) => `${XEND[XDIR[d][0]][0]} → ${XEND[XDIR[d][1]][0]}`;
+const XJ_STEPS = ['İstek', 'Gönderim', 'Onay', 'Ulaştı'];
+function xjName(j) { return j.dir === 'm2g' && XEND[j.then] ? `MEME → ${XEND[j.then][0]}` : j.dir === 'g2m' && j.wait && XEND[j.via] ? `${XEND[j.via][0]} → MEME` : XDIR[j.dir] ? xName(j.dir) : escH(j.dir); }
+function xjIdx(j) { const m = String(j.msg || ''); return j.stage === 'done' ? 3 : j.stage === 'arriving' || (j.stage === 'sent' && /onay|gönderildi|zincir/i.test(m)) ? 2 : j.stage === 'sent' ? 1 : 0; }
+function xjBar(j) {
+    const k = xjIdx(j), bad = j.stage === 'failed';
+    return `<span class="xpg${bad ? ' bad' : ''}">${XJ_STEPS.map((n, i) => `<i class="${i < k || j.stage === 'done' ? 'ok' : i === k ? (bad ? 'no' : 'on') : ''}"></i>`).join('')}</span>`;
+}
+function xjTime(t) { const d = new Date(t), n = new Date(); return d.toDateString() === n.toDateString() ? masaClock(t) : d.toLocaleDateString(LANG === 'en' ? 'en-GB' : 'tr-TR', { day: 'numeric', month: 'short' }) + ' ' + masaClock(t); }
+function xjSheet(j) {
+    const k = xjIdx(j), bad = j.stage === 'failed', sol = /m/.test(String(j.dir).slice(0, 3)) || j.sol;
+    const link = j.txId ? `<a class="xtx" href="${sol ? 'https://solscan.io/tx/' : 'https://arbiscan.io/tx/'}${encodeURIComponent(j.txId)}" target="_blank" rel="noopener">${ic('i-link')}Zincirde gör · ${escH(String(j.txId).slice(0, 10))}…</a>` : '';
+    const cap = (x) => x ? x.charAt(0).toLocaleUpperCase('tr-TR') + x.slice(1) : x;
+    const steps = (j.steps || []).slice().reverse().map(([t, sg, m], i) => `<div class="xst${i === 0 ? ' cur' : ''}${sg === 'failed' ? ' bad' : sg === 'done' ? ' ok' : ''}"><time>${xjTime(t)}</time><i></i><div><b>${escH(cap(m) || (XST[sg] || [sg])[0])}</b>${sg !== 'req' ? `<small>${escH((XST[sg] || [sg])[0])}</small>` : ''}</div></div>`).join('');
+    return `<div class="xsh"><div class="xsum"><b>${nf(+j.amt || 0, 2)} USDT</b><span>${xjTime(j.ts)}${j.chain ? ' · ' + escH(j.chain) : ''}${j.fee ? ` · ücret ${nf(+j.fee, 2)}` : ''}${j.got ? ` · ulaşan ${nf(+j.got, 2)}` : ''}</span></div>
+    <div class="xbig${bad ? ' bad' : ''}">${XJ_STEPS.map((n, i) => `<div class="${i < k || j.stage === 'done' ? 'ok' : i === k ? (bad ? 'no' : 'on') : ''}"><i>${i < k || j.stage === 'done' ? ic('i-check') : i === k && bad ? ic('i-stop') : i + 1}</i><span>${n}</span></div>`).join('')}</div>
+    ${link}<div class="xsteps">${steps || '<p class="hint">Adım kaydı yok (eski aktarım)</p>'}</div>
+    <p class="hint">Borsalar arası aktarımda "Ulaştı", karşı borsanın yatırma kaydında para görülünce; KASA'ya aktarımda Arbitrum zincirinde onaylanınca işaretlenir.</p></div>`;
+}
+function openXJob(id) {
+    const X = S?.xfer, j = (X?.jobs || []).find((x) => x.id === id);
+    if (!j)
+        return;
+    const q = document.getElementById('qsh');
+    q.dataset.n = '';
+    q.dataset.xjob = id;
+    qHead('i-refresh', 'Kapat');
+    document.getElementById('qTitle').textContent = xjName(j).replace(/<[^>]+>/g, '');
+    document.getElementById('qText').innerHTML = xjSheet(j);
+    q.hidden = false;
+}
+document.addEventListener('click', e => { const t = e.target; if (t.closest('.xc'))
+    return; const r = t.closest?.('[data-xj]'); if (r)
+    openXJob(r.dataset.xj); });
 const XST = { new: ['Sırada', 'i-clock', 'w'], sent: ['Yolda', 'i-out', 'w'], arriving: ['Ulaşıyor', 'i-in', 'w'], done: ['Tamam', 'i-check', 'ok'], failed: ['Olmadı', 'i-stop', 'bad'] };
 function xEnd(k) { const e = XEND[k]; return `<span class="xe ${e[2]}">${ic(e[1])}</span>`; }
 function setH(el, h) { if (el._h === h)
@@ -1316,6 +1349,11 @@ function setT(el, t, c) { if (el._t !== t) {
 } if (c != null && el.className !== c)
     el.className = c; }
 function renderXfer() {
+    {
+        const q = document.getElementById('qsh'), id = q?.dataset.xjob, X0 = S?.xfer, j = id && !q.hidden ? (X0?.jobs || []).find((x) => x.id === id) : null;
+        if (j && document.getElementById('qTitle').textContent === xjName(j).replace(/<[^>]+>/g, ''))
+            setH(document.getElementById('qText'), xjSheet(j));
+    }
     const box = document.getElementById('xfer');
     if (!box)
         return;
@@ -1327,8 +1365,8 @@ function renderXfer() {
     box.hidden = false;
     const jobs = (X?.jobs || []).slice(0, 4).map((j) => {
         const st = XST[j.stage] || [j.stage, 'i-info', 'w'];
-        return `<div class="xr"><span class="xs ${st[2]}">${ic(st[1])}</span><div class="xm"><b>${j.dir === 'm2g' && XEND[j.then] ? `MEME → ${XEND[j.then][0]}` : j.dir === 'g2m' && j.wait && XEND[j.via] ? `${XEND[j.via][0]} → MEME` : XDIR[j.dir] ? xName(j.dir) : escH(j.dir)}<i>${nf(+j.amt || 0, 2)} $</i></b>
-      <small>${masaClock(j.ts)} · ${escH(st[0])}${j.stage !== 'done' && j.msg && j.msg !== 'sırada' ? ' · ' + escH(j.msg) : ''}</small></div>${j.stage === 'new' ? `<button class="xc" data-xc="${escH(j.id)}">İptal</button>` : ''}</div>`;
+        return `<div class="xr" data-xj="${escH(j.id)}" role="button"><span class="xs ${st[2]}">${ic(st[1])}</span><div class="xm"><b>${xjName(j)}<i>${nf(+j.amt || 0, 2)} $</i></b>
+      <small>${masaClock(j.ts)} · ${escH(st[0])}${j.stage !== 'done' && j.msg && j.msg !== 'sırada' ? ' · ' + escH(j.msg) : ''}</small>${xjBar(j)}</div>${j.stage === 'new' ? `<button class="xc" data-xc="${escH(j.id)}">İptal</button>` : ''}</div>`;
     }).join('');
     const grp = [['OKX TR\'den', 'tr', ['tr2g', 'tr2k', 'tr2m']], ['OKX Global\'den', 'g', ['g2tr', 'g2k', 'g2m']], ['MEME\'den', 'm', ['m2g', 'm2k', 'm2tr']], ['KASA\'dan', 'k', ['k2g', 'k2tr', 'k2m']]];
     const tile = (k) => { const [f, t, sub] = XDIR[k]; return `<button data-x="${k}"><span class="xrt">${xEnd(f)}${ic('i-chev')}${xEnd(t)}</span><b>${XEND[t][0]}</b><small>${sub}</small></button>`; };
@@ -1343,7 +1381,7 @@ function renderXfer() {
     <h2 class="mh">${ic('i-out')}Para gönder<span class="hsum">bugün $${nf(X?.day_sum || 0, 0)} / ${nf(X?.daily_max || 1000, 0)}</span></h2>
     <div class="card xf xsend">${grp.filter(([, , ks]) => ks.some(k => XDIR[k])).map(([n, f, ks]) => `<div class="xg"><div class="xgh">${xEnd(f)}<span>${n}</span></div><div class="xt x3">${ks.filter(k => XDIR[k]).map(tile).join('')}</div></div>`).join('')}
       ${X?.free_tl != null ? `<p class="hint">OKX TR'de boşta ${tl(Math.max(0, X.free_tl), 0)}</p>` : ''}</div>
-    ${jobs ? `<h2 class="mh">${ic('i-refresh')}Aktarımlar<span class="hsum">son işler</span></h2><div class="card xf"><div class="xj">${jobs}</div></div>` : ''}
+    ${jobs ? `<h2 class="mh">${ic('i-refresh')}Aktarımlar<span class="hsum">dokun, aşamaları gör</span></h2><div class="card xf"><div class="xj">${jobs}</div></div>` : ''}
     <h2 class="mh">${ic('i-coins')}Küçük bakiyeler<span class="hsum">tek dokunuşla çevir</span></h2>
     <div class="card xf"><div class="xt x3">${DUST.map(([k, f, to]) => {
         const l = (X?.dust || {})[k] || [], u = l.reduce((a, x) => a + (+x.usd || 0), 0);

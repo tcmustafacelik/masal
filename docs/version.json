@@ -1,10 +1,17 @@
 {
-  "version": "1.86.0",
+  "version": "1.87.0",
   "date": "2026-11-25",
   "notes": [
-    "Global spot masası: OKX Global'de USDT paritelerinde kademeli alım-satım (en hacimli 30 coin). Önce deneme olarak çalışır; Ayarlar → Global'den gerçek parayla açılır, kendi bütçesi ve kara listesi var, futures masasının parasına dokunmaz"
+    "Aktarımlar aşama aşama: Kasalar'da bir aktarıma dokununca İstek → Gönderim → Onay → Ulaştı adımları saatleriyle görünür; zincir işlemlerinde 'Zincirde gör' bağlantısı. KASA'ya gidenler Arbitrum zincirinde onaylanınca 'Ulaştı' sayılır"
   ],
   "history": [
+    {
+      "version": "1.87.0",
+      "date": "2026-11-25",
+      "notes": [
+        "Aktarımlar aşama aşama: Kasalar'da bir aktarıma dokununca İstek → Gönderim → Onay → Ulaştı adımları saatleriyle görünür; zincir işlemlerinde 'Zincirde gör' bağlantısı. KASA'ya gidenler Arbitrum zincirinde onaylanınca 'Ulaştı' sayılır"
+      ]
+    },
     {
       "version": "1.86.0",
       "date": "2026-11-25",
@@ -101,13 +108,6 @@
       "date": "2026-11-24",
       "notes": [
         "Genel bakım: istekler tek sıradan gider (çakışma yok), ekran daha hızlı yenilenir, küçük hata ve görünüm düzeltmeleri"
-      ]
-    },
-    {
-      "version": "1.79.1",
-      "date": "2026-11-24",
-      "notes": [
-        "Futures: eğilim döndü kuralı artık 2 saatlik mum art arda ters kalınca kapatır (tek mumluk sahte dönüşlerde küçük zararla çıkmasın)"
       ]
     }
   ]

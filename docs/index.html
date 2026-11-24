@@ -761,6 +761,21 @@ em.lk.in{display:inline-block;width:auto;padding:2px 5px;margin:0 0 0 6px;vertic
 .deck .d5{background:var(--teal-bg);color:var(--teal)}.h5{background:var(--teal-bg);color:var(--teal)}
 .hdesk button:last-child:nth-child(odd){grid-column:span 2}
 .ovw .abar .pgs{background:var(--green)}.ovw .oleg .pgs em{background:var(--green)}
+.xr[data-xj]{cursor:pointer}.xpg{display:flex;gap:3px;margin-top:6px;max-width:160px}.xpg i{flex:1;height:4px;border-radius:2px;background:var(--line)}.xpg i.ok{background:var(--green)}.xpg i.on{background:var(--amber)}.xpg i.no{background:var(--red)}
+.xsh .xsum{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:2px 0 12px}.xsh .xsum b{font-size:20px;font-variant-numeric:tabular-nums;white-space:nowrap}.xsh .xsum span{font-size:11.5px;color:var(--muted);text-align:right}
+.xbig{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));position:relative;margin-bottom:12px}
+.xbig::before{content:"";position:absolute;left:12.5%;right:12.5%;top:13px;height:2px;background:var(--line)}
+.xbig div{position:relative;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:11px;color:var(--muted);font-weight:600}
+.xbig i{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:12px;font-weight:700;background:var(--surface);border:2px solid var(--line);color:var(--muted)}
+.xbig i svg{width:14px;height:14px}.xbig .ok i{background:var(--green);border-color:var(--green);color:#fff}.xbig .ok span{color:var(--green)}
+.xbig .on i{border-color:var(--amber);color:var(--amber);background:var(--amber-bg)}.xbig .on span{color:var(--amber)}.xbig .no i{background:var(--red);border-color:var(--red);color:#fff}.xbig .no span{color:var(--red)}
+.xtx{display:flex;align-items:center;gap:6px;justify-content:center;padding:9px;border:1px solid var(--line);border-radius:var(--r-sm);font-size:12.5px;font-weight:600;color:var(--blue);text-decoration:none;margin-bottom:10px}.xtx svg{width:14px;height:14px}
+.xsteps{border-top:1px solid var(--line2);padding-top:6px;max-height:42vh;overflow-y:auto}
+.xst{display:grid;grid-template-columns:auto 12px 1fr;gap:8px;align-items:start;padding:6px 0;position:relative}
+.xst time{font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums;padding-top:1px;min-width:40px;white-space:nowrap}
+.xst>i{width:8px;height:8px;border-radius:50%;background:var(--line);margin-top:5px;justify-self:center}
+.xst.cur>i{background:var(--amber);box-shadow:0 0 0 3px var(--amber-bg)}.xst.ok>i{background:var(--green)}.xst.bad>i{background:var(--red)}
+.xst b{display:block;font-size:12.5px}.xst small{display:block;font-size:11.5px;color:var(--muted);line-height:1.35;margin-top:1px}
 </style>
 </head>
 <body>
@@ -963,6 +978,6 @@ em.lk.in{display:inline-block;width:auto;padding:2px 5px;margin:0 0 0 6px;vertic
 <div class="toast" id="toast" hidden></div>
 <div class="qsh" id="qsh" hidden><div class="qb"><div class="gr"></div><h3><span><svg class="i" id="qIco"><use href="#i-info"/></svg></span><b id="qTitle"></b></h3><div class="qt" id="qText"></div><button class="btn primary" id="qOk">Anladım</button></div></div>
 
-<script src="app.js?v=1.86.0"></script>
+<script src="app.js?v=1.87.0"></script>
 </body>
 </html>

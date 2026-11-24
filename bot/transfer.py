@@ -332,10 +332,27 @@ def _poll(C, job, X, N):
         job["txId"] = w.get("txId") or job.get("txId")
         if st in ("-1", "-2"):
             raise RuntimeError(f"OKX çekimi reddetti ({job['msg']})")
+        if st == "2" and dest is None:
+            # KASA'ya: OKX "gönderildi" dese de işlem Arbitrum zincirinde onaylanınca tamamlandı sayılır
+            ok = None
+            if job.get("txId"):
+                try:
+                    rc = _rpc("eth_getTransactionReceipt", [job["txId"]])
+                    ok = None if not rc else (rc.get("status") == "0x1", int(rc.get("blockNumber") or "0x0", 16))
+                except Exception:
+                    ok = None
+            if ok is None:
+                job["msg"] = "OKX gönderdi; Arbitrum zincirinde onay bekleniyor"
+                return
+            if not ok[0]:
+                raise RuntimeError("Arbitrum zincirinde işlem başarısız göründü; işlem kodu " + str(job["txId"])[:20])
+            job["stage"] = "done"
+            job["msg"] = f"KASA'ya ulaştı · zincirde onaylandı (blok {ok[1]})"
+            N.add("money", "KASA'ya ulaştı", f"{job['amt']} USDT soğuk cüzdana ulaştı; Arbitrum zincirinde onaylandı.", 4, ["lock"])
+            _note(X, f"KASA'ya ulaştı: {job['amt']:.2f} USDT (zincirde onaylı)")
+            return
         if st == "2":
-            job["stage"] = "done" if dest is None else "arriving"
-            if dest is None:
-                N.add("money", "KASA'ya gönderildi", f"{job['amt']} USDT soğuk cüzdana gönderildi (Arbitrum).", 4, ["lock"])
+            job["stage"] = "arriving"
     if job["stage"] == "arriving":
         dex = C[dest]
         rows = dex.req("GET", "/api/v5/asset/deposit-history?ccy=USDT")
@@ -454,6 +471,20 @@ def quiesce(timeout=90):
         th.join(timeout)
 
 
+def _track(X):
+    """Her aktarımın aşama geçmişi: aşama ya da durum yazısı her değiştiğinde zamanıyla eklenir (uygulamada adım adım
+    görünür). Bütün yönler (TR, Global, KASA, MEME) için aynı yerden tutulur."""
+    now = int(time.time() * 1000)
+    for j in X.get("jobs", []):
+        st = j.setdefault("steps", [])
+        if not st:
+            st.append([j.get("ts") or now, "req", "istek alındı"])
+        cur = [j.get("stage"), str(j.get("msg") or "")]
+        if st[-1][1:] != cur:
+            st.append([now] + cur)
+            del st[:-20]
+
+
 def _merge_jobs(X, N):
     out = _JOBS.pop("out", None)
     if not out:
@@ -468,8 +499,11 @@ def _merge_jobs(X, N):
             if j["id"] not in ids:  # yalnız iş parçacığının yeni açtığı iş (ör. kâr süpürmenin KASA adımı); budananlar geri gelmez
                 X["jobs"].append(j)
         elif not (old["stage"] == "failed" and j["stage"] == "new"):  # bu arada iptal edildiyse iptal geçerli
+            st = list(old.get("steps") or [])
             old.clear()
             old.update(j)
+            have = {tuple(x[1:]) for x in st}
+            old["steps"] = sorted(st + [x for x in (j.get("steps") or []) if tuple(x[1:]) not in have], key=lambda x: x[0])[-20:]
     seen = {tuple(x) for x in X.get("log", [])}
     new = [x for x in Xc.get("log", []) if tuple(x) not in seen]
     X["log"] = (new + X.get("log", []))[:60]
@@ -633,6 +667,7 @@ def step(state, S, N):
     th = _JOBS.get("t")
     alive = bool(th and th.is_alive())  # önce bakılır: iş parçacığı bu arada biterse sonucu aşağıda birleşir, ikinci kez başlamaz
     _merge_jobs(X, N)
+    _track(X)
     if now - X.get("tick", 0) >= 15 and not alive and any(j["stage"] not in ("done", "failed") for j in X["jobs"]):
         X["tick"] = now
         snap = copy.deepcopy(X)
@@ -691,7 +726,8 @@ def public(state, S=None):
         return None
     cfg = {**DEFAULT, **((S or {}).get("xfer") or {})}
     cfg["daily_max"] = min(float(cfg.get("daily_max") or HARD_DAILY_MAX), HARD_DAILY_MAX)
-    return {"jobs": [{k: j.get(k) for k in ("id", "dir", "amt", "src", "ts", "stage", "msg", "got", "tl", "then", "wait", "via")} for j in X["jobs"]][::-1][:10],
+    return {"jobs": [{k: j.get(k) for k in ("id", "dir", "amt", "src", "ts", "stage", "msg", "got", "tl", "then", "wait", "via", "steps", "txId", "chain", "fee", "sol")}
+                     for j in X["jobs"]][::-1][:10],
             "log": X.get("log", [])[:20], "free_tl": X.get("free_tl"), "g_val": X.get("g_val"), "kasa": X.get("kasa"),
             "tr_total": X.get("tr_total"), "usdtry": X.get("usdtry"), "g_base": X.get("g_base", 0),
             "day_sum": X.get("day_sum", 0), "daily_max": cfg["daily_max"], "sweep": {k: cfg[k] for k in ("sweep_on", "sweep_pct", "sweep_days")},
