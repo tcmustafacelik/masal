@@ -379,6 +379,38 @@
         "GRASS"
       ],
       "to": "USDT"
+    },
+    {
+      "id": "dmwvc1mpp",
+      "ts": 1795563327805,
+      "ex": "tr",
+      "ccys": [
+        "AAVE",
+        "DATA",
+        "ETHFI",
+        "BREV",
+        "ACE",
+        "APT",
+        "BTC",
+        "BCH",
+        "LTC",
+        "ONDO",
+        "XRP",
+        "UNI",
+        "OP",
+        "ETH",
+        "PEPE",
+        "SOL",
+        "ARB",
+        "ICP",
+        "MENGO",
+        "ADA",
+        "XLM",
+        "NEAR",
+        "HBAR",
+        "GRASS"
+      ],
+      "to": "USDT"
     }
   ],
   "desk_cmd": [],
