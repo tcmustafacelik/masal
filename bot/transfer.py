@@ -258,6 +258,9 @@ def _send(ex, side, addr, dest, amt, job, X):
     try:
         res = _wd(ex, body, info, nm, dest)
     except RuntimeError as e:
+        if dest == "g" and ("58207" in str(e) or "58380" in str(e)):
+            # TR → Global yalnız OKX iç transferiyle (kullanıcı tercihi: zincir yok, ücret yok)
+            raise RuntimeError(f"OKX TR iç transferi API'den kabul etmedi ({str(e)[:60]}); OKX TR uygulamasından 'OKX hesabınıza platform içi transfer' ile gönder")
         if not (dest and ("58207" in str(e) or "58380" in str(e))):
             raise
         # Alıcı hesap (UID) adres defterinde "OKX kullanıcısı" olarak kayıtlı değil: doğrulanmış Arbitrum adresine zincirden gönder

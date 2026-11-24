@@ -1,4 +1,4 @@
-const APP_VERSION='1.87.5';
+const APP_VERSION='1.87.6';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (kehribar)
@@ -976,7 +976,16 @@ function openXfer(dir: string){
   if(dir.startsWith('tr')){const q=document.getElementById('qsh');q.dataset.n='';qHead('i-bank','Anladım');document.getElementById('qTitle').textContent=xName(dir);
     document.getElementById('qText').innerHTML=`<div class="xfs"><p class="xnote">OKX TR, Türkiye kuralı gereği API'den (bottan) yapılan para çıkışlarını kabul etmiyor (hata 58380). Bu yönü <b>OKX TR uygulamasından</b> yap; ücretsiz ve anında:</p>
       <div class="xinfo"><div>${ic('i-bank')}<span>1</span><b>${dir==='tr2g'?'Alıcı\'da <u>OKX Global ve OKX TR Kullanıcıları</u> sekmesine dokun':'Çek → USDT → Zincir üstü · Arbitrum One'}</b></div><div>${ic(dir==='tr2g'?'i-globe':'i-vault')}<span>2</span><b>${dir==='tr2g'?'"Telefon Numarası" yerine UID seç, yapıştır (UID kopyalandı)':'Adres defterinden KASA (Arbitrum)'}</b></div><div>${ic('i-check')}<span>3</span><b>Gelince bot kasalarda gösterir</b></div></div>${dir==='tr2g'?uidBox():''}
-      <a class="btn primary xgo" href="${OKX_TR_WD}" data-ext="1">${ic('i-out')}OKX TR'yi aç</a></div>`;q.hidden=false;return}
+      <a class="btn primary xgo" href="${OKX_TR_WD}" data-ext="1">${ic('i-out')}OKX TR'yi aç</a>
+      ${dir==='tr2g'?`<div class="xtry"><p class="hint">Bottan iç transferi dene: OKX TR kabul ederse bundan sonra otomatik olur. Yalnız TR'deki boş paradan (botun parasına dokunmaz), zincir kullanılmaz.</p>
+        <div class="xtr2"><div class="xamt"><input id="tryAmt" type="number" inputmode="decimal" min="1" step="1" value="2"><span>USDT</span></div><button class="btn xsync" type="button" id="tryGo">${ic('i-refresh')}Botla dene</button></div></div>`:''}</div>`;
+    q.hidden=false;
+    const tg=document.getElementById('tryGo');if(tg)tg.onclick=async()=>{const amt=Math.round(+(document.getElementById('tryAmt') as HTMLInputElement).value*100)/100;
+      if(!(amt>=1)){toast('En az 1 USDT');return}if(!token){toast('Önce Ayarlar\'dan GitHub bağlantısını kur');return}
+      const req={id:'t'+Date.now().toString(36),ts:Date.now(),dir:'tr2g',amt,src:'bos'};(tg as HTMLButtonElement).disabled=true;
+      const ok=await cloudPatch((o: any)=>{const l: any[]=o.xfer_req||[];o.xfer_req=[...l.filter(r=>Date.now()-(r.ts||0)<3600000),req]},'Deneme: OKX TR → Global iç transfer '+amt+' USDT');
+      (tg as HTMLButtonElement).disabled=false;if(ok){q.hidden=true;fastWatch();toast('İstek gönderildi; sonucu Aktarımlar\'da adım adım görürsün')}else toast('İstek gönderilemedi',patchWhy())};
+    return}
   const X: any=(S as any)?.xfer||{},[f,t]=XDIR[dir],q=document.getElementById('qsh'),r=+(X.usdtry||USDTTRY||0);
   q.dataset.n='';qHead(XEND[t][1],'Vazgeç');document.getElementById('qTitle').textContent='Para gönder';
   xfId='x'+Date.now().toString(36);

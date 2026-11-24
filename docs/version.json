@@ -1,10 +1,17 @@
 {
-  "version": "1.87.5",
+  "version": "1.87.6",
   "date": "2026-11-25",
   "notes": [
-    "OKX TR'yi açarken Global UID'n panoya kopyalanır; ekrandaki adımlar OKX'teki 'OKX Global ve OKX TR Kullanıcıları' sekmesini gösterir"
+    "OKX TR → Global ekranında 'Botla dene': bottan iç transfer denenir, sonuç Aktarımlar'da adım adım görünür. TR → Global hiçbir zaman zincirden gönderilmez"
   ],
   "history": [
+    {
+      "version": "1.87.6",
+      "date": "2026-11-25",
+      "notes": [
+        "OKX TR → Global ekranında 'Botla dene': bottan iç transfer denenir, sonuç Aktarımlar'da adım adım görünür. TR → Global hiçbir zaman zincirden gönderilmez"
+      ]
+    },
     {
       "version": "1.87.5",
       "date": "2026-11-25",
@@ -101,13 +108,6 @@
       "date": "2026-11-24",
       "notes": [
         "Günlük aktarım sınırına sabit 1000 $ güvenlik tavanı (ayardan yükseği girilemez, bot da aşmaz)"
-      ]
-    },
-    {
-      "version": "1.81.0",
-      "date": "2026-11-24",
-      "notes": [
-        "Genel bakım 2: uzun pencereler (Futures aç, elle alım) küçük ekranda üstten kesilmiyor, kendi içinde kayıyor; Ayarlar → Hesaplar ve anahtarlar kutuları düzeldi; çift dokunuş ve kaybolan yanıtta istek iki kez gitmiyor (elle alım, TR/KASA → MEME); aktarım satırı gerçek yönü yazıyor (MEME → KASA); akışta kâr/zarar renkli, etiketler tek genişlik; ekran çizimi ~7 kat hızlı; bot veri gönderimi takılırsa güncel kayıtla yeniden deniyor"
       ]
     }
   ]
