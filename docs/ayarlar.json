@@ -58,9 +58,10 @@
     "cleared": 1795497754
   },
   "sell": {
-    "ts": 1795499535897,
+    "ts": 1795499537811,
     "insts": [
-      "LIT-USDT"
+      "LIT-USDT",
+      "PONS-USDT"
     ]
   },
   "quote": "USDT",
