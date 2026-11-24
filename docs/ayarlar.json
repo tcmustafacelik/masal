@@ -56,7 +56,7 @@
     "alerts": true,
     "daily": true,
     "daily_hour": 20,
-    "cleared": 1795562169
+    "cleared": 1795562595
   },
   "sell": {
     "ts": 1795558156295,
