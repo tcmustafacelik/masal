@@ -1,8 +1,8 @@
 "use strict";
-const APP_VERSION = '1.72.4';
+const APP_VERSION = '1.73.0';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
-const AMBER = '#D9861A';
+const AMBER = 'var(--acc)'; // seçili çizgi: tema vurgu rengi (pembe)
 let S = null, B = null, sel = 'live', view = 'live';
 function localStore(k, v) { try {
     if (v === undefined)
@@ -317,8 +317,6 @@ async function load_(quiet) {
             if (st && !recent) {
                 if (st.theme && st.theme !== themeMode())
                     setTheme(st.theme);
-                if (st.accent && st.accent !== (localStore('masal-renk') || 'amber'))
-                    setAccent(st.accent);
                 if (st.lang && st.lang !== LANG) {
                     localStore('masal_pref_ts', String(Date.now()));
                     setLang(st.lang);
@@ -434,7 +432,7 @@ function render() {
         const sell = t.side === 'SAT';
         return `<div class="row">${cico(t.inst, t.side, t.pnl < 0)}
       <div class="mid"><b>${sym(t.inst)}${pq(t.inst)} ${sell ? 'satıldı' : 'alındı'}</b><span>${dt(t.ts)} · ${t.reason} · ${px(t.price)}</span></div>
-      <div class="end"><b>${tl(t.amount, 0)}</b>${sell ? `<span class="plc ${cls(t.pnl) || 'z'}">${sgn(t.pnl)} TL ${t.pnl >= 0 ? 'kâr' : 'zarar'}</span>` : `<span class="plc buy">${ic('i-coins')}Alım</span>`}</div></div>`;
+      <div class="end"><b>${tl(t.amount, 0)}</b>${sell ? `<span class="pill ${cls(t.pnl) || 'z'}"><i>${t.pnl >= 0 ? '▲' : '▼'}</i>${nf(Math.abs(t.pnl))} TL<small>${t.pnl >= 0 ? 'kâr' : 'zarar'}</small></span>` : `<span class="pill buy">${ic('i-coins')}Alım</span>`}</div></div>`;
     }).join('')
         : `<div class="empty">${ic('i-list')}<div>Henüz işlem yok. Bot fırsat bekliyor.</div></div>`);
     clipList('trades', 4);
@@ -1657,7 +1655,7 @@ function renderCoins(x) {
         const det = c.open_qty ? (c.sells ? `açıkta ${sgn(c.op)}` : 'elde') : 'kapandı';
         return `<div class="row">${cico(c.inst)}
       <div class="mid"><b>${sym(c.inst)}${pq(c.inst)}</b><span>${parts.join(' · ')}</span></div>
-      <div class="end"><b class="${cls(c.tot)}">${sgn(c.tot)} TL</b><span>${det}</span></div></div>`;
+      <div class="end"><span class="pill lg ${cls(c.tot) || 'z'}"><i>${c.tot >= 0 ? '▲' : '▼'}</i>${nf(Math.abs(c.tot))} TL</span><span class="est">${det}</span></div></div>`;
     }).join(''));
     clipList('coins', 5);
 }
@@ -1687,7 +1685,7 @@ function renderPositions(x) {
         }
         const row = `<div class="row pos${canSell ? ' swc' : ''}">${cico(p.inst)}
       <div class="mid"><b>${sym(p.inst)}${pq(p.inst)}${prot}${p.lots > 1 ? `<i class="kd">${p.lots} kademe</i>` : ''}</b><span>Alış ${px(p.avg)} → satış ${px(cur)}<br>${ago(p.since)} alındı${volTxt(p.inst) ? ` · hacim ${volTxt(p.inst)}` : ''}</span>${rng}</div>
-      <div class="end"><b>${tl(val, 0)}</b><span class="plc ${cls(pl) || 'z'}">${sgn(pl)} TL</span>${SELLING[p.inst] ? `<span class="sellst"><i class="spn"></i>Satılıyor</span>` : `<span class="plp ${cls(pl)}">${spc(plp)}</span>`}</div></div>`;
+      <div class="end"><b>${tl(val, 0)}</b>${SELLING[p.inst] ? `<span class="sellst"><i class="spn"></i>Satılıyor</span>` : `<span class="pill ${cls(pl) || 'z'}"><i>${pl >= 0 ? '▲' : '▼'}</i>${nf(Math.abs(pl))} TL</span><span class="est ${cls(pl)}">${spc(plp)}</span>`}</div></div>`;
         return canSell ? `<div class="swr${swOpen === p.inst ? ' open' : ''}${SELLING[p.inst] ? ' busy' : ''}" data-i="${p.inst}"><button class="swb" data-sell="${p.inst}">${ic('i-sell')}${SELLING[p.inst] ? 'Satılıyor' : 'Sat'}</button>${row}</div>` : row;
     }).join('')
         : `<div class="empty">${ic('i-box')}<div>Şu an açık pozisyon yok</div></div>`);
@@ -1904,7 +1902,7 @@ function renderMarket() {
     const mkH = rows.length ? rows.map(i => {
         const q = LP[i];
         return `<div class="row">${cico(i)}<div class="mid"><b>${sym(i)}${pq(i)}</b><span>Hacim ${volTxt(i)} · 24 sa</span></div>
-      <div class="end"><b class="pxv ${q.dir > 0 ? 'flash-up' : q.dir < 0 ? 'flash-dn' : ''}">${px(q.last)}</b><span class="${cls(q.ch)}">${spc(q.ch)}</span></div></div>`;
+      <div class="end"><b class="pxv ${q.dir > 0 ? 'flash-up' : q.dir < 0 ? 'flash-dn' : ''}">${px(q.last)}</b><span class="pill ${cls(q.ch) || 'z'}"><i>${q.ch >= 0 ? '▲' : '▼'}</i>%${nf(Math.abs(q.ch))}</span></div></div>`;
     }).join('')
         + (all.length > 6 ? `<button class="more" id="mkMore">${mkAll ? 'Daha az göster' : `Tümünü göster (${all.length} coin)`}</button>` : '')
         : `<div class="empty">${ic('i-pnl')}<div>Fiyatlar yükleniyor…</div></div>`;
@@ -1975,7 +1973,7 @@ function renderChart() {
     note.textContent = view === 'live' ? (S.created ? 'Başlangıç ' + dt(S.created).split(' ')[0] : '') : (B ? 'Son ' + B.days + ' gün' : '');
     for (const k in src) {
         const st = view === 'live' ? (S.strategies[k]?.start_cash || S.start_cash) : S.start_cash;
-        src[k] = src[k].map(([t, v, b0]) => [t, (v / (b0 || st) - 1) * 100]);
+        src[k] = [...src[k]].sort((a, b) => a[0] - b[0]).map(([t, v, b0]) => [t, (v / (b0 || st) - 1) * 100]);
     }
     const pts = Object.values(src).flat();
     if (pts.length < 4 || Object.values(src).every(s => s.length < 2)) {
@@ -2748,7 +2746,7 @@ async function loadSettings() {
     renderForm();
 }
 /** Ayarlardaki tek bir şeyi buluta yazar (bekleyen başka değişikliklere dokunmadan): dil, tema, bildirim temizleme. */
-let patchQ = Promise.resolve(), ACC_T = 0;
+let patchQ = Promise.resolve();
 /** Bulut yazmaları sırayla gider: üst üste dokunuşlarda (409 çakışması) son değişiklik kaybolmasın */
 function cloudPatch(fn, msg) { const p = patchQ.then(() => cloudPatch_(fn, msg)); patchQ = p.catch(() => { }); return p; }
 async function cloudPatch_(fn, msg, retry = true) {
@@ -2905,7 +2903,7 @@ function renderHist() {
         }
         const sell = t.side === 'SAT', hm = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
         h += `<div class="row">${cico(t.inst, t.side, t.pnl < 0)}<div class="mid"><b>${sym(t.inst)}${pq(t.inst)} ${sell ? 'satıldı' : 'alındı'}</b><span>${hm} · ${t.reason} · ${px(t.price)}</span></div>
-      <div class="end"><b>${tl(t.amount, 0)}</b>${sell ? `<span class="plc ${cls(t.pnl) || 'z'}">${sgn(t.pnl)} TL ${t.pnl >= 0 ? 'kâr' : 'zarar'}</span>` : `<span class="plc buy">${ic('i-coins')}Alım</span>`}</div></div>`;
+      <div class="end"><b>${tl(t.amount, 0)}</b>${sell ? `<span class="pill ${cls(t.pnl) || 'z'}"><i>${t.pnl >= 0 ? '▲' : '▼'}</i>${nf(Math.abs(t.pnl))} TL<small>${t.pnl >= 0 ? 'kâr' : 'zarar'}</small></span>` : `<span class="pill buy">${ic('i-coins')}Alım</span>`}</div></div>`;
     }
     if (day)
         h += '</div>';
@@ -3011,16 +3009,8 @@ function applyTheme() {
     document.documentElement.dataset.theme = d ? 'dark' : 'light';
     document.querySelector('meta[name=theme-color]').content = d ? '#0F131A' : '#F4F5F7';
 }
-const ACCENTS = [['amber', 'Kehribar', '#D9861A'], ['ocean', 'Okyanus', '#2F6FDB'], ['emerald', 'Zümrüt', '#178A5B'], ['violet', 'Ametist', '#7A52C7'], ['graphite', 'Grafit', '#334155']];
-function setAccent(a) { localStore('masal-renk', a); if (a === 'amber')
-    delete document.documentElement.dataset.accent;
-else
-    document.documentElement.dataset.accent = a; }
-{
-    const a = localStore('masal-renk');
-    if (a && a !== 'amber')
-        document.documentElement.dataset.accent = a;
-}
+function setAccent(_a) { }
+delete document.documentElement.dataset.accent;
 function setTheme(m) { try {
     localStorage.setItem('masal-tema', m);
 }
@@ -3037,10 +3027,6 @@ function installSection() {
     else
         h += `<ol class="steps" style="margin-top:0"><li><b>Android (Chrome):</b> sağ üstteki ⋮ → <b>Ana ekrana ekle</b></li><li><b>iPhone (Safari):</b> Paylaş → <b>Ana Ekrana Ekle</b></li><li><b>Bilgisayar (Chrome/Edge):</b> adres çubuğundaki <b>Yükle</b> simgesi</li></ol>`;
     const tm = themeMode();
-    {
-        const cur = localStore('masal-renk') || 'amber';
-        h += `<div class="prf" style="display:block"><b>Renk</b><div class="accs" id="accTiles" style="margin-top:6px">${ACCENTS.map(([k, n, c]) => `<button type="button" class="${cur === k ? 'on' : ''}" data-accent="${k}"><i style="background:${c}"></i>${n}</button>`).join('')}</div></div>`;
-    }
     h += `<div class="prf"><b>Tema</b><div class="seg mini" id="themeTiles">${[['light', 'i-sun', 'Açık'], ['dark', 'i-moon', 'Koyu'], ['auto', 'i-auto', 'Otomatik']].map(([k, i, n]) => `<button type="button" class="${tm === k ? 'on' : ''}" data-th="${k}">${ic(i)}${n}</button>`).join('')}</div></div>`;
     h += `<div class="prf"><b>Dil</b><div class="seg mini" id="langTiles">${[['tr', 'Türkçe'], ['en', 'English']].map(([k, n]) => `<button type="button" class="${LANG === k ? 'on' : ''}" data-lg="${k}">${n}</button>`).join('')}</div></div>`;
     const newer = remoteVer && vcmp(remoteVer.version, APP_VERSION) > 0;
@@ -3058,7 +3044,6 @@ function bindInstall() {
         await cloudPatch(o => { o.lang = l; }, 'Dil değişti');
         setLang(l);
     });
-    document.querySelectorAll('#accTiles button').forEach(t => t.onclick = () => { setAccent(t.dataset.accent); localStore('masal_pref_ts', String(Date.now())); clearTimeout(ACC_T); const v = t.dataset.accent; ACC_T = setTimeout(() => cloudPatch(o => { o.accent = v; }, 'Renk değişti'), 700); document.querySelectorAll('#accTiles button').forEach(x => x.classList.toggle('on', x === t)); });
     document.querySelectorAll('#themeTiles button').forEach(t => t.onclick = () => { setTheme(t.dataset.th); localStore('masal_pref_ts', String(Date.now())); cloudPatch(o => { o.theme = t.dataset.th; }, 'Tema değişti'); document.querySelectorAll('#themeTiles button').forEach(x => x.classList.toggle('on', x === t)); });
     const v = document.getElementById('verBtn');
     if (v)

@@ -1,7 +1,7 @@
-const APP_VERSION='1.72.4';
+const APP_VERSION='1.73.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
-const AMBER='#D9861A';
+const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (pembe)
 let S: Summary = null, B: Backtest = null, sel = 'live' as StrategyKey, view: 'live' | 'bt' = 'live';
 
 function localStore(k: string, v?: string): string | null {try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
@@ -150,7 +150,7 @@ async function load_(quiet?: boolean) {lastLoad=Date.now();offlineData=false;cle
     syncMark(!offlineData);
     // dil ve tema buluttan: başka cihazda değiştirildiyse bu cihaz da uyar (az önce burada değiştirildiyse bekler)
     {const st=S.settings as any,recent=Date.now()-+(localStore('masal_pref_ts')||0)<180000;
-     if(st&&!recent){if(st.theme&&st.theme!==themeMode())setTheme(st.theme);if((st as any).accent&&(st as any).accent!==(localStore('masal-renk')||'amber'))setAccent((st as any).accent);if(st.lang&&st.lang!==LANG){localStore('masal_pref_ts',String(Date.now()));setLang(st.lang);return}}}
+     if(st&&!recent){if(st.theme&&st.theme!==themeMode())setTheme(st.theme);if(st.lang&&st.lang!==LANG){localStore('masal_pref_ts',String(Date.now()));setLang(st.lang);return}}}
     nMerge();
     if(offlineData){err.innerHTML=`Bağlantı kurulamadı; <b>${dt(S.updated)}</b> tarihli son veri gösteriliyor. Kendiliğinden yeniden deneniyor…`;err.style.display='block';retryTimer=setTimeout(()=>load(true),15000)}if(S.strategies.live)sel='live';if(!S.strategies[sel])sel = Object.keys(S.strategies)[0] as StrategyKey;render();pollMarket();startNotes();
   }catch(e){syncMark(false);console.error(e);err.textContent='Veriler alınamadı (bağlantı ya da VPN). Kendiliğinden yeniden deneniyor…';err.style.display='block';retryTimer=setTimeout(()=>load(true),10000)}
@@ -202,7 +202,7 @@ function render(){
   setH(document.getElementById('trades'),tr.length?tr.map(t=>{const sell=t.side==='SAT';
     return `<div class="row">${cico(t.inst,t.side,t.pnl<0)}
       <div class="mid"><b>${sym(t.inst)}${pq(t.inst)} ${sell?'satıldı':'alındı'}</b><span>${dt(t.ts)} · ${t.reason} · ${px(t.price)}</span></div>
-      <div class="end"><b>${tl(t.amount,0)}</b>${sell?`<span class="plc ${cls(t.pnl)||'z'}">${sgn(t.pnl)} TL ${t.pnl>=0?'kâr':'zarar'}</span>`:`<span class="plc buy">${ic('i-coins')}Alım</span>`}</div></div>`}).join('')
+      <div class="end"><b>${tl(t.amount,0)}</b>${sell?`<span class="pill ${cls(t.pnl)||'z'}"><i>${t.pnl>=0?'▲':'▼'}</i>${nf(Math.abs(t.pnl))} TL<small>${t.pnl>=0?'kâr':'zarar'}</small></span>`:`<span class="pill buy">${ic('i-coins')}Alım</span>`}</div></div>`}).join('')
     :`<div class="empty">${ic('i-list')}<div>Henüz işlem yok. Bot fırsat bekliyor.</div></div>`);clipList('trades',4);
   renderBacktest();
   renderLog(x);
@@ -961,7 +961,7 @@ function renderCoins(x){
     const det=c.open_qty?(c.sells?`açıkta ${sgn(c.op)}`:'elde'):'kapandı';
     return `<div class="row">${cico(c.inst)}
       <div class="mid"><b>${sym(c.inst)}${pq(c.inst)}</b><span>${parts.join(' · ')}</span></div>
-      <div class="end"><b class="${cls(c.tot)}">${sgn(c.tot)} TL</b><span>${det}</span></div></div>`}).join(''));clipList('coins',5);
+      <div class="end"><span class="pill lg ${cls(c.tot)||'z'}"><i>${c.tot>=0?'▲':'▼'}</i>${nf(Math.abs(c.tot))} TL</span><span class="est">${det}</span></div></div>`}).join(''));clipList('coins',5);
 }
 // Satırı sola kaydırınca "Sat" düğmesi çıkar (sadece gerçek hesapta). Kaydırılırken liste yenilenmez.
 let swOpen='',swDrag=false,swJust=0;const SELLING:Record<string,number>={};
@@ -978,7 +978,7 @@ function renderPositions(x){
         <div class="rngl"><em class="dn">${lg?'Zarar':'Zarar durdur'} ${px(p.sl)}</em><em class="up">${lg?'Kâr':'Kâr al'} ${px(p.tp)}</em></div>`}
     const row=`<div class="row pos${canSell?' swc':''}">${cico(p.inst)}
       <div class="mid"><b>${sym(p.inst)}${pq(p.inst)}${prot}${p.lots>1?`<i class="kd">${p.lots} kademe</i>`:''}</b><span>Alış ${px(p.avg)} → satış ${px(cur)}<br>${ago(p.since)} alındı${volTxt(p.inst)?` · hacim ${volTxt(p.inst)}`:''}</span>${rng}</div>
-      <div class="end"><b>${tl(val,0)}</b><span class="plc ${cls(pl)||'z'}">${sgn(pl)} TL</span>${SELLING[p.inst]?`<span class="sellst"><i class="spn"></i>Satılıyor</span>`:`<span class="plp ${cls(pl)}">${spc(plp)}</span>`}</div></div>`;
+      <div class="end"><b>${tl(val,0)}</b>${SELLING[p.inst]?`<span class="sellst"><i class="spn"></i>Satılıyor</span>`:`<span class="pill ${cls(pl)||'z'}"><i>${pl>=0?'▲':'▼'}</i>${nf(Math.abs(pl))} TL</span><span class="est ${cls(pl)}">${spc(plp)}</span>`}</div></div>`;
     return canSell?`<div class="swr${swOpen===p.inst?' open':''}${SELLING[p.inst]?' busy':''}" data-i="${p.inst}"><button class="swb" data-sell="${p.inst}">${ic('i-sell')}${SELLING[p.inst]?'Satılıyor':'Sat'}</button>${row}</div>`:row}).join('')
     :`<div class="empty">${ic('i-box')}<div>Şu an açık pozisyon yok</div></div>`);
 }
@@ -1084,7 +1084,7 @@ function renderMarket(){
   box.className='card list mk';
   const mkH=rows.length?rows.map(i=>{const q=LP[i];
     return `<div class="row">${cico(i)}<div class="mid"><b>${sym(i)}${pq(i)}</b><span>Hacim ${volTxt(i)} · 24 sa</span></div>
-      <div class="end"><b class="pxv ${q.dir>0?'flash-up':q.dir<0?'flash-dn':''}">${px(q.last)}</b><span class="${cls(q.ch)}">${spc(q.ch)}</span></div></div>`}).join('')
+      <div class="end"><b class="pxv ${q.dir>0?'flash-up':q.dir<0?'flash-dn':''}">${px(q.last)}</b><span class="pill ${cls(q.ch)||'z'}"><i>${q.ch>=0?'▲':'▼'}</i>%${nf(Math.abs(q.ch))}</span></div></div>`}).join('')
     +(all.length>6?`<button class="more" id="mkMore">${mkAll?'Daha az göster':`Tümünü göster (${all.length} coin)`}</button>`:'')
     :`<div class="empty">${ic('i-pnl')}<div>Fiyatlar yükleniyor…</div></div>`;
   if(setH(box,mkH)){const mb=document.getElementById('mkMore');if(mb)mb.onclick=()=>{mkAll=!mkAll;renderMarket()}}
@@ -1137,7 +1137,7 @@ function renderChart(){
   const src=view==='live'?Object.fromEntries(Object.entries(S.strategies).filter(([k,v])=>v.equity_series&&(k==='live'||!S.strategies.live||S.strategies.live.locked)).map(([k,v])=>[k,v.equity_series]))
     :(B?Object.fromEntries(Object.entries(B.results).map(([k,v])=>[k,v.equity])):{});
   note.textContent=view==='live'?(S.created?'Başlangıç '+dt(S.created).split(' ')[0]:''):(B?'Son '+B.days+' gün':'');
-  for(const k in src){const st=view==='live'?(S.strategies[k]?.start_cash||S.start_cash):S.start_cash;src[k]=src[k].map(([t,v,b0])=>[t,(v/(b0||st)-1)*100])}
+  for(const k in src){const st=view==='live'?(S.strategies[k]?.start_cash||S.start_cash):S.start_cash;src[k]=[...src[k]].sort((a,b)=>a[0]-b[0]).map(([t,v,b0])=>[t,(v/(b0||st)-1)*100])}
   const pts=Object.values(src).flat();
   if(pts.length<4||Object.values(src).every(s=>s.length<2)){
     box.innerHTML=`<div class="empty">${ic('i-chart')}<div>${view==='live'?'Grafik için veri birikiyor. Bot saatte bir nokta ekler.':'Geçmiş test verisi yok'}</div></div>`;leg.innerHTML='';return}
@@ -1552,7 +1552,7 @@ async function loadSettings(){
 }
 
 /** Ayarlardaki tek bir şeyi buluta yazar (bekleyen başka değişikliklere dokunmadan): dil, tema, bildirim temizleme. */
-let patchQ: Promise<unknown> = Promise.resolve(), ACC_T: any = 0;
+let patchQ: Promise<unknown> = Promise.resolve();
 /** Bulut yazmaları sırayla gider: üst üste dokunuşlarda (409 çakışması) son değişiklik kaybolmasın */
 function cloudPatch(fn: (o: Settings) => void, msg: string): Promise<boolean> {const p = patchQ.then(() => cloudPatch_(fn, msg)); patchQ = p.catch(() => {}); return p;}
 async function cloudPatch_(fn: (o: Settings) => void, msg: string, retry = true): Promise<boolean> {
@@ -1618,7 +1618,7 @@ function renderHist(){const body=document.getElementById('histBody');const all=H
       h+=`<div class="dayh"><span>${d.toLocaleDateString(LANG==='en'?'en-GB':'tr-TR',{day:'numeric',month:'long',weekday:'long'})}</span>${dp?`<b class="${cls(dp)}">${sgn(dp)} TL</b>`:''}</div><div class="card list">`}
     const sell=t.side==='SAT',hm=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
     h+=`<div class="row">${cico(t.inst,t.side,t.pnl<0)}<div class="mid"><b>${sym(t.inst)}${pq(t.inst)} ${sell?'satıldı':'alındı'}</b><span>${hm} · ${t.reason} · ${px(t.price)}</span></div>
-      <div class="end"><b>${tl(t.amount,0)}</b>${sell?`<span class="plc ${cls(t.pnl)||'z'}">${sgn(t.pnl)} TL ${t.pnl>=0?'kâr':'zarar'}</span>`:`<span class="plc buy">${ic('i-coins')}Alım</span>`}</div></div>`}
+      <div class="end"><b>${tl(t.amount,0)}</b>${sell?`<span class="pill ${cls(t.pnl)||'z'}"><i>${t.pnl>=0?'▲':'▼'}</i>${nf(Math.abs(t.pnl))} TL<small>${t.pnl>=0?'kâr':'zarar'}</small></span>`:`<span class="pill buy">${ic('i-coins')}Alım</span>`}</div></div>`}
   if(day)h+='</div>';h+='</section>';
   body.innerHTML=h;
   body.querySelectorAll<HTMLElement>('#hCoins .tile').forEach(b=>b.onclick=()=>{hCoin=b.dataset.c;renderHist()});
@@ -1681,9 +1681,8 @@ function themeMode(){try{return localStorage.getItem('masal-tema')||'auto'}catch
 const darkMQ=matchMedia('(prefers-color-scheme: dark)');
 function applyTheme(){const m=themeMode(),d=m==='dark'||(m==='auto'&&darkMQ.matches);document.documentElement.dataset.theme=d?'dark':'light';
   document.querySelector<HTMLMetaElement>('meta[name=theme-color]').content=d?'#0F131A':'#F4F5F7'}
-const ACCENTS: [string,string,string][]=[['amber','Kehribar','#D9861A'],['ocean','Okyanus','#2F6FDB'],['emerald','Zümrüt','#178A5B'],['violet','Ametist','#7A52C7'],['graphite','Grafit','#334155']];
-function setAccent(a: string){localStore('masal-renk',a);if(a==='amber')delete document.documentElement.dataset.accent;else document.documentElement.dataset.accent=a}
-{const a=localStore('masal-renk');if(a&&a!=='amber')document.documentElement.dataset.accent=a}
+function setAccent(_a: string){/* tek tema (pembe): renk seçimi kaldırıldı */}
+delete document.documentElement.dataset.accent;
 function setTheme(m){try{localStorage.setItem('masal-tema',m)}catch(e){}applyTheme()}
 darkMQ.addEventListener?.('change',applyTheme);applyTheme();
 function installSection(){
@@ -1693,8 +1692,6 @@ function installSection(){
   else if(installEvt)h+=`<div style="font-size:13px;margin-bottom:10px">Masal'ı ana ekrana ekle; kendi simgesiyle uygulama gibi açılır, internet yokken de son verileri gösterir.</div><button class="btn primary" id="instBtn" style="width:100%">${ic('i-phone')}Ana ekrana ekle</button>`;
   else h+=`<ol class="steps" style="margin-top:0"><li><b>Android (Chrome):</b> sağ üstteki ⋮ → <b>Ana ekrana ekle</b></li><li><b>iPhone (Safari):</b> Paylaş → <b>Ana Ekrana Ekle</b></li><li><b>Bilgisayar (Chrome/Edge):</b> adres çubuğundaki <b>Yükle</b> simgesi</li></ol>`;
   const tm=themeMode();
-  {const cur=localStore('masal-renk')||'amber';
-   h+=`<div class="prf" style="display:block"><b>Renk</b><div class="accs" id="accTiles" style="margin-top:6px">${ACCENTS.map(([k,n,c])=>`<button type="button" class="${cur===k?'on':''}" data-accent="${k}"><i style="background:${c}"></i>${n}</button>`).join('')}</div></div>`;}
   h+=`<div class="prf"><b>Tema</b><div class="seg mini" id="themeTiles">${[['light','i-sun','Açık'],['dark','i-moon','Koyu'],['auto','i-auto','Otomatik']].map(([k,i,n])=>`<button type="button" class="${tm===k?'on':''}" data-th="${k}">${ic(i)}${n}</button>`).join('')}</div></div>`;
   h+=`<div class="prf"><b>Dil</b><div class="seg mini" id="langTiles">${[['tr','Türkçe'],['en','English']].map(([k,n])=>`<button type="button" class="${LANG===k?'on':''}" data-lg="${k}">${n}</button>`).join('')}</div></div>`;
   const newer=remoteVer&&vcmp(remoteVer.version,APP_VERSION)>0;
@@ -1705,7 +1702,7 @@ function installSection(){
 function bindInstall(){document.querySelectorAll<HTMLElement>('#langTiles button').forEach(t=>t.onclick=async()=>{const l=t.dataset.lg as 'tr'|'en';if(l===LANG)return;
     // dil bulutta tutulur: bütün cihazlar ve bildirimler aynı dilde
     localStore('masal_pref_ts',String(Date.now()));await cloudPatch(o=>{o.lang=l},'Dil değişti');
-    setLang(l)});document.querySelectorAll<HTMLElement>('#accTiles button').forEach(t=>t.onclick=()=>{setAccent(t.dataset.accent);localStore('masal_pref_ts',String(Date.now()));clearTimeout(ACC_T);const v=t.dataset.accent;ACC_T=setTimeout(()=>cloudPatch(o=>{(o as any).accent=v},'Renk değişti'),700);document.querySelectorAll<HTMLElement>('#accTiles button').forEach(x=>x.classList.toggle('on',x===t))});document.querySelectorAll<HTMLElement>('#themeTiles button').forEach(t=>t.onclick=()=>{setTheme(t.dataset.th);localStore('masal_pref_ts',String(Date.now()));cloudPatch(o=>{(o as any).theme=t.dataset.th},'Tema değişti');document.querySelectorAll<HTMLElement>('#themeTiles button').forEach(x=>x.classList.toggle('on',x===t))});const v=document.getElementById('verBtn');if(v)v.onclick=()=>{if(remoteVer&&vcmp(remoteVer.version,APP_VERSION)>0)applyUpdate();else checkVersion(true)};const b=document.getElementById('instBtn');if(b)b.onclick=async()=>{installEvt.prompt();await installEvt.userChoice;installEvt=null;renderForm()}}
+    setLang(l)});document.querySelectorAll<HTMLElement>('#themeTiles button').forEach(t=>t.onclick=()=>{setTheme(t.dataset.th);localStore('masal_pref_ts',String(Date.now()));cloudPatch(o=>{(o as any).theme=t.dataset.th},'Tema değişti');document.querySelectorAll<HTMLElement>('#themeTiles button').forEach(x=>x.classList.toggle('on',x===t))});const v=document.getElementById('verBtn');if(v)v.onclick=()=>{if(remoteVer&&vcmp(remoteVer.version,APP_VERSION)>0)applyUpdate();else checkVersion(true)};const b=document.getElementById('instBtn');if(b)b.onclick=async()=>{installEvt.prompt();await installEvt.userChoice;installEvt=null;renderForm()}}
 
 /* ---------- sürüm ---------- */
 let remoteVer=null;

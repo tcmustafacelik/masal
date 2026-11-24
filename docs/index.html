@@ -3,16 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#F4F5F7">
-<script>(function(){var m;try{m=localStorage.getItem('masal-tema')}catch(e){}m=m||'auto';var d=m==='dark'||(m==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=d?'dark':'light';var a;try{a=localStorage.getItem('masal-renk')}catch(e){}if(a&&a!=='amber')document.documentElement.dataset.accent=a})()</script>
+<meta name="theme-color" content="#FBF5F8">
+<script>(function(){var m;try{m=localStorage.getItem('masal-tema')}catch(e){}m=m||'auto';var d=m==='dark'||(m==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=d?'dark':'light';})()</script>
 <title>Masal</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="favicon.svg?v=2" type="image/svg+xml">
 <link rel="apple-touch-icon" href="logo-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <style>
-:root{--bg:#F4F5F7;--surface:#fff;--line:#E3E6EB;--line2:#EEF0F3;--text:#1D2430;--muted:#6A7280;--faint:#9AA1AC;--blue:#2F6FDE;--blue-bg:#EAF1FD;--amber:#D9861A;--amber-bg:#FFF3DF;--amber-line:#F0C27A;--green:#178A5B;--green-bg:#E6F5EE;--red:#C9473F;--red-bg:#FCEBEA;--r:10px;--r-sm:8px;--pri-bg:#1D2430;--pri-fg:#fff;--amber-ink:#93570B;--red-line:#F1C4C0;--header-bg:rgba(244,245,247,.92);--logo-bg:#1D2430;--knob:#fff;--zero:#C9CED6;--shadow:rgba(16,24,40,.10);color-scheme:light;--violet:#7A5AC8;--violet-bg:#F1ECFB;--teal:#11807E;--teal-bg:#E2F4F3;--acc:#D9861A;--acc-bg:#FFF3DF;--acc-line:#F0C27A;--acc-ink:#93570B}
-[data-theme=dark]{--bg:#0F131A;--surface:#171C25;--line:#29303C;--line2:#1F2530;--text:#E8ECF2;--muted:#9AA3B2;--faint:#6B7484;--blue:#6E9BF0;--blue-bg:#1B2840;--amber:#E39A2E;--amber-bg:#2B2215;--amber-line:#6B4A1E;--green:#3DBE84;--green-bg:#13281F;--red:#F0736A;--red-bg:#2E1715;--pri-bg:#E8ECF2;--pri-fg:#0F131A;--amber-ink:#F0B460;--red-line:#5A2A27;--header-bg:rgba(15,19,26,.9);--logo-bg:#222A36;--knob:#E8ECF2;--zero:#3A4250;--shadow:rgba(0,0,0,.45);color-scheme:dark;--violet:#A58BE8;--violet-bg:#251E36;--teal:#3CC4BF;--teal-bg:#122A29;--acc:#E39A2E;--acc-bg:#2B2215;--acc-line:#6B4A1E;--acc-ink:#F0B460}
+:root{--bg:#FBF5F8;--surface:#fff;--line:#E3E6EB;--line2:#EEF0F3;--text:#1D2430;--muted:#6A7280;--faint:#9AA1AC;--blue:#2F6FDE;--blue-bg:#EAF1FD;--amber:#D9861A;--amber-bg:#FFF3DF;--amber-line:#F0C27A;--green:#178A5B;--green-bg:#E6F5EE;--red:#C9473F;--red-bg:#FCEBEA;--r:10px;--r-sm:8px;--pri-bg:#1D2430;--pri-fg:#fff;--amber-ink:#93570B;--red-line:#F1C4C0;--header-bg:rgba(251,245,248,.92);--logo-bg:#1D2430;--knob:#fff;--zero:#C9CED6;--shadow:rgba(16,24,40,.10);color-scheme:light;--violet:#7A5AC8;--violet-bg:#F1ECFB;--teal:#11807E;--teal-bg:#E2F4F3;--acc:#E2589C;--acc-bg:#FDEBF4;--acc-line:#F5BCD8;--acc-ink:#B02D6E}
+[data-theme=dark]{--bg:#0F131A;--surface:#171C25;--line:#29303C;--line2:#1F2530;--text:#E8ECF2;--muted:#9AA3B2;--faint:#6B7484;--blue:#6E9BF0;--blue-bg:#1B2840;--amber:#E39A2E;--amber-bg:#2B2215;--amber-line:#6B4A1E;--green:#3DBE84;--green-bg:#13281F;--red:#F0736A;--red-bg:#2E1715;--pri-bg:#E8ECF2;--pri-fg:#0F131A;--amber-ink:#F0B460;--red-line:#5A2A27;--header-bg:rgba(15,19,26,.9);--logo-bg:#222A36;--knob:#E8ECF2;--zero:#3A4250;--shadow:rgba(0,0,0,.45);color-scheme:dark;--violet:#A58BE8;--violet-bg:#251E36;--teal:#3CC4BF;--teal-bg:#122A29;--acc:#F28CBF;--acc-bg:#2C1824;--acc-line:#6A2F4D;--acc-ink:#F7B3D5}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 [hidden]{display:none!important}
 .pinv{position:fixed;inset:0;z-index:70;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 20px calc(24px + env(safe-area-inset-bottom));animation:pinIn .3s cubic-bezier(.2,.8,.2,1)}
@@ -545,18 +545,6 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 #setv h2{font-size:11px;margin:0 2px 6px}
 .sw .lb b{font-size:12.5px}.sw .lb span{display:block;font-size:10.5px;color:var(--muted)}
 .sw .track{transform:scale(.85);transform-origin:right center}
-/* ===== Vurgu renkleri (Ayarlar → Uygulama → Renk): seçili öğeler, sekmeler, anahtarlar ===== */
-[data-accent=ocean]{--acc:#2F6FDB;--acc-bg:#E8F0FD;--acc-line:#A9C4F2;--acc-ink:#1D4FA8}
-[data-theme=dark][data-accent=ocean]{--acc:#5B93F0;--acc-bg:#16233A;--acc-line:#2E4C80;--acc-ink:#9DBDF5}
-[data-accent=emerald]{--acc:#178A5B;--acc-bg:#E4F5EC;--acc-line:#9FD8BC;--acc-ink:#0F6542}
-[data-theme=dark][data-accent=emerald]{--acc:#3FBF87;--acc-bg:#12291F;--acc-line:#24573F;--acc-ink:#86D9B3}
-[data-accent=violet]{--acc:#7A52C7;--acc-bg:#F1ECFB;--acc-line:#C9B5EE;--acc-ink:#5A3A9A}
-[data-theme=dark][data-accent=violet]{--acc:#A27FE6;--acc-bg:#221A33;--acc-line:#4A3A73;--acc-ink:#C6B0F2}
-[data-accent=graphite]{--acc:#334155;--acc-bg:#EEF1F5;--acc-line:#B8C1CE;--acc-ink:#1F2937}
-[data-theme=dark][data-accent=graphite]{--acc:#CBD5E1;--acc-bg:#1E2530;--acc-line:#475569;--acc-ink:#E2E8F0}
-[data-theme=dark][data-accent=graphite] .tile.on .ic,[data-theme=dark][data-accent=graphite] .drow.on .dck{color:#111827}
-.accs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}.accs button{display:flex;flex-direction:column;align-items:center;gap:4px;border:1px solid var(--line);background:var(--surface);border-radius:11px;padding:7px 2px 6px;font:inherit;font-size:10.5px;color:var(--text);-webkit-tap-highlight-color:transparent;user-select:none}
-.accs i{width:22px;height:22px;border-radius:7px;display:block}.accs button.on{border-color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc)}
 /* ---- ayar grupları ve kademe merdiveni ---- */
 .fgrp{margin-top:10px;padding-top:10px;border-top:1px solid var(--line2)}.fgrp:first-child{margin-top:0;padding-top:0;border-top:0}
 .fgh{display:flex;align-items:center;gap:6px;margin:0;padding:0 0 2px;font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--acc-ink,var(--muted))}
@@ -658,6 +646,16 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 .moff .moi svg{width:20px;height:20px}.moff b{font-size:14.5px}.moff p{font-size:12px;color:var(--muted);line-height:1.5;margin:0 0 4px}
 .moff .btn{width:auto;padding:9px 16px;display:inline-flex;align-items:center;gap:6px}
 .mh .mset+.mset{margin-left:5px}.mh .mset.ico{padding-left:8px;padding-right:8px;color:var(--red)}.mh .mset.ico svg{margin:0}
+
+/* Değer etiketleri: listelerin sağ sütunu tek standart (tutar + yönlü renkli etiket) */
+.end .pill{display:inline-flex;align-items:center;gap:3px;margin-top:4px;padding:3px 7px;border-radius:7px;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;line-height:1.25}
+.end .pill i{font-style:normal;font-size:8.5px;line-height:1;transform:translateY(-.5px)}
+.end .pill small{font-size:10.5px;font-weight:600;opacity:.8;margin-left:3px;padding-left:5px;border-left:1px solid currentColor}
+.end .pill.up{background:var(--green-bg);color:var(--green)}.end .pill.dn{background:var(--red-bg);color:var(--red)}.end .pill.z{background:var(--line2);color:var(--muted)}
+.end .pill.buy{background:var(--blue-bg);color:var(--blue);gap:4px}.end .pill.buy svg{width:12px;height:12px}
+.end .pill.lg{font-size:13.5px;padding:4px 9px;margin-top:0}
+.end .est{display:block;font-size:10.5px;color:var(--faint);margin-top:3px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums}.end .est.up{color:var(--green)}.end .est.dn{color:var(--red)}
+.end b.pxv{color:var(--text)}
 </style>
 </head>
 <body>
@@ -855,6 +853,6 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 <div class="toast" id="toast" hidden></div>
 <div class="qsh" id="qsh" hidden><div class="qb"><div class="gr"></div><h3><span><svg class="i" id="qIco"><use href="#i-info"/></svg></span><b id="qTitle"></b></h3><div class="qt" id="qText"></div><button class="btn primary" id="qOk">Anladım</button></div></div>
 
-<script src="app.js?v=1.72.4"></script>
+<script src="app.js?v=1.73.0"></script>
 </body>
 </html>
