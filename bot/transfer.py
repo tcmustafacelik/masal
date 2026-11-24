@@ -211,7 +211,8 @@ def _already(ex, job, X):
     if not rows:
         return False
     job.update(stage="sent", wdId=rows[0].get("wdId"), sent_ts=int(rows[0].get("ts") or time.time() * 1000))
-    X["day_sum"] = round(X.get("day_sum", 0) + job["amt"], 2)
+    if not job.get("link"):  # zincirin 2. adımı (MEME → Global → KASA/TR) aynı para: günlük sınıra bir kez sayılır
+        X["day_sum"] = round(X.get("day_sum", 0) + job["amt"], 2)
     return True
 
 
@@ -260,7 +261,8 @@ def _send(ex, side, addr, dest, amt, job, X):
                 "fee": f"{fee:f}".rstrip("0").rstrip(".") or "0", "clientId": job["id"][:32]}
         res = _wd(ex, body, info, nm, dest)
     job.update(stage="sent", wdId=res.get("wdId"), fee=fee, chain=chain, sent_ts=int(time.time() * 1000))
-    X["day_sum"] = round(X.get("day_sum", 0) + amt, 2)
+    if not job.get("link"):  # zincirin 2. adımı günlük sınıra ikinci kez sayılmaz
+        X["day_sum"] = round(X.get("day_sum", 0) + amt, 2)
     _note(X, f"{NAMES[side]} → {NAMES[dest]}: {amt:.2f} USDT gönderildi ({chain}, ücret {fee:g})")
 
 
@@ -497,7 +499,7 @@ def _run_jobs(X, C, cfg, state, N, now):
             if job["stage"] == "new":
                 if job["amt"] < 1:
                     raise RuntimeError("tutar çok küçük")
-                if X.get("day_sum", 0) + job["amt"] > float(cfg["daily_max"]):
+                if not job.get("link") and X.get("day_sum", 0) + job["amt"] > float(cfg["daily_max"]):
                     job["msg"] = f"günlük sınır ({cfg['daily_max']} $) dolu; yarın gönderilecek"
                     if now * 1000 - job["ts"] > 3 * 86400_000:
                         raise RuntimeError("3 gün içinde günlük sınır açılmadı")

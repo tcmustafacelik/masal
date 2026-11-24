@@ -251,11 +251,11 @@ def _m2g(g, job, X, N, note):
                         k_fee = 1.0
                     k_amt = math.floor((usd - k_fee) * 100) / 100  # zincir ücreti Global fonundan düşer
                     if job.get("then") == "k" and k_amt >= 1:  # Global'den KASA'ya devam (kâr süpürme ya da elle MEME → KASA)
-                        X["jobs"].append({"id": job["id"] + "k", "dir": "g2k", "amt": k_amt, "src": "kar",
+                        X["jobs"].append({"id": job["id"] + "k", "dir": "g2k", "amt": k_amt, "src": "kar", "link": True,
                                           "ts": int(time.time() * 1000), "stage": "new", "msg": "memecoin kârı KASA'ya" if job.get("src") == "kar" and not job.get("all") else "MEME'den gelen para KASA'ya"})
                     tr_amt = math.floor(usd * 100) / 100  # Global → TR iç transfer ücretsiz
                     if job.get("then") == "tr" and tr_amt >= 1:
-                        X["jobs"].append({"id": job["id"] + "t", "dir": "g2tr", "amt": tr_amt, "src": "bos",
+                        X["jobs"].append({"id": job["id"] + "t", "dir": "g2tr", "amt": tr_amt, "src": "bos", "link": True,
                                           "ts": int(time.time() * 1000), "stage": "new", "msg": "MEME'den gelen para OKX TR'ye"})
                     X["g_base"] = round(X.get("g_base", 0) + usd, 2)
                     note(X, f"Global'e ulaştı: {usd:.2f} USDT")
