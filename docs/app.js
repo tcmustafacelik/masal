@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.94.2';
+const APP_VERSION = '1.94.3';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = 'var(--acc)';
@@ -2356,7 +2356,8 @@ function renderOverview() {
     const cur = OV_CUR === 'btc' && !btcUsd ? 'usd' : OV_CUR;
     const cv = (usd, d) => OV_HIDE ? '••••' : cur === 'try' ? tl(usd * r, d ?? 0) : cur === 'btc' ? '₿' + nf(usd / btcUsd, d ?? (Math.abs(usd / btcUsd) < 0.01 ? 6 : 4)) : U(usd, d ?? 2);
     const GS = S.gspotr, gE = GS ? gReal(GS) : 0;
-    const parts = [['tr', 'Spot · OKX TR', 'i-bank', +X.tr_total || 0], ['g', 'Futures · Global', 'i-layers', Math.max(0, (+X.g_val || 0) - gE)], ...(gE ? [['gs', 'Global spot', 'i-globe', gE]] : []), ['m', 'Memecoin', 'i-flask', +M?.value || 0], ['k', 'Kasa', 'i-vault', +X.kasa?.usd || 0]];
+    const fE = R?.funded ? Math.max(0, +R.equity || 0) : 0, gFree = Math.max(0, (+X.g_val || 0) - gE - fE);
+    const parts = [['tr', 'Spot · OKX TR', 'i-bank', +X.tr_total || 0], ['g', 'Futures · Global', 'i-layers', R?.funded ? fE : Math.max(0, (+X.g_val || 0) - gE)], ...(gE ? [['gs', 'Global spot', 'i-globe', gE]] : []), ...(R?.funded && gFree >= 0.5 ? [['gb', 'Global boşta', 'i-globe', gFree]] : []), ['m', 'Memecoin', 'i-flask', +M?.value || 0], ['k', 'Kasa', 'i-vault', +X.kasa?.usd || 0]];
     const tot = [X.tr_total, X.g_val, X.kasa?.usd].every((v) => v != null) ? parts.reduce((a, p) => a + p[3], 0) : null;
     const sP = (liveEquity(sp) - sp.start_cash) / r, fP = R?.funded ? +R.pnl || 0 : 0, mP = M?.start ? +M.pnl || 0 : 0, gP = GS?.funded ? +GS.pnl || 0 : 0, all = sP + fP + mP + gP;
     const sum = Math.max(1, tot || 0), bar = parts.filter(p => p[3] > 0).map(p => `<i class="p${p[0]}" style="width:${(p[3] / sum * 100).toFixed(2)}%"></i>`).join('');
