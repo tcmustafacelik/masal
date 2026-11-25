@@ -155,8 +155,27 @@ def _run(req, X):
             why = {}
             for b in bad:
                 why.setdefault(b.split(" (", 1)[-1].rstrip(")"), []).append(b.split(" (")[0])
-            msg = (f"{len(ok)} coin çevrildi ({', '.join(ok[:8])}{'…' if len(ok) > 8 else ''})" if ok else "çevrilen yok") + \
-                  "".join(f" · {len(v)} coin olmadı ({', '.join(v[:4])}{'…' if len(v) > 4 else ''}): {k_}" for k_, v in list(why.items())[:3])
+            # kısa ve tam cümle: bildirimde yarıda kesilmesin (çevrilenler + olmayanların sayısı ve kısa sebebi)
+            tos_ = sorted({x.split("→")[1] for x in ok})
+            names = [x.split("→")[0] for x in ok]
+            msg = (f"{len(ok)} coin {'/'.join(tos_)}'ye çevrildi: {', '.join(names[:6])}{'…' if len(names) > 6 else ''}" if ok else "Çevrilen coin yok")
+            if bad:
+                def short(r):
+                    r = r.lower()
+                    if "korunuyor" in r:
+                        return "masada, korunuyor"
+                    if "kolay çevir" in r or "kabul etmedi" in r:
+                        return "OKX şu an kabul etmedi"
+                    if "reddetti" in r:
+                        return "borsa reddetti"
+                    w = r.split(" (")[0].split(";")[0].split()
+                    out = ""
+                    for x in w:  # kelime ortasında kesilmez
+                        if len(out) + len(x) > 30:
+                            break
+                        out = (out + " " + x).strip()
+                    return out
+                msg += f" · {len(bad)} coin çevrilemedi (" + ", ".join(f"{len(v)}: {short(k_)}" for k_, v in list(why.items())[:2]) + ")"
             note(X, f"{name}: " + msg)
             _OUT.append(["push", f"{name} · küçük bakiyeler", msg])
         elif k == "m":
