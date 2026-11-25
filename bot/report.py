@@ -10,7 +10,7 @@ OUT = os.path.join(os.path.dirname(__file__), "..", "docs", "data", "summary.jso
 
 # Herkese açık özette gösterilmeyen ayarlar (para tutarları, cüzdan, kara liste, istekler): uygulama kilidi açınca
 # şifreli kutudaki tam ayarları kullanır
-BOT_VER = "1.101.3"
+BOT_VER = "1.101.4"
 _PRIVATE = {"budget", "kasa", "real_total", "target", "xfer", "ban", "notify", "sell", "buy", "convert", "liquidate",
             "xfer_req", "xfer_cancel", "dust", "desk_cmd", "test_req", "clear", "clear_all", "topup"}
 _PRIVATE_SUB = {"lev": ("real_budget", "max_loss", "real", "real_reset", "cross_ok"), "meme": ("wallet", "budget", "max_loss", "real"),

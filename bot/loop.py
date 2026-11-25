@@ -282,9 +282,10 @@ def main():
                     sh("git", "reset", "-q", "bot")
                     print("Yeni bot kodu açılamadı; eski kodla devam ediliyor.")
                     start_rev = rev
-            # nabız 3 dk'da bir; bot 10 dk susarsa telefona uyarı düşer. ntfy yanıt vermezse (ortak GitHub IP'sinde
-            # sınır vb.) 30 sn sonra yeniden denenir; yoksa çalışan bot için yanlış "Bot durdu" uyarısı düşerdi
-            if time.time() - last_hb > (3 * 60 if _HB["ok"] else 30) and not _HB["busy"]:
+            # nabız 20 dk'da bir; bot 30 dk susarsa telefona uyarı düşer. ntfy.sh ücretsiz kullanımda IP başına günlük
+            # mesaj sınırı var (3 dk'lık nabız günde ~960 istekle sınırı doldurup 429 alıyordu; gerçek bildirimler de
+            # gidemiyordu). Yanıt alınamazsa 1 dk sonra yeniden denenir.
+            if time.time() - last_hb > (20 * 60 if _HB["ok"] else 60) and not _HB["busy"]:
                 hb_n = notifier()  # ayarlar ana turda okunur (arka planda okunursa config tur ortasında değişebilirdi)
 
                 def _hb(n_=hb_n):
