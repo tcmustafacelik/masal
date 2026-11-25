@@ -414,7 +414,9 @@
     "spot": [
       "IRYS"
     ],
-    "lev": [],
+    "lev": [
+      "IRYS"
+    ],
     "meme": [],
     "gspot": [
       "IRYS"
@@ -423,14 +425,23 @@
   "gspot": {
     "on": true,
     "real": true,
+    "bank": 100,
     "budget": 72,
+    "max_loss": 15,
     "lot_pct": 12,
     "lot2_pct": 70,
     "lot3_pct": 100,
+    "step_pct": 3.3,
+    "step3_pct": 6.6,
+    "lot_tp_pct": 3.5,
+    "stop_pct": 50,
     "max_lots": 4,
     "max_coins": 4,
     "use_pct": 90,
-    "max_loss": 15,
+    "sma_hours": 72,
+    "trend_filter_pct": 5,
+    "vol_filter": 4,
+    "coins": 30,
     "instant": true
   },
   "clear_all": 1795564433086
