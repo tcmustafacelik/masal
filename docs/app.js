@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.98.1';
+const APP_VERSION = '1.98.2';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = 'var(--acc)';
@@ -1727,7 +1727,7 @@ function renderXfer() {
             : /çevrildi|satıldı|alındı/i.test(m) ? ['ac', 'ÇEVİR'] : /bekle|sınır|iptal/i.test(m) ? ['wn', 'BEKLE'] : ['z', 'BİLGİ'];
         return `<div class="xl lg"><time>${masaClock(t)}</time><em class="lk ${c}">${lb}</em><div><b>${parts[0]}</b>${parts.length > 1 ? `<small>${parts.slice(1).join(' · ')}</small>` : ''}</div></div>`;
     }).join('');
-    if (!setH(box, `<h2 class="mh">${ic('i-wallet')}Kasalar<span class="hsum">dakikada bir güncellenir</span></h2>
+    if (!setH(box, `<h2 class="mh">${ic('i-wallet')}Kasalar<span class="hsum">15 sn'de bir güncellenir</span></h2>
     <div class="card xf">${xKasalar(X)}</div>
     <h2 class="mh">${ic('i-out')}Para gönder<span class="hsum">bugün ${U(X?.day_sum || 0, 0)} / ${nf(X?.daily_max || 10000, 0)}</span></h2>
     <div class="card xf xsend">${grp.filter(([, , ks]) => ks.some(k => XDIR[k])).map(([n, f, ks]) => `<div class="xg"><div class="xgh">${xEnd(f)}<span>${n}</span></div><div class="xt x3">${ks.filter(k => XDIR[k]).map(tile).join('')}</div></div>`).join('')}
