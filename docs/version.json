@@ -1,10 +1,17 @@
 {
-  "version": "1.99.0",
+  "version": "1.99.1",
   "date": "2026-11-25",
   "notes": [
-    "Futures: teminat pozisyon başına kasanın 1/en fazla pozisyon'u (daha çok pozisyon sığar); ayarlarda düz yazılan alanlar şifreli ayarların içine alan alan işlenir"
+    "Kasalar → Global içinde · Futures'a: boştaki paradan ya da Global spot'tan futures'a tek dokunuşla para aktar"
   ],
   "history": [
+    {
+      "version": "1.99.1",
+      "date": "2026-11-25",
+      "notes": [
+        "Kasalar → Global içinde · Futures'a: boştaki paradan ya da Global spot'tan futures'a tek dokunuşla para aktar"
+      ]
+    },
     {
       "version": "1.99.0",
       "date": "2026-11-25",
@@ -101,13 +108,6 @@
       "date": "2026-11-25",
       "notes": [
         "Tümünü göster / Daha az göster düğmeleri her listede aynı tasarımda"
-      ]
-    },
-    {
-      "version": "1.95.0",
-      "date": "2026-11-25",
-      "notes": [
-        "Global Eşleştir artık otomatik: fon hesabında hiçbir masaya ayrılmamış USDT (yeni gelen aktarım) bütçeye eklenir"
       ]
     }
   ]

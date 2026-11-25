@@ -1,4 +1,4 @@
-const APP_VERSION='1.99.0';
+const APP_VERSION='1.99.1';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (kehribar)
@@ -989,8 +989,8 @@ async function syncReal(){
 }
 /* ---------- Para aktarımı: TR ↔ Global ↔ KASA (USDT, Arbitrum One). İstek bulut ayar dosyasına yazılır, bot gönderir. ---------- */
 /* Uçlar: her kasanın simgesi, rengi ve kısa adı (kartlarda ve pencerede aynı standart) */
-const XEND: Record<string, [string, string, string]> = {tr:['OKX TR','i-bank','e1'], g:['OKX Global','i-globe','e2'], k:['KASA','i-vault','e3'], m:['MEME','i-flask','e4']};
-const XDIR: Record<string, [string, string, string]> = {tr2g:['tr','g','Uygulamadan'], g2tr:['g','tr','TL olur'], tr2k:['tr','k','Uygulamadan'], g2k:['g','k','Soğuk cüzdan'], g2m:['g','m','SOL olarak'], m2g:['m','g','USDT olur'], k2g:['k','g','Trust Wallet'], k2tr:['k','tr','Trust Wallet'],
+const XEND: Record<string, [string, string, string]> = {tr:['OKX TR','i-bank','e1'], g:['OKX Global','i-globe','e2'], k:['KASA','i-vault','e3'], m:['MEME','i-flask','e4'], f:['Futures','i-layers','e6'], gs:['Global spot','i-globe','e7']};
+const XDIR: Record<string, [string, string, string]> = {g2f:['g','f','Boştaki paradan'], gs2f:['gs','f','Global spot\'tan'], tr2g:['tr','g','Uygulamadan'], g2tr:['g','tr','TL olur'], tr2k:['tr','k','Uygulamadan'], g2k:['g','k','Soğuk cüzdan'], g2m:['g','m','SOL olarak'], m2g:['m','g','USDT olur'], k2g:['k','g','Trust Wallet'], k2tr:['k','tr','Trust Wallet'],
   tr2m:['tr','m','Global ile'], m2k:['m','k','USDT olarak'], m2tr:['m','tr','TL olur'], k2m:['k','m','Global ile']};
 const xName=(d: string)=>`${XEND[XDIR[d][0]][0]} → ${XEND[XDIR[d][1]][0]}`;
 /** Aktarım aşamaları: İstek → Gönderim → Onay → Ulaştı. Her aktarımın zaman damgalı adımları bot tarafından tutulur. */
@@ -1030,7 +1030,7 @@ function renderXfer(){
     return `<div class="xr" data-xj="${escH(j.id)}" role="button"><span class="xs ${st[2]}">${ic(st[1])}</span><div class="xm"><b>${xjName(j)}<i>${U(+j.amt||0,2)}</i></b>
       <small>${masaClock(j.ts)} · ${escH(st[0])}${j.stage!=='done'&&j.msg&&j.msg!=='sırada'?' · '+ut(escH(j.msg)):''}</small>${xjBar(j)}</div>${j.stage==='new'?`<button class="xc" data-xc="${escH(j.id)}">İptal</button>`:''}</div>`}).join('');
   // Kasalar ekranı: her bölüm kendi başlığı ve kartıyla (bakiyeler · para gönder · aktarımlar · küçük bakiyeler · kayıt)
-  const grp: [string,string,string[]][]=[['OKX TR\'den','tr',['tr2g','tr2k','tr2m']],['OKX Global\'den','g',['g2tr','g2k','g2m']],['MEME\'den','m',['m2g','m2k','m2tr']],['KASA\'dan','k',['k2g','k2tr','k2m']]];
+  const grp: [string,string,string[]][]=[['OKX TR\'den','tr',['tr2g','tr2k','tr2m']],['OKX Global\'den','g',['g2tr','g2k','g2m']],['MEME\'den','m',['m2g','m2k','m2tr']],['KASA\'dan','k',['k2g','k2tr','k2m']],['Global içinde · Futures\'a','g',['g2f','gs2f']]];
   const tile=(k: string)=>{const [f,t,sub]=XDIR[k];return `<button data-x="${k}"><span class="xrt">${xEnd(f)}${ic('i-chev')}${xEnd(t)}</span><b>${XEND[t][0]}</b><small>${sub}</small></button>`};
   const logRows=((X?.log||[]) as any[]).slice(0,5).map(([t,m]: [number,string])=>{const parts=escH(String(m).replace(/^(HATA|İptal:) /,'')).split(' · ');
     const [c,lb]: [string,string]=/^İptal/i.test(m)?['wn','İPTAL']:/başarısız|hata|reddetti|yapılamadı|ulaşmadı|çevrilemedi/i.test(m)?['dn','HATA']:/alınamadı|edilemedi|edilecek/i.test(m)?['wn','BEKLE']:/ulaştı|tamamlandı/i.test(m)?['up','ULAŞTI']:/gönderildi|aktarıldı/i.test(m)?['b','GÖNDER']
@@ -1153,6 +1153,7 @@ function xPending(dir: string): boolean {const X: any=(S as any)?.xfer;
   if(j){toast(`Bekleyen bir ${xjName(j).replace(/<[^>]+>/g,'')} aktarımı var (${U(+j.amt||0,2)}). Önce o bitsin; Aktarımlar'dan takip et.`);return true}return false}
 function openXfer(dir: string){
   if(dir.startsWith('k')){openKasaSend(dir);return}
+  if(dir==='g2f'||dir==='gs2f'){openFutFund(dir);return}
   if(dir==='tr2m'){const q=document.getElementById('qsh');q.dataset.n='';qHead('i-bank','Kapat');document.getElementById('qTitle').textContent='OKX TR → MEME';
     document.getElementById('qText').innerHTML=`<div class="xfs">
       <div class="xroute"><div>${xEnd('tr')}<b>OKX TR</b><small>uygulamadan</small></div><span class="xar">${ic('i-chev')}</span><div>${xEnd('m')}<b>MEME</b><small>Solana</small></div></div>
@@ -1216,6 +1217,39 @@ function openXfer(dir: string){
     const sw=document.getElementById('xfBot');if(sw)sw.onclick=()=>{const v=(document.getElementById('xfAmt') as HTMLInputElement).value;XF_BOT=!XF_BOT;const keep=xfId;openXfer(dir);xfId=keep;const a=document.getElementById('xfAmt') as HTMLInputElement;if(a){a.value=v;a.dispatchEvent(new Event('input'))}};};
   document.getElementById('qText').innerHTML='';draw();q.hidden=false;
   XF_OPEN={dir,ts:Date.now()};
+}
+/** Global içinde futures'a para: futures bütçesi artar, bot farkı fon hesabından futures'a geçirir.
+ *  "Global spot'tan": Global spot'un bütçesi aynı kadar düşer (onun ayırdığı boş para futures'a geçer) */
+function openFutFund(dir: string){
+  const R: any=(S as any)?.levr,G: any=(S as any)?.gspotr,st: any=orig||S?.settings||{},lv: any=st.lev||{},gs: any=st.gspot||{};
+  const fromGs=dir==='gs2f',max=Math.floor((fromGs?Math.max(0,+G?.fund_res||0):Math.max(0,+gFree()||0))*100)/100,cur=+lv.real_budget||0;
+  const q=document.getElementById('qsh');q.dataset.n='';qHead('i-layers','Vazgeç');document.getElementById('qTitle').textContent='Futures\'a para';
+  const draw=(v: string)=>{const a=+v||0;document.getElementById('qText').innerHTML=`<div class="xfs">
+      <div class="xroute"><div>${xEnd(fromGs?'gs':'g')}<b>${fromGs?'Global spot':'OKX Global'}</b><small>${fromGs?'boşta '+U(+G?.fund_res||0,2):'boşta '+U(gFree(),2)}</small></div><span class="xar">${ic('i-chev')}</span><div>${xEnd('f')}<b>Futures</b><small>${U(+R?.equity||0,2)}</small></div></div>
+      <div class="xlab">Tutar</div>
+      <div class="xamt"><input id="ffAmt" type="number" inputmode="decimal" min="1" step="1" placeholder="0" value="${v}"><span>USDT</span></div>
+      <div class="xq">${[5,10,20,50].map(n=>`<button data-fq="${n}"${n>max?' class="off"':''}>${n}</button>`).join('')}<button class="xall" data-fq="${max}"${max>=1?'':' disabled'}>Tümü<small>${U(max,2)}</small></button></div>
+      <div class="xinfo">
+        <div>${ic('i-layers')}<span>Futures bütçesi</span><b>${U(cur,0)} → ${U(cur+a,0)}</b></div>
+        ${fromGs?`<div>${ic('i-globe')}<span>Global spot bütçesi</span><b>${U(+gs.budget||0,0)} → ${U(Math.max(0,(+gs.budget||0)-a),0)}</b></div>`:''}
+        <div>${ic('i-shield')}<span>Ücret</span><b>Ücretsiz · hesap içi</b></div>
+        <div>${ic('i-clock')}<span>Süre</span><b>Birkaç saniye</b></div>
+      </div>
+      <p class="hint" style="margin:8px 2px 0">Bot parayı Global fon hesabından futures işlem hesabına geçirir. Zarar sınırı (${U(+lv.max_loss||0,0)}) aynı kalır.</p>
+      <button class="btn primary xgo" id="ffGo">${ic('i-out')}Futures'a aktar</button></div>`;
+    const inp=document.getElementById('ffAmt') as HTMLInputElement;inp.oninput=()=>{const p=inp.selectionStart;draw(inp.value);const n=document.getElementById('ffAmt') as HTMLInputElement;n.focus();try{n.setSelectionRange(p,p)}catch(e){}};
+    document.querySelectorAll<HTMLElement>('[data-fq]').forEach(b=>b.onclick=()=>draw(b.dataset.fq));
+    document.getElementById('ffGo').onclick=async()=>{const amt=Math.floor((+inp.value||0)*100)/100;
+      if(!(amt>=1)){toast('Tutarı yaz (en az 1 USDT)');return}
+      if(amt>max+0.005){toast(max<1?(fromGs?'Global spot\'un boşta parası yok (coinlerde)':'Global\'de boşta para yok; Global spot\'tan aktarmayı dene'):`En fazla ${U(max,2)} aktarılabilir`);return}
+      if(!lv.real){toast('Futures gerçek modda değil; Ayarlar → Futures → Gerçek parayla işlem');return}
+      if(!token){toast('Önce Ayarlar\'dan GitHub bağlantısını kur');return}
+      const b=document.getElementById('ffGo') as HTMLButtonElement;b.disabled=true;
+      const ok=await cloudPatch(o=>{const l: any=(o as any).lev=(o as any).lev||{};l.real_budget=Math.round(((+l.real_budget||0)+amt)*100)/100;
+        if(fromGs){const g: any=(o as any).gspot=(o as any).gspot||{};g.budget=Math.max(0,Math.round(((+g.budget||0)-amt)*100)/100)}},`Futures'a ${amt} USDT (${fromGs?'Global spot\'tan':'boştaki paradan'})`);
+      if(ok){q.hidden=true;fastWatch();toast(`${U(amt,2)} futures'a aktarılıyor; bot birkaç saniyede geçirir`)}else{b.disabled=false;toast('Aktarılamadı, tekrar dene',patchWhy())}};
+  };
+  draw('');q.hidden=false;
 }
 /** Açık gönder sayfası yeni bakiyelerle güncellenir ("Tümü" tutarı ve kaynak/hedef bakiyesi senkron kalır) */
 let XF_OPEN: {dir: string, ts: number}|null=null,XF_BOT: boolean|null=null,XF_BOT_DIR='';
