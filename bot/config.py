@@ -66,6 +66,7 @@ def ban_key(x):
     x = str(x or "").strip()
     if len(x) >= 30:
         return x
+    x = x.replace("İ", "I").replace("ı", "I").replace("i", "I")  # Türkçe klavye: "İRYS" / "ırys" → "IRYS"
     return x.upper().split("-")[0].split("/")[0]
 
 

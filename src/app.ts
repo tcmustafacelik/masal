@@ -1,4 +1,4 @@
-const APP_VERSION='1.92.0';
+const APP_VERSION='1.92.1';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (kehribar)
@@ -485,7 +485,7 @@ function favSec(real: any[], paper: any[], kind: 'lev'|'meme'|'gspot'): string {
     `<div class="fr"><time>${i + 1}.</time><em class="ft fav">${ic('i-star')}</em><div><span class="fh"><b>${escH(f.sym)}</b> <span class="up">+${usd(f.pnl)}</span>${ban.has(banKey(f.mint || f.sym)) || ban.has(banKey(f.sym)) ? ' <em class="lk wn in">KARA LİSTE</em>' : ''}</span><small>${f.n} işlem · ${f.w} kârlı</small></div></div>`).join('')}</div>`;
 }
 /** Kara liste adı: 'irys', 'IRYS-USDT' -> 'IRYS'; Solana token adresi olduğu gibi */
-const banKey = (x: string) => {x = String(x || '').trim(); return x.length >= 30 ? x : x.toUpperCase().split(/[-/]/)[0]};
+const banKey = (x: string) => {x = String(x || '').trim(); return x.length >= 30 ? x : x.replace(/[İıi]/g, 'I').toUpperCase().split(/[-/]/)[0]}; // Türkçe klavye: "İRYS" → "IRYS"
 /** Futures: izlenen coinler ve sinyale uzaklık; deneme masasının son kararları */
 function levWatch(): string {
   const L = (S as any)?.lev; if (!L) return '';
@@ -2072,13 +2072,31 @@ function banSec(tab: string): string{const d=BAN_DESK[tab];if(!d)return '';const
   return accOpen('ban_'+d,'Kara liste','i-ban','red',list.length?`${list.length} ${d==='meme'?'token':'coin'} · yeni işlem yok`:'boş',secDirty(['ban.'+d]))+`<div class="card">
     ${rows?`<div class="list banl" id="banList">${rows}</div>`:`<div class="empty">${ic('i-ban')}<div>Liste boş. Eklediğin ${d==='meme'?'tokende':'coinde'} bot bir daha işlem açmaz.</div></div>`}
     <div class="banadd"><input class="inp" id="banIn" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="${d==='meme'?'Token adı ya da adresi':'Coin adı, ör. IRYS'}"><button class="btn primary" type="button" id="banAdd">${ic('i-plus')}Ekle</button></div>
+    <div class="bant" id="banSug" hidden style="margin-top:8px"></div>
     ${sg.length?`<div class="fgh" style="margin-top:12px">${ic('i-plus')}${d==='lev'?'İzlenen coinler':d==='spot'?'Elindekiler ve zarar ettirenler':'Elindekiler'} · dokun, ekle</div><div class="bant">${sg.map(x=>`<button type="button" class="tile" data-ban="${escH(x)}"><span class="nm">${escH(nm(x))}</span></button>`).join('')}</div>`:''}
     <p class="hint" style="margin:10px 2px 0">Listedeki ${d==='meme'?'tokende':'coinde'} yeni işlem açılmaz${d==='spot'?' (otomatik alım, yeni kademe, elle alım)':d==='lev'?' (sinyal ya da elle açma)':''}. Elinde varsa kendi kurallarıyla, kârda ya da zarar sınırında satılır. Silmek için satırı sola kaydır. Kaydet'e basınca geçerli olur.</p></div>`+ACC_END}
 function bindBan(){const d=BAN_DESK[STAB];if(!d)return;const add=(v: string)=>{v=banKey(v);if(!v||v.length>64){toast('Geçerli bir ad yaz');return}
     const l=banList(d);if(l.map(banKey).includes(v)){toast(v+' zaten listede');return}l.push(v);OPEN.add('ban_'+d);renderForm()};
   const i=document.getElementById('banIn') as HTMLInputElement,b=document.getElementById('banAdd');
   if(b)b.onclick=()=>add(i.value);if(i)i.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();add(i.value)}};
-  document.querySelectorAll<HTMLElement>('[data-ban]').forEach(t=>t.onclick=()=>add(t.dataset.ban))}
+  document.querySelectorAll<HTMLElement>('[data-ban]').forEach(t=>t.onclick=()=>add(t.dataset.ban));
+  // yazmaya başlayınca borsadaki coinlerden eşleşenler listelenir (dokun, ekle)
+  if(i){const box=document.getElementById('banSug') as HTMLElement;let pool: string[]|null=null;
+    const draw=()=>{const v=banKey(i.value);if(!box)return;if(!v){box.innerHTML='';box.hidden=true;return}
+      const have=new Set(banList(d).map(banKey)),src=pool||[];
+      const m=[...src.filter(x=>x.startsWith(v)),...src.filter(x=>!x.startsWith(v)&&x.includes(v))].filter(x=>!have.has(x)).slice(0,8);
+      box.hidden=false;box.innerHTML=m.length?m.map(x=>`<button type="button" class="tile" data-bs="${escH(x)}"><span class="nm">${escH(x)}</span></button>`).join('')
+        :`<div class="hint" style="grid-column:1/-1;margin:0">${pool?`"${escH(v)}" bulunamadı; yine de Ekle ile eklenebilir`:'Coin listesi yükleniyor…'}</div>`;
+      box.querySelectorAll<HTMLElement>('[data-bs]').forEach(t=>t.onclick=()=>add(t.dataset.bs))};
+    i.oninput=()=>{draw();if(!pool)banPool(d).then(l=>{pool=l;draw()})};}
+}
+/** Kara liste önerileri için borsadaki bütün coinler: Spot OKX TR, Global spot/Futures OKX Global (yalnız kripto), memecoin masadakiler */
+async function banPool(d: string): Promise<string[]>{
+  let l: string[]=[];
+  if(d==='spot'){l=Object.keys(LP).map(sym);if(!l.length)try{const j=await tfetch('https://tr.okx.com/api/v5/market/tickers?instType=SPOT',{cache:'no-store'},8000).then(r=>r.json());l=(j?.data||[]).map((t: any)=>t.instId.split('-')[0])}catch(e){}}
+  else if(d==='lev'||d==='gspot'){const c=await gcat(d==='lev'?'sw':'g');l=c?[...c]:[]}
+  else l=[...(((S as any)?.memer?.positions)||[]),...(((S as any)?.meme?.positions)||[]),...((((S as any)?.meme?.scan)||[]) as any[])].map((p: any)=>p.sym).filter(Boolean);
+  return [...new Set(l.map(banKey))].sort()}
 function gspotExtra(){const g=(draft as any).gspot||{},o=(orig as any)?.gspot||{};let h='';
   if(g.real&&!o.real)h+=`<div class="warn">${ic('i-info')}<div>Kaydedince bot OKX Global'de <b>gerçek emir</b> verir. Para, alım anında Global <b>fon hesabından</b> işlem hesabına geçer (en fazla ${U(+g.budget||0,0)}); önce Kasalar'dan Global'e USDT gönder. Futures masasının parasına dokunulmaz.</div></div>`;
   if(!g.real&&o.real)h+=`<div class="warn">${ic('i-info')}<div>Gerçek mod kapanınca yeni alım yapılmaz; eldeki coinler kurallarıyla (kademe kârı, zarar sınırı) satılmaya devam eder.</div></div>`;

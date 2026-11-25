@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.92.0';
+const APP_VERSION = '1.92.1';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = 'var(--acc)';
@@ -867,7 +867,7 @@ function favSec(real, paper, kind) {
     const ban = new Set((((orig || S?.settings)?.ban || {})[kind] || []).map((x) => banKey(x)));
     return `<h2 class="mh">${ic('i-star')}Favoriler<span class="hsum">${pp ? 'deneme masası · ' : ''}en çok kâr getiren</span></h2><div class="card mfeed">${list.map((f, i) => `<div class="fr"><time>${i + 1}.</time><em class="ft fav">${ic('i-star')}</em><div><span class="fh"><b>${escH(f.sym)}</b> <span class="up">+${usd(f.pnl)}</span>${ban.has(banKey(f.mint || f.sym)) || ban.has(banKey(f.sym)) ? ' <em class="lk wn in">KARA LİSTE</em>' : ''}</span><small>${f.n} işlem · ${f.w} kârlı</small></div></div>`).join('')}</div>`;
 }
-const banKey = (x) => { x = String(x || '').trim(); return x.length >= 30 ? x : x.toUpperCase().split(/[-/]/)[0]; };
+const banKey = (x) => { x = String(x || '').trim(); return x.length >= 30 ? x : x.replace(/[İıi]/g, 'I').toUpperCase().split(/[-/]/)[0]; };
 function levWatch() {
     const L = S?.lev;
     if (!L)
@@ -3496,6 +3496,7 @@ function banSec(tab) {
     return accOpen('ban_' + d, 'Kara liste', 'i-ban', 'red', list.length ? `${list.length} ${d === 'meme' ? 'token' : 'coin'} · yeni işlem yok` : 'boş', secDirty(['ban.' + d])) + `<div class="card">
     ${rows ? `<div class="list banl" id="banList">${rows}</div>` : `<div class="empty">${ic('i-ban')}<div>Liste boş. Eklediğin ${d === 'meme' ? 'tokende' : 'coinde'} bot bir daha işlem açmaz.</div></div>`}
     <div class="banadd"><input class="inp" id="banIn" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="${d === 'meme' ? 'Token adı ya da adresi' : 'Coin adı, ör. IRYS'}"><button class="btn primary" type="button" id="banAdd">${ic('i-plus')}Ekle</button></div>
+    <div class="bant" id="banSug" hidden style="margin-top:8px"></div>
     ${sg.length ? `<div class="fgh" style="margin-top:12px">${ic('i-plus')}${d === 'lev' ? 'İzlenen coinler' : d === 'spot' ? 'Elindekiler ve zarar ettirenler' : 'Elindekiler'} · dokun, ekle</div><div class="bant">${sg.map(x => `<button type="button" class="tile" data-ban="${escH(x)}"><span class="nm">${escH(nm(x))}</span></button>`).join('')}</div>` : ''}
     <p class="hint" style="margin:10px 2px 0">Listedeki ${d === 'meme' ? 'tokende' : 'coinde'} yeni işlem açılmaz${d === 'spot' ? ' (otomatik alım, yeni kademe, elle alım)' : d === 'lev' ? ' (sinyal ya da elle açma)' : ''}. Elinde varsa kendi kurallarıyla, kârda ya da zarar sınırında satılır. Silmek için satırı sola kaydır. Kaydet'e basınca geçerli olur.</p></div>` + ACC_END;
 }
@@ -3527,6 +3528,47 @@ function bindBan() {
             add(i.value);
         } };
     document.querySelectorAll('[data-ban]').forEach(t => t.onclick = () => add(t.dataset.ban));
+    if (i) {
+        const box = document.getElementById('banSug');
+        let pool = null;
+        const draw = () => {
+            const v = banKey(i.value);
+            if (!box)
+                return;
+            if (!v) {
+                box.innerHTML = '';
+                box.hidden = true;
+                return;
+            }
+            const have = new Set(banList(d).map(banKey)), src = pool || [];
+            const m = [...src.filter(x => x.startsWith(v)), ...src.filter(x => !x.startsWith(v) && x.includes(v))].filter(x => !have.has(x)).slice(0, 8);
+            box.hidden = false;
+            box.innerHTML = m.length ? m.map(x => `<button type="button" class="tile" data-bs="${escH(x)}"><span class="nm">${escH(x)}</span></button>`).join('')
+                : `<div class="hint" style="grid-column:1/-1;margin:0">${pool ? `"${escH(v)}" bulunamadı; yine de Ekle ile eklenebilir` : 'Coin listesi yükleniyor…'}</div>`;
+            box.querySelectorAll('[data-bs]').forEach(t => t.onclick = () => add(t.dataset.bs));
+        };
+        i.oninput = () => { draw(); if (!pool)
+            banPool(d).then(l => { pool = l; draw(); }); };
+    }
+}
+async function banPool(d) {
+    let l = [];
+    if (d === 'spot') {
+        l = Object.keys(LP).map(sym);
+        if (!l.length)
+            try {
+                const j = await tfetch('https://tr.okx.com/api/v5/market/tickers?instType=SPOT', { cache: 'no-store' }, 8000).then(r => r.json());
+                l = (j?.data || []).map((t) => t.instId.split('-')[0]);
+            }
+            catch (e) { }
+    }
+    else if (d === 'lev' || d === 'gspot') {
+        const c = await gcat(d === 'lev' ? 'sw' : 'g');
+        l = c ? [...c] : [];
+    }
+    else
+        l = [...((S?.memer?.positions) || []), ...((S?.meme?.positions) || []), ...((S?.meme?.scan) || [])].map((p) => p.sym).filter(Boolean);
+    return [...new Set(l.map(banKey))].sort();
 }
 function gspotExtra() {
     const g = draft.gspot || {}, o = orig?.gspot || {};

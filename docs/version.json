@@ -1,10 +1,17 @@
 {
-  "version": "1.92.0",
+  "version": "1.92.1",
   "date": "2026-11-25",
   "notes": [
-    "Global spot ile futures aynı coinde ters pozisyon tutabilir (Ayarlar → Futures → Global spot ile ters pozisyon; açık)"
+    "Kara liste: yazmaya başlayınca borsadaki eşleşen coinler listelenir (dokun, ekle); Türkçe İ/ı doğru tanınır; sola kaydırınca Sil düğmesi ve satır bozulmuyor"
   ],
   "history": [
+    {
+      "version": "1.92.1",
+      "date": "2026-11-25",
+      "notes": [
+        "Kara liste: yazmaya başlayınca borsadaki eşleşen coinler listelenir (dokun, ekle); Türkçe İ/ı doğru tanınır; sola kaydırınca Sil düğmesi ve satır bozulmuyor"
+      ]
+    },
     {
       "version": "1.92.0",
       "date": "2026-11-25",
@@ -101,13 +108,6 @@
       "date": "2026-11-25",
       "notes": [
         "OKX TR'yi açarken Global UID'n panoya kopyalanır; ekrandaki adımlar OKX'teki 'OKX Global ve OKX TR Kullanıcıları' sekmesini gösterir"
-      ]
-    },
-    {
-      "version": "1.87.4",
-      "date": "2026-11-25",
-      "notes": [
-        "Çakışma düzeltmeleri: küçük bakiyeleri çevir Global spot botunun coinlerine dokunmaz; Global spot SOL almaz (memecoin aktarımı SOL kullanıyor)"
       ]
     }
   ]
