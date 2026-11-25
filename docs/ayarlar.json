@@ -409,6 +409,13 @@
       "desk": "levr",
       "act": "sync",
       "sym": ""
+    },
+    {
+      "id": "smwvskci0",
+      "ts": 1795591074888,
+      "desk": "gspotr",
+      "act": "sync",
+      "sym": ""
     }
   ],
   "accent": "violet",
@@ -427,7 +434,7 @@
     "on": true,
     "real": true,
     "bank": 100,
-    "budget": 92,
+    "budget": 117,
     "max_loss": 15,
     "lot_pct": 12,
     "lot2_pct": 70,
