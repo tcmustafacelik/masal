@@ -1,4 +1,4 @@
-const APP_VERSION='1.91.0';
+const APP_VERSION='1.91.1';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (kehribar)
@@ -1804,7 +1804,7 @@ const SECTIONS=[
   ['meme.min_buys','En az alıcı','Son 5 dk\'da en az bu kadar alıcı','adet',5,5,500,0],
   ['meme.max_h1','Tepe sınırı','Son 1 saatte bundan fazla uçmuşsa alınmaz; 0 kapalı','%',50,0,5000,0],
   ['meme.max_hold_h','En uzun tutma','Bu süre dolunca satılır','saat',1,1,72,0]]},
- {t:'Global spot',i:'i-globe',sw:[['gspot.on','Global spot masası açık','Kapalıyken tarama ve alım yapılmaz'],['gspot.real','Gerçek parayla işlem','Kararlar OKX Global işlem hesabında gerçek emirle uygulanır'],['gspot.instant','Anlık alım','Açık: fiyat değince hemen alır · kapalı: 15 dk mum kapanışını bekler']],f:[
+ {t:'Global spot',i:'i-globe',sw:[['gspot.on','Global spot masası açık','Kapalıyken tarama ve alım yapılmaz'],['gspot.real','Gerçek parayla işlem','Kararlar OKX Global işlem hesabında gerçek emirle uygulanır'],['gspot.instant','Anlık alım','Açık: fiyat değince hemen alır · kapalı: 15 dk mum kapanışını bekler. Satış her zaman anlık']],f:[
   ['gspot.budget','Bütçe','Gerçek masanın kullanacağı en fazla para; alım anında Global fon hesabından işlem hesabına geçer','USDT',10,0,100000,0],
   ['gspot.max_loss','En fazla kayıp','Toplam zarar buna ulaşınca yeni alım durur; eldeki coinler kurallarıyla satılır','USDT',5,1,100000,0],
   ['gspot.lot_pct','1. kademe','Bütçenin; en az 5 USDT olmalı','%',1,1,100,0],
@@ -2014,7 +2014,7 @@ function renderForm(){
   const GG: [string,string,string[]][]=[['i-coins','Alım',['grid.sma_hours','grid.step_pct','grid.step3_pct','grid.lot_pct','grid.lot2_pct','grid.lot3_pct']],['i-pnl','Satış',['grid.lot_tp_pct','grid.pos_tp_pct','grid.stop_pct']],['i-shield','Sınırlar',['grid.max_lots','grid.max_coins','grid.use_pct']],['i-eye','Filtreler',['grid.trend_filter_pct','grid.vol_filter']]];
   const sfH=grid?GG.map(([i,t,ks])=>`<div class="fgrp"><div class="fgh">${ic(i)}${t}</div>${ks.map(k=>sf.find(f=>f[0]===k)).filter(Boolean).map(field).join('')}${t==='Alım'?'<div id="ladder"></div>':''}</div>`).join(''):sf.map(field).join('');
   if(STAB==='spot')h+=accOpen('strat',SNAMES[draft.strategy]+' ayarları',ICON[draft.strategy],'blue',SUMS[draft.strategy](),secDirty([...sf.map(x=>x[0]),...(grid?['grid.instant']:[])]))+`<div class="card">${sfH}`
-    +(grid?`<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line2)">${swRow('instSw',!!draft.grid.instant,'Anlık alım','Fiyat değince hemen alır')}</div>`:'')+`</div>`+ACC_END;
+    +(grid?`<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line2)">${swRow('instSw',!!draft.grid.instant,'Anlık alım','Fiyat değince hemen alır · satış her zaman anlık (borsadaki kâr al / zarar durdur emriyle)')}</div>`:'')+`</div>`+ACC_END;
   if(STAB==='spot')h+=banSec('spot');
   if(STAB==='app'){h+=installSection();
   h+=`<section class="clr"><button class="btn xsync" type="button" id="clrOld">${ic('i-trash')}Eski kayıtları temizle</button><p class="hint">Canlı akış, aktarım geçmişi, masa günlükleri ve bildirimler silinir; işlem geçmişi ve kâr/zarar hesabı korunur.</p></section>`;}
