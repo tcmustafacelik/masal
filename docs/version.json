@@ -1,10 +1,17 @@
 {
-  "version": "1.97.2",
+  "version": "1.97.3",
   "date": "2026-11-25",
   "notes": [
-    "Aktarım: OKX TR'ye ulaşıp onay bekleyen para ikinci kontrolde kayboluyordu ('ulaşması bekleniyor'da takılı kalıyordu); artık aynı yatırma takip edilir ve ne yapman gerektiği yazılır"
+    "Aktarım takibi: OKX TR'de tamamlanmış ama botun gözden kaçırdığı yatırma artık bulunur, iş 'Ulaştı' olur"
   ],
   "history": [
+    {
+      "version": "1.97.3",
+      "date": "2026-11-25",
+      "notes": [
+        "Aktarım takibi: OKX TR'de tamamlanmış ama botun gözden kaçırdığı yatırma artık bulunur, iş 'Ulaştı' olur"
+      ]
+    },
     {
       "version": "1.97.2",
       "date": "2026-11-25",
@@ -101,13 +108,6 @@
       "date": "2026-11-25",
       "notes": [
         "Kara liste: yazmaya başlayınca borsadaki eşleşen coinler listelenir (dokun, ekle); Türkçe İ/ı doğru tanınır; sola kaydırınca Sil düğmesi ve satır bozulmuyor"
-      ]
-    },
-    {
-      "version": "1.92.0",
-      "date": "2026-11-25",
-      "notes": [
-        "Global spot ile futures aynı coinde ters pozisyon tutabilir (Ayarlar → Futures → Global spot ile ters pozisyon; açık)"
       ]
     }
   ]

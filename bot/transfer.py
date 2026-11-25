@@ -402,7 +402,7 @@ def _poll(C, job, X, N):
                 # eski sürümde eşleşip "kullanıldı" sayılan ama başka işe ait olmayan kayıt (bu iş onay beklerken kaybolmuştu)
                 mine = {j.get("depId") for j in X.get("jobs", []) if j.get("depId") and j is not job}
                 hit = next((d for d in rows if d.get("depId") in used and d.get("depId") not in mine
-                            and str(d.get("state")) not in ("1", "2") and abs(float(d.get("amt") or 0) - job["amt"]) < 0.02
+                            and abs(float(d.get("amt") or 0) - job["amt"]) < 0.02
                             and int(d.get("ts") or 0) >= job.get("sent_ts", 0) - 120_000), None)
             if hit:
                 X["used_dep"] = (X.get("used_dep", []) + [hit.get("depId")])[-50:]
@@ -428,7 +428,10 @@ def _poll(C, job, X, N):
             N.add("money", "OKX Global'e ulaştı", f"{got:.2f} USDT OKX Global'e geçti.", 4, ["globe_with_meridians"])
         else:  # TR'ye geldi: TL'ye çevrilip "Nakit"e konur
             X["g_base"] = round(max(0.0, X.get("g_base", 0) - job["amt"]), 2)
+            late = time.time() * 1000 - job.get("sent_ts", job["ts"]) > 3 * 3600_000
             try:
+                if late:  # saatler önce ulaşmış (takip geç yakaladı): para bu arada başka işte kullanılmış olabilir; çevrilmez
+                    raise RuntimeError("geç fark edildi; USDT olarak bırakıldı")
                 dex.move("USDT", got, FUNDING, TRADING)
                 time.sleep(0.5)
                 usdt = min(got, dex.trading("USDT"))
@@ -440,7 +443,8 @@ def _poll(C, job, X, N):
                 job["tl"] = round(tl_got, 2)
                 N.add("money", "OKX TR'ye ulaştı", f"{got:.2f} USDT geldi, ~{tl_got:,.0f} TL'ye çevrilip Nakit'e kondu. Bankaya çekebilirsin.".replace(",", "."), 4, ["moneybag"])
             except Exception as e:
-                N.add("alerts", "TR'ye geldi ama TL'ye çevrilemedi", f"{got:.2f} USDT TR'de duruyor: {e}", 4, ["warning"])
+                if not late:
+                    N.add("alerts", "TR'ye geldi ama TL'ye çevrilemedi", f"{got:.2f} USDT TR'de duruyor: {e}", 4, ["warning"])
             job["stage"] = "done"
         job["msg"] = "tamamlandı"
         _note(X, f"{NAMES[dest]}'e ulaştı: {got:.2f} USDT")
