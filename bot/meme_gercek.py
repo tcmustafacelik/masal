@@ -454,7 +454,7 @@ def _loop():
                             _sell(key, R, m, "masa kapatıldı", cfg)
                         except Exception as e:
                             R["err"] = f"{R['pos'].get(m, {}).get('sym', m[:4])} satılamadı: {e}"[:160]
-                if time.time() - last >= SYNC:
+                if time.time() - last >= SYNC or (ev and ev[0] == "sync"):
                     _sync(R, cfg, prices, held, key)
                     last = time.time()
                     R["sync"] = int(time.time() * 1000)
@@ -576,4 +576,22 @@ def public(state):
             "sync": R.get("sync"), "positions": [{"mint": m, "sym": p["sym"], "ts": p["ts"], "cost": round(p["cost"], 2),
                                                   "val": p.get("val", 0), "why": p["why"], "part": bool(p.get("part"))} for m, p in R["pos"].items()],
             "trades": R["trades"][-40:][::-1], "log": R["log"][-40:][::-1], "equity_series": R["equity"][-200:], "fav": config.top_earners(R["trades"]),
-            "sells": len(sells), "win_rate": round(len(wins) / len(sells) * 100) if sells else None}
+            "sells": len(sells), "win_rate": round(len(wins) / len(sells) * 100) if sells else None, "coins": _coins(R["trades"])}
+
+
+def _coins(trades):
+    """Token bazında kâr/zarar (Spot'taki bölüm): satış sayısı, kârlı olan, toplam gerçekleşen."""
+    agg = {}
+    for t in trades:
+        if t.get("side") != "SAT":
+            continue
+        a = agg.setdefault(t.get("mint") or t["sym"], {"inst": t["sym"], "mint": t.get("mint"), "sells": 0, "w": 0, "realized": 0.0})
+        a["sells"] += 1
+        a["w"] += 1 if (t.get("pnl") or 0) > 0 else 0
+        a["realized"] = round(a["realized"] + (t.get("pnl") or 0), 2)
+    return list(agg.values())
+
+
+def request_sync():
+    """Uygulamadan "Eşleştir": MEME cüzdanı hemen yeniden okunur (SOL, tokenler, değer)."""
+    _Q.put(("sync",))

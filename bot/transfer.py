@@ -32,7 +32,7 @@ NAMES = {"tr": "OKX TR", "g": "OKX Global", None: "KASA", "m": "MEME"}
 MEME_DIRS = {"g2m": ("g", "m"), "m2g": ("m", "g")}  # SOL ile; ayrıntı meme_aktar.py
 FUNDING, TRADING = "6", "18"
 HARD_DAILY_MAX = 1000  # $: güvenlik tavanı — ayardan daha yükseği girilse de günlük aktarım bunu aşamaz
-DEFAULT = {"daily_max": 1000, "sweep_on": True, "sweep_pct": 50, "sweep_days": 7, "sweep_min": 10}
+DEFAULT = {"daily_max": 1000, "sweep_on": True, "sweep_pct": 50, "sweep_days": 7, "sweep_min": 10, "use_bot": False}
 
 
 class Ex:
@@ -492,6 +492,19 @@ def _track(X):
             del st[:-20]
 
 
+def _bot_withdrawn(X, state):
+    """Spot botunun nakdinden gönderilen kısım: gönderim yapılınca botun bütçesinden düşülür (bir kez)."""
+    L = state.get("live")
+    if not L:
+        return
+    done = L.setdefault("wd_ids", [])
+    for j in X["jobs"]:
+        if j.get("bot_tl", 0) > 0 and j["stage"] in ("sent", "arriving", "done") and j["id"] not in done:
+            L["wd_off"] = round(L.get("wd_off", 0.0) + j["bot_tl"], 2)
+            done.append(j["id"])
+            del done[:-50]
+
+
 def _merge_jobs(X, N):
     out = _JOBS.pop("out", None)
     if not out:
@@ -561,7 +574,11 @@ def _run_jobs(X, C, cfg, state, N, now):
                     if now * 1000 - job["ts"] > 3 * 86400_000:
                         raise RuntimeError("3 gün içinde günlük sınır açılmadı")
                     continue
-                if (src == "tr" and job["src"] != "bot" and ex.funding("USDT", total=True) < job["amt"] - 0.01
+                if src == "tr" and cfg.get("use_bot") and "bot_tl" not in job:
+                    # Ayarlar → Aktarım → "Botun parasını kullan": boş para yetmezse eksik kısım Spot botunun nakdinden
+                    # alınır; gönderilince botun bütçesi o kadar düşer (kâr/zarar sayılmaz)
+                    job["bot_tl"] = round(max(0.0, job["amt"] * _rate() - max(0.0, _free_tr(ex, state))), 2)
+                if (src == "tr" and job["src"] != "bot" and not cfg.get("use_bot") and ex.funding("USDT", total=True) < job["amt"] - 0.01
                         and _free_tr(ex, state) < job["amt"] * _rate() * 0.97):
                     job["msg"] = "TR'de boşta yeterli para yok (botun parasına dokunulmaz); bekleniyor"
                     if now * 1000 - job["ts"] > 86400_000:
@@ -675,6 +692,7 @@ def step(state, S, N):
     alive = bool(th and th.is_alive())  # önce bakılır: iş parçacığı bu arada biterse sonucu aşağıda birleşir, ikinci kez başlamaz
     _merge_jobs(X, N)
     _track(X)
+    _bot_withdrawn(X, state)
     if now - X.get("tick", 0) >= 15 and not alive and any(j["stage"] not in ("done", "failed") for j in X["jobs"]):
         X["tick"] = now
         snap = copy.deepcopy(X)

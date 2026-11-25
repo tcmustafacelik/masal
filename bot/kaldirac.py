@@ -113,6 +113,14 @@ def new_state(cfg):
 
 
 def _note(L, ts, kind, text):
+    if kind == "risk" and text.startswith("ENGEL "):
+        # aynı engel (aynı coin, aynı sebep) her turda yeniden yazılıp kaydı doldurmasın: saatte bir
+        seen = L.setdefault("_seen", {})
+        if ts - seen.get(text, 0) < 3_600_000:
+            return
+        seen[text] = ts
+        for k in [k for k, v in seen.items() if ts - v > 3_600_000]:
+            del seen[k]
     L["log"].append([ts, kind, text])
     L["log"] = L["log"][-80:]
 

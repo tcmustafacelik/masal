@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.93.0';
+const APP_VERSION = '1.94.0';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = 'var(--acc)';
@@ -299,7 +299,7 @@ async function seal(obj, pw, iter = 150000) {
 }
 let pw = localStore('masal_pw') || '';
 async function openLive(s) {
-    if (!s.live_enc && !s.live_z)
+    if (!s.live_z)
         return;
     const pub = s.live_public || { armed: false, paused: false };
     s.strategies.live = { locked: true, name: 'Gerçek hesap', live: true, armed: pub.armed, paused: pub.paused, pnl_pct: 0 };
@@ -321,16 +321,7 @@ async function openLive(s) {
     }
 }
 async function unsealLive(s, p) {
-    if (s.live_z) {
-        try {
-            return await unseal(s.live_z, p);
-        }
-        catch (e) {
-            if (!s.live_enc || e?.name === 'OperationError')
-                throw e;
-        }
-    }
-    return unseal(s.live_enc, p);
+    return unseal(s.live_z, p);
 }
 async function tfetch(url, opt = {}, ms = 8000) {
     const c = new AbortController(), t = setTimeout(() => c.abort(), ms);
@@ -743,7 +734,8 @@ document.addEventListener('click', e => { const b = e.target.closest?.('[data-da
 else
     DALL.add(k); renderDeck(); });
 const dCut = (id, a) => (DALL.has(id) ? a : a.slice(0, 5)).join('') + dMore(id, a.length);
-function deskCoins(id, coins, open, kind) {
+function deskCoins(id, coins, open, kind, favs = []) {
+    const fv = new Set((favs || []).flatMap((f) => [banKey(f.sym), f.mint].filter(Boolean)));
     const m = {};
     for (const c of coins || [])
         m[c.inst] = { ...c };
@@ -756,28 +748,28 @@ function deskCoins(id, coins, open, kind) {
     const T = list.reduce((a, c) => a + c.tot, 0), ban = new Set((((orig || S?.settings)?.ban || {})[kind] || []).map(banKey));
     const rows = list.map((c) => {
         const parts = [];
-        if (kind === 'lev')
+        if (kind !== 'gspot')
             parts.push(c.sells ? `${c.sells} işlem · ${c.w || 0} kârlı` : 'ilk işlem');
         else {
             parts.push(c.sells ? `${c.sells} satış` : `${c.buys || 0} alım`);
             if (c.bought)
                 parts.push(U(c.bought, 0) + ' alındı');
         }
-        const det = c.op != null ? (c.sells ? `açıkta ${sgnU(c.op)}` : (kind === 'lev' ? 'açık' : 'elde')) : 'kapandı';
-        return `<div class="row">${cico(c.inst)}<div class="mid"><b>${sym(c.inst)}${ban.has(banKey(c.inst)) ? '<em class="lk wn in">KARA LİSTE</em>' : ''}</b><span>${parts.join(' · ')}</span></div>
+        const det = c.op != null ? (c.sells ? `açıkta ${sgnU(c.op)}` : (kind === 'gspot' ? 'elde' : 'açık')) : 'kapandı', star = fv.has(banKey(c.inst)) || (c.mint && fv.has(c.mint));
+        return `<div class="row">${cico(c.inst)}<div class="mid"><b>${escH(sym(c.inst))}${star ? `<i class="fst" title="Favori: en çok kâr getirenlerden">${ic('i-star')}</i>` : ''}${ban.has(banKey(c.inst)) || (c.mint && ban.has(c.mint)) ? '<em class="lk wn in">KARA LİSTE</em>' : ''}</b><span>${parts.join(' · ')}</span></div>
       <div class="end"><span class="pill lg ${cls(c.tot) || 'z'}"><i>${c.tot >= 0 ? '▲' : '▼'}</i>${U(Math.abs(c.tot), 2)}</span><span class="est">${det}</span></div></div>`;
     });
-    return `<h2 class="mh">${ic('i-pnl')}Coin bazında kâr/zarar<span class="hsum ${cls(T)}">${sgnU(T)}</span></h2><div class="card list">${dCut(id, rows)}</div>`;
+    return `<h2 class="mh">${ic('i-pnl')}${kind === 'meme' ? 'Token' : 'Coin'} bazında kâr/zarar<span class="hsum ${cls(T)}">${sgnU(T)}</span></h2><div class="card list">${dCut(id, rows)}</div>`;
 }
-function deskTrades(id, trades, kind) {
+function deskTrades(id, trades, kind, empty = '') {
     if (!(trades || []).length)
-        return '';
+        return empty ? `<h2 class="mh">${ic('i-list')}Son işlemler<span class="hsum">0 işlem</span></h2><div class="card"><div class="empty">${ic('i-eye')}<div>${empty}</div></div></div>` : '';
     const rows = trades.slice(0, 40).map((t) => {
         const inst = t.inst || `${t.sym}-USDT`, pnl = +t.pnl || 0, buy = t.side === 'AL';
         const what = kind === 'lev' ? `${t.side} kapandı` : buy ? 'alındı' : 'satıldı', why = escH(String(t.reason || ''));
         const end = buy ? `<b>${U(+t.usd || 0, 2)}</b><small class="etl">${usdTL(+t.usd || 0)}</small>`
             : `<span class="pill ${cls(pnl) || 'z'}"><i>${pnl >= 0 ? '▲' : '▼'}</i>${U(Math.abs(pnl), 2)}</span><span class="est ${cls(pnl)}">${t.pct != null ? spc(+t.pct, 1) : ''}${kind !== 'lev' && t.usd ? ` · ${U(+t.usd, 0)}` : ''}</span>`;
-        return `<div class="row">${cico(inst, kind === 'lev' ? undefined : (buy ? 'AL' : 'SAT'), !buy && pnl < 0)}<div class="mid"><b>${escH(sym(inst))} ${what}</b><span>${ago(t.ts)}${why ? ' · ' + why : ''}</span></div><div class="end">${end}</div></div>`;
+        return `<div class="row${kind === 'meme' ? ' nch' : ''}">${cico(inst, kind === 'lev' ? undefined : (buy ? 'AL' : 'SAT'), !buy && pnl < 0)}<div class="mid"><b>${escH(sym(inst))} ${what}</b><span>${ago(t.ts)}${why ? ' · ' + why : ''}</span></div><div class="end">${end}</div></div>`;
     });
     return `<h2 class="mh">${ic('i-list')}Son işlemler<span class="hsum">${trades.length} işlem</span></h2><div class="card list">${dCut(id, rows)}</div>`;
 }
@@ -832,7 +824,7 @@ function deskMarket(x) {
 function renderLevR() {
     const R = S?.levr;
     if (!R)
-        return (S?.live_enc || S?.live_z) && !pw ? `<div class="warn">${ic('i-lock')}<div>Gerçek futures masasını görmek için kilidi aç.</div></div>` : '';
+        return S?.live_z && !pw ? `<div class="warn">${ic('i-lock')}<div>Gerçek futures masasını görmek için kilidi aç.</div></div>` : '';
     const usd = (v, d = 2) => U(v, d), esc = escH;
     const pf = (v) => nf(v, v >= 100 ? 2 : v >= 1 ? 4 : Math.min(8, 2 - Math.floor(Math.log10(v || 1))));
     const lv = (orig || S?.settings)?.lev || {}, ml = +lv.max_loss || 10, left = Math.max(0, ml + Math.min(0, R.pnl));
@@ -846,7 +838,7 @@ function renderLevR() {
       <div class="end"><b>${usd((+p.margin || 0) + (+p.pnl || 0))}</b><small class="etl">${usdTL((+p.margin || 0) + (+p.pnl || 0))}</small>${busy ? `<span class="sellst"><i class="spn"></i>Kapanıyor</span>` : `<span class="pill ${cls(p.pnl) || 'z'}"><i>${p.pnl >= 0 ? '▲' : '▼'}</i>${usd(Math.abs(p.pnl))}</span><span class="est ${cls(p.pnl)}">${spc(g, 1)}</span>`}</div></div>`;
         return `<div class="swr${swOpen === 'f:' + p.sym ? ' open' : ''}${busy ? ' busy' : ''}" data-i="f:${esc(p.sym)}"><button class="swb" type="button" data-desk="lev" data-sym="${esc(p.sym)}">${ic('i-sell')}${busy ? 'Kapanıyor' : 'Kapat'}</button>${row}</div>`;
     }).join('');
-    const feed = (R.log || []).slice(0, 15).map(([ts, k, t]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : 'not'}">${k === 'buy' ? 'AÇ' : k === 'exit' ? 'KAPAT' : k === 'risk' ? 'ENGEL' : 'BİLGİ'}</em><div>${feedTxt(String(t).replace(/^GERÇEK (?:(?:AÇ|KAPAT|ENGEL) )?/, ''))}</div></div>`).join('');
+    const feed = (R.log || []).filter((l) => l[1] !== 'buy' && l[1] !== 'exit').slice(0, 12).map(([ts, k, t]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : 'not'}">${k === 'buy' ? 'AÇ' : k === 'exit' ? 'KAPAT' : k === 'risk' ? 'ENGEL' : 'BİLGİ'}</em><div>${feedTxt(String(t).replace(/^GERÇEK (?:(?:AÇ|KAPAT|ENGEL) )?/, ''))}</div></div>`).join('');
     const st = R.dead ? `<b class="dn">Durdu: ${esc(R.dead)}. Ayarlar → Futures → Yeniden başlat.</b>` : R.halt ? `<b class="dn">Bugün durduruldu: günlük zarar sınırı.</b>` : !R.on ? '<b>Kapalı.</b> Ayarlar → Futures\'tan açılır.' : '';
     return `<h2 class="mh">${ic('i-layers')}Futures<span class="hsum"><em class="rbadge">GERÇEK</em>OKX Global</span><button class="mset" type="button" data-sett="fut">${ic('i-gear')}Ayarlar</button></h2>
     <div class="card mmeme">
@@ -856,17 +848,8 @@ function renderLevR() {
     </div>
     ${pos ? `<h2 class="mh">${ic('i-coins')}Açık pozisyonlar<span class="hsum ${cls(+R.upl || 0)}">${(R.positions || []).length} pozisyon · ${sgnU(+R.upl || 0)}</span></h2><div class="card list gpos">${pos}</div><p class="hint" style="margin:6px 2px 0">Kapatmak için satırı sola kaydır; grafiği görmek için dokun. Çubuk: soldaki uç stop, sağdaki uç hedef.</p>` : ''}
     ${eqCard(R.equity_series, R.funded)}
-    <h2 class="mh">${ic('i-list')}İşlem kaydı<span class="hsum">gerçek masa</span></h2>
-    <div class="card mfeed">
-      ${feed ? feed : `<div class="empty">${ic('i-eye')}<div>Henüz gerçek işlem yok; sinyal gelince açılır</div></div>`}
-    </div>${deskTrades('ltr', R.trades, 'lev')}${deskCoins('lco', R.coins, Object.fromEntries((R.positions || []).map((p) => [p.sym + '-USDT', +p.pnl || 0])), 'lev')}${favSec(R.fav, S?.lev?.fav, 'lev')}${levWatch()}${deskMarket('sw')}`;
-}
-function favSec(real, paper, kind) {
-    const usd = (v) => U(v, 2), list = (real && real.length ? real : paper) || [], pp = !(real && real.length) && list.length;
-    if (!list.length)
-        return '';
-    const ban = new Set((((orig || S?.settings)?.ban || {})[kind] || []).map((x) => banKey(x)));
-    return `<h2 class="mh">${ic('i-star')}Favoriler<span class="hsum">${pp ? 'deneme masası · ' : ''}en çok kâr getiren</span></h2><div class="card mfeed">${list.map((f, i) => `<div class="fr"><time>${i + 1}.</time><em class="ft fav">${ic('i-star')}</em><div><span class="fh"><b>${escH(f.sym)}</b> <span class="up">+${usd(f.pnl)}</span>${ban.has(banKey(f.mint || f.sym)) || ban.has(banKey(f.sym)) ? ' <em class="lk wn in">KARA LİSTE</em>' : ''}</span><small>${f.n} işlem · ${f.w} kârlı</small></div></div>`).join('')}</div>`;
+    ${deskTrades('ltr', R.trades, 'lev', 'Henüz kapanan gerçek işlem yok; sinyal gelince açılır')}${deskCoins('lco', R.coins, Object.fromEntries((R.positions || []).map((p) => [p.sym + '-USDT', +p.pnl || 0])), 'lev', (R.fav && R.fav.length ? R.fav : S?.lev?.fav) || [])}
+    ${feed ? `<h2 class="mh">${ic('i-info')}Bot notları<span class="hsum">engel · bilgi · uyarı</span></h2><div class="card mfeed">${feed}</div>` : ''}${levWatch()}${deskMarket('sw')}`;
 }
 const banKey = (x) => { x = String(x || '').trim(); return x.length >= 30 ? x : x.replace(/[İıi]/g, 'I').toUpperCase().split(/[-/]/)[0]; };
 function levWatch() {
@@ -880,11 +863,10 @@ function levWatch() {
         const ps = pf(r.px), lg = ps.length > 9;
         return `<div class="wr ${up ? 'wu' : 'wd'}" data-lo="${escH(r.sym)}" data-ls="${up ? 1 : -1}" role="button"><div><b>${escH(r.sym)}</b><em>${r.open ? 'AÇIK' : up ? '↑ UZUN' : '↓ KISA'}</em></div><div><span>${ps}</span><small>${r.open ? (lg ? 'açık' : 'pozisyon açık') : `${lg ? '' : 'sinyale '}%${nf(d, 1)}`}</small></div><i style="width:${(r.open ? 100 : near).toFixed(0)}%"></i></div>`;
     }).join('');
-    const lg = (L.log || []).slice(0, 8).map(([ts, k, t]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : 'not'}">${k === 'buy' ? 'SİNYAL' : k === 'exit' ? 'ÇIKIŞ' : 'ENGEL'}</em><div>${feedTxt(String(t).replace(/^(AÇ|KAPAT|ENGEL) /, ''))}</div></div>`).join('');
     return `<h2 class="mh">${ic('i-eye')}İzlenen coinler<span class="hsum">sinyale uzaklık · saatlik</span></h2>
     <div class="card"><div class="wgrid">${w || `<div class="empty">${ic('i-refresh')}<div>Mumlar yükleniyor</div></div>`}</div>
     <p class="hint">Elle açmak için coine dokun. Çubuk dolu = sinyale yakın. Fiyat son ${lv.brk_h ?? 20} saatin zirvesini aşınca UZUN, dibini kırınca KISA açılır (${lv.trend_on === false ? 'eğilim filtresi kapalı' : `${lv.trend_h ?? 200} saatlik ortalamanın yönünde`}).</p></div>
-    ${lg ? `<h2 class="mh">${ic('i-list')}Son kararlar<span class="hsum">${L.stats?.signals || 0} sinyal · ${L.stats?.entered || 0} giriş</span></h2><div class="card mfeed">${lg}</div>` : ''}`;
+`;
 }
 function openLevOpen(sym, side0) {
     const L = S?.lev, R = S?.levr, lv = (orig || S?.settings)?.lev || {}, r = (L?.watch || []).find((w) => w.sym === sym);
@@ -1041,7 +1023,7 @@ function renderGspot() {
         return `<h2 class="mh">${ic('i-globe')}Global spot<span class="hsum">kapalı</span><button class="mset" type="button" data-sett="gspot">${ic('i-gear')}Ayarlar</button></h2>
     <div class="card moff"><span class="moi">${ic('i-globe')}</span><b>Global spot masası kapalı</b><p>Ayarlar → Global'den açılır.</p></div>`;
     if (!G)
-        return gs.real && !RR && (S?.live_enc || S?.live_z) && !pw ? `<div class="warn">${ic('i-lock')}<div>Gerçek Global masasını görmek için kilidi aç.</div></div>`
+        return gs.real && !RR && S?.live_z && !pw ? `<div class="warn">${ic('i-lock')}<div>Gerçek Global masasını görmek için kilidi aç.</div></div>`
             : `<div class="empty">${ic('i-globe')}<div>Global spot masası hazırlanıyor; ilk veriler birkaç dakika içinde gelir</div></div>`;
     const usd = (v, d = 2) => U(v, d), esc = escH, tp = +(gs.lot_tp_pct ?? 3.5);
     const pf = (v) => nf(v, v >= 100 ? 2 : v >= 1 ? 4 : Math.min(8, 2 - Math.floor(Math.log10(v || 1))));
@@ -1057,7 +1039,7 @@ function renderGspot() {
       <div class="end"><b>${usd(p.val)}</b><small class="etl">${usdTL(p.val)}</small>${busy ? `<span class="sellst"><i class="spn"></i>Satılıyor</span>` : `<span class="pill ${cls(p.pnl) || 'z'}"><i>${p.pnl >= 0 ? '▲' : '▼'}</i>${usd(Math.abs(p.pnl))}</span><span class="est ${cls(p.pnl)}">${spc(g, 1)}</span>`}</div></div>`;
         return `<div class="swr${swOpen === 'g:' + p.inst ? ' open' : ''}${busy ? ' busy' : ''}" data-i="g:${esc(p.inst)}"><button class="swb" type="button" data-desk="${desk}" data-sym="${esc(p.inst)}">${ic('i-sell')}${busy ? 'Satılıyor' : 'Sat'}</button>${row}</div>`;
     }).join('');
-    const feed = (G.log || []).slice(0, 15).map(([ts, k, t]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : /^HATA/.test(t) ? 'err' : 'not'}">${k === 'buy' ? 'AL' : k === 'exit' ? 'SAT' : k === 'risk' ? (/^HATA/.test(t) ? 'HATA' : 'ENGEL') : 'BİLGİ'}</em><div>${feedTxt(String(t).replace(/^(?:AL|SAT|HATA|ENGEL:?|DUR:) ?/, ''))}</div></div>`).join('');
+    const feed = (G.log || []).filter((l) => l[1] !== 'buy' && l[1] !== 'exit').slice(0, 12).map(([ts, k, t]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : /^HATA/.test(t) ? 'err' : 'not'}">${k === 'buy' ? 'AL' : k === 'exit' ? 'SAT' : k === 'risk' ? (/^HATA/.test(t) ? 'HATA' : 'ENGEL') : 'BİLGİ'}</em><div>${feedTxt(String(t).replace(/^(?:AL|SAT|HATA|ENGEL:?|DUR:) ?/, ''))}</div></div>`).join('');
     const full = (G.positions || []).length >= +(gs.max_coins ?? 5);
     const W = (P?.watch || []).slice(0, 8).map((w) => {
         const d = w.g, ok = d <= 0 && !w.f && !w.fs && (w.h || !full), near = Math.max(4, Math.min(100, 100 - Math.max(0, d) * 12));
@@ -1076,10 +1058,8 @@ function renderGspot() {
     </div>
     ${pos ? `<h2 class="mh">${ic('i-coins')}Eldeki coinler<span class="hsum ${cls((G.positions || []).reduce((a, p) => a + (+p.pnl || 0), 0))}">${(G.positions || []).length} coin · ${sgnU((G.positions || []).reduce((a, p) => a + (+p.pnl || 0), 0))}</span></h2><div class="card list gpos">${pos}</div><p class="hint" style="margin:6px 2px 0">Satmak için satırı sola kaydır. Her kademe alışının %${nf(tp, 1)} üstünde satılır; çubuk ortalamaya göre. Grafiği görmek için dokun.</p>` : ''}
     ${eqCard(G.equity_series, G.start)}
-    <h2 class="mh">${ic('i-list')}İşlem kaydı<span class="hsum">${real ? 'gerçek masa' : 'deneme masası'}</span></h2>
-    <div class="card mfeed">${feed || `<div class="empty">${ic('i-eye')}<div>Henüz işlem yok; fiyat alım hedefine inince alır</div></div>`}</div>
-    ${deskTrades('gtr', G.trades, 'gspot')}${deskCoins('gco', G.coins, Object.fromEntries((G.positions || []).map((p) => [p.inst, +p.pnl || 0])), 'gspot')}
-    ${favSec(real ? G.fav : [], P?.fav, 'gspot')}
+    ${deskTrades('gtr', G.trades, 'gspot', 'Henüz işlem yok; fiyat alım hedefine inince alır')}${deskCoins('gco', G.coins, Object.fromEntries((G.positions || []).map((p) => [p.inst, +p.pnl || 0])), 'gspot', (real && G.fav && G.fav.length ? G.fav : P?.fav) || [])}
+    ${feed ? `<h2 class="mh">${ic('i-info')}Bot notları<span class="hsum">${real ? 'gerçek masa' : 'deneme masası'} · engel · bilgi</span></h2><div class="card mfeed">${feed}</div>` : ''}
     <h2 class="mh">${ic('i-eye')}Alım adayları<span class="hsum">${P?.uni || 0} coin · 15 dk</span><button class="mset" type="button" data-gb="">${ic('i-buy')}Elle al</button></h2>
     <div class="card"><div class="wgrid">${W || `<div class="empty">${ic('i-refresh')}<div>Mumlar yükleniyor</div></div>`}</div>
     <p class="hint">Hacmi en yüksek ${gs.coins ?? 30} USDT paritesi izlenir. Fiyat son ${gs.sma_hours ?? 72} saatin ortalamasının %${nf(+(gs.step_pct ?? 3.3), 1)} altına inince 1. kademe alınır; her kademe alışının %${nf(tp, 1)} üstünde satılır. Çubuk dolu = hedefe yakın. Grafik ve elle alım için coine dokun.</p>${warm}</div>${deskMarket('g')}`;
@@ -1178,25 +1158,25 @@ function renderMemeR() {
         return memeOff();
     const R = S?.memer;
     if (!R)
-        return (S?.live_enc || S?.live_z) && !pw ? `<div class="warn">${ic('i-lock')}<div>Gerçek memecoin masasını görmek için kilidi aç.</div></div>` : '';
+        return S?.live_z && !pw ? `<div class="warn">${ic('i-lock')}<div>Gerçek memecoin masasını görmek için kilidi aç.</div></div>` : '';
     const usd = (v, d = 2) => U(v, d), esc = escH;
     const mm = (orig || S?.settings)?.meme || {}, ml = +mm.max_loss || 10, left = Math.max(0, ml + Math.min(0, R.pnl));
     const pos = (R.positions || []).map((p) => {
         const g = p.cost ? (p.val / p.cost - 1) * 100 : 0;
         return `<div class="fr mpc" data-mc="${esc(p.mint)}" role="button"><time>${masaClock(p.ts)}</time><em class="ft al">${p.part ? 'KALAN' : 'AÇIK'}</em><div><span class="fh"><b>${esc(p.sym)}</b> ${usd(p.val)} <span class="${cls(g) || 'up'}">${spc(g, 1)}</span></span><small>≈ ${usdTL(p.val)} · giriş ${usd(p.cost)} · ${esc(p.why)}</small></div>${deskBtn('meme', p.mint, 'Sat')}</div>`;
     }).join('');
-    const feed = (R.log || []).slice(0, 15).map(([ts, k, t]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : 'not'}">${k === 'buy' ? 'AL' : k === 'exit' ? 'SAT' : k === 'risk' ? 'ENGEL' : 'BİLGİ'}</em><div>${feedTxt(String(t).replace(/^GERÇEK (?:(?:AL|SAT|ENGEL) )?/, ''))}</div></div>`).join('');
+    const feed = (R.log || []).filter((l) => l[1] !== 'buy' && l[1] !== 'exit').slice(0, 12).map(([ts, k, t]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : 'not'}">${k === 'buy' ? 'AL' : k === 'exit' ? 'SAT' : k === 'risk' ? 'ENGEL' : 'BİLGİ'}</em><div>${feedTxt(String(t).replace(/^GERÇEK (?:(?:AL|SAT|ENGEL) )?/, ''))}</div></div>`).join('');
     const st = R.dead ? `<b class="dn">Durdu: ${esc(R.dead)}. Ayarlar → Memecoin → Yeniden başlat.</b>` : !R.on ? '<b>Kapalı.</b> Ayarlar → Memecoin\'den açılır.' : '';
     return `<h2 class="mh">${ic('i-flask')}Memecoin<span class="hsum">${mm.real ? '<em class="rbadge">GERÇEK</em>' : '<em class="rbadge pp">DENEME</em>'}</span><button class="mset ico" type="button" data-memeon="0" aria-label="Masayı kapat">${ic('i-power')}</button><button class="mset" type="button" data-sett="meme">${ic('i-gear')}Ayarlar</button></h2>
     <div class="card mmeme">
       ${deskHero('Cüzdan', R.value, `${nf(R.sol, 4)} SOL · başlangıç ${usd(R.start || 0)}`, R.pnl, R.start, left, ml, [['Pozisyon', String((R.positions || []).length)], ['Hedef', mm.tp_pct ? '%' + nf(+mm.tp_pct, 0) : '—'], ['Stop', mm.sl_pct ? '%' + nf(+mm.sl_pct, 0) : '—'], ['Fiyat etkisi', '≤%' + nf(+mm.max_slip || 2, 1)]])}
       <p class="mnote">${ic('i-lock')}Jupiter ile alım-satım · KASA'ya dokunulmaz. ${st}${R.err ? ` <b class="dn">Uyarı: ${esc(R.err).slice(0, 110)}</b>` : ''}</p>
+      ${mm.real ? deskReal('memer') : ''}
     </div>
     ${pos ? `<h2 class="mh">${ic('i-coins')}Açık tokenler<span class="hsum">${(R.positions || []).length} token</span></h2><div class="card mfeed">${pos}</div>` : ''}
-    <h2 class="mh">${ic('i-list')}İşlem kaydı<span class="hsum">${mm.real ? 'gerçek masa' : 'gerçek mod kapalı'}</span></h2>
-    <div class="card mfeed">
-      ${feed ? feed : `<div class="empty">${ic('i-eye')}<div>${R.sol > 0 ? 'Henüz gerçek işlem yok; şartı tutan token bekleniyor' : 'MEME cüzdanına SOL gönderilince başlar'}</div></div>`}
-    </div>${favSec(R.fav, S?.meme?.fav, 'meme')}${memeScan()}`;
+    ${eqCard(R.equity_series, R.start)}
+    ${deskTrades('mtr', R.trades, 'meme', R.sol > 0 ? 'Henüz gerçek işlem yok; şartı tutan token bekleniyor' : 'MEME cüzdanına SOL gönderilince başlar')}${deskCoins('mco', R.coins, Object.fromEntries((R.positions || []).map((p) => [p.sym, (+p.val || 0) - (+p.cost || 0)])), 'meme', (R.fav && R.fav.length ? R.fav : S?.meme?.fav) || [])}
+    ${feed ? `<h2 class="mh">${ic('i-info')}Bot notları<span class="hsum">${mm.real ? 'gerçek masa' : 'gerçek mod kapalı'} · engel · bilgi</span></h2><div class="card mfeed">${feed}</div>` : ''}${memeScan()}`;
 }
 document.getElementById('masaBtn').onclick = () => showMasa(true);
 document.getElementById('closeMasa').onclick = () => showMasa(false);
@@ -1469,7 +1449,7 @@ function renderMetrics(x) {
         const used = x.positions.reduce((a, p) => a + p.cost, 0), r = Math.min(100, used / w.cap * 100);
         h += `<div class="use"><div class="ul">Coinlere ayrılan sınır<button class="qm" data-q="use" aria-label="Açıklama">?</button><b>${tl(used, 0)} / ${tl(w.cap, 0)}</b></div>
       <div class="ub"><i class="${w.room ? '' : 'full'}" style="width:${r.toFixed(1)}%"></i></div>
-      <div class="uh">${x.positions.length}/${w.max_coins} coin · ${x.trades} kapanan işlem · başlangıç ${tl(x.start_cash, 0)}</div></div>`;
+      <div class="uh">${x.positions.length > w.max_coins ? `${x.positions.length} coin · sınır ${w.max_coins}, yeni coin alınmaz` : `${x.positions.length}/${w.max_coins} coin`} · ${x.trades} kapanan işlem · başlangıç ${tl(x.start_cash, 0)}</div></div>`;
     }
     else
         h += `<div class="use">${live ? '' : `<div class="uh" style="color:var(--text);font-size:12.5px;line-height:1.45">${x.desc}</div>`}<div class="uh">${x.trades} kapanan işlem · başlangıç ${tl(x.start_cash, 0)}${live ? '' : ' (sanal para)'}</div></div>`;
@@ -1500,7 +1480,19 @@ function assetsExtra(x, eq) {
 function deskReal(desk) {
     const sy = DESK_BUSY['sync:' + desk] && Date.now() - DESK_BUSY['sync:' + desk] < 60000;
     let lbl = '', val = '', small = '', ok = true, warn = '';
-    if (desk === 'levr') {
+    if (desk === 'memer') {
+        const R = S?.memer;
+        if (!R)
+            return '';
+        const age = R.sync ? (Date.now() - R.sync) / 1000 : 1e9;
+        lbl = 'MEME cüzdanında gerçek';
+        val = U(+R.value || 0, 2);
+        small = `${nf(+R.sol || 0, 4)} SOL · ${R.sync ? 'son okuma ' + ago(R.sync) : 'okuma bekleniyor'}`;
+        ok = age < 180 && !R.err;
+        if (!ok)
+            warn = R.err ? `Uyarı: ${escH(String(R.err)).slice(0, 90)}` : 'Cüzdan bir süredir okunmadı; Eşleştir\'e bas.';
+    }
+    else if (desk === 'levr') {
         const R = S?.levr;
         if (!R)
             return '';
@@ -1644,8 +1636,8 @@ function renderXfer() {
     box.hidden = false;
     const jobs = (X?.jobs || []).slice(0, 4).map((j) => {
         const st = XST[j.stage] || [j.stage, 'i-info', 'w'];
-        return `<div class="xr" data-xj="${escH(j.id)}" role="button"><span class="xs ${st[2]}">${ic(st[1])}</span><div class="xm"><b>${xjName(j)}<i>${nf(+j.amt || 0, 2)} $</i></b>
-      <small>${masaClock(j.ts)} · ${escH(st[0])}${j.stage !== 'done' && j.msg && j.msg !== 'sırada' ? ' · ' + escH(j.msg) : ''}</small>${xjBar(j)}</div>${j.stage === 'new' ? `<button class="xc" data-xc="${escH(j.id)}">İptal</button>` : ''}</div>`;
+        return `<div class="xr" data-xj="${escH(j.id)}" role="button"><span class="xs ${st[2]}">${ic(st[1])}</span><div class="xm"><b>${xjName(j)}<i>${U(+j.amt || 0, 2)}</i></b>
+      <small>${masaClock(j.ts)} · ${escH(st[0])}${j.stage !== 'done' && j.msg && j.msg !== 'sırada' ? ' · ' + ut(escH(j.msg)) : ''}</small>${xjBar(j)}</div>${j.stage === 'new' ? `<button class="xc" data-xc="${escH(j.id)}">İptal</button>` : ''}</div>`;
     }).join('');
     const grp = [['OKX TR\'den', 'tr', ['tr2g', 'tr2k', 'tr2m']], ['OKX Global\'den', 'g', ['g2tr', 'g2k', 'g2m']], ['MEME\'den', 'm', ['m2g', 'm2k', 'm2tr']], ['KASA\'dan', 'k', ['k2g', 'k2tr', 'k2m']]];
     const tile = (k) => { const [f, t, sub] = XDIR[k]; return `<button data-x="${k}"><span class="xrt">${xEnd(f)}${ic('i-chev')}${xEnd(t)}</span><b>${XEND[t][0]}</b><small>${sub}</small></button>`; };
@@ -1848,7 +1840,7 @@ function xPending(dir) {
     const X = S?.xfer;
     const j = (X?.jobs || []).find((j) => j.dir === dir && !['done', 'failed'].includes(j.stage) && Date.now() - (+j.ts || 0) < 3 * 3600_000);
     if (j) {
-        toast(`Bekleyen bir ${xjName(j).replace(/<[^>]+>/g, '')} aktarımı var (${nf(+j.amt || 0, 2)} $). Önce o bitsin; Aktarımlar'dan takip et.`);
+        toast(`Bekleyen bir ${xjName(j).replace(/<[^>]+>/g, '')} aktarımı var (${U(+j.amt || 0, 2)}). Önce o bitsin; Aktarımlar'dan takip et.`);
         return true;
     }
     return false;
@@ -2192,7 +2184,7 @@ document.addEventListener('click', e => {
     if (el.closest('.swr.open'))
         return;
     const c = el.querySelector('[data-coin]');
-    if (!c)
+    if (!c || el.closest('#memeBody'))
         return;
     const pf = (v) => nf(v, v >= 100 ? 2 : v >= 1 ? 4 : Math.min(8, 2 - Math.floor(Math.log10(v || 1))));
     if (el.closest('#futBody')) {
@@ -3089,7 +3081,7 @@ const SECTIONS = [
             ['gspot.coins', 'İzlenen coin', 'Hacmi en yüksek USDT pariteleri', 'adet', 5, 5, 60, 0],
             ['gspot.bank', 'Deneme kasası', 'Deneme masasının sanal parası (değişince deneme masası yeniden başlamaz)', 'USDT', 10, 10, 1000000, 0]
         ] },
-    { t: 'Aktarım ve KASA', i: 'i-vault', f: [
+    { t: 'Aktarım ve KASA', i: 'i-vault', sw: [['xfer.use_bot', 'Aktarımda botun parasını kullan', 'Açık: OKX TR\'de boş para yetmezse eksik kısım Spot botunun nakdinden gönderilir; botun bütçesi o kadar düşer (kâr/zarar sayılmaz). Kapalı: yalnız boştaki para gider']], f: [
             ['xfer.daily_max', 'Günlük aktarım sınırı', 'Bir günde borsalardan en fazla gönderilecek', 'USDT', 100, 10, 1000, 0],
             ['xfer.sweep_pct', 'Kâr süpürme oranı', 'Futures ve memecoin kârının bu kadarı KASA\'ya gider; 0 kapalı', '%', 5, 0, 100, 0],
             ['xfer.sweep_days', 'Süpürme aralığı', 'Bu kadar günde bir', 'gün', 1, 1, 90, 0],

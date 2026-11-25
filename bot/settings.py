@@ -21,7 +21,7 @@ DEFAULTS = {
     "sell": {"ts": 0, "insts": []},
     "clear": 0,  # zaman damgası yeniyse eski kayıtlar (akış, aktarım geçmişi, masa günlükleri, bildirimler) temizlenir
     "clear_all": 0,  # zaman damgası yeniyse (clear ile birlikte) işlem geçmişleri de silinir
-    "xfer": {"daily_max": 1000, "sweep_on": True, "sweep_pct": 50, "sweep_days": 7, "sweep_min": 10},  # para aktarımı ve kâr süpürme
+    "xfer": {"daily_max": 1000, "sweep_on": True, "sweep_pct": 50, "sweep_days": 7, "sweep_min": 10, "use_bot": False},  # para aktarımı ve kâr süpürme
     "dust": [],
     "gspot": {"on": True, "real": False, "bank": 100.0, "budget": 50.0, "max_loss": 15.0, "lot_pct": 10.0, "lot2_pct": 45.0,
               "lot3_pct": 77.0, "step_pct": 3.3, "step3_pct": 6.6, "lot_tp_pct": 3.5, "stop_pct": 50.0, "max_lots": 5,

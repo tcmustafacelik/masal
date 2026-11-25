@@ -241,7 +241,8 @@
     "sweep_on": true,
     "sweep_pct": 50,
     "sweep_days": 1,
-    "sweep_min": 15
+    "sweep_min": 15,
+    "use_bot": true
   },
   "meme": {
     "on": true,
@@ -275,7 +276,7 @@
     "bank": 100,
     "lev": 3,
     "risk_pct": 2,
-    "max_pos": 6,
+    "max_pos": 3,
     "sl_atr": 1.5,
     "tp_atr": 3,
     "daily_loss_pct": 10,

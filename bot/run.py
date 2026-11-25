@@ -85,6 +85,11 @@ def sync_cash(state, L):
 def setup_live(state, S):
     """Gerçek hesap portföyünü ayarlara göre hazırlar."""
     armed, key, budget = bool(S["live"]), S["strategy"], float(S["budget"])
+    L0 = state.get("live") or {}
+    if L0.get("budget_set") is not None and budget != L0["budget_set"]:
+        L0["wd_off"] = 0.0  # bütçe elle / Eşleştir ile yeniden girildi: aktarımla düşülen kısım artık içinde
+    raw_budget = budget
+    budget = max(0.0, budget - float(L0.get("wd_off") or 0.0))  # aktarımda botun parasından gönderilen düşülür
     if armed and not (os.environ.get("OKX_API_KEY") and os.environ.get("OKX_API_SECRET")
                       and os.environ.get("OKX_API_PASSPHRASE")):
         armed = False  # anahtar yoksa gerçek mod açılmaz, bot deneme olarak devam eder
@@ -104,7 +109,8 @@ def setup_live(state, S):
         # İlk kurulumda, strateji değişince ya da denemeden gerçeğe geçince temiz başlanır
         old_log = (L or {}).get("log", [])
         L = new_state(key, cash=budget)
-        L.update(base=budget, topups=0, last_topup=None, checkpoint=budget, log=old_log)
+        L.update(base=budget, topups=0, last_topup=None, checkpoint=budget, log=old_log,
+                 wd_off=float(L0.get("wd_off") or 0.0), wd_ids=list(L0.get("wd_ids") or []))
         note(L, f"Gerçek hesap {'GERÇEK' if armed else 'deneme'} modunda {tr(budget)} TL ile başladı "
                 f"({config.STRATEGIES[key]['name']})")
         state["live"] = L
@@ -132,6 +138,7 @@ def setup_live(state, S):
         note(L, "Bot durduruldu: yeni alım yapılmayacak" if want_pause else "Bot yeniden başlatıldı")
     L["paused"] = want_pause
     L["kasa"], L["armed"] = float(S["kasa"]), armed
+    L["budget_set"] = raw_budget
     sync_cash(state, L)
     if not L.get("eq_v2"):  # eski grafik noktaları başlangıç parası bilgisi olmadan tutuluyordu; temiz başla
         L["equity"], L["eq_v2"] = [], True
@@ -286,6 +293,9 @@ def desk_commands(state, S):
             elif c.get("act") == "sync" and c.get("desk") == "gspotr":
                 from . import gspot
                 gspot.recon(state.get("gspotr"), force=True)
+            elif c.get("act") == "sync" and c.get("desk") == "memer":
+                from . import meme_gercek
+                meme_gercek.request_sync()
             elif c.get("act") == "sync" and c.get("desk") == "levr":
                 from . import kaldirac_gercek
                 kaldirac_gercek.request_sync()
