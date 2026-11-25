@@ -53,7 +53,7 @@ SLIP = 0.0005
 MIN_ORDER = 5.0             # $: bundan küçük kademe alınmaz
 BPH = 4                     # saatte 4 mum (15 dk)
 WARM = 60 * BPH             # 60 saatlik veri birikmeden alım yapılmaz
-EVERY = 1.5                 # fiyat okuma aralığı (sn)
+EVERY = 0.8                 # fiyat okuma aralığı (sn): her turda (1 sn) taze fiyat; tek herkese açık istek
 # SOL: memecoin aktarımı Global'de SOL alıp satar; Global spot SOL tutmaz (aynı coine iki iş dokunmasın)
 STABLE = {"SOL", "USDT", "USDC", "DAI", "FDUSD", "TUSD", "PYUSD", "USDG", "RLUSD", "USDE", "EURT", "EUR", "XAUT", "PAXG",
           "BUSD", "USDP", "USD1", "USDQ", "SUSDE", "WBTC", "STETH", "WETH", "WSTETH", "CBBTC"}
