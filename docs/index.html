@@ -525,6 +525,7 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 .swr.open .swc{transform:translateX(-88px)}
 /* Kaydırınca çıkan Sat: yumuşak kırmızı kart, ortada dolu yuvarlak simge; satır açılınca ölçeklenerek belirir */
 .swb{position:absolute;right:2px;top:10px;bottom:10px;width:76px;border:1px solid var(--red-line);border-radius:12px;background:var(--red-bg);color:var(--red);font:700 12px/1.2 inherit;font-family:inherit;letter-spacing:.2px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none;opacity:0;transform:scale(.86);transition:opacity .2s,transform .22s cubic-bezier(.2,.8,.2,1),background .15s}
+.swb{padding:0 4px;text-align:center;overflow:hidden}.swb .spn{width:14px;height:14px;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;animation:spn .7s linear infinite;flex:none;margin-bottom:5px}.swb:disabled{font-size:11px}
 .swr:first-child .swb{top:2px}.swr:last-child .swb{bottom:2px}
 .swr.open .swb,.swr.drag .swb{opacity:1;transform:none}
 .swb svg{width:34px;height:34px;padding:8px;border-radius:50%;background:var(--red);color:#fff;box-shadow:0 3px 10px -3px var(--red)}
@@ -1056,6 +1057,6 @@ em.lk.in{display:inline-block;width:auto;padding:2px 5px;margin:0 0 0 6px;vertic
 <div class="toast" id="toast" hidden></div>
 <div class="qsh" id="qsh" hidden><div class="qb"><div class="gr"></div><h3><span><svg class="i" id="qIco"><use href="#i-info"/></svg></span><b id="qTitle"></b></h3><div class="qt" id="qText"></div><button class="btn primary" id="qOk">Anladım</button></div></div>
 
-<script src="app.js?v=1.101.0"></script>
+<script src="app.js?v=1.101.1"></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-const APP_VERSION='1.101.0';
+const APP_VERSION='1.101.1';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (kehribar)
@@ -661,7 +661,7 @@ function deskBtn(desk: string, sym: string, label: string): string {
 document.addEventListener('click', async e => {
   const b = (e.target as HTMLElement).closest?.('[data-desk]') as HTMLButtonElement; if (!b) return;
   if (!token) { toast('Önce Ayarlar\'dan GitHub bağlantısını kur'); return; }
-  const desk = b.dataset.desk, sym = b.dataset.sym, lbl = b.textContent; DESK_BUSY[desk + ':' + sym] = Date.now(); b.disabled = true; b.textContent = 'Gönderildi…';
+  const desk = b.dataset.desk, sym = b.dataset.sym, lbl = b.textContent; DESK_BUSY[desk + ':' + sym] = Date.now(); b.disabled = true; if (b.classList.contains('swb')) b.innerHTML = '<i class="spn"></i>Gönderildi'; else b.textContent = 'Gönderildi…';
   const req = {id: 'c' + Date.now().toString(36), ts: Date.now(), desk, act: desk === 'lev' ? 'close' : 'sell', sym};
   const ok = await cloudPatch(o => { (o as any).desk_cmd = [...((o as any).desk_cmd || []).filter((r: any) => r.id !== req.id && Date.now() - (r.ts || 0) < 600000), req]; }, 'Masa komutu: ' + desk + ' ' + sym);
   toast(ok ? 'İstek gönderildi; bot birkaç saniyede piyasa fiyatından kapatır' : 'İstek gönderilemedi, tekrar dene', ok ? '' : patchWhy());

@@ -1,10 +1,17 @@
 {
-  "version": "1.101.0",
+  "version": "1.101.1",
   "date": "2026-11-25",
   "notes": [
-    "Yeni tasarım: her masanın kendi rengiyle başlık bloğu, Spot adayları eşit kutularda"
+    "Kapat/Sat düğmesinde Gönderildi yazısı sığar"
   ],
   "history": [
+    {
+      "version": "1.101.1",
+      "date": "2026-11-25",
+      "notes": [
+        "Kapat/Sat düğmesinde Gönderildi yazısı sığar"
+      ]
+    },
     {
       "version": "1.101.0",
       "date": "2026-11-25",
@@ -101,13 +108,6 @@
       "date": "2026-11-25",
       "notes": [
         "Futures: teminat pozisyon başına kasanın 1/en fazla pozisyon'u (daha çok pozisyon sığar); ayarlarda düz yazılan alanlar şifreli ayarların içine alan alan işlenir"
-      ]
-    },
-    {
-      "version": "1.98.3",
-      "date": "2026-11-25",
-      "notes": [
-        "Ayarlar üst menüsü renkli: her masanın kendi rengi"
       ]
     }
   ]
