@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.100.3';
+const APP_VERSION = '1.100.4';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = 'var(--acc)';
@@ -709,6 +709,7 @@ function renderMasa() {
     <div class="card mfeed">${feed.length ? feed.slice(0, 30).map(([ts, k, tag, txt]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k}">${tag}</em><div>${txt}</div></div>`).join('') : `<div class="empty">${ic('i-list')}<div>Henüz kayıt yok</div></div>`}</div>`);
 }
 const usdTL = (v) => { const r = +(S?.xfer?.usdtry || USDTTRY || 0); return r && isFinite(v) ? tl(v * r, 0) : ''; };
+const pTL = (v) => { const t = usdTL(Math.abs(+v || 0)); return t ? ` · ${(+v || 0) < 0 ? '−' : '+'}${t}` : ''; };
 function deskHero(lbl, val, sub, pnl, base, left, ml, chips) {
     const usd = (v) => U(v, 2), pc = base > 0 ? pnl / base * 100 : 0, r = ml > 0 ? Math.max(0, Math.min(100, left / ml * 100)) : 0;
     const tv = usdTL(val), tp = usdTL(Math.abs(pnl));
@@ -768,7 +769,7 @@ function deskCoins(id, coins, open, kind, favs = []) {
         }
         const det = c.op != null ? (c.sells ? `açıkta ${sgnU(c.op)}` : (kind === 'gspot' ? 'elde' : 'açık')) : 'kapandı', star = fv.has(banKey(c.inst)) || (c.mint && fv.has(c.mint));
         return `<div class="row">${cico(c.inst)}<div class="mid"><b>${escH(sym(c.inst))}${star ? `<i class="fst" title="Favori: en çok kâr getirenlerden">${ic('i-star')}</i>` : ''}${ban.has(banKey(c.inst)) || (c.mint && ban.has(c.mint)) ? '<em class="lk wn in">KARA LİSTE</em>' : ''}</b><span>${parts.join(' · ')}</span></div>
-      <div class="end"><span class="pill lg ${cls(c.tot) || 'z'}"><i>${c.tot >= 0 ? '▲' : '▼'}</i>${U(Math.abs(c.tot), 2)}</span><span class="est">${det}</span></div></div>`;
+      <div class="end"><span class="pill lg ${cls(c.tot) || 'z'}"><i>${c.tot >= 0 ? '▲' : '▼'}</i>${U(Math.abs(c.tot), 2)}</span><span class="est">${det}${pTL(c.tot)}</span></div></div>`;
     });
     return `<h2 class="mh">${ic('i-pnl')}${kind === 'meme' ? 'Token' : 'Coin'} bazında kâr/zarar<span class="hsum ${cls(T)}">${sgnU(T)}</span></h2><div class="card list">${dCut(id, rows)}</div>`;
 }
@@ -779,7 +780,7 @@ function deskTrades(id, trades, kind, empty = '') {
         const inst = t.inst || `${t.sym}-USDT`, pnl = +t.pnl || 0, buy = t.side === 'AL';
         const what = kind === 'lev' ? `${t.side} kapandı` : buy ? 'alındı' : 'satıldı', why = escH(String(t.reason || ''));
         const end = buy ? `<b>${U(+t.usd || 0, 2)}</b><small class="etl">${usdTL(+t.usd || 0)}</small>`
-            : `<span class="pill ${cls(pnl) || 'z'}"><i>${pnl >= 0 ? '▲' : '▼'}</i>${U(Math.abs(pnl), 2)}</span><span class="est ${cls(pnl)}">${t.pct != null ? spc(+t.pct, 1) : ''}${kind !== 'lev' && t.usd ? ` · ${U(+t.usd, 0)}` : ''}</span>`;
+            : `<span class="pill ${cls(pnl) || 'z'}"><i>${pnl >= 0 ? '▲' : '▼'}</i>${U(Math.abs(pnl), 2)}</span><span class="est ${cls(pnl)}">${t.pct != null ? spc(+t.pct, 1) : ''}${pTL(pnl)}</span>`;
         return `<div class="row${kind === 'meme' ? ' nch' : ''}">${cico(inst, kind === 'lev' ? undefined : (buy ? 'AL' : 'SAT'), !buy && pnl < 0)}<div class="mid"><b>${escH(sym(inst))} ${what}</b><span>${ago(t.ts)}${why ? ' · ' + why : ''}</span></div><div class="end">${end}</div></div>`;
     });
     return `<h2 class="mh">${ic('i-list')}Son işlemler<span class="hsum">${trades.length} işlem</span></h2><div class="card list">${dCut(id, rows)}</div>`;
@@ -846,7 +847,7 @@ function renderLevR() {
       <div class="mid"><b><span class="sy">${esc(p.sym)}</span><i class="kd ${up ? 'lu' : 'ls'}">${p.side} ${p.lev || ''}x</i></b><span>Giriş ${pf(p.entry)} → şimdi ${pf(now)}<br>${ago(p.ts)} açıldı · teminat ${usd(p.margin)}</span>
         <div class="rng"><i class="av" style="left:${k(p.entry).toFixed(1)}%"></i><i class="mk ${cls(p.pnl)}" style="left:${k(now).toFixed(1)}%"></i></div>
         <div class="rngl"><em class="dn">Stop ${pf(p.stop)}</em><em class="up">Hedef ${pf(p.tp)}</em></div></div>
-      <div class="end"><b>${usd((+p.margin || 0) + (+p.pnl || 0))}</b><small class="etl">${usdTL((+p.margin || 0) + (+p.pnl || 0))}</small>${busy ? `<span class="sellst"><i class="spn"></i>Kapanıyor</span>` : `<span class="pill ${cls(p.pnl) || 'z'}"><i>${p.pnl >= 0 ? '▲' : '▼'}</i>${usd(Math.abs(p.pnl))}</span><span class="est ${cls(p.pnl)}">${spc(g, 1)}</span>`}</div></div>`;
+      <div class="end"><b>${usd((+p.margin || 0) + (+p.pnl || 0))}</b><small class="etl">${usdTL((+p.margin || 0) + (+p.pnl || 0))}</small>${busy ? `<span class="sellst"><i class="spn"></i>Kapanıyor</span>` : `<span class="pill ${cls(p.pnl) || 'z'}"><i>${p.pnl >= 0 ? '▲' : '▼'}</i>${usd(Math.abs(p.pnl))}</span><span class="est ${cls(p.pnl)}">${spc(g, 1)}${pTL(p.pnl)}</span>`}</div></div>`;
         return `<div class="swr${swOpen === 'f:' + p.sym ? ' open' : ''}${busy ? ' busy' : ''}" data-i="f:${esc(p.sym)}"><button class="swb" type="button" data-desk="lev" data-sym="${esc(p.sym)}">${ic('i-sell')}${busy ? 'Kapanıyor' : 'Kapat'}</button>${row}</div>`;
     }).join('');
     const feed = (R.log || []).filter((l) => l[1] !== 'buy' && l[1] !== 'exit').slice(0, 12).map(([ts, k, t]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : 'not'}">${k === 'buy' ? 'AÇ' : k === 'exit' ? 'KAPAT' : k === 'risk' ? 'ENGEL' : 'BİLGİ'}</em><div>${feedTxt(String(t).replace(/^GERÇEK (?:(?:AÇ|KAPAT|ENGEL) )?/, ''))}</div></div>`).join('');
@@ -1047,7 +1048,7 @@ function renderGspot() {
       <div class="mid"><b><span class="sy">${esc(p.sym)}</span>${pq(p.inst)}${p.lots > 1 ? `<i class="kd">${p.lots} kademe</i>` : ''}</b><span>Alış ${pf(p.avg)} → şimdi ${pf(p.px)}<br>${ago(p.ts)} alındı · maliyet ${usd(p.cost)}</span>
         <div class="rng"><i class="av" style="left:${k(p.avg).toFixed(1)}%"></i><i class="mk ${cls(p.pnl)}" style="left:${k(p.px).toFixed(1)}%"></i></div>
         <div class="rngl"><em class="dn">Zarar sınırı ${pf(sl)}</em><em class="up">Kâr al ${pf(tpx)}</em></div></div>
-      <div class="end"><b>${usd(p.val)}</b><small class="etl">${usdTL(p.val)}</small>${busy ? `<span class="sellst"><i class="spn"></i>Satılıyor</span>` : `<span class="pill ${cls(p.pnl) || 'z'}"><i>${p.pnl >= 0 ? '▲' : '▼'}</i>${usd(Math.abs(p.pnl))}</span><span class="est ${cls(p.pnl)}">${spc(g, 1)}</span>`}</div></div>`;
+      <div class="end"><b>${usd(p.val)}</b><small class="etl">${usdTL(p.val)}</small>${busy ? `<span class="sellst"><i class="spn"></i>Satılıyor</span>` : `<span class="pill ${cls(p.pnl) || 'z'}"><i>${p.pnl >= 0 ? '▲' : '▼'}</i>${usd(Math.abs(p.pnl))}</span><span class="est ${cls(p.pnl)}">${spc(g, 1)}${pTL(p.pnl)}</span>`}</div></div>`;
         return `<div class="swr${swOpen === 'g:' + p.inst ? ' open' : ''}${busy ? ' busy' : ''}" data-i="g:${esc(p.inst)}"><button class="swb" type="button" data-desk="${desk}" data-sym="${esc(p.inst)}">${ic('i-sell')}${busy ? 'Satılıyor' : 'Sat'}</button>${row}</div>`;
     }).join('');
     const feed = (G.log || []).filter((l) => l[1] !== 'buy' && l[1] !== 'exit').slice(0, 12).map(([ts, k, t]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : /^HATA/.test(t) ? 'err' : 'not'}">${k === 'buy' ? 'AL' : k === 'exit' ? 'SAT' : k === 'risk' ? (/^HATA/.test(t) ? 'HATA' : 'ENGEL') : 'BİLGİ'}</em><div>${feedTxt(String(t).replace(/^(?:AL|SAT|HATA|ENGEL:?|DUR:) ?/, ''))}</div></div>`).join('');
