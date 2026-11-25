@@ -333,7 +333,8 @@
     "real_reset": 0,
     "brk_h": 12,
     "trend_h": 100,
-    "trend_on": true
+    "trend_on": true,
+    "cross_ok": true
   },
   "dust": [
     {

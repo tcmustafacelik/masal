@@ -241,7 +241,7 @@ def step(state, S):
             bad = f"en fazla {cfg['max_pos']} pozisyon"
         elif not px.get(c):
             bad = "fiyat yok"
-        elif side < 0 and f"{c}-USDT" in ((state.get("gspotr") or {}).get("positions") or {}):
+        elif side < 0 and not config.CROSS_OK and f"{c}-USDT" in ((state.get("gspotr") or {}).get("positions") or {}):
             bad = "Global spot'ta elde (yükselişe oynuyor); ters pozisyon açılmaz"
         if bad:
             L["stats"]["blocked"] += 1

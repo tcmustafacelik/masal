@@ -69,6 +69,9 @@ def ban_key(x):
     return x.upper().split("-")[0].split("/")[0]
 
 
+CROSS_OK = True  # aynı coinde Global spot uzun + futures kısa serbest mi (settings.apply günceller)
+
+
 def banned(desk, *names):
     b = BAN.get(desk) or ()
     return any(n and ban_key(n) in b for n in names)

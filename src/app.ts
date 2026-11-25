@@ -1,4 +1,4 @@
-const APP_VERSION='1.91.2';
+const APP_VERSION='1.92.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (kehribar)
@@ -1777,7 +1777,7 @@ const SECTIONS=[
   ['risk.trade_pct','İşlem büyüklüğü',()=>`Bottaki paranın; şu an ${sizeTL(draft.risk.trade_pct)}`,'%',1,1,100,0]]},
  {t:'Kâr hedefi',i:'i-flag',f:[
   ['target.amount','Hedef kâr',()=>`Bu kârda her şey satılır, bot durur`,'TL',500,100,1e8,0]]},
- {t:'Futures',i:'i-layers',sw:[['lev.real','Gerçek parayla işlem','Kararlar OKX Global\'de gerçek parayla uygulanır'],['lev.trend_on','Eğilim filtresi','Kapalıysa yalnız kırılım yönü karar verir (daha çok işlem, daha riskli)']],f:[
+ {t:'Futures',i:'i-layers',sw:[['lev.real','Gerçek parayla işlem','Kararlar OKX Global\'de gerçek parayla uygulanır'],['lev.trend_on','Eğilim filtresi','Kapalıysa yalnız kırılım yönü karar verir (daha çok işlem, daha riskli)'],['lev.cross_ok','Global spot ile ters pozisyon','Açık: Global spot\'ta elde olan coinde futures kısa açabilir (ve tersi); masalar kendi kuralını tam uygular. Kapalı: açılmaz, ücret iki kez ödenmez']],f:[
   ['lev.real_budget','Bütçe','Global fon hesabından futures\'a geçecek para','USDT',5,5,10000,0],
   ['lev.max_loss','En fazla kayıp','Toplam zarar buna ulaşınca masa tamamen durur','USDT',5,1,10000,0],
   ['lev.real_lev','Kaldıraç','İzole marjin; güvenlik için en fazla 3x','x',1,1,3,0],

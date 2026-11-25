@@ -235,6 +235,8 @@ def _equity(G, px):
 def _fut_short(state):
     """Futures masasının KISA olduğu coinler (gerçek masa varsa onun, yoksa deneme masasının): Global spot bu coinlerde
     alım yapmaz; biri yükselişe biri düşüşe oynayıp kâr ve zararı birbirini götürmesin, ücret iki kez ödenmesin."""
+    if config.CROSS_OK:
+        return set()  # ayarlardan serbest bırakıldı: masalar birbirine bakmadan kendi kuralını uygular
     R = (state or {}).get("levr") or {}
     pos = R.get("pos") if R.get("pos") else ((state or {}).get("lev") or {}).get("positions") or {}
     return {f"{c}-USDT" for c, p in pos.items() if (p.get("side") or 0) < 0}
