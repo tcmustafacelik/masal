@@ -32,6 +32,8 @@ NAMES = {"tr": "OKX TR", "g": "OKX Global", None: "KASA", "m": "MEME"}
 MEME_DIRS = {"g2m": ("g", "m"), "m2g": ("m", "g")}  # SOL ile; ayrıntı meme_aktar.py
 FUNDING, TRADING = "6", "18"
 HARD_DAILY_MAX = 1000  # $: güvenlik tavanı — ayardan daha yükseği girilse de günlük aktarım bunu aşamaz
+# Borsanın geçici "meşgul" cevapları: istek işlenmeden reddedilir, yeniden denemek güvenlidir
+BUSY = {"50011", "50013", "50001", "50061"}
 DEFAULT = {"daily_max": 1000, "sweep_on": True, "sweep_pct": 50, "sweep_days": 7, "sweep_min": 10, "use_bot": False}
 
 
@@ -44,7 +46,7 @@ class Ex:
     def ok(self):
         return bool(self.key and self.sec and self.pas)
 
-    def req(self, method, path, body=None):
+    def req(self, method, path, body=None, _try=0):
         now = datetime.now(timezone.utc)
         ts = now.strftime("%Y-%m-%dT%H:%M:%S.") + f"{now.microsecond // 1000:03d}Z"
         payload = json.dumps(body, separators=(",", ":")) if body else ""
@@ -57,6 +59,10 @@ class Ex:
                 d = json.load(f)
         except urllib.error.HTTPError as e:
             d = json.loads(e.read() or b"{}")
+        if d.get("code") in BUSY and _try < 3:
+            # borsa "çok fazla istek / meşgul" dedi: istek işlenmedi, kısa bekleyip yeniden denenir
+            time.sleep(1.5 * (_try + 1))
+            return self.req(method, path, body, _try + 1)
         if d.get("code") != "0":
             d0 = (d.get("data") or [{}])[0]
             raise RuntimeError(f"{d.get('code')}: {d.get('msg') or ''} {d0.get('sMsg', '')}".strip() + ("" if d.get("msg") else f" {json.dumps(d)[:200]}"))
@@ -602,7 +608,7 @@ def _run_jobs(X, C, cfg, state, N, now):
             if job["stage"] in ("sent", "arriving") and "reddetti" not in str(e):
                 job["msg"] = f"kontrol edilemedi, tekrar denenecek: {str(e)[:120]}"  # para yolda; iş bırakılmaz
                 continue
-            if job["stage"] == "new" and _net_err(e) and now * 1000 - job["ts"] < 86400_000:
+            if job["stage"] == "new" and (_net_err(e) or str(e)[:5] in BUSY) and now * 1000 - job["ts"] < 86400_000:
                 # Bağlantı hatası: gönderim isteği borsaya ulaşmış olabilir. İş "başarısız" sayılmaz (kullanıcı yeniden
                 # isteyip iki kez göndermesin); bir sonraki kontrolde borsadaki kayıtla (clientId) karşılaştırılır:
                 # gönderildiyse "gönderildi" olur, gönderilmediyse yeniden denenir.

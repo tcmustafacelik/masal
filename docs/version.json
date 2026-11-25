@@ -1,10 +1,17 @@
 {
-  "version": "1.94.0",
+  "version": "1.94.1",
   "date": "2026-11-25",
   "notes": [
-    "Aktarımda botun parasını kullan ayarı (Ayarlar → Aktarım ve KASA); Global/Futures/Memecoin: Son işlemler + Coin bazında kâr/zarar (favoriler yıldızla), notlar ayrı; Memecoin'e Eşleştir ve Bakiye seyri; tekrar eden engel notları saatte bire indi; Spot coin sınırı yazısı netleşti; futures en fazla 3 pozisyon"
+    "Aktarım: borsanın 'çok fazla istek' (50011) cevabında iş başarısız sayılmıyor, kısa bekleyip yeniden deneniyor; kuruşluk hesap hareketleri bildirim olarak gelmiyor"
   ],
   "history": [
+    {
+      "version": "1.94.1",
+      "date": "2026-11-25",
+      "notes": [
+        "Aktarım: borsanın 'çok fazla istek' (50011) cevabında iş başarısız sayılmıyor, kısa bekleyip yeniden deneniyor; kuruşluk hesap hareketleri bildirim olarak gelmiyor"
+      ]
+    },
     {
       "version": "1.94.0",
       "date": "2026-11-25",
@@ -101,13 +108,6 @@
       "date": "2026-11-25",
       "notes": [
         "Global → TR aktarımında OKX TR gönderici bilgisi isteyince Kasalar'da ne yapacağın yazar ve bildirim gelir"
-      ]
-    },
-    {
-      "version": "1.87.7",
-      "date": "2026-11-25",
-      "notes": [
-        "Borsalar arası (TR ↔ Global) yalnız OKX iç transferiyle; zincire düşmez. Kasalar'da her iki yön için adres defterine eklenecek UID gösterilir"
       ]
     }
   ]

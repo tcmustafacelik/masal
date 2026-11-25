@@ -106,6 +106,8 @@ def scan(state, L, N, note, data=None):
         # ilk çalıştırmada sadece son 6 saattekiler bildirilir; eskiler sessizce kaydedilir
         if not mem.get("init") and now - ts > 6 * 3600 * 1000:
             continue
+        if ccy in ("USDT", "USDC") and abs(amt) < 0.01 or ccy == "TRY" and abs(amt) < 0.5:
+            continue  # kuruş artıkları (ör. 0.000001 USDT) bildirilmez
         found = True
         title, body, tags = MSG[kind]
         x = _fmt(ccy, amt)
