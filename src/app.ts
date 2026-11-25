@@ -1,4 +1,4 @@
-const APP_VERSION='1.99.3';
+const APP_VERSION='1.99.4';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (kehribar)
@@ -1230,15 +1230,18 @@ function openFutFund(dir: string){
       <div class="xamt"><input id="ffAmt" type="number" inputmode="decimal" min="1" step="1" placeholder="0" value="${v}"><span>USDT</span></div>
       <div class="xq">${[5,10,20,50].map(n=>`<button data-fq="${n}"${n>max?' class="off"':''}>${n}</button>`).join('')}<button class="xall" data-fq="${max}"${max>=1?'':' disabled'}>Tümü<small>${U(max,2)}</small></button></div>
       <div class="xinfo">
-        <div>${ic('i-layers')}<span>Futures bütçesi</span><b>${U(cur,0)} → ${U(cur+a,0)}</b></div>
-        ${fromGs?`<div>${ic('i-globe')}<span>Global spot bütçesi</span><b>${U(+gs.budget||0,0)} → ${U(Math.max(0,(+gs.budget||0)-a),0)}</b></div>`:''}
+        <div>${ic('i-layers')}<span>Futures bütçesi</span><b id="ffB">${U(cur,0)} → ${U(cur+a,0)}</b></div>
+        ${fromGs?`<div>${ic('i-globe')}<span>Global spot bütçesi</span><b id="ffG">${U(+gs.budget||0,0)} → ${U(Math.max(0,(+gs.budget||0)-a),0)}</b></div>`:''}
         <div>${ic('i-shield')}<span>Ücret</span><b>Ücretsiz · hesap içi</b></div>
         <div>${ic('i-clock')}<span>Süre</span><b>Birkaç saniye</b></div>
       </div>
       <p class="hint" style="margin:8px 2px 0">Bot parayı Global fon hesabından futures işlem hesabına geçirir. Zarar sınırı (${U(+lv.max_loss||0,0)}) aynı kalır.</p>
       <button class="btn primary xgo" id="ffGo">${ic('i-out')}Futures'a aktar</button></div>`;
-    const inp=document.getElementById('ffAmt') as HTMLInputElement;inp.oninput=()=>{const p=inp.selectionStart;draw(inp.value);const n=document.getElementById('ffAmt') as HTMLInputElement;n.focus();try{n.setSelectionRange(p,p)}catch(e){}};
-    document.querySelectorAll<HTMLElement>('[data-fq]').forEach(b=>b.onclick=()=>draw(b.dataset.fq));
+    // yazarken sayfa yeniden çizilmez (imleç yerinde kalır); yalnız bütçe önizlemesi güncellenir
+    const inp=document.getElementById('ffAmt') as HTMLInputElement,upd=()=>{const a=+inp.value||0;
+      document.getElementById('ffB').textContent=`${U(cur,0)} → ${U(cur+a,0)}`;const g=document.getElementById('ffG');if(g)g.textContent=`${U(+gs.budget||0,0)} → ${U(Math.max(0,(+gs.budget||0)-a),0)}`};
+    inp.oninput=upd;
+    document.querySelectorAll<HTMLElement>('[data-fq]').forEach(b=>b.onclick=()=>{inp.value=b.dataset.fq;upd()});
     document.getElementById('ffGo').onclick=async()=>{const amt=Math.floor((+inp.value||0)*100)/100;
       if(!(amt>=1)){toast('Tutarı yaz (en az 1 USDT)');return}
       if(amt>max+0.005){toast(max<1?(fromGs?'Global spot\'un boşta parası yok (coinlerde)':'Global\'de boşta para yok; Global spot\'tan aktarmayı dene'):`En fazla ${U(max,2)} aktarılabilir`);return}

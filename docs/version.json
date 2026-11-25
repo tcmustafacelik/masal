@@ -1,10 +1,17 @@
 {
-  "version": "1.99.3",
+  "version": "1.99.4",
   "date": "2026-11-25",
   "notes": [
-    "Küçük bakiye bildirimi kısa ve tam: yarıda kesilmez"
+    "Futures'a para: tutar yazarken/silerken imleç yerinde kalır"
   ],
   "history": [
+    {
+      "version": "1.99.4",
+      "date": "2026-11-25",
+      "notes": [
+        "Futures'a para: tutar yazarken/silerken imleç yerinde kalır"
+      ]
+    },
     {
       "version": "1.99.3",
       "date": "2026-11-25",
@@ -101,13 +108,6 @@
       "date": "2026-11-25",
       "notes": [
         "OKX TR → Global: talimat ekranı ve 'Botla dene' kalktı; diğer yönlerle aynı Para gönder ekranı (tutar, Tümü, kaynak bilgisi, Gönder)"
-      ]
-    },
-    {
-      "version": "1.96.0",
-      "date": "2026-11-25",
-      "notes": [
-        "Kasalar bakiyeleri 15 sn'de bir yenilenir (önce dakikada bir); bütün borsa istekleri ortak sırada uç başına aralıkla gider, botlar birbirinin isteğiyle çakışıp 'çok fazla istek' almaz"
       ]
     }
   ]
