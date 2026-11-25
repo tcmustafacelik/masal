@@ -842,6 +842,18 @@ em.lk.in{display:inline-block;width:auto;padding:2px 5px;margin:0 0 0 6px;vertic
 .toast .tt .tb{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;margin-top:3px;font-size:11.5px;font-weight:500;color:var(--muted);line-height:1.4;overflow-wrap:anywhere}
 .toast.full .tt .tb{-webkit-line-clamp:unset;display:block}
 .toast.long .tt>span:first-child{display:block;font-weight:700}
+
+/* Tasarım 8: her masanın kendi rengi; üstte renkli başlık bloğu, adaylar eşit kutularda */
+#mainv{--dk:var(--blue);--dkb:var(--blue-bg)}#gspotv{--dk:var(--teal);--dkb:var(--teal-bg)}#futv{--dk:var(--violet);--dkb:var(--violet-bg)}#memev{--dk:var(--green);--dkb:var(--green-bg)}#kasav{--dk:var(--amber);--dkb:var(--amber-bg)}
+#mainv h2 svg.i,#gspotv h2 svg.i,#futv h2 svg.i,#memev h2 svg.i,#kasav h2 svg.i{color:var(--dk)}
+#mainv .hero{background:var(--dkb);border-color:color-mix(in srgb,var(--dk) 22%,transparent)}
+.mmeme>.dhero{background:var(--dkb);margin:-10px -11px 8px;padding:12px 14px 11px;border-radius:var(--r) var(--r) 0 0;border-bottom:1px solid color-mix(in srgb,var(--dk) 18%,transparent)}
+.mmeme>.dhero small{color:color-mix(in srgb,var(--dk) 75%,var(--text))}
+.mmeme>.dhero strong{color:color-mix(in srgb,var(--dk) 35%,var(--text))}
+.mmeme>.dhero .adf{background:var(--surface)}
+#now .wgrid{margin-top:2px}
+.wgrid .wa em{background:var(--amber-bg);color:var(--amber)}.wgrid .wa>i{background:var(--amber)}
+.wgrid .wr[data-sb]{cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none}
 </style>
 </head>
 <body>
@@ -1044,6 +1056,6 @@ em.lk.in{display:inline-block;width:auto;padding:2px 5px;margin:0 0 0 6px;vertic
 <div class="toast" id="toast" hidden></div>
 <div class="qsh" id="qsh" hidden><div class="qb"><div class="gr"></div><h3><span><svg class="i" id="qIco"><use href="#i-info"/></svg></span><b id="qTitle"></b></h3><div class="qt" id="qText"></div><button class="btn primary" id="qOk">Anladım</button></div></div>
 
-<script src="app.js?v=1.100.7"></script>
+<script src="app.js?v=1.101.0"></script>
 </body>
 </html>
