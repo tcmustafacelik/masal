@@ -294,6 +294,7 @@ def _enter(L, c, side, k, x, cfg, lev, ts, why):
     free = L["bank"] - used
     qty = min(L["bank"] * cfg["risk_pct"] / 100 / dist, min(L["bank"] / max(3, int(cfg.get("max_pos") or 3)), free) * lev / entry)
     if qty <= 0 or qty * entry / lev < 1:
+        L["stats"]["blocked"] += 1
         _note(L, ts, "risk", f"ENGEL {c} {name}: boş teminat yetersiz")
         return False
     margin = qty * entry / lev

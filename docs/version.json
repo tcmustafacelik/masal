@@ -1,10 +1,17 @@
 {
-  "version": "1.100.1",
+  "version": "1.100.2",
   "date": "2026-11-25",
   "notes": [
-    "Futures deneme masası 5 pozisyona yer açar"
+    "Futures: teminat engeli sayaçta görünür"
   ],
   "history": [
+    {
+      "version": "1.100.2",
+      "date": "2026-11-25",
+      "notes": [
+        "Futures: teminat engeli sayaçta görünür"
+      ]
+    },
     {
       "version": "1.100.1",
       "date": "2026-11-25",
@@ -101,13 +108,6 @@
       "date": "2026-11-25",
       "notes": [
         "Aktarım: OKX TR'ye ulaşıp onay bekleyen para ikinci kontrolde kayboluyordu ('ulaşması bekleniyor'da takılı kalıyordu); artık aynı yatırma takip edilir ve ne yapman gerektiği yazılır"
-      ]
-    },
-    {
-      "version": "1.97.1",
-      "date": "2026-11-25",
-      "notes": [
-        "Global spot fiyatları her turda (saniyede bir) okunur: alım-satım kararı daha taze fiyatla; geçmiş temizlendi"
       ]
     }
   ]
