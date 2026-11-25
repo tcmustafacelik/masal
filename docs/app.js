@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.103.1';
+const APP_VERSION = '1.103.2';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = 'var(--acc)';
@@ -1248,6 +1248,13 @@ document.addEventListener('click', async (e) => {
     const req = { id: 'c' + Date.now().toString(36), ts: Date.now(), desk, act: desk === 'lev' ? 'close' : 'sell', sym };
     const ok = await cloudPatch(o => { o.desk_cmd = [...(o.desk_cmd || []).filter((r) => r.id !== req.id && Date.now() - (r.ts || 0) < 600000), req]; }, 'Masa komutu: ' + desk + ' ' + sym);
     toast(ok ? 'İstek gönderildi; bot birkaç saniyede piyasa fiyatından kapatır' : 'İstek gönderilemedi, tekrar dene', ok ? '' : patchWhy());
+    const w = b.closest('.swr');
+    if (w && swOpen === w.dataset.i)
+        swOpen = '';
+    document.querySelectorAll('.swr.open').forEach(x => { if (x.dataset.i !== swOpen)
+        x.classList.remove('open'); });
+    if (ok)
+        renderDeck();
     if (!ok) {
         delete DESK_BUSY[desk + ':' + sym];
         b.disabled = false;

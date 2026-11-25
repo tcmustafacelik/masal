@@ -1,10 +1,17 @@
 {
-  "version": "1.103.1",
+  "version": "1.103.2",
   "date": "2026-11-25",
   "notes": [
-    "Aday kutularında kaydır → Al / Pozisyon aç; ayarlar sekmeleri yeni tasarım; kara liste çerçevesi kesilmez"
+    "Kapat/Sat sonrası kaydırılan satır yerine döner"
   ],
   "history": [
+    {
+      "version": "1.103.2",
+      "date": "2026-11-25",
+      "notes": [
+        "Kapat/Sat sonrası kaydırılan satır yerine döner"
+      ]
+    },
     {
       "version": "1.103.1",
       "date": "2026-11-25",
@@ -101,13 +108,6 @@
       "date": "2026-11-25",
       "notes": [
         "Futures al-kaç modu: 15 dk mumlarla karar, kâr 1 ATR'de iz süren stop"
-      ]
-    },
-    {
-      "version": "1.99.4",
-      "date": "2026-11-25",
-      "notes": [
-        "Futures'a para: tutar yazarken/silerken imleç yerinde kalır"
       ]
     }
   ]
