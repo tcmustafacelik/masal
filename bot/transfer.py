@@ -37,6 +37,27 @@ BUSY = {"50011", "50013", "50001", "50061"}
 DEFAULT = {"daily_max": 1000, "sweep_on": True, "sweep_pct": 50, "sweep_days": 7, "sweep_min": 10, "use_bot": False}
 
 
+# Uç başına istek aralığı (sn): OKX sınırlarının biraz altında. Bot, Global spot, futures, aktarım ve bakiye
+# okuması aynı anahtarla aynı anda istek atar; hepsi bu sıradan geçer, borsa "çok fazla istek" demez.
+_GAP = {"/api/v5/asset/asset-valuation": 2.1, "/api/v5/asset/balances": 0.2, "/api/v5/account/balance": 0.22,
+        "/api/v5/asset/transfer": 1.05, "/api/v5/asset/withdrawal": 0.2, "/api/v5/asset/withdrawal-history": 0.2,
+        "/api/v5/asset/deposit-history": 0.2, "/api/v5/trade/order": 0.04, "/api/v5/account/positions": 0.22,
+        "/api/v5/asset/convert/estimate-quote": 0.1, "/api/v5/asset/convert/trade": 0.1}
+_RL = {"lock": threading.Lock(), "next": {}}
+
+
+def _pace(base, path):
+    """Aynı uca arka arkaya istek gerekiyorsa sıradaki zamana kadar bekler (iş parçacıkları arasında ortak)."""
+    k = (base, path.split("?")[0])
+    gap = _GAP.get(k[1], 0.1)
+    with _RL["lock"]:
+        now = time.time()
+        at = max(now, _RL["next"].get(k, 0.0))
+        _RL["next"][k] = at + gap
+    if at > now:
+        time.sleep(at - now)
+
+
 class Ex:
     def __init__(self, base, pre):
         self.base = base
@@ -47,6 +68,7 @@ class Ex:
         return bool(self.key and self.sec and self.pas)
 
     def req(self, method, path, body=None, _try=0):
+        _pace(self.base, path)
         now = datetime.now(timezone.utc)
         ts = now.strftime("%Y-%m-%dT%H:%M:%S.") + f"{now.microsecond // 1000:03d}Z"
         payload = json.dumps(body, separators=(",", ":")) if body else ""
@@ -710,7 +732,9 @@ def step(state, S, N):
         _JOBS["t"].start()
         X["jobs"] = [j for j in X["jobs"] if j["stage"] not in ("done", "failed") or now * 1000 - j["ts"] < 7 * 86400_000][-30:]
     # uygulama için bakiye özeti (dakikada bir, arka planda: ana turu bekletmez)
-    if now - X.get("bal_at", 0) >= (60 if X.get("dust_at", 1) else 5) and not (_BAL.get("t") and _BAL["t"].is_alive()):
+    if now - X.get("bal_at", 0) >= (15 if X.get("dust_at", 1) else 5) and not (_BAL.get("t") and _BAL["t"].is_alive()):
+        if not X.get("dust_at", 1):
+            _BAL["force"] = True  # küçük bakiye çevrildi: liste hemen yenilensin
         X["bal_at"], X["dust_at"] = now, 1
         o = state.get("okx") or {}
         bot_cash = float((state.get("live") or {}).get("cash") or 0)
@@ -759,15 +783,19 @@ def _balances(C, o, bot_cash):
             out["g_fund"] = round(max(0.0, C["g"].funding("USDT") - gspot.FUNDRES["v"]), 2)  # gönderilebilir: fon hesabındaki boş USDT (futures teminatı hariç)
         except Exception as e:
             print("Global bakiye okunamadı:", e)
-    try:
-        from . import dust
-        out["dust"] = dust.scan(C)
-    except Exception as e:
-        print("Küçük bakiyeler okunamadı:", e)
-    try:
-        out["kasa"] = kasa_balance()
-    except Exception as e:
-        print("KASA bakiyesi okunamadı:", e)
+    # küçük bakiye listesi ve KASA (Arbitrum) daha seyrek: dakikada bir (borsa bakiyeleri 15 sn'de bir)
+    slow = time.time() - _BAL.get("slow", 0) >= 55 or _BAL.get("force")
+    if slow:
+        _BAL["slow"], _BAL["force"] = time.time(), False
+        try:
+            from . import dust
+            out["dust"] = dust.scan(C)
+        except Exception as e:
+            print("Küçük bakiyeler okunamadı:", e)
+        try:
+            out["kasa"] = kasa_balance()
+        except Exception as e:
+            print("KASA bakiyesi okunamadı:", e)
     _BAL["out"] = out
 
 
