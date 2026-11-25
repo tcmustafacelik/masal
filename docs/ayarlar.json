@@ -395,7 +395,7 @@
     "lot_tp_pct": 3.5,
     "stop_pct": 50,
     "max_lots": 4,
-    "max_coins": 4,
+    "max_coins": 8,
     "use_pct": 90,
     "sma_hours": 72,
     "trend_filter_pct": 5,
