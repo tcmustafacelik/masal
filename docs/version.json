@@ -1,10 +1,17 @@
 {
-  "version": "1.99.1",
+  "version": "1.99.2",
   "date": "2026-11-25",
   "notes": [
-    "Kasalar → Global içinde · Futures'a: boştaki paradan ya da Global spot'tan futures'a tek dokunuşla para aktar"
+    "Uzun bildirimler düzenli: kalın başlık, altında en çok 4 satır ayrıntı (dokununca tamamı), sola hizalı; uzun olanlar ekranda daha uzun kalır"
   ],
   "history": [
+    {
+      "version": "1.99.2",
+      "date": "2026-11-25",
+      "notes": [
+        "Uzun bildirimler düzenli: kalın başlık, altında en çok 4 satır ayrıntı (dokununca tamamı), sola hizalı; uzun olanlar ekranda daha uzun kalır"
+      ]
+    },
     {
       "version": "1.99.1",
       "date": "2026-11-25",
@@ -101,13 +108,6 @@
       "date": "2026-11-25",
       "notes": [
         "Global Eşleştir bütçe eklemesi düzeltildi: boştaki USDT bilgisi uygulamaya hiç gelmiyordu"
-      ]
-    },
-    {
-      "version": "1.95.1",
-      "date": "2026-11-25",
-      "notes": [
-        "Tümünü göster / Daha az göster düğmeleri her listede aynı tasarımda"
       ]
     }
   ]

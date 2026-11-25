@@ -1,4 +1,4 @@
-const APP_VERSION='1.99.1';
+const APP_VERSION='1.99.2';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (kehribar)
@@ -2317,8 +2317,12 @@ async function save_(obj?: Settings, msg?: string, keepDraft?: boolean, retry = 
 let toastT;function toast(t,why?: string){const el=document.getElementById('toast');const s=String(t);
   const k=/yanlış|hata|yapılamadı|kaydedilemedi|edilemedi|gönderilemez|alınamadı|bulunamadı|başarısız|yetmez|olmalı|gir$|bağlı değil|süresi dolmuş/i.test(s)?'er':/gönderildi|kaydedildi|açıldı|kapatıldı|kopyalandı|eşitlendi|tamam|silindi|güncellendi|başlatıldı|değişti/i.test(s)?'ok':'in';
   el.className='toast t-'+k;el.innerHTML=`<span class="ti">${ic(k==='er'?'i-info':k==='ok'?'i-check':'i-bell')}</span><span class="tt"><span></span><span></span></span><i class="tbar"></i>`;
-  {const [a,b]=el.querySelectorAll<HTMLElement>('.tt span');a.textContent=s;b.textContent=why?' '+why:''}el.hidden=false;el.onclick=()=>{el.hidden=true};
-  clearTimeout(toastT);toastT=setTimeout(()=>el.hidden=true,3800)}
+  // uzun bildirim: ilk parça kalın başlık, kalanı altında küçük ve en çok 4 satır (dokununca tamamı açılır)
+  {const [a,b]=el.querySelectorAll<HTMLElement>('.tt span');let i=s.length>70?s.indexOf(' · '):-1;
+   if(i>0&&i<14){const j=s.indexOf(' · ',i+3);if(j>0&&j<48)i=j} // "OKX TR · küçük bakiyeler" birlikte başlık
+   if(i>0){a.textContent=s.slice(0,i);b.className='tb';b.textContent=s.slice(i+3).replace(/\s+·\s+/g,' · ')+(why?' '+why:'')}else{a.textContent=s;b.textContent=why?' '+why:''}}
+  el.classList.toggle('long',s.length>70);el.hidden=false;el.onclick=()=>{if(el.classList.contains('long')&&!el.classList.contains('full')){el.classList.add('full');clearTimeout(toastT);toastT=setTimeout(()=>el.hidden=true,12000)}else el.hidden=true};
+  clearTimeout(toastT);toastT=setTimeout(()=>el.hidden=true,Math.min(9000,3800+Math.max(0,s.length-70)*25))}
 let HIST: Trade[] = null, hCoin = '', hSide: '' | Side = '';
 function showHist(on){overlayView(on);document.getElementById('mainv').hidden=on;document.getElementById('histv').hidden=!on;
   document.querySelector('header').hidden=on;scrollTo(0,0);if(!on)pollMarket()}
