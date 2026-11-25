@@ -428,7 +428,7 @@ def _poll(C, job, X, N):
             N.add("money", "OKX Global'e ulaştı", f"{got:.2f} USDT OKX Global'e geçti.", 4, ["globe_with_meridians"])
         else:  # TR'ye geldi: TL'ye çevrilip "Nakit"e konur
             X["g_base"] = round(max(0.0, X.get("g_base", 0) - job["amt"]), 2)
-            late = time.time() * 1000 - job.get("sent_ts", job["ts"]) > 3 * 3600_000
+            late = time.time() * 1000 - (job.get("sent_ts") or job.get("ts") or time.time() * 1000) > 3 * 3600_000
             try:
                 if late:  # saatler önce ulaşmış (takip geç yakaladı): para bu arada başka işte kullanılmış olabilir; çevrilmez
                     raise RuntimeError("geç fark edildi; USDT olarak bırakıldı")
