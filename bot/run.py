@@ -20,7 +20,7 @@ def tr(v):
     return f"{v:,.0f}".replace(",", ".")
 
 
-SEALED = ("live", "okx", "xfer", "levr", "memer")  # herkese açık depoda bakiye ve cüzdan bilgisi şifreli durur
+SEALED = ("live", "okx", "xfer", "levr")  # herkese açık depoda bakiye ve cüzdan bilgisi şifreli durur
 
 
 def load_state():
@@ -243,7 +243,7 @@ def clear_old(state, S):
     X["jobs"] = [j for j in X.get("jobs", []) if j.get("stage") not in ("done", "failed")
                  or (j.get("dir") == "g2tr" and nowm - (j.get("sent_ts") or j.get("ts") or 0) < 48 * 3600_000)]
     X["log"] = []
-    for k in ("meme", "lev", "levr", "memer", "gspot", "gspotr"):
+    for k in ("lev", "levr", "gspot", "gspotr"):
         d = state.get(k) or {}
         if d:
             d["log"] = d.get("log", [])[-5:]
@@ -253,21 +253,19 @@ def clear_old(state, S):
     if full:
         state["cleared_all_at"] = int(S["clear_all"])
         L["trades"], L["coin_arch"] = [], {}
-        for k in ("meme", "lev", "levr", "memer", "gspot", "gspotr"):
+        for k in ("lev", "levr", "gspot", "gspotr"):
             if state.get(k):
                 state[k]["trades"] = []
     try:
         from . import kaldirac_gercek
         kaldirac_gercek.trim_log(bool(full))
-        from . import meme_gercek
-        meme_gercek.trim_log(bool(full))
     except Exception:
         pass
     print("Eski kayıtlar temizlendi" + (" (işlem geçmişi dahil)" if full else ""))
 
 
 def desk_commands(state, S):
-    """Uygulamadan masa komutları: {"desk_cmd": [{id, ts, desk: lev|meme, act: close|sell, sym}]} (her biri bir kez)."""
+    """Uygulamadan masa komutları: {"desk_cmd": [{id, ts, desk: lev|gspot, act: close|sell, sym}]} (her biri bir kez)."""
     done = state.setdefault("desk_done", [])
     for c in S.get("desk_cmd") or []:
         if not isinstance(c, dict):
@@ -287,15 +285,9 @@ def desk_commands(state, S):
             elif c.get("desk") == "lev":
                 from . import kaldirac
                 kaldirac.manual_close(state, str(c.get("sym")), S=S)
-            elif c.get("desk") == "meme":
-                from . import meme
-                meme.manual_sell(state, str(c.get("sym")))
             elif c.get("act") == "sync" and c.get("desk") == "gspotr":
                 from . import gspot
                 gspot.recon(state.get("gspotr"), force=True)
-            elif c.get("act") == "sync" and c.get("desk") == "memer":
-                from . import meme_gercek
-                meme_gercek.request_sync()
             elif c.get("act") == "sync" and c.get("desk") == "levr":
                 from . import kaldirac_gercek
                 kaldirac_gercek.request_sync()
@@ -710,7 +702,7 @@ def signature(state, S):
     """Kaydedilmesi gereken bir değişiklik olup olmadığını anlamak için özet."""
     parts = []
     tail = lambda d: ((d.get("log") or [None])[-1], (d.get("trades") or [{}])[-1].get("ts"))  # listeler sınıra ulaşınca uzunluk değişmez
-    for k in ("meme", "lev", "levr", "memer", "gspot", "gspotr"):
+    for k in ("lev", "levr", "gspot", "gspotr"):
         parts.append(tail(state.get(k) or {}))
     for s in list(state["portfolios"].values()) + [state.get("live") or {}]:
         parts.append(tail(s))
@@ -718,8 +710,6 @@ def signature(state, S):
                       s.get("halted"), s.get("armed"), s.get("paused"), round(s.get("cash", 0), 2)])
     parts.append(len((state.get("money") or {}).get("seen", [])))
     parts.append((state.get("okx") or {}).get("ok"))
-    mm = state.get("meme") or {}
-    parts.append([len(mm.get("trades", [])), sorted(mm.get("positions", {})), len(mm.get("log", []))])
     xf = state.get("xfer") or {}
     parts.append([(j.get("id"), j.get("stage"), j.get("msg")) for j in xf.get("jobs", [])] + [xf.get("free_tl"), xf.get("g_val")])
     lv = state.get("lev") or {}
@@ -728,9 +718,6 @@ def signature(state, S):
     lr = state.get("levr") or {}
     parts.append([len(lr.get("trades", [])), sorted(lr.get("pos", {})), len(lr.get("log", [])), lr.get("err"),
                   round(lr.get("eq", 0) * 2) / 2, lr.get("halt"), lr.get("dead"), lr.get("on")])
-    mr = state.get("memer") or {}
-    parts.append([len(mr.get("trades", [])), sorted(mr.get("pos", {})), len(mr.get("log", [])), mr.get("err"),
-                  round(mr.get("value", 0) * 2) / 2, mr.get("dead"), mr.get("on")])
     parts.append(json.dumps(S, sort_keys=True, default=str))
     return json.dumps(parts, default=str)
 
@@ -740,6 +727,9 @@ def main():
     S = settings.load()
     N = Notifier(S)
     state = load_state()
+    for k in ("meme", "memer"):  # memecoin masası sistemden kaldırıldı: eski kayıtları da kalmasın
+        state.pop(k, None)
+    (state.get("locked") or {}).pop("memer", None)
     try:
         return _turn(state, S, N, t_start)
     except Exception:
@@ -909,16 +899,6 @@ def _turn(state, S, N, t_start):
         print("Para hareketleri kontrol edilemedi:", e)
 
     daily_summary(L, live, N)
-    try:
-        from . import meme
-        meme.step(state, S)  # memecoin deneme masası (sanal para; ağ işi arka planda)
-    except Exception as e:
-        print("Memecoin masası hatası:", e)
-    try:
-        from . import meme, meme_gercek
-        meme_gercek.step(state, S, {**meme.DEFAULT, **(S.get("meme") or {})}, N)  # aynı kararlar MEME cüzdanında
-    except Exception as e:
-        print("Gerçek memecoin masası hatası:", e)
     try:
         from . import transfer
         if L["armed"]:

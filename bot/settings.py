@@ -26,14 +26,13 @@ DEFAULTS = {
     "gspot": {"on": True, "real": False, "bank": 100.0, "budget": 50.0, "max_loss": 15.0, "lot_pct": 10.0, "lot2_pct": 45.0,
               "lot3_pct": 77.0, "step_pct": 3.3, "step3_pct": 6.6, "lot_tp_pct": 3.5, "stop_pct": 50.0, "max_lots": 5,
               "max_coins": 5, "use_pct": 85.0, "sma_hours": 72, "trend_filter_pct": 5.0, "vol_filter": 4.0, "coins": 30, "instant": True},  # Global spot masası ($)
-    "ban": {"spot": [], "lev": [], "meme": [], "gspot": []},  # kara liste: masa başına yeni işlem açılmayacak coinler
+    "ban": {"spot": [], "lev": [], "gspot": []},  # kara liste: masa başına yeni işlem açılmayacak coinler
     "buy": [],  # uygulamadan elle alım istekleri [{id, ts, inst, amt (TL)}]
-    "desk_cmd": [],  # futures/memecoin elle kapat/sat istekleri  # küçük bakiye çevirme istekleri [{id, ts, ex: tr|g|m}]
+    "desk_cmd": [],  # futures elle kapat/aç, eşleştir istekleri
     "xfer_cancel": [],  # iptal edilecek aktarım istekleri (id listesi)
     "xfer_req": [],  # uygulamadan aktarım istekleri [{id, ts, dir, amt, src}]; her biri bir kez işlenir
     "convert": {"ts": 0},
     "target": {"on": False, "amount": 20000, "mode": "profit"},  # açıksa hedefe ulaşınca her şey satılır ve bot durur
-    "meme": {"on": True, "bank": 100.0, "size_pct": 10, "max_pos": 5, "min_liq": 20000, "max_fdv": 5000000, "min_age_min": 10, "max_age_h": 72, "tp_pct": 30, "tp_part": 100, "trail_from": 15, "trail_pct": 12, "sl_pct": 15, "max_hold_h": 4, "slip_pct": 1.0, "fee_pct": 0.5, "max_m5": 8, "min_ratio": 1.2, "min_buys": 5, "max_h1": 0, "wallet": "", "real": False, "max_loss": 10.0, "max_slip": 2.0, "real_reset": 0},  # memecoin deneme masası (sanal para)
     "lev": {"on": True, "bank": 100.0, "lev": 3, "risk_pct": 1.0, "max_pos": 3, "sl_atr": 2.0, "tp_atr": 4.0, "daily_loss_pct": 5, "fee_pct": 0.05, "slip_pct": 0.05, "coins": ["BTC", "ETH", "SOL", "XRP", "DOGE", "HYPE", "ZEC", "PEPE"], "brk_h": 20, "trend_h": 200, "trend_on": True, "fast": False, "real": False, "real_budget": 30.0, "real_lev": 2, "max_loss": 10.0, "real_reset": 0, "cross_ok": True},  # kaldıraç deneme masası (sanal para, en fazla 3x)
     # mode: "profit" = toplam kâr bu tutara ulaşınca; "total" = bottaki para + kasadaki yedek toplamı bu tutara ulaşınca   # zaman damgası yeniyse alım-satım hesabındaki boş TL'nin tamamı seçili pariteye çevrilir  # seçili coinleri elle sat: zaman damgası yeniyse listedekiler bir kez satılır
     "strategy": "grid",
@@ -167,13 +166,16 @@ def _warn(text):
 
 def apply(s):
     """Yüzdeleri 10.000 TL tabanına çevirip config'e yazar; motor bunları bakiyeye göre ölçekler."""
+    s.pop("meme", None)  # memecoin masası kaldırıldı: eski ayarları yok sayılır
+    if isinstance(s.get("ban"), dict):
+        s["ban"].pop("meme", None)
     base = config.START_CASH
     if s.get("quote") not in config.QUOTES:
         s["quote"] = "USDT"
     config.QUOTE = s["quote"]
     b = s.get("ban") if isinstance(s.get("ban"), dict) else {}
     config.BAN = {k: {config.ban_key(x) for x in (b.get(k) or []) if isinstance(x, str) and x.strip()}
-                  for k in ("spot", "lev", "meme", "gspot")}
+                  for k in ("spot", "lev", "gspot")}
     # Global spot (uzun) ile futures (kısa) aynı coinde ters pozisyon tutabilir mi (Ayarlar → Futures)
     config.CROSS_OK = bool((s.get("lev") or {}).get("cross_ok", True))
     from . import engine

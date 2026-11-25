@@ -1,10 +1,9 @@
 """Küçük bakiyeler: listeleme (dakikada bir, Kasalar ekranında) ve seçilenleri tek dokunuşla çevirme.
 
-Uygulamadan istek: ayarlar.json → "dust": [{id, ts, ex: tr|g|m, ccys: [...]}]
+Uygulamadan istek: ayarlar.json → "dust": [{id, ts, ex: tr|g, ccys: [...]}]
   tr: OKX TR'deki seçilen artıklar TRY'ye (olmazsa USDT'ye) çevrilir (OKX Convert: ücretsiz, en az tutar ~0)
   g:  OKX Global'deki seçilen artıklar USDT'ye çevrilir
-  m:  MEME cüzdanında seçilen token artıkları SOL'a satılır (Jupiter)
-Botun açık coinleri, nakit (TRY/USDT/USDC/EUR) ve SOL listelenmez, çevrilmez. Tek istekte en fazla MAX coin.
+Botun açık coinleri ve nakit (TRY/USDT/USDC/EUR) listelenmez, çevrilmez. Tek istekte en fazla MAX coin.
 """
 import threading
 import time
@@ -45,7 +44,7 @@ def _assets(ex):
 def scan(C):
     """Kasalar ekranı için küçük bakiye listesi."""
     res = {}
-    for k, skip in (("tr", CASH | _HELD["tr"]), ("g", CASH | {"SOL"} | _HELD["g"])):
+    for k, skip in (("tr", CASH | _HELD["tr"]), ("g", CASH | _HELD["g"])):
         if not C[k].ok:
             continue
         try:
@@ -53,23 +52,6 @@ def scan(C):
                              if c not in skip and 0 < u < SMALL), key=lambda x: -x["usd"])[:30]
         except Exception as e:
             print("Küçük bakiye listesi", k, e)
-    try:
-        from . import meme_gercek as G
-        R = G._W.get("R") or {}
-        if R.get("addr"):
-            from . import meme
-            with meme._LOCK:
-                pairs = dict(meme._SNAP.get("pairs") or {})
-            lst = []
-            for m, h in G._holdings(R["addr"]).items():
-                if m in (R.get("pos") or {}):
-                    continue
-                p = pairs.get(m) or {}
-                usd = h["ui"] * float(p.get("priceUsd") or 0)
-                lst.append({"ccy": m, "sym": (p.get("baseToken") or {}).get("symbol") or m[:4] + "…", "amt": h["ui"], "usd": round(usd, 2)})
-            res["m"] = sorted(lst, key=lambda x: -x["usd"])[:30]
-    except Exception as e:
-        print("MEME artık listesi:", e)
     return res
 
 
@@ -114,14 +96,14 @@ def _run(req, X):
     note = lambda _x, text: _OUT.append(["note", text])
     k = req.get("ex")
     ccys = [str(c) for c in (req.get("ccys") or [])][:MAX]
-    name = {"tr": "OKX TR", "g": "OKX Global", "m": "MEME"}.get(k, k)
+    name = {"tr": "OKX TR", "g": "OKX Global"}.get(k, k)
     try:
         if k in ("tr", "g"):
             ex = transfer._clients()[k]
             want = str(req.get("to") or ("TRY" if k == "tr" else "USDT"))
             ok, bad, todo = [], [], []
             for c in ccys:
-                if c in CASH or (k == "tr" and c in _HELD["tr"]) or (k == "g" and (c == "SOL" or c in _HELD["g"])):
+                if c in CASH or (k == "tr" and c in _HELD["tr"]) or (k == "g" and c in _HELD["g"]):
                     bad.append(f"{c} (korunuyor)")
                 else:
                     todo.append(c)
@@ -178,12 +160,6 @@ def _run(req, X):
                 msg += f" · {len(bad)} coin çevrilemedi (" + ", ".join(f"{len(v)}: {short(k_)}" for k_, v in list(why.items())[:2]) + ")"
             note(X, f"{name}: " + msg)
             _OUT.append(["push", f"{name} · küçük bakiyeler", msg])
-        elif k == "m":
-            from . import meme_gercek
-            if not meme_gercek._W.get("key"):
-                raise RuntimeError("MEME cüzdanı bağlı değil")
-            meme_gercek._Q.put(["dust", ccys])
-            note(X, f"MEME: {len(ccys)} token artığı SOL'a satılıyor")
         _OUT.append(["refresh"])  # liste hemen yenilensin
     except Exception as e:
         note(X, f"{name} küçük bakiye çevirme: {str(e)[:120]}")

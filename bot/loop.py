@@ -196,18 +196,16 @@ def weekly_backtest():
 def flush_desks():
     """Yeniden başlamadan / oturum bitmeden önce: aktarım işleri ve gerçek masaların son hâli kayda yazılır."""
     try:
-        from . import dust, kaldirac_gercek, meme_gercek, transfer
+        from . import dust, kaldirac_gercek, transfer
         transfer.quiesce()
         dust.quiesce()
-        a, b = kaldirac_gercek.quiesce(), meme_gercek.quiesce()
+        a = kaldirac_gercek.quiesce()
         st = run.load_state()
         if st.get("xfer") is not None:
             q = transfer._NoteQ()
             transfer._merge_jobs(st["xfer"], q)
         if a is not None:
             st["levr"] = a
-        if b is not None:
-            st["memer"] = b
         run.save_state(st)
         if st.get("xfer") is not None and q.items:
             n = notifier()
@@ -225,9 +223,8 @@ def flush_desks():
 
 def resume_desks():
     try:
-        from . import kaldirac_gercek, meme_gercek
+        from . import kaldirac_gercek
         kaldirac_gercek.resume()
-        meme_gercek.resume()
     except Exception as e:
         print("Masalar devam ettirilemedi:", e)
 
@@ -260,7 +257,7 @@ def main():
                 ok = sh("git", "checkout", sha, "--", "bot").returncode == 0
                 sh("git", "reset", "-q", "bot")
                 # yeni kod açılabiliyor mu? açılamıyorsa eski kodla devam (bozuk gönderim botu kilitlemesin)
-                if ok and sh(sys.executable, "-c", "import bot.loop, bot.run, bot.transfer, bot.dust, bot.money, bot.meme, bot.meme_gercek, bot.meme_aktar, bot.kaldirac, bot.kaldirac_gercek, bot.gspot", timeout=120).returncode == 0:
+                if ok and sh(sys.executable, "-c", "import bot.loop, bot.run, bot.transfer, bot.dust, bot.money, bot.kaldirac, bot.kaldirac_gercek, bot.gspot", timeout=120).returncode == 0:
                     try:
                         flush_desks()
                         push_data(wait=True)

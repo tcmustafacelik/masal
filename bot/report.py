@@ -10,10 +10,10 @@ OUT = os.path.join(os.path.dirname(__file__), "..", "docs", "data", "summary.jso
 
 # Herkese açık özette gösterilmeyen ayarlar (para tutarları, cüzdan, kara liste, istekler): uygulama kilidi açınca
 # şifreli kutudaki tam ayarları kullanır
-BOT_VER = "1.101.4"
+BOT_VER = "1.102.0"
 _PRIVATE = {"budget", "kasa", "real_total", "target", "xfer", "ban", "notify", "sell", "buy", "convert", "liquidate",
             "xfer_req", "xfer_cancel", "dust", "desk_cmd", "test_req", "clear", "clear_all", "topup"}
-_PRIVATE_SUB = {"lev": ("real_budget", "max_loss", "real", "real_reset", "cross_ok"), "meme": ("wallet", "budget", "max_loss", "real"),
+_PRIVATE_SUB = {"lev": ("real_budget", "max_loss", "real", "real_reset", "cross_ok"),
                 "gspot": ("budget", "max_loss", "real")}
 
 
@@ -72,22 +72,6 @@ def _levr(state):
     try:
         from . import kaldirac_gercek
         return kaldirac_gercek.public(state)
-    except Exception:
-        return None
-
-
-def _memer(state):
-    try:
-        from . import meme_gercek
-        return meme_gercek.public(state)
-    except Exception:
-        return None
-
-
-def _meme(state):
-    try:
-        from . import meme
-        return meme.public(state)
     except Exception:
         return None
 
@@ -162,16 +146,16 @@ def build(state, S=None):
         "updated": state.get("updated"), "created": state.get("created"),
         "mode": "Sanal", "start_cash": config.START_CASH,
         "risk": config.RISK, "fee": config.FEE_RATE, "slippage": config.SLIPPAGE,
-        "universe": state.get("universe", []), "strategies": strategies, "settings": S, "okx": state.get("okx"), "perf": state.get("perf"), "bot_ver": BOT_VER, "meme": _meme(state), "lev": _lev(state), "xfer": _xfer(state, S), "levr": _levr(state), "memer": _memer(state),
+        "universe": state.get("universe", []), "strategies": strategies, "settings": S, "okx": state.get("okx"), "perf": state.get("perf"), "bot_ver": BOT_VER, "lev": _lev(state), "xfer": _xfer(state, S), "levr": _levr(state),
         "gspot": _gs(state, "gspot"), "gspotr": _gs(state, "gspotr"),
     }
     if vault.password() and "live" in strategies:
         # Gerçek hesap bilgileri herkese açık sayfada şifreli durur; uygulama OKX şifresiyle çözer
         lv = strategies.pop("live")
-        okx_, xfer_, levr_, memer_ = state.get("okx"), out.pop("xfer", None), out.pop("levr", None), out.pop("memer", None)
+        okx_, xfer_, levr_ = state.get("okx"), out.pop("xfer", None), out.pop("levr", None)
         gsr_ = out.pop("gspotr", None)
         # Sıkıştırılıp şifrelenen tam kutu (uygulama 1.82+ bunu okur): şifreli veri sıkışmadığı için önce sıkıştırılır
-        out["live_z"] = vault.seal({"strategy": lv, "okx": okx_, "xfer": xfer_, "levr": levr_, "memer": memer_, "gspotr": gsr_,
+        out["live_z"] = vault.seal({"strategy": lv, "okx": okx_, "xfer": xfer_, "levr": levr_, "gspotr": gsr_,
                                     "settings": S}, z=True)
         out["settings"] = public_settings(S)  # tam ayarlar şifreli kutuda; açıkta yalnız deneme masalarının ihtiyacı
         # Eski biçimdeki yedek kutu (live_enc) artık yazılmıyor: uygulama 1.82'den beri sıkıştırılmış kutuyu okuyor; özet ~%30 küçüldü

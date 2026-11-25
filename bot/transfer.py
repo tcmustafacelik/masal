@@ -28,8 +28,7 @@ G_DEP = "0x74877903737257289dc07e7baf1f4b078c2a82a3"  # OKX Global USDT yatırma
 TR_DEP = "0x1e194face9b26c78f75d854d741cf6547730b705"  # OKX TR USDT yatırma adresi (Arbitrum One)
 ROUTES = {  # yön: (kaynak, hedef adres, hedef borsa ya da None)
     "tr2g": ("tr", G_DEP, "g"), "g2tr": ("g", TR_DEP, "tr"), "tr2k": ("tr", KASA, None), "g2k": ("g", KASA, None)}
-NAMES = {"tr": "OKX TR", "g": "OKX Global", None: "KASA", "m": "MEME"}
-MEME_DIRS = {"g2m": ("g", "m"), "m2g": ("m", "g")}  # SOL ile; ayrıntı meme_aktar.py
+NAMES = {"tr": "OKX TR", "g": "OKX Global", None: "KASA"}
 FUNDING, TRADING = "6", "18"
 HARD_DAILY_MAX = 10000  # USDT: güvenlik tavanı — ayardan daha yükseği girilse de günlük aktarım bunu aşamaz
 # Borsanın geçici "meşgul" cevapları: istek işlenmeden reddedilir, yeniden denemek güvenlidir
@@ -263,7 +262,7 @@ def _already(ex, job, X):
     if not rows:
         return False
     job.update(stage="sent", wdId=rows[0].get("wdId"), sent_ts=int(rows[0].get("ts") or time.time() * 1000))
-    if not job.get("link"):  # zincirin 2. adımı (MEME → Global → KASA/TR) aynı para: günlük sınıra bir kez sayılır
+    if not job.get("link"):  # zincirin 2. adımı aynı para: günlük sınıra bir kez sayılır
         X["day_sum"] = round(X.get("day_sum", 0) + job["amt"], 2)
     return True
 
@@ -472,32 +471,6 @@ def _sweep(C, X, cfg, N, state):
     X["swept"] = round(float(X.get("swept", 0)) + profit, 4)  # kârın tamamı sayılır, yüzdesi gönderilir (aynı kâr iki kez süpürülmez)
 
 
-def _sweep_meme(X, cfg, state):
-    """Memecoin kârı: MEME cüzdanı başlangıç tutarının üstüne çıktıysa kârın yüzdesi Global üzerinden KASA'ya gider.
-    Açık token varken yapılmaz (kâr henüz kesin değil)."""
-    if not cfg.get("sweep_on") or float(cfg.get("sweep_pct") or 0) <= 0:
-        return
-    R = state.get("memer") or {}
-    if not R.get("addr") or not R.get("start") or R.get("pos"):
-        return
-    if any(j["dir"] in MEME_DIRS and j["stage"] not in ("done", "failed") for j in X.get("jobs", [])):
-        return  # yoldaki para kâr sanılmasın
-    now = time.time()
-    if now - X.get("msweep_at", 0) < cfg["sweep_days"] * 86400:
-        return
-    X["msweep_at"] = now
-    if R.get("reset", 0) != X.get("meme_reset", 0):
-        X["meme_reset"], X["mswept"] = R.get("reset", 0), 0.0
-    profit = float(R.get("value") or 0) - float(R["start"]) - float(X.get("mswept", 0))
-    if profit < cfg["sweep_min"]:
-        _note(X, f"Memecoin kâr süpürme: yeni kâr {max(0, profit):.2f} $; gönderilecek kâr yok")
-        return
-    amt = math.floor(profit * cfg["sweep_pct"] / 100 * 100) / 100
-    X["jobs"].append({"id": f"msweep{int(now)}", "dir": "m2g", "amt": amt, "src": "kar", "then": "k", "ts": int(now * 1000),
-                      "stage": "new", "msg": "memecoin kâr süpürme (MEME → Global → KASA)"})
-    X["mswept"] = round(float(X.get("mswept", 0)) + profit, 4)
-
-
 _JOBS = {}
 
 
@@ -528,7 +501,7 @@ def quiesce(timeout=90):
 
 def _track(X):
     """Her aktarımın aşama geçmişi: aşama ya da durum yazısı her değiştiğinde zamanıyla eklenir (uygulamada adım adım
-    görünür). Bütün yönler (TR, Global, KASA, MEME) için aynı yerden tutulur."""
+    görünür). Bütün yönler (TR, Global, KASA) için aynı yerden tutulur."""
     now = int(time.time() * 1000)
     for j in X.get("jobs", []):
         st = j.setdefault("steps", [])
@@ -597,26 +570,8 @@ def _run_jobs(X, C, cfg, state, N, now):
     for job in X["jobs"]:
         if job["stage"] in ("done", "failed"):
             continue
-        if job["dir"] in MEME_DIRS:
-            try:
-                from . import meme_aktar
-                if job["stage"] == "new" and X.get("day_sum", 0) + job["amt"] > float(cfg["daily_max"]):
-                    job["msg"] = f"günlük sınır ({cfg['daily_max']} $) dolu; yarın gönderilecek"
-                    continue
-                if job["stage"] == "new":
-                    # "hepsini gönder"de tutar cüzdandaki SOL'a göre sonradan belirlenir: günlük sınırdan kalan pay
-                    # işe yazılır, gönderim onu aşamaz
-                    job["cap"] = round(float(cfg["daily_max"]) - float(X.get("day_sum", 0)), 2)
-                meme_aktar.run(job, X, C, N, _note)
-            except Exception as e:
-                if ((job["stage"] == "sent" and "reddetti" not in str(e) and "ulaşmadı" not in str(e))
-                        or ((job.get("ordId") or job.get("clOrd") or job.get("mv")) and not isinstance(e, RuntimeError))):
-                    # ağ hatası: SOL alındıysa, alım emri ya da hesap içi aktarım gönderilmiş olabilirse iş bırakılmaz, tekrar denenir
-                    job["msg"] = f"kontrol edilemedi, tekrar denenecek: {str(e)[:120]}"
-                else:
-                    job.update(stage="failed", msg=str(e)[:300])
-                    _note(X, f"Aktarım başarısız: {job['msg']}")
-                    N.add("money", "Aktarım başarısız", job["msg"][:200], 4, ["warning"])
+        if job["dir"] not in ROUTES:  # eski (kaldırılmış memecoin) iş
+            job.update(stage="failed", msg="memecoin masası kaldırıldı")
             continue
         src, addr, dest = ROUTES[job["dir"]]
         ex = C[src]
@@ -693,7 +648,7 @@ def step(state, S, N):
         if not isinstance(r, dict):
             continue
         rid = str(r.get("id") or "")
-        if not rid or rid in X["seen"] or (r.get("dir") not in ROUTES and r.get("dir") not in MEME_DIRS):
+        if not rid or rid in X["seen"] or r.get("dir") not in ROUTES:
             continue
         X["seen"] = (X["seen"] + [rid])[-100:]
         try:
@@ -706,14 +661,8 @@ def step(state, S, N):
             continue
         job = {"id": rid, "dir": r["dir"], "amt": amt, "src": r.get("src") or "bos", "ts": int(float(r.get("ts") or now * 1000)),
                "stage": "new", "msg": "sırada"}
-        if r["dir"] == "m2g" and r.get("all"):
-            job["all"] = True  # MEME'deki bütün SOL (tokenler satıldıktan sonra)
-        if r["dir"] == "m2g" and r.get("then") in ("k", "tr"):
-            job["then"] = r["then"]  # Global'e gelince satılıp KASA'ya / OKX TR'ye devam eder
-        if r["dir"] == "g2m" and r.get("wait") and r.get("via") in ("k", "tr"):
-            job.update(wait=True, via=r["via"], msg=f"{ {'k': 'KASA', 'tr': 'OKX TR'}[r['via']]}'dan Global'e gelmesi bekleniyor")  # elle gönderilen para gelince MEME'ye geçer
         X["jobs"].append(job)
-        a, b = MEME_DIRS.get(r["dir"]) or (ROUTES[r["dir"]][0], ROUTES[r["dir"]][2])
+        a, b = ROUTES[r["dir"]][0], ROUTES[r["dir"]][2]
         _note(X, f"İstek: {NAMES[a]} → {NAMES[b]} {amt:.2f} USDT")
     # iptal istekleri: henüz gönderilmemiş işler durdurulur, fon hesabına ayrılan para alım-satım hesabına geri döner
     _th = _JOBS.get("t")
@@ -724,9 +673,8 @@ def step(state, S, N):
         job = next((j for j in X["jobs"] if j["id"] == str(rid) and j["stage"] == "new"), None)
         if not job:
             continue
-        if job["dir"] in MEME_DIRS:
+        if job["dir"] not in ROUTES:
             job.update(stage="failed", msg="iptal edildi")
-            _note(X, f"İptal: {job['dir']} {job['amt']} USDT")
             continue
         src = ROUTES[job["dir"]][0]
         try:
@@ -741,7 +689,6 @@ def step(state, S, N):
         N.add("money", "Aktarım iptal edildi", job["msg"], 3, ["x"])
     try:
         _sweep(C, X, cfg, N, state)
-        _sweep_meme(X, cfg, state)
     except Exception as e:
         print("Kâr süpürme hatası:", e)
     # işler (en fazla 15 sn'de bir; arka planda: borsa istekleri ana turu bekletmez)
@@ -832,7 +779,7 @@ def public(state, S=None):
         return None
     cfg = {**DEFAULT, **((S or {}).get("xfer") or {})}
     cfg["daily_max"] = min(float(cfg.get("daily_max") or HARD_DAILY_MAX), HARD_DAILY_MAX)
-    return {"jobs": [{k: j.get(k) for k in ("id", "dir", "amt", "src", "ts", "stage", "msg", "got", "tl", "then", "wait", "via", "steps", "txId", "chain", "fee", "sol")}
+    return {"jobs": [{k: j.get(k) for k in ("id", "dir", "amt", "src", "ts", "stage", "msg", "got", "tl", "steps", "txId", "chain", "fee")}
                      for j in X["jobs"]][::-1][:10],
             "log": X.get("log", [])[:20], "free_tl": X.get("free_tl"), "g_val": X.get("g_val"), "g_fund": X.get("g_fund"), "kasa": X.get("kasa"),
             "tr_total": X.get("tr_total"), "usdtry": X.get("usdtry"), "g_uid": X.get("g_uid"), "tr_uid": X.get("tr_uid"), "g_base": X.get("g_base", 0),

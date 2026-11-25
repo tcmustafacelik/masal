@@ -58,14 +58,12 @@ TZ_OFFSET_HOURS = 3  # Türkiye saati
 
 # Kara liste (uygulamadan): masa başına, bu coinlerde YENİ işlem açılmaz. Eldeki pozisyon kendi kurallarıyla
 # (kâr al, zarar durdur) satılmaya devam eder; yeni kademe / yeni pozisyon / elle alım yapılmaz.
-BAN = {"spot": set(), "lev": set(), "meme": set(), "gspot": set()}
+BAN = {"spot": set(), "lev": set(), "gspot": set()}
 
 
 def ban_key(x):
-    """'irys', 'IRYS-USDT', ' Irys ' -> 'IRYS'; Solana token adresi (uzun) olduğu gibi kalır."""
+    """'irys', 'IRYS-USDT', ' Irys ' -> 'IRYS'."""
     x = str(x or "").strip()
-    if len(x) >= 30:
-        return x
     x = x.replace("İ", "I").replace("ı", "I").replace("i", "I")  # Türkçe klavye: "İRYS" / "ırys" → "IRYS"
     return x.upper().split("-")[0].split("/")[0]
 
