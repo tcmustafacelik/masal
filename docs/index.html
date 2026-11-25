@@ -814,12 +814,13 @@ em.lk.in{display:inline-block;width:auto;padding:2px 5px;margin:0 0 0 6px;vertic
 .fv2 .fdot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px var(--green-bg)}
 .fv2.nw .fdot{background:var(--amber);box-shadow:0 0 0 3px var(--amber-bg);animation:fvp 1.4s ease-in-out infinite}
 @keyframes fvp{50%{transform:scale(1.35)}}
-.sall{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 8px;width:100%;margin-top:14px;padding:12px;border:0;border-radius:12px;font:inherit;font-size:14px;font-weight:700;color:#fff;cursor:pointer;-webkit-tap-highlight-color:transparent;background:linear-gradient(100deg,#2F6FDE,#11807E);box-shadow:0 6px 16px -8px #2F6FDE}
-.sall svg{width:17px;height:17px}.sall small{flex-basis:100%;text-align:center;font-size:11px;font-weight:500;opacity:.85}
-.sall.sent{background:linear-gradient(100deg,#D9701F,#B7791F);box-shadow:0 6px 16px -8px #D9701F}
-.sall.ok{background:linear-gradient(100deg,#178A5B,#11807E);box-shadow:0 6px 16px -8px #178A5B}
-.sall .spn{width:14px;height:14px;border:2px solid #fff;border-right-color:transparent;border-radius:50%;display:inline-block;animation:xspin .8s linear infinite}
+.sall{display:inline-flex;align-items:center;justify-content:center;gap:6px;margin:12px 0 0 auto;padding:7px 12px;border:0;border-radius:9px;font:inherit;font-size:12.5px;font-weight:650;color:#fff;cursor:pointer;-webkit-tap-highlight-color:transparent;background:linear-gradient(100deg,#2F6FDE,#11807E);box-shadow:none}
+.sall svg{width:14px;height:14px}
+.sall.sent{background:linear-gradient(100deg,#D9701F,#B7791F);box-shadow:none}
+.sall.ok{background:linear-gradient(100deg,#178A5B,#11807E);box-shadow:none}
+.sall .spn{width:12px;height:12px;border:2px solid #fff;border-right-color:transparent;border-radius:50%;display:inline-block;animation:xspin .8s linear infinite}
 .sall:active{transform:scale(.98)}
+.ovw .ob{display:flex;flex-direction:column}.ovw .sall{align-self:flex-end}
 </style>
 </head>
 <body>
@@ -1022,6 +1023,6 @@ em.lk.in{display:inline-block;width:auto;padding:2px 5px;margin:0 0 0 6px;vertic
 <div class="toast" id="toast" hidden></div>
 <div class="qsh" id="qsh" hidden><div class="qb"><div class="gr"></div><h3><span><svg class="i" id="qIco"><use href="#i-info"/></svg></span><b id="qTitle"></b></h3><div class="qt" id="qText"></div><button class="btn primary" id="qOk">Anladım</button></div></div>
 
-<script src="app.js?v=1.98.0"></script>
+<script src="app.js?v=1.98.1"></script>
 </body>
 </html>

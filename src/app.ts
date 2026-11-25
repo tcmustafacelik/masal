@@ -1,4 +1,4 @@
-const APP_VERSION='1.98.0';
+const APP_VERSION='1.98.1';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (kehribar)
@@ -961,7 +961,7 @@ let SYNC_AT=0,SYNCALL_AT=0;
  *  borsayla eşitlenir. Tek kayıtla gider (istekler çakışmaz). Renk: mavi hazır · turuncu gönderildi · yeşil tamam */
 function syncAllH(): string{
   const st=SYNCALL_AT&&Date.now()-SYNCALL_AT<90000?(['gspotr','levr'].every(d=>!(S as any)?.[d]||syncDone(d)>SYNCALL_AT)&&S.updated>SYNCALL_AT+5000?'ok':'sent'):'';
-  return `<button type="button" id="syncAll" class="sall${st?' '+st:''}"${st==='sent'?' disabled':''}>${st==='sent'?'<i class="spn"></i>Eşleştirme gönderildi · bot karşılaştırıyor':st==='ok'?ic('i-check')+'Hepsi borsayla eşleştirildi':ic('i-refresh')+'Tümünü borsayla eşleştir'}<small>${st?'':'Spot · Global · Futures'+((S as any)?.memer?' · Memecoin':'')}</small></button>`}
+  return `<button type="button" id="syncAll" class="sall${st?' '+st:''}"${st==='sent'?' disabled':''}>${st==='sent'?'<i class="spn"></i>Gönderildi':st==='ok'?ic('i-check')+'Eşleştirildi':ic('i-refresh')+'Tümünü eşleştir'}</button>`}
 async function syncAll(){
   if(!token){toast('Önce Ayarlar\'dan GitHub bağlantısını kur');return}
   const x: any=S?.strategies?.live,o: any=S?.okx;let b: number|null=null,k: number|null=null;
