@@ -297,7 +297,8 @@ def main():
                         _HB["last"] = int(time.time() * 1000)
                     else:
                         _HB["fail"] += 1
-                    run.PERF["hb"] = {"last": _HB["last"], "fail": _HB["fail"], "ok": _HB["ok"]}
+                    from .notify import HB_ERR
+                    run.PERF["hb"] = {"last": _HB["last"], "fail": _HB["fail"], "ok": _HB["ok"], "err": "" if _HB["ok"] else HB_ERR[0]}
                     _HB["busy"] = False
                 _HB["busy"] = True
                 threading.Thread(target=_hb, daemon=True).start()  # ntfy yavaşsa tur beklemesin

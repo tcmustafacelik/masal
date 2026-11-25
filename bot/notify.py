@@ -136,6 +136,7 @@ def drain(timeout=15):
 
 
 HB_ID = "masal-nabiz"
+HB_ERR = [""]  # son nabız hatası (özette görünür)
 
 
 def heartbeat(n, minutes=10):
@@ -149,6 +150,7 @@ def heartbeat(n, minutes=10):
     except Exception as e:
         # silinemediyse bekleyen eski "Bot durdu" mesajı süresi dolunca düşer (yanlış alarm): hemen yeniden denenir
         print("Nabız silinemedi:", e)
+        HB_ERR[0] = f"sil: {e}"[:120]
         return False
     if not (n.on and n.cats.get("alerts", True)):
         return True
@@ -165,5 +167,6 @@ def heartbeat(n, minutes=10):
                                timeout=10).read()
     except Exception as e:
         print("Nabız mesajı kurulamadı:", e)
+        HB_ERR[0] = f"kur: {e}"[:120]
         return False
     return True
