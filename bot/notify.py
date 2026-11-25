@@ -142,14 +142,16 @@ def heartbeat(n, minutes=10):
     """Ölü adam düğmesi: ntfy'da ileri tarihli bir "Bot durdu" mesajı bekletilir.
     Bot çalıştıkça bu mesaj silinip yeniden kurulur; bot durursa süre dolunca telefona düşer."""
     if not n.topic:
-        return
+        return True
     try:
         urllib.request.urlopen(urllib.request.Request(f"https://ntfy.sh/{n.topic}/{HB_ID}", method="DELETE",
                                                       headers={"User-Agent": "masal/1.0"}), timeout=10).read()
-    except Exception:
-        pass
+    except Exception as e:
+        # silinemediyse bekleyen eski "Bot durdu" mesajı süresi dolunca düşer (yanlış alarm): hemen yeniden denenir
+        print("Nabız silinemedi:", e)
+        return False
     if not (n.on and n.cats.get("alerts", True)):
-        return
+        return True
     m = {"topic": n.topic, "title": "Bot durdu", "priority": 5, "tags": ["rotating_light"],
          "message": f"Masal botu {minutes} dakikadır çalışmıyor. Uygulamayı açıp kontrol et. "
                     "OKX'teki kâr al / zarar durdur emirleri çalışmaya devam ediyor.",
@@ -163,3 +165,5 @@ def heartbeat(n, minutes=10):
                                timeout=10).read()
     except Exception as e:
         print("Nabız mesajı kurulamadı:", e)
+        return False
+    return True

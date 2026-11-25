@@ -232,6 +232,9 @@ def resume_desks():
         print("Masalar devam ettirilemedi:", e)
 
 
+_HB = {"ok": True, "busy": False, "last": 0, "fail": 0}  # nabız durumu (uygulamada görünür)
+
+
 def main():
     from .notify import heartbeat
     start, last_sig, last_push, n, errors, last_hb = float(os.environ.get("MASAL_T0") or time.time()), None, 0, 0, 0, 0
@@ -279,14 +282,24 @@ def main():
                     sh("git", "reset", "-q", "bot")
                     print("Yeni bot kodu açılamadı; eski kodla devam ediliyor.")
                     start_rev = rev
-            if time.time() - last_hb > 3 * 60:  # nabız 3 dk'da bir; bot 10 dk susarsa telefona uyarı düşer
+            # nabız 3 dk'da bir; bot 10 dk susarsa telefona uyarı düşer. ntfy yanıt vermezse (ortak GitHub IP'sinde
+            # sınır vb.) 30 sn sonra yeniden denenir; yoksa çalışan bot için yanlış "Bot durdu" uyarısı düşerdi
+            if time.time() - last_hb > (3 * 60 if _HB["ok"] else 30) and not _HB["busy"]:
                 hb_n = notifier()  # ayarlar ana turda okunur (arka planda okunursa config tur ortasında değişebilirdi)
 
                 def _hb(n_=hb_n):
                     try:
-                        heartbeat(n_)
+                        _HB["ok"] = bool(heartbeat(n_))
                     except Exception as e:
+                        _HB["ok"] = False
                         print("Nabız kurulamadı:", e)
+                    if _HB["ok"]:
+                        _HB["last"] = int(time.time() * 1000)
+                    else:
+                        _HB["fail"] += 1
+                    run.PERF["hb"] = {"last": _HB["last"], "fail": _HB["fail"], "ok": _HB["ok"]}
+                    _HB["busy"] = False
+                _HB["busy"] = True
                 threading.Thread(target=_hb, daemon=True).start()  # ntfy yavaşsa tur beklemesin
                 last_hb = time.time()
             custom_backtest()

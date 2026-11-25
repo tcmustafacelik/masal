@@ -1,10 +1,17 @@
 {
-  "version": "1.101.1",
+  "version": "1.101.2",
   "date": "2026-11-25",
   "notes": [
-    "Kapat/Sat düğmesinde Gönderildi yazısı sığar"
+    "Nabız ntfy'a ulaşamazsa 30 sn'de yeniden dener (yanlış Bot durdu uyarısı)"
   ],
   "history": [
+    {
+      "version": "1.101.2",
+      "date": "2026-11-25",
+      "notes": [
+        "Nabız ntfy'a ulaşamazsa 30 sn'de yeniden dener (yanlış Bot durdu uyarısı)"
+      ]
+    },
     {
       "version": "1.101.1",
       "date": "2026-11-25",
@@ -101,13 +108,6 @@
       "date": "2026-11-25",
       "notes": [
         "Kasalar → Global içinde · Futures'a: boştaki paradan ya da Global spot'tan futures'a tek dokunuşla para aktar"
-      ]
-    },
-    {
-      "version": "1.99.0",
-      "date": "2026-11-25",
-      "notes": [
-        "Futures: teminat pozisyon başına kasanın 1/en fazla pozisyon'u (daha çok pozisyon sığar); ayarlarda düz yazılan alanlar şifreli ayarların içine alan alan işlenir"
       ]
     }
   ]

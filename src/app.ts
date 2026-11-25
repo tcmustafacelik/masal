@@ -1,4 +1,4 @@
-const APP_VERSION='1.101.1';
+const APP_VERSION='1.101.2';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (kehribar)
@@ -823,7 +823,7 @@ function openNotes() {
   const bar = `<div class="nbar"><div class="seg" id="nRange">${[1, 6, 12, 24].map(h => `<button type="button" data-h="${h}" class="${h === nHours ? 'on' : ''}">${h} sa</button>`).join('')}</div>
     <button type="button" class="nclr" id="nClear"${list.length ? '' : ' disabled'}>${ic('i-trash')}Temizle</button></div>`;
   document.getElementById('qText').innerHTML = bar + (list.length ? `<div class="nlist">${list.map(m => {const [i, c] = nKind(m.tags), d = new Date(m.time * 1000);
-    return `<div class="nrow${m.time > nSeen() ? ' new' : ''}"><span class="ni ${c}">${ic(i)}</span><div><b>${String(m.title).replace(/</g, '&lt;')}</b><p>${m.message.replace(/</g, '&lt;')}</p></div><time>${p(d.getHours())}:${p(d.getMinutes())}</time></div>`}).join('')}</div>`
+    return `<div class="nrow${m.time > nSeen() ? ' new' : ''}"><span class="ni ${c}">${ic(i)}</span><div><b>${String(m.title).replace(/</g, '&lt;')}</b><p>${m.message.replace(/</g, '&lt;')}</p>${/^Bot (durdu|stopped)/.test(String(m.title)) && S?.updated && Date.now() - S.updated < 120000 ? `<p class="nok">${ic('i-check')}Bot şu an çalışıyor (son tur ${Math.max(1, Math.round((Date.now() - S.updated) / 1000))} sn önce). Bildirim servisi nabzı alamadığı için bu uyarı yanlış düşmüş olabilir.</p>` : ''}</div><time>${p(d.getHours())}:${p(d.getMinutes())}</time></div>`}).join('')}</div>`
     : `<div class="empty">${ic('i-bell')}<div>Son ${nHours} saatte bildirim yok</div></div>`);
   q.hidden = false;
   document.querySelectorAll<HTMLElement>('#nRange button').forEach(b => b.onclick = () => {nHours = +b.dataset.h; localStore('masal_nh', String(nHours)); openNotes()});
