@@ -33,11 +33,12 @@ DEFAULT = {
     "brk_h": 20,          # kırılım kanalı (saat): fiyat son brk_h saatin zirvesini/dibini kırınca sinyal. Küçüldükçe daha sık işlem
     "trend_h": 200,       # eğilim süzgeci: bu kadar saatlik ortalamanın yönünde işlem (en fazla 280)
     "trend_on": True,     # False: eğilim süzgeci kapalı, yönü yalnız kırılım belirler (daha sık ve daha riskli)
+    "fast": False,        # al-kaç: 15 dk mumlarla karar (4 kat daha sık bakış), iz süren stop 1 ATR kârda başlar
 }
 EVERY = 5        # fiyat kontrolü (sn)
 CANDLE_EVERY = 300  # mum yenileme (sn); karar kapanmış saatlik mumla verilir
 
-_SNAP = {"ts": 0, "px": {}, "c": {}, "err": ""}
+_SNAP = {"ts": 0, "px": {}, "c": {}, "err": "", "bar": ""}
 _LOCK = threading.Lock()
 _TH = {"t": None, "last": 0.0, "clast": 0.0}
 
@@ -51,7 +52,7 @@ def _get(path):
     return d["data"]
 
 
-def _fetch(coins, candles):
+def _fetch(coins, candles, bar="1H"):
     try:
         px = {}
         for t in _get("/api/v5/market/tickers?instType=SWAP"):
@@ -66,7 +67,7 @@ def _fetch(coins, candles):
 
             def one(c):
                 try:
-                    rows = _get(f"/api/v5/market/candles?instId={c}-USDT-SWAP&bar=1H&limit=300")
+                    rows = _get(f"/api/v5/market/candles?instId={c}-USDT-SWAP&bar={bar}&limit=300")
                     rows = [r for r in rows if r[8] == "1"]  # yalnız kapanmış mumlar
                     out[c] = [(int(r[0]), float(r[2]), float(r[3]), float(r[4])) for r in reversed(rows)]
                 except Exception as e:
@@ -76,7 +77,9 @@ def _fetch(coins, candles):
         with _LOCK:
             _SNAP["err"] = errs[0] if errs else ""
             if out:
-                _SNAP["c"] = {**_SNAP.get("c", {}), **out}  # isteği başarısız olan coin eski mumlarıyla kalır
+                # isteği başarısız olan coin eski mumlarıyla kalır; mum süresi değiştiyse eskiler atılır
+                _SNAP["c"] = {**(_SNAP.get("c", {}) if _SNAP.get("bar") == bar else {}), **out}
+                _SNAP["bar"] = bar
             _SNAP["ts"] = int(time.time() * 1000)
     except Exception as e:
         _SNAP["err"] = str(e)
@@ -89,13 +92,21 @@ def _ema(a, n):
     return o
 
 
+def _tf(cfg):
+    """Mum süresi: (OKX bar adı, saniye, saatteki mum sayısı). Al-kaç modunda 15 dk."""
+    return ("15m", 900, 4) if cfg.get("fast") else ("1H", 3600, 1)
+
+
 def _windows(cfg):
-    """Ayarlardaki pencereler güvenli aralığa çekilir: kırılım 2-200 sa, eğilim 20-280 sa (300 mumluk veri yeter)."""
+    """Ayarlardaki pencereler (saat) mum sayısına çevrilip güvenli aralığa çekilir: kırılım 2-200, eğilim 20-280 mum
+    (300 mumluk veri yeter). Al-kaç modunda 1 saat = 4 mum; 200 saatlik eğilim 280 mumla (70 sa) sınırlanır."""
+    per = _tf(cfg)[2]
+
     def num(k, lo, hi):
         try:
-            return int(max(lo, min(hi, float(cfg.get(k) or DEFAULT[k]))))
+            return int(max(lo, min(hi, float(cfg.get(k) or DEFAULT[k]) * per)))
         except (TypeError, ValueError):
-            return DEFAULT[k]
+            return int(max(lo, min(hi, DEFAULT[k] * per)))
     return num("brk_h", 2, 200), num("trend_h", 20, 280), bool(cfg.get("trend_on", True))
 
 
@@ -153,17 +164,19 @@ def step(state, S):
     now = time.time()
     th = _TH["t"]
     if (th is None or not th.is_alive()) and now - _TH["last"] >= EVERY:
-        hour0 = now - now % 3600 + 4  # saat başı mum kapanır: 4 sn sonra hemen çekilir (karar beklemeden verilir)
-        need_c = now - _TH["clast"] >= CANDLE_EVERY or not _SNAP["c"] or (now >= hour0 and _TH["clast"] < hour0)
+        bar, sec, _ = _tf(cfg)
+        hour0 = now - now % sec + 4  # mum kapanır kapanmaz (4 sn sonra) çekilir; karar beklemeden verilir
+        need_c = (now - _TH["clast"] >= CANDLE_EVERY or not _SNAP["c"] or _SNAP.get("bar") != bar
+                  or (now >= hour0 and _TH["clast"] < hour0))
         _TH["last"] = now
         if need_c:
             _TH["clast"] = now
         # açık pozisyonu olan coin ayarlardan çıkarılsa da fiyatı okunur (zarar durdur / kâr al çalışmaya devam etsin)
         want = list(dict.fromkeys(list(cfg["coins"]) + list(L["positions"])))
-        _TH["t"] = threading.Thread(target=_fetch, args=(want, need_c), daemon=True)
+        _TH["t"] = threading.Thread(target=_fetch, args=(want, need_c, bar), daemon=True)
         _TH["t"].start()
     with _LOCK:
-        snap = {"ts": _SNAP["ts"], "px": dict(_SNAP["px"]), "c": _SNAP["c"]}
+        snap = {"ts": _SNAP["ts"], "px": dict(_SNAP["px"]), "c": _SNAP["c"] if _SNAP.get("bar") == _tf(cfg)[0] else {}}
     if not snap["ts"] or snap["ts"] == L.get("snap"):
         return
     L["snap"] = ts = snap["ts"]
@@ -184,7 +197,7 @@ def step(state, S):
             _close(L, c, x, ts, "iz süren stop" if p.get("trailed") else "zarar durdur", cfg)
         elif s * (x - p["tp"]) >= 0:
             _close(L, c, x, ts, "kâr al", cfg)
-        elif s * (x - p["entry"]) > 1.5 * p["atr"]:  # kâra geçti: stopu fiyatın 2 ATR arkasına çek
+        elif s * (x - p["entry"]) > (1.0 if cfg.get("fast") else 1.5) * p["atr"]:  # kâra geçti: stopu sl_atr arkaya çek
             ns = x - s * cfg["sl_atr"] * p["atr"]
             if s * (ns - p["stop"]) > 0:
                 p["stop"], p["trailed"] = ns, True
@@ -222,7 +235,7 @@ def step(state, S):
             # eğilim art arda 2 saatlik mum ters kalırsa kapatılır; arada zarar durdur zaten borsada korur.
             p["against"] = p.get("against", 0) + 1
             if p["against"] >= 2:
-                _close(L, c, px.get(c, k["c"]), ts, "eğilim döndü (20/50 ort., 2 saat)", cfg)
+                _close(L, c, px.get(c, k["c"]), ts, f"eğilim döndü (20/50 ort., 2 mum)", cfg)
             continue
         if p:
             p["against"] = 0
@@ -238,9 +251,13 @@ def step(state, S):
         if (side > 0) != (k["e20"] > k["e50"]):
             continue
         L["stats"]["signals"] += 1
-        why = (f"{brk} sa zirvesi kırıldı ({k['hh']:.6g})" if side > 0 else f"{brk} sa dibi kırıldı ({k['ll']:.6g})")
+        per = _tf(cfg)[2]
+        hs = lambda n: f"{n / per:g} sa"
+        why = (f"{hs(brk)} zirvesi kırıldı ({k['hh']:.6g})" if side > 0 else f"{hs(brk)} dibi kırıldı ({k['ll']:.6g})")
         if trend_on:
-            why += f", {trend} sa ort. {'üstünde' if side > 0 else 'altında'}"
+            why += f", {hs(trend)} ort. {'üstünde' if side > 0 else 'altında'}"
+        if per > 1:
+            why += " · al-kaç"
         name = "UZUN" if side > 0 else "KISA"
         bad = None
         if L["halt"]:
@@ -301,7 +318,7 @@ def manual_open(state, S, sym, side):
     if not cfg.get("on") or not L:
         return
     with _LOCK:
-        rows = list((_SNAP["c"] or {}).get(sym) or [])
+        rows = list((_SNAP["c"] or {}).get(sym) or []) if _SNAP.get("bar") == _tf(cfg)[0] else []
         x = _SNAP["px"].get(sym)
     brk, trend, trend_on = _windows(cfg)
     bad = ("zaten açık" if sym in L["positions"] else "kara listede" if config.banned("lev", sym) else "izlenen coinler arasında değil" if sym not in (cfg.get("coins") or [])

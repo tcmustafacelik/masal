@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.99.4';
+const APP_VERSION = '1.100.0';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = 'var(--acc)';
@@ -876,7 +876,7 @@ function levWatch() {
     }).join('');
     return `<h2 class="mh">${ic('i-eye')}İzlenen coinler<span class="hsum">sinyale uzaklık · saatlik</span></h2>
     <div class="card"><div class="wgrid">${w || `<div class="empty">${ic('i-refresh')}<div>Mumlar yükleniyor</div></div>`}</div>
-    <p class="hint">Elle açmak için coine dokun. Çubuk dolu = sinyale yakın. Fiyat son ${lv.brk_h ?? 20} saatin zirvesini aşınca UZUN, dibini kırınca KISA açılır (${lv.trend_on === false ? 'eğilim filtresi kapalı' : `${lv.trend_h ?? 200} saatlik ortalamanın yönünde`}).</p></div>
+    <p class="hint">Elle açmak için coine dokun. Çubuk dolu = sinyale yakın. ${lv.fast ? '<b>Al-kaç</b> (15 dk mum). ' : ''}Fiyat son ${lv.brk_h ?? 20} saatin zirvesini aşınca UZUN, dibini kırınca KISA açılır (${lv.trend_on === false ? 'eğilim filtresi kapalı' : `${lv.fast ? Math.min(70, lv.trend_h ?? 200) : lv.trend_h ?? 200} saatlik ortalamanın yönünde`}).</p></div>
 `;
 }
 function openLevOpen(sym, side0) {
@@ -3194,7 +3194,7 @@ const SECTIONS = [
     { t: 'Kâr hedefi', i: 'i-flag', f: [
             ['target.amount', 'Hedef kâr', () => `Bu kârda her şey satılır, bot durur`, 'TL', 500, 100, 1e8, 0]
         ] },
-    { t: 'Futures', i: 'i-layers', sw: [['lev.real', 'Gerçek parayla işlem', 'Kararlar OKX Global\'de gerçek parayla uygulanır'], ['lev.trend_on', 'Eğilim filtresi', 'Kapalıysa yalnız kırılım yönü karar verir (daha çok işlem, daha riskli)'], ['lev.cross_ok', 'Global spot ile ters pozisyon', 'Açık: Global spot\'ta elde olan coinde futures kısa açabilir (ve tersi); masalar kendi kuralını tam uygular. Kapalı: açılmaz, ücret iki kez ödenmez']], f: [
+    { t: 'Futures', i: 'i-layers', sw: [['lev.real', 'Gerçek parayla işlem', 'Kararlar OKX Global\'de gerçek parayla uygulanır'], ['lev.fast', 'Al-kaç modu', '15 dakikalık mumlarla karar verir: 4 kat daha sık işlem, kâr 1 ATR\'yi geçince stop peşine düşer. Zarar sınırları aynı kalır'], ['lev.trend_on', 'Eğilim filtresi', 'Kapalıysa yalnız kırılım yönü karar verir (daha çok işlem, daha riskli)'], ['lev.cross_ok', 'Global spot ile ters pozisyon', 'Açık: Global spot\'ta elde olan coinde futures kısa açabilir (ve tersi); masalar kendi kuralını tam uygular. Kapalı: açılmaz, ücret iki kez ödenmez']], f: [
             ['lev.real_budget', 'Bütçe', 'Global fon hesabından futures\'a geçecek para', 'USDT', 5, 5, 10000, 0],
             ['lev.max_loss', 'En fazla kayıp', 'Toplam zarar buna ulaşınca masa tamamen durur', 'USDT', 5, 1, 10000, 0],
             ['lev.real_lev', 'Kaldıraç', 'İzole marjin; güvenlik için en fazla 3x', 'x', 1, 1, 3, 0],
@@ -3888,7 +3888,7 @@ async function loadSettings() {
     if (orig && orig.grid && orig.grid.vol_filter == null)
         orig.grid.vol_filter = 2;
     if (orig)
-        orig.lev = { on: true, bank: 100, lev: 3, risk_pct: 1, max_pos: 3, sl_atr: 2, tp_atr: 4, daily_loss_pct: 5, fee_pct: .05, slip_pct: .05, coins: ['BTC', 'ETH', 'SOL', 'XRP', 'DOGE', 'HYPE', 'ZEC', 'PEPE'], real: false, real_budget: 30, real_lev: 2, max_loss: 10, real_reset: 0, brk_h: 20, trend_h: 200, trend_on: true, ...(orig.lev || {}) };
+        orig.lev = { on: true, bank: 100, lev: 3, risk_pct: 1, max_pos: 3, sl_atr: 2, tp_atr: 4, daily_loss_pct: 5, fee_pct: .05, slip_pct: .05, coins: ['BTC', 'ETH', 'SOL', 'XRP', 'DOGE', 'HYPE', 'ZEC', 'PEPE'], real: false, real_budget: 30, real_lev: 2, max_loss: 10, real_reset: 0, brk_h: 20, trend_h: 200, trend_on: true, fast: false, ...(orig.lev || {}) };
     if (orig)
         orig.meme = { on: true, bank: 100, size_pct: 10, max_pos: 5, min_liq: 20000, max_fdv: 5000000, min_age_min: 10, max_age_h: 72, tp_pct: 30, tp_part: 100, trail_from: 15, trail_pct: 12, sl_pct: 15, max_hold_h: 4, slip_pct: 1, fee_pct: .5, max_m5: 8, min_ratio: 1.2, min_buys: 5, max_h1: 0, wallet: '', real: false, max_loss: 10, max_slip: 2, real_reset: 0, ...(orig.meme || {}) };
     if (orig)
