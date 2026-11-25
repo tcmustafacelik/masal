@@ -369,20 +369,6 @@
   ],
   "desk_cmd": [
     {
-      "id": "smwvs985m",
-      "ts": 1795590556042,
-      "desk": "gspotr",
-      "act": "sync",
-      "sym": ""
-    },
-    {
-      "id": "smwvs99ep",
-      "ts": 1795590557665,
-      "desk": "levr",
-      "act": "sync",
-      "sym": ""
-    },
-    {
       "id": "smwvsfso9",
       "ts": 1795590862569,
       "desk": "gspotr",
@@ -413,6 +399,13 @@
     {
       "id": "smwvskci0",
       "ts": 1795591074888,
+      "desk": "gspotr",
+      "act": "sync",
+      "sym": ""
+    },
+    {
+      "id": "smwvsnfzp",
+      "ts": 1795591219381,
       "desk": "gspotr",
       "act": "sync",
       "sym": ""
