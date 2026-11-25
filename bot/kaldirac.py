@@ -292,7 +292,7 @@ def _enter(L, c, side, k, x, cfg, lev, ts, why):
     dist = cfg["sl_atr"] * k["atr"]
     used = sum(q["margin"] for q in L["positions"].values())
     free = L["bank"] - used
-    qty = min(L["bank"] * cfg["risk_pct"] / 100 / dist, min(L["bank"] / 3, free) * lev / entry)
+    qty = min(L["bank"] * cfg["risk_pct"] / 100 / dist, min(L["bank"] / max(3, int(cfg.get("max_pos") or 3)), free) * lev / entry)
     if qty <= 0 or qty * entry / lev < 1:
         _note(L, ts, "risk", f"ENGEL {c} {name}: boş teminat yetersiz")
         return False
