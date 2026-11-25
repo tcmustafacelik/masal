@@ -1,10 +1,17 @@
 {
-  "version": "1.94.3",
+  "version": "1.95.0",
   "date": "2026-11-25",
   "notes": [
-    "Toplam varlık: Global'deki masaya ayrılmamış para (yeni gelen aktarım) artık Futures sayılmıyor, 'Global boşta' olarak ayrı görünüyor"
+    "Global Eşleştir artık otomatik: fon hesabında hiçbir masaya ayrılmamış USDT (yeni gelen aktarım) bütçeye eklenir"
   ],
   "history": [
+    {
+      "version": "1.95.0",
+      "date": "2026-11-25",
+      "notes": [
+        "Global Eşleştir artık otomatik: fon hesabında hiçbir masaya ayrılmamış USDT (yeni gelen aktarım) bütçeye eklenir"
+      ]
+    },
     {
       "version": "1.94.3",
       "date": "2026-11-25",
@@ -101,13 +108,6 @@
       "date": "2026-11-25",
       "notes": [
         "Ters pozisyon çakışması önlendi: futures bir coinde KISA iken Global spot o coini almaz; Global spot'ta elde olan coinde futures KISA açmaz"
-      ]
-    },
-    {
-      "version": "1.88.0",
-      "date": "2026-11-25",
-      "notes": [
-        "Global'de eldeki coinler Spot'taki gibi (simge, kâr al / zarar çubuğu, kaydırarak Sat) · Global spot'a ayrılan para elle aktarımlara ve futures'a gitmez · bot saniyede bir kontrol eder · tüm geçmişi silme"
       ]
     }
   ]

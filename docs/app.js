@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.94.3';
+const APP_VERSION = '1.95.0';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = 'var(--acc)';
@@ -1479,7 +1479,7 @@ function assetsExtra(x, eq) {
 }
 function deskReal(desk) {
     const sy = DESK_BUSY['sync:' + desk] && Date.now() - DESK_BUSY['sync:' + desk] < 60000;
-    let lbl = '', val = '', small = '', ok = true, warn = '';
+    let lbl = '', val = '', small = '', ok = true, warn = '', info = '';
     if (desk === 'memer') {
         const R = S?.memer;
         if (!R)
@@ -1517,9 +1517,12 @@ function deskReal(desk) {
             warn = `Borsada kayıttakinden az: ${bad.map((x) => escH(x.sym)).join(', ')}. Eşleştir'e basınca kayıt borsadakine iner.`;
         else if (r.err)
             warn = 'Kontrol yapılamadı: ' + escH(r.err);
+        const fr = +(S?.xfer?.g_fund) || 0;
+        if (fr >= 1)
+            info = `Fon hesabında masaya ayrılmamış ${U(fr, 2)} var; Eşleştir'e basınca bütçeye eklenir.`;
     }
     return `<div class="areal${ok ? '' : ' bad'}">${ic('i-bank')}<div><span>${lbl}</span><b>${val}</b>${small ? `<small>${small}</small>` : ''}</div>
-    <em>${ok ? ic('i-check') + 'Eşleşik' : 'Tutmuyor'}</em><button class="btn xsync" type="button" data-dsync="${desk}"${sy ? ' disabled' : ''}>${ic('i-refresh')}${sy ? 'Gönderildi' : 'Eşleştir'}</button></div>${warn ? `<div class="xw dn">${warn}</div>` : ''}`;
+    <em>${ok ? ic('i-check') + 'Eşleşik' : 'Tutmuyor'}</em><button class="btn xsync" type="button" data-dsync="${desk}"${sy ? ' disabled' : ''}>${ic('i-refresh')}${sy ? 'Gönderildi' : 'Eşleştir'}</button></div>${warn ? `<div class="xw dn">${warn}</div>` : ''}${info ? `<div class="xw">${info}</div>` : ''}`;
 }
 document.addEventListener('click', async (e) => {
     const b = e.target.closest?.('[data-dsync]');
@@ -1534,8 +1537,14 @@ document.addEventListener('click', async (e) => {
     b.disabled = true;
     fastWatch();
     const req = { id: 's' + Date.now().toString(36), ts: Date.now(), desk, act: 'sync', sym: '' };
-    const ok = await cloudPatch(o => { o.desk_cmd = [...(o.desk_cmd || []).filter((x) => Date.now() - (x.ts || 0) < 600000), req]; }, 'Borsayla eşleştir: ' + desk);
-    toast(ok ? 'Eşleştirme isteği gönderildi; bot birkaç saniyede borsayla karşılaştırır' : 'İstek gönderilemedi, tekrar dene', ok ? '' : patchWhy());
+    const X = S?.xfer, free = desk === 'gspotr' ? Math.floor((+X?.g_fund || 0) * 100) / 100 : 0, cur = +(((orig || S?.settings)?.gspot || {}).budget) || 0, nb = Math.round((cur + free) * 100) / 100;
+    const ok = await cloudPatch(o => {
+        o.desk_cmd = [...(o.desk_cmd || []).filter((x) => Date.now() - (x.ts || 0) < 600000), req];
+        if (free >= 1) {
+            o.gspot = { ...(o.gspot || {}), budget: nb };
+        }
+    }, 'Borsayla eşleştir: ' + desk + (free >= 1 ? ` · bütçe ${nb}` : ''));
+    toast(ok ? (free >= 1 ? `Eşleştirildi: boştaki ${U(free, 2)} masaya eklendi, bütçe ${U(nb, 2)}. Bot birkaç saniyede uygular` : 'Eşleştirme isteği gönderildi; bot birkaç saniyede borsayla karşılaştırır') : 'İstek gönderilemedi, tekrar dene', ok ? '' : patchWhy());
     if (!ok) {
         delete DESK_BUSY['sync:' + desk];
         b.disabled = false;
