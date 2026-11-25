@@ -177,6 +177,17 @@ def _day():
     return time.strftime("%Y-%m-%d", time.gmtime(time.time() + 3 * 3600))
 
 
+def _coins(done):
+    """Coin bazında kâr/zarar (Spot'taki bölüm): kapanan işlem sayısı, kârlı olan, toplam gerçekleşen."""
+    agg = {}
+    for t in done:
+        a = agg.setdefault(t["sym"], {"inst": f"{t['sym']}-USDT", "sells": 0, "w": 0, "realized": 0.0})
+        a["sells"] += 1
+        a["w"] += 1 if (t.get("pnl") or 0) > 0 else 0
+        a["realized"] = round(a["realized"] + (t.get("pnl") or 0), 2)
+    return list(agg.values())
+
+
 def _record(R, c, p, pnl, px, reason):
     pct = pnl / p["margin"] * 100 if p.get("margin") else 0
     R["trades"].append({"ts": int(time.time() * 1000), "sym": c, "side": "UZUN" if p["side"] > 0 else "KISA",
@@ -622,4 +633,4 @@ def public(state):
                            "now": p["now"], "stop": p["stop"], "tp": p["tp"], "liq": p["liq"], "margin": round(p["margin"], 2),
                            "pnl": round(p.get("upl", 0), 2), "why": p["why"], "lev": p.get("lev")} for c, p in R["pos"].items()],
             "trades": done[-40:][::-1], "log": R["log"][-40:][::-1], "equity_series": R["equity"][-200:], "fav": config.top_earners(done),
-            "closed": len(done), "win_rate": round(len(wins) / len(done) * 100) if done else None}
+            "closed": len(done), "win_rate": round(len(wins) / len(done) * 100) if done else None, "coins": _coins(done)}

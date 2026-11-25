@@ -1,10 +1,17 @@
 {
-  "version": "1.90.0",
+  "version": "1.91.0",
   "date": "2026-11-25",
   "notes": [
-    "Futures ve Global spot gibi: açık pozisyonlar coin simgeli satırlarda (giriş → şimdi, stop ↔ hedef çubuğu, sola kaydır: Kapat), Bakiye seyri grafiği; satıra dokununca mumlu grafik (OKX Global, giriş/stop/hedef çizgileriyle). Global'e Anlık alım ayarı: kapatılırsa 15 dk mum kapanışını bekler"
+    "Global spot ve Futures'a Spot'taki bölümler: Son işlemler, Coin bazında kâr/zarar, Piyasa (OKX Global, yalnız kripto). Aday/izlenen coine dokununca önce mumlu grafik (alım seviyesiyle), altında Elle al / Elle aç"
   ],
   "history": [
+    {
+      "version": "1.91.0",
+      "date": "2026-11-25",
+      "notes": [
+        "Global spot ve Futures'a Spot'taki bölümler: Son işlemler, Coin bazında kâr/zarar, Piyasa (OKX Global, yalnız kripto). Aday/izlenen coine dokununca önce mumlu grafik (alım seviyesiyle), altında Elle al / Elle aç"
+      ]
+    },
     {
       "version": "1.90.0",
       "date": "2026-11-25",
@@ -101,13 +108,6 @@
       "date": "2026-11-25",
       "notes": [
         "Global spot gerçek masada ekranda gerçek para gösterilir (bütçe sınırı ayrı yazar); para yokken 'Henüz para yok' uyarısı"
-      ]
-    },
-    {
-      "version": "1.87.0",
-      "date": "2026-11-25",
-      "notes": [
-        "Aktarımlar aşama aşama: Kasalar'da bir aktarıma dokununca İstek → Gönderim → Onay → Ulaştı adımları saatleriyle görünür; zincir işlemlerinde 'Zincirde gör' bağlantısı. KASA'ya gidenler Arbitrum zincirinde onaylanınca 'Ulaştı' sayılır"
       ]
     }
   ]

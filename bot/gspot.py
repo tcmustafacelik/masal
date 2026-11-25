@@ -731,10 +731,20 @@ def public(G, snap_bid=None):
     sells = [t for t in G["trades"] if t["side"] == "SAT"]
     wins = [t for t in sells if t["pnl"] > 0]
     eq = G.get("eq", G["cash"])
+    agg = {}  # coin bazında: alım/satım sayısı, alınan tutar, gerçekleşen kâr/zarar (Spot'taki "Coin bazında kâr/zarar")
+    for t in G["trades"]:
+        a = agg.setdefault(t["inst"], {"inst": t["inst"], "buys": 0, "sells": 0, "bought": 0.0, "realized": 0.0})
+        if t["side"] == "AL":
+            a["buys"] += 1
+            a["bought"] = round(a["bought"] + (t.get("usd") or 0), 2)
+        else:
+            a["sells"] += 1
+            a["realized"] = round(a["realized"] + (t.get("pnl") or 0), 2)
     return {"cash": round(G["cash"], 2), "equity": eq, "start": G["start"], "pnl": round(eq - G["start"], 2),
             "funded": G.get("funded"), "halt": G["halt"], "err": G.get("err", ""),
             "positions": sorted(pos, key=lambda x: -x["val"]), "trades": G["trades"][-40:][::-1], "log": G["log"][-40:][::-1],
             "equity_series": G["equity"][-200:], "sells": len(sells), "realized": round(sum(t["pnl"] for t in sells), 2),
             "win_rate": round(len(wins) / len(sells) * 100) if sells else None, "watch": G.get("watch"),
             "fav": config.top_earners(G["trades"]), "warm": warm, "uni": n, "stats": G["stats"],
-            "phys": round(max(0.0, G.get("phys", 0.0)), 2), "fund_res": round(max(0.0, G["cash"] - G.get("phys", 0.0)), 2), "nousd": bool(G.get("cool") and G.get("nousd_ts"))}
+            "phys": round(max(0.0, G.get("phys", 0.0)), 2), "fund_res": round(max(0.0, G["cash"] - G.get("phys", 0.0)), 2), "nousd": bool(G.get("cool") and G.get("nousd_ts")),
+            "coins": list(agg.values())}

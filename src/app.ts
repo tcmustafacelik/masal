@@ -1,4 +1,4 @@
-const APP_VERSION='1.90.0';
+const APP_VERSION='1.91.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (kehribar)
@@ -391,6 +391,59 @@ function eqCard(ser: any[], base: number): string {
     <text x="0" y="${H - 3}" class="gt">${dt(x0).split(' ')[0]}</text><text x="${W - pr}" y="${H - 3}" text-anchor="end" class="gt">${dt(x1).split(' ')[0]}</text>`;
   return `<h2 class="mh">${ic('i-chart')}Bakiye seyri<span class="hsum ${cls(last - b0)}">${sgnU(last - b0)}</span></h2><div class="card"><svg class="cdc eqc" viewBox="0 0 ${W} ${H}">${g}</svg><p class="hint" style="margin-top:4px">Kesikli çizgi başlangıç (${U(b0, 2)}${usdTL(b0) ? ' · ' + usdTL(b0) : ''}).</p></div>`;
 }
+/* ---- Spot ekranındaki bölümlerin Global spot ve Futures için ortak hâli (USDT, yanında TL) ---- */
+const DALL=new Set<string>();
+const dMore=(id: string,n: number)=>n>5?`<button class="more" type="button" data-dall="${id}">${DALL.has(id)?'Daha az göster':`Tümünü göster (${n})`}</button>`:'';
+document.addEventListener('click',e=>{const b=(e.target as HTMLElement).closest?.('[data-dall]') as HTMLElement;if(!b)return;const k=b.dataset.dall;if(DALL.has(k))DALL.delete(k);else DALL.add(k);renderDeck()});
+const dCut=(id: string,a: string[])=>(DALL.has(id)?a:a.slice(0,5)).join('')+dMore(id,a.length);
+/** Coin bazında kâr/zarar: gerçekleşen + eldeki/açıktaki (Spot'taki bölümün aynısı) */
+function deskCoins(id: string,coins: any[],open: Record<string,number>,kind: 'gspot'|'lev'): string{
+  const m: Record<string,any>={};for(const c of coins||[])m[c.inst]={...c};
+  for(const k in open)if(!m[k])m[k]={inst:k,buys:1,sells:0,realized:0};
+  const list=Object.values(m).map((c: any)=>({...c,op:open[c.inst],tot:(+c.realized||0)+(open[c.inst]||0)})).sort((a: any,b: any)=>b.tot-a.tot);
+  if(!list.length)return '';
+  const T=list.reduce((a: number,c: any)=>a+c.tot,0),ban=new Set((((orig||S?.settings as any)?.ban||{})[kind]||[]).map(banKey));
+  const rows=list.map((c: any)=>{const parts: string[]=[];
+    if(kind==='lev')parts.push(c.sells?`${c.sells} işlem · ${c.w||0} kârlı`:'ilk işlem');else{parts.push(c.sells?`${c.sells} satış`:`${c.buys||0} alım`);if(c.bought)parts.push(U(c.bought,0)+' alındı')}
+    const det=c.op!=null?(c.sells?`açıkta ${sgnU(c.op)}`:(kind==='lev'?'açık':'elde')):'kapandı';
+    return `<div class="row">${cico(c.inst)}<div class="mid"><b>${sym(c.inst)}${ban.has(banKey(c.inst))?'<em class="lk wn in">KARA LİSTE</em>':''}</b><span>${parts.join(' · ')}</span></div>
+      <div class="end"><span class="pill lg ${cls(c.tot)||'z'}"><i>${c.tot>=0?'▲':'▼'}</i>${U(Math.abs(c.tot),2)}</span><span class="est">${det}</span></div></div>`});
+  return `<h2 class="mh">${ic('i-pnl')}Coin bazında kâr/zarar<span class="hsum ${cls(T)}">${sgnU(T)}</span></h2><div class="card list">${dCut(id,rows)}</div>`;
+}
+/** Son işlemler: coin simgeli satırlar (alındı / satıldı / kapandı), tutar ve kâr/zarar USDT + TL */
+function deskTrades(id: string,trades: any[],kind: 'gspot'|'lev'): string{
+  if(!(trades||[]).length)return '';
+  const rows=trades.slice(0,40).map((t: any)=>{const inst=t.inst||`${t.sym}-USDT`,pnl=+t.pnl||0,buy=t.side==='AL';
+    const what=kind==='lev'?`${t.side} kapandı`:buy?'alındı':'satıldı',why=escH(String(t.reason||''));
+    const end=buy?`<b>${U(+t.usd||0,2)}</b><small class="etl">${usdTL(+t.usd||0)}</small>`
+      :`<span class="pill ${cls(pnl)||'z'}"><i>${pnl>=0?'▲':'▼'}</i>${U(Math.abs(pnl),2)}</span><span class="est ${cls(pnl)}">${t.pct!=null?spc(+t.pct,1):''}${kind!=='lev'&&t.usd?` · ${U(+t.usd,0)}`:''}</span>`;
+    return `<div class="row">${cico(inst,kind==='lev'?undefined:(buy?'AL':'SAT'),!buy&&pnl<0)}<div class="mid"><b>${escH(sym(inst))} ${what}</b><span>${ago(t.ts)}${why?' · '+why:''}</span></div><div class="end">${end}</div></div>`});
+  return `<h2 class="mh">${ic('i-list')}Son işlemler<span class="hsum">${trades.length} işlem</span></h2><div class="card list">${dCut(id,rows)}</div>`;
+}
+/** Piyasa: OKX Global'in en yüksek hacimli USDT pariteleri (Global spot) / USDT vadeli sözleşmeleri (Futures); dokun: grafik */
+const GMK: Record<string,{t:number,l:any[],busy?:boolean}>={g:{t:0,l:[]},sw:{t:0,l:[]}};
+const GSTB=new Set(['USDC','DAI','FDUSD','TUSD','PYUSD','USDG','RLUSD','USDE','EURT','EUR','XAUT','PAXG','BUSD','USDP','USD1','USDQ']);
+/** Yalnız kripto (OKX instCategory 1): hisse/emtia sözleşmeleri listelenmez. Liste günde bir alınır, cihazda saklanır. */
+const GCAT: Record<string,Set<string>|null>={g:null,sw:null};
+async function gcat(x: 'g'|'sw'): Promise<Set<string>|null>{
+  if(GCAT[x])return GCAT[x];const k='masal_gcat_'+x;
+  try{const c=JSON.parse(localStorage.getItem(k)||'null');if(c&&Date.now()-c.t<86400000){GCAT[x]=new Set(c.l);return GCAT[x]}}catch(e){}
+  try{const j=await tfetch(`https://www.okx.com/api/v5/public/instruments?instType=${x==='g'?'SPOT':'SWAP'}`,{cache:'no-store'},12000).then(r=>r.json());
+    const l=(j?.data||[]).filter((i: any)=>(i.instCategory??'1')==='1').map((i: any)=>i.instId.split('-')[0]);
+    if(l.length){GCAT[x]=new Set(l);try{localStorage.setItem(k,JSON.stringify({t:Date.now(),l}))}catch(e){}}}catch(e){}
+  return GCAT[x]}
+function deskMarket(x: 'g'|'sw'): string{
+  const M=GMK[x];
+  if(Date.now()-M.t>15000&&!M.busy){M.busy=true;
+    gcat(x).then(()=>tfetch(`https://www.okx.com/api/v5/market/tickers?instType=${x==='g'?'SPOT':'SWAP'}`,{cache:'no-store'},8000).then(r=>r.json()).then(j=>{
+      M.l=(j?.data||[]).filter((t: any)=>x==='g'?/-USDT$/.test(t.instId):/-USDT-SWAP$/.test(t.instId)).map((t: any)=>{const b=t.instId.split('-')[0],last=+t.last,o=+t.open24h;
+        return {inst:b+'-USDT',last,ch:o?(last/o-1)*100:0,vol:x==='g'?+t.volCcy24h:(+t.volCcy24h||0)*last}}).filter((t: any)=>!GSTB.has(sym(t.inst))&&t.last>0&&(!GCAT[x]||GCAT[x].has(sym(t.inst)))).sort((a: any,b: any)=>b.vol-a.vol).slice(0,60);
+      M.t=Date.now();M.busy=false;renderDeck()})).catch(()=>{M.busy=false;M.t=Date.now()-10000})}
+  const vt=(v: number)=>v>=1e9?nf(v/1e9,1)+' Mr':v>=1e6?nf(v/1e6,1)+' Mn':nf(v/1e3,0)+' B';
+  const rows=M.l.map((q: any)=>`<div class="row">${cico(q.inst)}<div class="mid"><b>${sym(q.inst)}</b><span>Hacim ${vt(q.vol)} USDT · 24 sa</span></div>
+      <div class="end"><b>${px(q.last)}</b><span class="pill ${cls(q.ch)||'z'}"><i>${q.ch>=0?'▲':'▼'}</i>%${nf(Math.abs(q.ch))}</span></div></div>`);
+  return `<h2 class="mh">${ic('i-chart')}Piyasa<span class="hsum">OKX Global ${x==='g'?'spot':'futures'} · canlı</span></h2><div class="card list mk">${rows.length?dCut('mk'+x,rows):`<div class="empty">${ic('i-pnl')}<div>Fiyatlar yükleniyor…</div></div>`}</div><p class="hint" style="margin:6px 2px 0">Grafiği görmek için coine dokun.</p>`;
+}
 function renderLevR(): string {
   const R = (S as any)?.levr;
   if (!R) return ((S as any)?.live_enc || (S as any)?.live_z) && !pw ? `<div class="warn">${ic('i-lock')}<div>Gerçek futures masasını görmek için kilidi aç.</div></div>` : '';
@@ -420,7 +473,7 @@ function renderLevR(): string {
     <h2 class="mh">${ic('i-list')}İşlem kaydı<span class="hsum">gerçek masa</span></h2>
     <div class="card mfeed">
       ${feed ? feed : `<div class="empty">${ic('i-eye')}<div>Henüz gerçek işlem yok; sinyal gelince açılır</div></div>`}
-    </div>${favSec(R.fav, (S as any)?.lev?.fav, 'lev')}${levWatch()}`;
+    </div>${deskTrades('ltr', R.trades, 'lev')}${deskCoins('lco', R.coins, Object.fromEntries((R.positions || []).map((p: any) => [p.sym + '-USDT', +p.pnl || 0])), 'lev')}${favSec(R.fav, (S as any)?.lev?.fav, 'lev')}${levWatch()}${deskMarket('sw')}`;
 }
 /** Favoriler: kapanan işlemlerde en çok toplam kâr getiren 5 coin/token (bot hesaplar). Gerçek masada işlem yoksa
  *  deneme masasınınki gösterilir. Yalnız bilgi: bot favorilere öncelik vermez, geçmiş kâr gelecek kârı göstermez. */
@@ -478,7 +531,10 @@ function openLevOpen(sym: string, side0: number){
       if(ok){q.hidden=true;toast(`${sym} ${side>0?'UZUN':'KISA'} açma isteği gönderildi; bot birkaç saniyede açar`)}else{go.disabled=false;toast('İstek gönderilemedi, tekrar dene',patchWhy())}}};
   draw();q.hidden=false;
 }
-document.addEventListener('click',e=>{const t=(e.target as HTMLElement).closest?.('[data-lo]') as HTMLElement;if(t)openLevOpen(t.dataset.lo,+t.dataset.ls)});
+document.addEventListener('click',e=>{const t=(e.target as HTMLElement).closest?.('[data-lo]') as HTMLElement;if(!t)return;const sy=t.dataset.lo,sd=+t.dataset.ls;
+  const r: any=(((S as any)?.lev?.watch)||[]).find((w: any)=>w.sym===sy);
+  if(r?.open){openLevOpen(sy,sd);return}
+  openCoin(sy+'-USDT','sw',[],r?[['Sinyal',`${r.side==='UZUN'?'↑ UZUN':'↓ KISA'} · sinyale %${nf(Math.abs(r.dist||0),1)}`]]:undefined,['Elle aç',()=>openLevOpen(sy,sd)])});
 /** Global spot elle alım: aday kutusuna ya da "Coin al"a dokun → coin + tutar seç → al. Sonrası botun kademe
  *  kuralıyla yönetilir (kâr al, zarar sınırı). Bot da aynı güvenlik kurallarını uygular; uymazsa kayda ENGEL yazar. */
 function openGBuy(inst0: string){
@@ -522,7 +578,11 @@ function openGBuy(inst0: string){
   };
   draw();q.hidden=false;
 }
-document.addEventListener('click',e=>{const t=(e.target as HTMLElement).closest?.('[data-gb]') as HTMLElement;if(t)openGBuy(t.dataset.gb)});
+document.addEventListener('click',e=>{const t=(e.target as HTMLElement).closest?.('[data-gb]') as HTMLElement;if(!t)return;const i=t.dataset.gb;
+  if(!i||!t.classList.contains('wr')){openGBuy(i);return}
+  // aday kutusu: önce mumlu grafik (alım seviyesi çizgisiyle), altında "Al" düğmesi
+  const w: any=(((S as any)?.gspot?.watch)||[]).find((x: any)=>x.i===i),tg=w&&w.g!=null?w.p/(1+w.g/100):0;
+  openCoin(i,'g',tg?[[tg,'Alım seviyesi','#3B6FD8']]:[],w?[['Durum',w.fs?'Futures kısa · alınmaz':w.f?'Filtrede · bekliyor':w.g<=0?'Alım seviyesinde':'Alım seviyesine %'+nf(w.g,1)]]:undefined,['Elle al',()=>openGBuy(i)])});
 /** Global spot masası (OKX Global, USDT pariteleri, kademeli strateji). Gerçek mod açıksa ya da gerçek masada coin
  *  varsa gerçek masa, değilse deneme masası gösterilir; alım adayları ve favoriler deneme masasının taramasından. */
 /** Gerçek Global masasında borsadaki gerçek para: kendi USDT'si + eldeki coinlerin değeri (bütçe değil) */
@@ -570,10 +630,11 @@ function renderGspot(): string {
     ${eqCard(G.equity_series, G.start)}
     <h2 class="mh">${ic('i-list')}İşlem kaydı<span class="hsum">${real ? 'gerçek masa' : 'deneme masası'}</span></h2>
     <div class="card mfeed">${feed || `<div class="empty">${ic('i-eye')}<div>Henüz işlem yok; fiyat alım hedefine inince alır</div></div>`}</div>
+    ${deskTrades('gtr', G.trades, 'gspot')}${deskCoins('gco', G.coins, Object.fromEntries((G.positions || []).map((p: any) => [p.inst, +p.pnl || 0])), 'gspot')}
     ${favSec(real ? G.fav : [], P?.fav, 'gspot')}
     <h2 class="mh">${ic('i-eye')}Alım adayları<span class="hsum">${P?.uni || 0} coin · 15 dk</span><button class="mset" type="button" data-gb="">${ic('i-buy')}Elle al</button></h2>
     <div class="card"><div class="wgrid">${W || `<div class="empty">${ic('i-refresh')}<div>Mumlar yükleniyor</div></div>`}</div>
-    <p class="hint">Hacmi en yüksek ${gs.coins ?? 30} USDT paritesi izlenir. Fiyat son ${gs.sma_hours ?? 72} saatin ortalamasının %${nf(+(gs.step_pct ?? 3.3), 1)} altına inince 1. kademe alınır; her kademe alışının %${nf(tp, 1)} üstünde satılır. Çubuk dolu = hedefe yakın. Elle almak için coine dokun.</p>${warm}</div>`;
+    <p class="hint">Hacmi en yüksek ${gs.coins ?? 30} USDT paritesi izlenir. Fiyat son ${gs.sma_hours ?? 72} saatin ortalamasının %${nf(+(gs.step_pct ?? 3.3), 1)} altına inince 1. kademe alınır; her kademe alışının %${nf(tp, 1)} üstünde satılır. Çubuk dolu = hedefe yakın. Grafik ve elle alım için coine dokun.</p>${warm}</div>${deskMarket('g')}`;
 }
 /** Futures/Memecoin pozisyonunu elle kapatma düğmesi: istek ayarlara yazılır, bot birkaç saniyede uygular */
 const DESK_BUSY: Record<string, number> = {};
@@ -1145,13 +1206,13 @@ async function sendXfer(dir: string){fastWatch();if(xPending(dir.startsWith('m')
 }
 
 /* ---------- Coin ayrıntısı: dokununca canlı fiyat, grafik ve parite seçimi (OKX TR herkese açık verisi) ---------- */
-let CD: {base:string,q:string,bar:string,t:any,x?:string,mk?:[number,string,string][],info?:[string,string][]}|null=null;
+let CD: {base:string,q:string,bar:string,t:any,x?:string,mk?:[number,string,string][],info?:[string,string][],act?:[string,()=>void]}|null=null;
 const CQ=['TRY','USDT','USDC','EUR'],CBAR=[['15m','15 dk'],['1H','1 sa'],['4H','4 sa'],['1D','1 gün']];
 /** Coin grafiği. x: 'tr' OKX TR spot · 'g' OKX Global spot · 'sw' OKX Global futures (USDT-SWAP).
  *  mk: grafikte kesikli çizgiler (giriş, stop, hedef…); info: altta masanın pozisyon bilgisi */
-function openCoin(inst: string,x='tr',mk?: [number,string,string][],info?: [string,string][]){
+function openCoin(inst: string,x='tr',mk?: [number,string,string][],info?: [string,string][],act?: [string,()=>void]){
   if(CD)clearTimeout(CD.t);
-  const [base,q0]=String(inst).split('-');CD={base,q:x==='tr'?(q0||'USDT'):'USDT',bar:x==='tr'?'1H':'15m',t:null,x,mk,info};
+  const [base,q0]=String(inst).split('-');CD={base,q:x==='tr'?(q0||'USDT'):'USDT',bar:x==='tr'?'1H':'15m',t:null,x,mk,info,act};
   const q=document.getElementById('qsh');q.dataset.n='';qHead('i-chart','Kapat');document.getElementById('qTitle').textContent=base+(x==='g'?' · Global':x==='sw'?' · Futures':'');
   document.getElementById('qText').innerHTML=`<div class="cdv" id="cdv"><div class="empty">${ic('i-refresh')}<div>Yükleniyor…</div></div></div>`;q.hidden=false;
   drawCoin();
@@ -1170,7 +1231,7 @@ async function drawCoin(live=false){
     const rows=(CD as any).rows||[],has=(CD as any).has||new Set(CQ);
     if(t&&rows.length){const r=rows[rows.length-1],v=+t.last;r[4]=v;r[2]=Math.max(r[2],v);r[3]=Math.min(r[3],v)}
     const QP=X==='tr'?`<div class="qpair">${CQ.map(x=>`<button data-cq="${x}" class="${x===q?'on':''}" ${has.has(x)?'':'disabled'}>${x}</button>`).join('')}</div>`:'';
-    if(!t&&X!=='tr'){box.innerHTML=`<div class="empty">${ic('i-info')}<div>${inst} OKX Global'de bulunamadı</div></div>`;return}
+    if(!t&&X!=='tr'){box.innerHTML=`<div class="empty">${ic('i-info')}<div>${inst} OKX Global'de bulunamadı</div></div>${cdActH()}`;cdActB();return}
     if(!t){box.innerHTML=`<div class="qpair">${CQ.map(x=>`<button data-cq="${x}" class="${x===q?'on':''}" ${has.has(x)?'':'disabled'}>${x}</button>`).join('')}</div><div class="empty">${ic('i-info')}<div>${inst} paritesi OKX TR'de yok</div></div>`;bindCoin();return}
     const VOL=X==='sw'?(+t.volCcy24h||0)*(+t.last||0):+t.volCcy24h,last=+t.last,open=+t.sodUtc8||+t.open24h,ch=open?(last/open-1)*100:0,dec=last>=100?2:last>=1?4:Math.min(8,2-Math.floor(Math.log10(last||1)));
     const L=S?.strategies?.live,pos=(L?.positions||[]).find((p: any)=>p.inst.split('-')[0]===base),coin=(L?.coins||[]).find((c: any)=>c.inst.split('-')[0]===base);
@@ -1182,10 +1243,14 @@ async function drawCoin(live=false){
       ${CD.info?`<div class="cdb">${CD.info.map(([k,v])=>`<div>${ic('i-coins')}<span>${k}</span><b>${v}</b></div>`).join('')}</div>`:''}
       ${X==='tr'&&pos?`<div class="cdb"><div>${ic('i-coins')}<span>Botta</span><b>${pos.lots||1} kademe · ${tl(pos.cost||0,0)} · ${sgn(pos.pnl||0)} TL</b></div><div>${ic('i-pnl')}<span>Ortalama alış</span><b>${tl(pos.avg||0,dec)}</b></div></div>`:''}
       ${X==='tr'&&coin?`<div class="cdb"><div>${ic('i-chart')}<span>Bu coinden toplam</span><b class="${cls(coin.realized)}">${sgn(coin.realized)} TL · ${coin.sells} satış</b></div></div>`:''}
-      <div class="cdn">Canlı · 5 sn'de bir · ${X==='tr'?'OKX TR':X==='sw'?'OKX Global futures':'OKX Global'}</div>`;
+      <div class="cdn">Canlı · 5 sn'de bir · ${X==='tr'?'OKX TR':X==='sw'?'OKX Global futures':'OKX Global'}</div>
+      ${cdActH()}`;cdActB();
     bindCoin();
-  }catch(e){if(!live)box.innerHTML=`<div class="empty">${ic('i-info')}<div>Veri alınamadı, tekrar dene</div></div>`}
+  }catch(e){if(!live){box.innerHTML=`<div class="empty">${ic('i-info')}<div>Grafik verisi alınamadı</div></div>${cdActH()}`;cdActB()}}
 }
+/** Grafik altındaki işlem düğmesi (Elle al / Elle aç): grafik yüklenmese de görünür */
+const cdActH=()=>CD?.act?`<button class="btn primary xgo" type="button" id="cdAct">${ic('i-buy')}${CD.act[0]}</button>`:'';
+function cdActB(){const a=document.getElementById('cdAct');if(a&&CD?.act){const f=CD.act[1];a.onclick=()=>{clearTimeout(CD?.t);CD=null;f()}}}
 function bindCoin(){
   document.querySelectorAll<HTMLButtonElement>('#cdv [data-cq]').forEach(b=>b.onclick=()=>{if(CD&&!b.disabled){CD.q=b.dataset.cq;drawCoin()}});
   document.querySelectorAll<HTMLButtonElement>('#cdv [data-cb]').forEach(b=>b.onclick=()=>{if(CD){CD.bar=b.dataset.cb;drawCoin()}});
