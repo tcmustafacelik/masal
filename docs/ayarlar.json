@@ -362,13 +362,6 @@
   ],
   "desk_cmd": [
     {
-      "id": "smwvrisiz",
-      "ts": 1795589322731,
-      "desk": "gspotr",
-      "act": "sync",
-      "sym": ""
-    },
-    {
       "id": "smwvrmy2l",
       "ts": 1795589516541,
       "desk": "gspotr",
@@ -378,6 +371,13 @@
     {
       "id": "smwvrvh6v",
       "ts": 1795589914567,
+      "desk": "gspotr",
+      "act": "sync",
+      "sym": ""
+    },
+    {
+      "id": "smwvrwch7",
+      "ts": 1795589955115,
       "desk": "gspotr",
       "act": "sync",
       "sym": ""
