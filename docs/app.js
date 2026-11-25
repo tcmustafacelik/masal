@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.103.0';
+const APP_VERSION = '1.103.1';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = 'var(--acc)';
@@ -1022,7 +1022,7 @@ function levWatch() {
     const w = (L.watch || []).slice().sort((a, b) => pk(a) - pk(b)).map((r) => {
         const d = Math.abs(r.dist || 0), up = r.side === 'UZUN', past = up ? (r.dist || 0) <= 0 : (r.dist || 0) >= 0, near = Math.max(4, Math.min(100, 100 - d * 12));
         const ps = pf(r.px);
-        return `<div class="wr ${up ? 'wu' : 'wd'}" data-lo="${escH(r.sym)}" data-ls="${up ? 1 : -1}" role="button"><div><b>${escH(r.sym)}</b><em>${r.open ? 'AÇIK' : up ? '↑ UZUN' : '↓ KISA'}</em></div><div class="wpx"><span>${ps}</span><small>${pxTL(r.px)}</small></div><div class="wfk"><small class="${past && !r.open ? 'up' : ''}">Fark ${past ? '−' : '+'}%${nf(d, 1)}</small><small>${r.open ? 'pozisyon açık' : past ? 'kırıldı' : 'sinyale'}</small></div><i style="width:${(r.open || past ? 100 : near).toFixed(0)}%"></i></div>`;
+        return `<div class="swr wsw${swOpen === 't:${escH(r.sym)}' ? ' open' : ''}" data-i="t:${escH(r.sym)}"><button class="swb buy" type="button" data-nb="${escH(r.sym)}" data-ls="${up ? 1 : -1}">${ic(up ? 'i-buy' : 'i-sell')}Pozisyon aç</button><div class="wr swc ${up ? 'wu' : 'wd'}" data-lo="${escH(r.sym)}" data-ls="${up ? 1 : -1}" role="button"><div><b>${escH(r.sym)}</b><em>${r.open ? 'AÇIK' : up ? '↑ UZUN' : '↓ KISA'}</em></div><div class="wpx"><span>${ps}</span><small>${pxTL(r.px)}</small></div><div class="wfk"><small class="${past && !r.open ? 'up' : ''}">Fark ${past ? '−' : '+'}%${nf(d, 1)}</small><small>${r.open ? 'pozisyon açık' : past ? 'kırıldı' : 'sinyale'}</small></div><i style="width:${(r.open || past ? 100 : near).toFixed(0)}%"></i></div></div>`;
     }).join('');
     return `<h2 class="mh">${ic('i-eye')}İzlenen coinler<span class="hsum">sinyale uzaklık · ${lv.fast ? '15 dk' : 'saatlik'}</span></h2>
     <div class="card"><div class="wgrid">${w || `<div class="empty">${ic('i-refresh')}<div>Mumlar yükleniyor</div></div>`}</div>
@@ -1088,7 +1088,7 @@ function openLevOpen(sym, side0) {
 }
 document.addEventListener('click', e => {
     const t = e.target.closest?.('[data-lo]');
-    if (!t)
+    if (!t || swBusy(t))
         return;
     const sy = t.dataset.lo, sd = +t.dataset.ls;
     const r = ((S?.lev?.watch) || []).find((w) => w.sym === sy);
@@ -1165,7 +1165,7 @@ function openGBuy(inst0) {
 }
 document.addEventListener('click', e => {
     const t = e.target.closest?.('[data-gb]');
-    if (!t)
+    if (!t || swBusy(t))
         return;
     const i = t.dataset.gb;
     if (!i || !t.classList.contains('wr')) {
@@ -1204,7 +1204,7 @@ function renderGspot() {
     const full = (G.positions || []).length >= +(gs.max_coins ?? 5);
     const W = (P?.watch || []).slice().sort((a, b) => ((a.f || a.fs) ? 1 : 0) - ((b.f || b.fs) ? 1 : 0) || a.g - b.g).slice(0, 8).map((w) => {
         const d = w.g, ok = d <= 0 && !w.f && !w.fs && (w.h || !full), near = Math.max(4, Math.min(100, 100 - Math.max(0, d) * 12));
-        return `<div class="wr ${ok ? 'wu' : 'wd'}" data-gb="${esc(w.i)}" role="button"><div><b>${esc(sym(w.i))}</b><em>${w.fs ? 'FUTURES KISA' : w.f ? 'FİLTRE' : ok ? 'ŞART TAMAM' : d <= 0 && full && !w.h ? 'COİN SINIRI' : w.h ? (w.h + 1) + '. KDM' : 'ADAY'}</em></div><div class="wpx"><span>${pf(w.p)}</span><small>${pxTL(w.p)}</small></div><div class="wfk"><small class="${d <= 0 ? 'up' : ''}">Fark ${d <= 0 ? '−' : '+'}%${nf(Math.abs(d), 1)}</small><small>${d <= 0 ? 'hedefin altında' : 'hedefe'}</small></div><i style="width:${(ok ? 100 : near).toFixed(0)}%"></i></div>`;
+        return `<div class="swr wsw${swOpen === 't:${esc(w.i)}' ? ' open' : ''}" data-i="t:${esc(w.i)}"><button class="swb buy" type="button" data-nb="${esc(w.i)}">${ic('i-buy')}Al</button><div class="wr swc ${ok ? 'wu' : 'wd'}" data-gb="${esc(w.i)}" role="button"><div><b>${esc(sym(w.i))}</b><em>${w.fs ? 'FUTURES KISA' : w.f ? 'FİLTRE' : ok ? 'ŞART TAMAM' : d <= 0 && full && !w.h ? 'COİN SINIRI' : w.h ? (w.h + 1) + '. KDM' : 'ADAY'}</em></div><div class="wpx"><span>${pf(w.p)}</span><small>${pxTL(w.p)}</small></div><div class="wfk"><small class="${d <= 0 ? 'up' : ''}">Fark ${d <= 0 ? '−' : '+'}%${nf(Math.abs(d), 1)}</small><small>${d <= 0 ? 'hedefin altında' : 'hedefe'}</small></div><i style="width:${(ok ? 100 : near).toFixed(0)}%"></i></div></div>`;
     }).join('');
     const warm = P && P.uni && P.warm < P.uni ? `<p class="hint">Mumlar yükleniyor: ${P.warm}/${P.uni} coin hazır. Bir coin, 60 saatlik verisi tamamlanınca alınabilir.</p>` : '';
     const empty = real && gReal(G) < 0.5;
@@ -1469,7 +1469,7 @@ function renderNow(x) {
             const r = it.gap <= 0 && !it.f ? why(it) : '', bz = BUYING[it.i], ok = it.gap <= 0 && !it.f && !r;
             const tag = bz ? 'ALINIYOR' : it.f ? 'FİLTRE' : it.gap <= 0 ? (r ? r.toLocaleUpperCase('tr') : 'ŞART TAMAM') : it.h ? `${it.h + 1}. KDM` : 'ADAY';
             const near = it.f ? 8 : it.gap <= 0 ? 100 : Math.max(4, Math.min(100, 100 - it.gap * 20));
-            return `<div class="wr ${ok || bz ? 'wu' : it.gap <= 0 && !it.f ? 'wa' : 'wd'}" data-sb="${it.i}" role="button"><div><b>${sym(it.i)}</b><em>${tag}</em></div><div class="wpx"><span>${px(it.cur)}</span><small>${it.h ? `${it.h + 1}. alım` : 'alım'} ${px(it.t)}</small></div><div class="wfk"><small class="${it.gap <= 0 ? 'up' : ''}">Fark ${it.gap <= 0 ? '−' : '+'}%${nf(Math.abs(it.gap), Math.abs(it.gap) < 10 ? 1 : 0)}</small><small>${it.f ? 'düşüş filtresi' : it.gap <= 0 ? 'şartta' : 'düşerse alır'}</small></div><i style="width:${near.toFixed(0)}%"></i></div>`;
+            return `<div class="swr wsw${swOpen === 't:${it.i}' ? ' open' : ''}" data-i="t:${it.i}"><button class="swb buy" type="button" data-nb="${it.i}">${ic('i-buy')}Al</button><div class="wr swc ${ok || bz ? 'wu' : it.gap <= 0 && !it.f ? 'wa' : 'wd'}" data-sb="${it.i}" role="button"><div><b>${sym(it.i)}</b><em>${tag}</em></div><div class="wpx"><span>${px(it.cur)}</span><small>${it.h ? `${it.h + 1}. alım` : 'alım'} ${px(it.t)}</small></div><div class="wfk"><small class="${it.gap <= 0 ? 'up' : ''}">Fark ${it.gap <= 0 ? '−' : '+'}%${nf(Math.abs(it.gap), Math.abs(it.gap) < 10 ? 1 : 0)}</small><small>${it.f ? 'düşüş filtresi' : it.gap <= 0 ? 'şartta' : 'düşerse alır'}</small></div><i style="width:${near.toFixed(0)}%"></i></div></div>`;
         }).join('');
         h += '</div>';
         if (items.length > 6)
@@ -2546,6 +2546,7 @@ function renderPositions(x) {
     }).join('')
         : `<div class="empty">${ic('i-box')}<div>Şu an açık pozisyon yok</div></div>`);
 }
+const swBusy = (t) => Date.now() - swJust < 400 || !!t.closest('#now,#gspotBody,#futBody')?.querySelector('.swr.open');
 function swipeBox(box, act) {
     let sx = 0, sy = 0, el = null, dx = 0, lock = '';
     const start = (x, y, t) => { const w = t.closest('.swr'); if (!w)
@@ -2609,14 +2610,18 @@ function swipeBox(box, act) {
 swipeBox(document.getElementById('positions'), b => sellCoin(b.dataset.sell));
 document.getElementById('now').addEventListener('click', e => {
     const t = e.target.closest('[data-sb]');
-    if (!t)
+    if (!t || swBusy(t))
         return;
     const i = t.dataset.sb, w = NOWX?.watch, it = (w?.items || []).find((x) => x.i === i);
     const cur = it ? livePrice(i, it.p) : 0, g = it ? (cur / it.t - 1) * 100 : 0;
     openCoin(i, 'tr', [], it ? [['Alım seviyesi', `${px(+it.t)} TL`], ['Durum', it.f ? 'Düşüş filtresinde · bekliyor' : g <= 0 ? `Alım seviyesinin %${nf(-g, 1)} altında` : `Alım seviyesine %${nf(g, 1)}`]] : undefined, ['Elle al', () => openBuy(i)]);
 });
-swipeBox(document.getElementById('gspotBody'), () => { });
-swipeBox(document.getElementById('futBody'), () => { });
+swipeBox(document.getElementById('gspotBody'), b => { if (b.dataset.nb)
+    openGBuy(b.dataset.nb); });
+swipeBox(document.getElementById('futBody'), b => { if (b.dataset.nb)
+    openLevOpen(b.dataset.nb, +b.dataset.ls || 1); });
+swipeBox(document.getElementById('now'), b => { if (b.dataset.nb)
+    openBuy(b.dataset.nb); });
 swipeBox(document.getElementById('setForm'), b => { const d = BAN_DESK[STAB], v = b.dataset.unban; if (!d || v == null)
     return; const l = banList(d), i = l.indexOf(v); if (i >= 0)
     l.splice(i, 1); swOpen = ''; renderForm(); });
@@ -3456,7 +3461,7 @@ function renderForm() {
         if (e)
             e.hidden = STAB !== 'app';
     }
-    let h = `<div class="tiles stabs">${STABS.map(([k, i, n]) => `<button class="tile ${STAB === k ? 'on' : ''}" data-stab="${k}"><span class="ic">${ic(i)}</span><span class="nm">${n}</span>${dirtyTab(k) ? '<i class="dot"></i>' : ''}</button>`).join('')}</div>`;
+    let h = `<div class="stabs" style="--n:${STABS.length}">${STABS.map(([k, i, n]) => `<button type="button" class="stb ${STAB === k ? 'on' : ''}" data-stab="${k}"><span class="ic">${ic(i)}</span><span class="nm">${n}</span>${dirtyTab(k) ? '<i class="dot"></i>' : ''}</button>`).join('')}</div>`;
     if (STAB === 'spot') {
         h += `<section><h2><span class="hb c-green">${ic('i-power')}</span>Çalışma</h2>
    <div class="tiles two" data-g="mode">${tile(!live, 'demo', 'i-flask', 'Deneme', 'Emir gönderilmez')}${tile(live, 'real', 'i-coins', 'Gerçek', 'OKX TR hesabında')}</div>

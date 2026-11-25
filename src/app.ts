@@ -1,4 +1,4 @@
-const APP_VERSION='1.103.0';
+const APP_VERSION='1.103.1';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (kehribar)
@@ -560,7 +560,7 @@ function levWatch(): string {
   const pk = (r: any) => {const v = r.dist || 0; return (r.side === 'UZUN' ? v <= 0 : v >= 0) ? -Math.abs(v) - 1000 : Math.abs(v)};
   const w = (L.watch || []).slice().sort((a: any, b: any) => pk(a) - pk(b)).map((r: any) => {const d = Math.abs(r.dist || 0), up = r.side === 'UZUN', past = up ? (r.dist || 0) <= 0 : (r.dist || 0) >= 0, near = Math.max(4, Math.min(100, 100 - d * 12));
     const ps = pf(r.px);
-    return `<div class="wr ${up ? 'wu' : 'wd'}" data-lo="${escH(r.sym)}" data-ls="${up ? 1 : -1}" role="button"><div><b>${escH(r.sym)}</b><em>${r.open ? 'AÇIK' : up ? '↑ UZUN' : '↓ KISA'}</em></div><div class="wpx"><span>${ps}</span><small>${pxTL(r.px)}</small></div><div class="wfk"><small class="${past && !r.open ? 'up' : ''}">Fark ${past ? '−' : '+'}%${nf(d, 1)}</small><small>${r.open ? 'pozisyon açık' : past ? 'kırıldı' : 'sinyale'}</small></div><i style="width:${(r.open || past ? 100 : near).toFixed(0)}%"></i></div>`}).join('');
+    return `<div class="swr wsw${swOpen==='t:${escH(r.sym)}'?' open':''}" data-i="t:${escH(r.sym)}"><button class="swb buy" type="button" data-nb="${escH(r.sym)}" data-ls="${up ? 1 : -1}">${ic(up ? 'i-buy' : 'i-sell')}Pozisyon aç</button><div class="wr swc ${up ? 'wu' : 'wd'}" data-lo="${escH(r.sym)}" data-ls="${up ? 1 : -1}" role="button"><div><b>${escH(r.sym)}</b><em>${r.open ? 'AÇIK' : up ? '↑ UZUN' : '↓ KISA'}</em></div><div class="wpx"><span>${ps}</span><small>${pxTL(r.px)}</small></div><div class="wfk"><small class="${past && !r.open ? 'up' : ''}">Fark ${past ? '−' : '+'}%${nf(d, 1)}</small><small>${r.open ? 'pozisyon açık' : past ? 'kırıldı' : 'sinyale'}</small></div><i style="width:${(r.open || past ? 100 : near).toFixed(0)}%"></i></div></div>`}).join('');
   return `<h2 class="mh">${ic('i-eye')}İzlenen coinler<span class="hsum">sinyale uzaklık · ${lv.fast ? '15 dk' : 'saatlik'}</span></h2>
     <div class="card"><div class="wgrid">${w || `<div class="empty">${ic('i-refresh')}<div>Mumlar yükleniyor</div></div>`}</div>
     <p class="hint">Elle açmak için coine dokun. Çubuk dolu = sinyale yakın. ${lv.fast?'<b>Al-kaç</b> (15 dk mum). ':''}Fiyat son ${lv.brk_h??20} saatin zirvesini aşınca UZUN, dibini kırınca KISA açılır (${lv.trend_on===false?'eğilim filtresi kapalı':`${lv.fast?Math.min(70,lv.trend_h??200):lv.trend_h??200} saatlik ortalamanın yönünde`}).</p></div>
@@ -597,7 +597,7 @@ function openLevOpen(sym: string, side0: number){
       if(ok){q.hidden=true;toast(`${sym} ${side>0?'UZUN':'KISA'} açma isteği gönderildi; bot birkaç saniyede açar`)}else{go.disabled=false;toast('İstek gönderilemedi, tekrar dene',patchWhy())}}};
   draw();q.hidden=false;
 }
-document.addEventListener('click',e=>{const t=(e.target as HTMLElement).closest?.('[data-lo]') as HTMLElement;if(!t)return;const sy=t.dataset.lo,sd=+t.dataset.ls;
+document.addEventListener('click',e=>{const t=(e.target as HTMLElement).closest?.('[data-lo]') as HTMLElement;if(!t||swBusy(t))return;const sy=t.dataset.lo,sd=+t.dataset.ls;
   const r: any=(((S as any)?.lev?.watch)||[]).find((w: any)=>w.sym===sy);
   if(r?.open){openLevOpen(sy,sd);return}
   openCoin(sy+'-USDT','sw',[],r?[['Sinyal',`${r.side==='UZUN'?'↑ UZUN':'↓ KISA'} · sinyale %${nf(Math.abs(r.dist||0),1)}`]]:undefined,['Elle aç',()=>openLevOpen(sy,sd)])});
@@ -644,7 +644,7 @@ function openGBuy(inst0: string){
   };
   draw();q.hidden=false;
 }
-document.addEventListener('click',e=>{const t=(e.target as HTMLElement).closest?.('[data-gb]') as HTMLElement;if(!t)return;const i=t.dataset.gb;
+document.addEventListener('click',e=>{const t=(e.target as HTMLElement).closest?.('[data-gb]') as HTMLElement;if(!t||swBusy(t))return;const i=t.dataset.gb;
   if(!i||!t.classList.contains('wr')){openGBuy(i);return}
   // aday kutusu: önce mumlu grafik (alım seviyesi çizgisiyle), altında "Al" düğmesi
   const w: any=(((S as any)?.gspot?.watch)||[]).find((x: any)=>x.i===i),tg=w&&w.g!=null?w.p/(1+w.g/100):0;
@@ -678,7 +678,7 @@ function renderGspot(): string {
     `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : /^HATA/.test(t) ? 'err' : 'not'}">${k === 'buy' ? 'AL' : k === 'exit' ? 'SAT' : k === 'risk' ? (/^HATA/.test(t) ? 'HATA' : 'ENGEL') : 'BİLGİ'}</em><div>${feedTxt(String(t).replace(/^(?:AL|SAT|HATA|ENGEL:?|DUR:) ?/, ''))}</div></div>`).join('');
   const full = (G.positions || []).length >= +(gs.max_coins ?? 5);
   const W = (P?.watch || []).slice().sort((a: any, b: any) => ((a.f || a.fs) ? 1 : 0) - ((b.f || b.fs) ? 1 : 0) || a.g - b.g).slice(0, 8).map((w: any) => {const d = w.g, ok = d <= 0 && !w.f && !w.fs && (w.h || !full), near = Math.max(4, Math.min(100, 100 - Math.max(0, d) * 12));
-    return `<div class="wr ${ok ? 'wu' : 'wd'}" data-gb="${esc(w.i)}" role="button"><div><b>${esc(sym(w.i))}</b><em>${w.fs ? 'FUTURES KISA' : w.f ? 'FİLTRE' : ok ? 'ŞART TAMAM' : d <= 0 && full && !w.h ? 'COİN SINIRI' : w.h ? (w.h + 1) + '. KDM' : 'ADAY'}</em></div><div class="wpx"><span>${pf(w.p)}</span><small>${pxTL(w.p)}</small></div><div class="wfk"><small class="${d <= 0 ? 'up' : ''}">Fark ${d <= 0 ? '−' : '+'}%${nf(Math.abs(d), 1)}</small><small>${d <= 0 ? 'hedefin altında' : 'hedefe'}</small></div><i style="width:${(ok ? 100 : near).toFixed(0)}%"></i></div>`}).join('');
+    return `<div class="swr wsw${swOpen==='t:${esc(w.i)}'?' open':''}" data-i="t:${esc(w.i)}"><button class="swb buy" type="button" data-nb="${esc(w.i)}">${ic('i-buy')}Al</button><div class="wr swc ${ok ? 'wu' : 'wd'}" data-gb="${esc(w.i)}" role="button"><div><b>${esc(sym(w.i))}</b><em>${w.fs ? 'FUTURES KISA' : w.f ? 'FİLTRE' : ok ? 'ŞART TAMAM' : d <= 0 && full && !w.h ? 'COİN SINIRI' : w.h ? (w.h + 1) + '. KDM' : 'ADAY'}</em></div><div class="wpx"><span>${pf(w.p)}</span><small>${pxTL(w.p)}</small></div><div class="wfk"><small class="${d <= 0 ? 'up' : ''}">Fark ${d <= 0 ? '−' : '+'}%${nf(Math.abs(d), 1)}</small><small>${d <= 0 ? 'hedefin altında' : 'hedefe'}</small></div><i style="width:${(ok ? 100 : near).toFixed(0)}%"></i></div></div>`}).join('');
   const warm = P && P.uni && P.warm < P.uni ? `<p class="hint">Mumlar yükleniyor: ${P.warm}/${P.uni} coin hazır. Bir coin, 60 saatlik verisi tamamlanınca alınabilir.</p>` : '';
   const empty = real && gReal(G) < 0.5;
   const ready = Math.min(+G.fund_res || 0, G.start);
@@ -862,7 +862,7 @@ function renderNow(x: Strategy){NOWX=x;
     h+=show.map(it=>{const r=it.gap<=0&&!it.f?why(it):'',bz=BUYING[it.i],ok=it.gap<=0&&!it.f&&!r;
       const tag=bz?'ALINIYOR':it.f?'FİLTRE':it.gap<=0?(r?r.toLocaleUpperCase('tr'):'ŞART TAMAM'):it.h?`${it.h+1}. KDM`:'ADAY';
       const near=it.f?8:it.gap<=0?100:Math.max(4,Math.min(100,100-it.gap*20));
-      return `<div class="wr ${ok||bz?'wu':it.gap<=0&&!it.f?'wa':'wd'}" data-sb="${it.i}" role="button"><div><b>${sym(it.i)}</b><em>${tag}</em></div><div class="wpx"><span>${px(it.cur)}</span><small>${it.h?`${it.h+1}. alım`:'alım'} ${px(it.t)}</small></div><div class="wfk"><small class="${it.gap<=0?'up':''}">Fark ${it.gap<=0?'−':'+'}%${nf(Math.abs(it.gap),Math.abs(it.gap)<10?1:0)}</small><small>${it.f?'düşüş filtresi':it.gap<=0?'şartta':'düşerse alır'}</small></div><i style="width:${near.toFixed(0)}%"></i></div>`}).join('');
+      return `<div class="swr wsw${swOpen==='t:${it.i}'?' open':''}" data-i="t:${it.i}"><button class="swb buy" type="button" data-nb="${it.i}">${ic('i-buy')}Al</button><div class="wr swc ${ok||bz?'wu':it.gap<=0&&!it.f?'wa':'wd'}" data-sb="${it.i}" role="button"><div><b>${sym(it.i)}</b><em>${tag}</em></div><div class="wpx"><span>${px(it.cur)}</span><small>${it.h?`${it.h+1}. alım`:'alım'} ${px(it.t)}</small></div><div class="wfk"><small class="${it.gap<=0?'up':''}">Fark ${it.gap<=0?'−':'+'}%${nf(Math.abs(it.gap),Math.abs(it.gap)<10?1:0)}</small><small>${it.f?'düşüş filtresi':it.gap<=0?'şartta':'düşerse alır'}</small></div><i style="width:${near.toFixed(0)}%"></i></div></div>`}).join('');
     h+='</div>';
     if(items.length>6)h+=`<button class="more" id="nowMore">${nowAll?'Daha az göster':`Tümünü göster (${items.length} coin)`}</button>`;
   }
@@ -1486,6 +1486,8 @@ function renderPositions(x){
     :`<div class="empty">${ic('i-box')}<div>Şu an açık pozisyon yok</div></div>`);
 }
 /** Sola kaydırınca düğme açılan satırlar (Elimdeki coinler: Sat · Alıma yakın coinler: Al) — tek davranış */
+/** Kaydırma yeni bittiyse ya da kutu açıksa (Al düğmesi görünürken) dokunuş grafik açmasın: önce kutu kapanır */
+const swBusy=(t: HTMLElement)=>Date.now()-swJust<400||!!t.closest('#now,#gspotBody,#futBody')?.querySelector('.swr.open');
 function swipeBox(box: HTMLElement, act: (b: HTMLElement)=>void){let sx=0,sy=0,el:HTMLElement=null,dx=0,lock='';
   const start=(x,y,t)=>{const w=(t as HTMLElement).closest<HTMLElement>('.swr');if(!w)return;el=w;sx=x;sy=y;dx=0;lock='';swDrag=true;w.classList.add('drag')};
   const move=(x,y,ev)=>{if(!el)return;const ddx=x-sx,ddy=y-sy;if(!lock)lock=Math.abs(ddx)>8&&Math.abs(ddx)>Math.abs(ddy)?'x':(Math.abs(ddy)>8?'y':'');
@@ -1505,12 +1507,13 @@ function swipeBox(box: HTMLElement, act: (b: HTMLElement)=>void){let sx=0,sy=0,e
     if(swOpen&&!(e.target as HTMLElement).closest('.swr.open .swb')){swOpen='';box.querySelectorAll('.swr.open').forEach(w=>w.classList.remove('open'))}});
 }
 swipeBox(document.getElementById('positions'),b=>sellCoin(b.dataset.sell));
-document.getElementById('now').addEventListener('click',e=>{const t=(e.target as HTMLElement).closest<HTMLElement>('[data-sb]');if(!t)return;
+document.getElementById('now').addEventListener('click',e=>{const t=(e.target as HTMLElement).closest<HTMLElement>('[data-sb]');if(!t||swBusy(t))return;
   const i=t.dataset.sb,w: any=NOWX?.watch,it: any=(w?.items||[]).find((x: any)=>x.i===i);
   const cur=it?livePrice(i,it.p):0,g=it?(cur/it.t-1)*100:0;
   openCoin(i,'tr',[],it?[['Alım seviyesi',`${px(+it.t)} TL`],['Durum',it.f?'Düşüş filtresinde · bekliyor':g<=0?`Alım seviyesinin %${nf(-g,1)} altında`:`Alım seviyesine %${nf(g,1)}`]]:undefined,['Elle al',()=>openBuy(i)])});
-swipeBox(document.getElementById('gspotBody'),()=>{}); // Global: "Sat" düğmesi masa komutu gönderir (data-desk)
-swipeBox(document.getElementById('futBody'),()=>{}); // Futures: "Kapat" düğmesi masa komutu gönderir (data-desk)
+swipeBox(document.getElementById('gspotBody'),b=>{if(b.dataset.nb)openGBuy(b.dataset.nb)}); // Global: "Sat" masa komutu (data-desk), aday kutusunda "Al"
+swipeBox(document.getElementById('futBody'),b=>{if(b.dataset.nb)openLevOpen(b.dataset.nb,+b.dataset.ls||1)}); // Futures: "Kapat" masa komutu (data-desk), izlenen coinde "Aç"
+swipeBox(document.getElementById('now'),b=>{if(b.dataset.nb)openBuy(b.dataset.nb)}); // Spot adayları: sola kaydır → Al
 swipeBox(document.getElementById('setForm'),b=>{const d=BAN_DESK[STAB],v=b.dataset.unban;if(!d||v==null)return;const l=banList(d),i=l.indexOf(v);if(i>=0)l.splice(i,1);swOpen='';renderForm()});
 // Tek coini sat: ayarlar.json'a satış isteği yazılır, bot ~5 sn içinde piyasa fiyatından satar
 async function sellCoin(inst: string){
@@ -2025,7 +2028,7 @@ function renderForm(){
   const live=draft.live;
   const dirtyTab=(t: string)=>(BAN_DESK[t]&&secDirty(['ban.'+BAN_DESK[t]]))||(t==='spot'&&secDirty(['live','paused','quote','strategy','target','grid','dip','trend']))||(t==='app'&&secDirty(['notify']))||SECTIONS.some(sec=>SEC_TAB[sec.t]===t&&secDirty([...sec.f.map(x=>x[0]),...((sec as any).sw||[]).map(x=>x[0])]));
   for(const id of ['linkSec','connSec']){const e=document.getElementById(id);if(e)e.hidden=STAB!=='app'}
-  let h=`<div class="tiles stabs">${STABS.map(([k,i,n])=>`<button class="tile ${STAB===k?'on':''}" data-stab="${k}"><span class="ic">${ic(i)}</span><span class="nm">${n}</span>${dirtyTab(k)?'<i class="dot"></i>':''}</button>`).join('')}</div>`;
+  let h=`<div class="stabs" style="--n:${STABS.length}">${STABS.map(([k,i,n])=>`<button type="button" class="stb ${STAB===k?'on':''}" data-stab="${k}"><span class="ic">${ic(i)}</span><span class="nm">${n}</span>${dirtyTab(k)?'<i class="dot"></i>':''}</button>`).join('')}</div>`;
   if(STAB==='spot'){h+=`<section><h2><span class="hb c-green">${ic('i-power')}</span>Çalışma</h2>
    <div class="tiles two" data-g="mode">${tile(!live,'demo','i-flask','Deneme','Emir gönderilmez')}${tile(live,'real','i-coins','Gerçek','OKX TR hesabında')}</div>
    ${live&&!orig.live?`<div class="warn">${ic('i-info')}<div>Kaydedince bot OKX TR hesabında <b>gerçek emir</b> vermeye başlar. API anahtarı GitHub Secrets'ta olmalı.</div></div>`:''}

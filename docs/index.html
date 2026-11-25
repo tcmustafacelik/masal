@@ -401,7 +401,7 @@ details.setup summary::-webkit-details-marker{display:none}
 
 .xf .xt.x3{grid-template-columns:repeat(3,minmax(0,1fr))}.xt.x2{grid-template-columns:repeat(2,minmax(0,1fr))}.xe.e5{font-size:10px;font-weight:700;width:auto;min-width:30px;padding:0 6px}
 
-.stabs{grid-template-columns:repeat(6,minmax(0,1fr));gap:5px;margin:2px 0 10px}.stabs .tile{min-height:0;position:relative;padding:6px 2px 5px;gap:2px}.stabs .tile .ic{width:22px;height:22px}.stabs .tile .nm{font-size:10px}.stabs .dot{position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--acc)}
+
 .mh .mset{margin-left:8px;display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:9px;padding:4px 9px;font-size:11.5px;font-weight:600;letter-spacing:0;text-transform:none;-webkit-tap-highlight-color:transparent}.mh .mset .i{width:13px;height:13px}.mh .hsum{display:inline-flex;align-items:center;white-space:nowrap}
 .seg.dto{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;margin-bottom:12px}.seg.dto button{justify-content:center}
 .xcp{display:inline-flex;align-items:center;gap:3px;margin-left:6px;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:7px;padding:2px 7px;font-size:11px;font-weight:600;-webkit-tap-highlight-color:transparent}.xcp .i{width:12px;height:12px}
@@ -582,7 +582,7 @@ input,textarea,.inp{-webkit-user-select:text;user-select:text}
 .tiles.two .tile .nm{align-self:end;font-size:12.5px}.tiles.two .tile .pc{align-self:start;text-align:left}
 .tiles.two .tile:not(:has(.pc)) .ic{grid-row:auto}
 .qtiles .tile{padding:8px 2px 7px}
-.stabs .tile .ic svg{width:13px;height:13px}
+
 /* ---- kasalar ve aktarım yolları: simge solda, ad ve tutar sağda ---- */
 .xf .xk div .xe{grid-row:1/4;width:28px;height:28px}
 .xf .xt .xe{width:21px;height:21px;border-radius:6px}.xf .xt .xe svg{width:12px;height:12px}.xf .xt .xe.e5{font-size:9.5px;width:auto;min-width:26px;padding:0 5px}
@@ -825,12 +825,12 @@ em.lk.in{display:inline-block;width:auto;padding:2px 5px;margin:0 0 0 6px;vertic
 .sall .spn{width:12px;height:12px;border:2px solid #fff;border-right-color:transparent;border-radius:50%;display:inline-block;animation:xspin .8s linear infinite}
 .sall:active{transform:scale(.98)}
 .ovw .ob{display:flex;flex-direction:column}.ovw .sall{align-self:flex-end}
-.stabs [data-stab=spot] .ic{background:var(--blue-bg);color:var(--blue)}.stabs [data-stab=spot].on .ic{background:var(--blue);color:#fff}
-.stabs [data-stab=gspot] .ic{background:var(--teal-bg);color:var(--teal)}.stabs [data-stab=gspot].on .ic{background:var(--teal);color:#fff}
-.stabs [data-stab=fut] .ic{background:var(--violet-bg);color:var(--violet)}.stabs [data-stab=fut].on .ic{background:var(--violet);color:#fff}
-.stabs [data-stab=kasa] .ic{background:var(--amber-bg);color:var(--amber)}.stabs [data-stab=kasa].on .ic{background:var(--amber);color:#fff}
-.stabs [data-stab=app] .ic{background:var(--acc-bg);color:var(--acc)}.stabs [data-stab=app].on .ic{background:var(--acc);color:#fff}
-[data-theme=dark] .stabs .tile.on .ic{color:#111827}
+
+
+
+
+
+[data-theme=dark] 
 .xe.e6{background:var(--violet-bg);color:var(--violet)}.xe.e7{background:var(--teal-bg);color:var(--teal)}
 .toast.long{align-items:flex-start;width:calc(100% - 24px)}
 .toast .tt .tb{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;margin-top:3px;font-size:11.5px;font-weight:500;color:var(--muted);line-height:1.4;overflow-wrap:anywhere}
@@ -867,6 +867,28 @@ em.lk.in{display:inline-block;width:auto;padding:2px 5px;margin:0 0 0 6px;vertic
 .isban .coin{box-shadow:0 0 0 2px var(--red)}.isban .coin img{filter:grayscale(1);opacity:.6}
 .wgrid .wr.isfav>div:first-child b::after{content:'★';color:var(--amber);margin-left:4px;font-size:11px}
 .wgrid .wr.isban{opacity:.6}.wgrid .wr.isban>div:first-child b{text-decoration:line-through;text-decoration-color:var(--red)}
+
+/* Aday kutuları da sola kaydırılır: arkada yeşil "Al / Aç" */
+.wgrid .swr.wsw{border-top:0;border-radius:9px;overflow:hidden;min-width:0}
+.wgrid .swr.wsw .wr.swc{background:var(--line2);padding:7px 9px 9px;border-radius:9px}
+.wgrid .swr.wsw .swb{top:0;bottom:0;right:0;width:72px;border-radius:9px;font-size:11.5px;gap:5px}
+.wgrid .swr.wsw .swb svg{width:28px;height:28px;padding:6px}
+.wgrid .swr.wsw.open .swc{transform:translateX(-80px)}
+/* kara liste çerçevesi simgenin içinde (kenarda kesilmesin) */
+.isban .coin{box-shadow:inset 0 0 0 2px var(--red)}
+
+/* Ayarlar sekmeleri: tam genişlikte tek parça çubuk; sekme sayısı kadar eşit bölme, seçili sekme kendi renginde kart */
+.stabs{display:grid;grid-template-columns:repeat(var(--n,5),minmax(0,1fr));gap:3px;padding:4px;margin:2px 0 12px;border-radius:14px;background:var(--line2);border:1px solid var(--line)}
+.stb{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:0;padding:7px 2px 8px;border:0;border-radius:11px;background:transparent;font:inherit;color:var(--muted);cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none;transition:background .18s,color .18s,box-shadow .18s}
+.stb .ic{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:var(--tb);color:var(--tc);transition:background .18s,color .18s}
+.stb .ic svg{width:15px;height:15px}
+.stb .nm{font-size:clamp(9.5px,2.9vw,11px);letter-spacing:-.1px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.stb.on{background:var(--surface);color:var(--tc);box-shadow:0 1px 3px rgba(20,24,40,.08)}.stb.on::after{content:'';position:absolute;bottom:3px;left:50%;width:18px;height:3px;margin-left:-9px;border-radius:2px;background:var(--tc)}
+.stb.on .ic{background:var(--tc);color:#fff}.stb.on .nm{font-weight:750}
+.stb:active{transform:scale(.97)}
+.stb .dot{position:absolute;top:5px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--acc);box-shadow:0 0 0 2px var(--line2)}
+.stb[data-stab=spot]{--tc:var(--blue);--tb:var(--blue-bg)}.stb[data-stab=gspot]{--tc:var(--teal);--tb:var(--teal-bg)}.stb[data-stab=fut]{--tc:var(--violet);--tb:var(--violet-bg)}
+.stb[data-stab=kasa]{--tc:var(--amber);--tb:var(--amber-bg)}.stb[data-stab=app]{--tc:var(--acc);--tb:var(--acc-bg)}
 </style>
 </head>
 <body>
@@ -1067,6 +1089,6 @@ em.lk.in{display:inline-block;width:auto;padding:2px 5px;margin:0 0 0 6px;vertic
 <div class="toast" id="toast" hidden></div>
 <div class="qsh" id="qsh" hidden><div class="qb"><div class="gr"></div><h3><span><svg class="i" id="qIco"><use href="#i-info"/></svg></span><b id="qTitle"></b></h3><div class="qt" id="qText"></div><button class="btn primary" id="qOk">Anladım</button></div></div>
 
-<script src="app.js?v=1.103.0"></script>
+<script src="app.js?v=1.103.1"></script>
 </body>
 </html>
