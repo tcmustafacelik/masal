@@ -59,10 +59,11 @@
     "cleared": 1795586100
   },
   "sell": {
-    "ts": 1795587725275,
+    "ts": 1795587727963,
     "insts": [
       "WLFI-USDT",
-      "TRUMP-USDT"
+      "TRUMP-USDT",
+      "VIRTUAL-USDT"
     ]
   },
   "quote": "USDT",
