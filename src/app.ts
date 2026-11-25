@@ -1,4 +1,4 @@
-const APP_VERSION='1.102.0';
+const APP_VERSION='1.103.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (kehribar)
@@ -501,6 +501,56 @@ function renderLevR(): string {
 }
 /** Kara liste adı: 'irys', 'IRYS-USDT' -> 'IRYS' */
 const banKey = (x: string) => {x = String(x || '').trim(); return x.replace(/[İıi]/g, 'I').toUpperCase().split(/[-/]/)[0]}; // Türkçe klavye: "İRYS" → "IRYS"
+
+/* ---------- Basılı tutma menüsü: Spot, Global ve Futures'taki her coin satırı / aday kutusu ----------
+ * Yarım saniye basılı tutunca alttan menü açılır: Favori · Kara liste · Grafik · Elle al/aç. Değişiklik buluta hemen yazılır.
+ * Favoriler ve kara listedekiler bütün listelerde işaretlenir (coin simgesinde yıldız / kırmızı çizgi). */
+const LPD: Record<string,string>={mainv:'spot',gspotv:'gspot',futv:'lev'};
+const LPN: Record<string,string>={spot:'Spot · OKX TR',gspot:'Global spot',lev:'Futures'};
+function lpRow(t: EventTarget|null): [HTMLElement,string,string]|null{
+  const e=t as HTMLElement;if(!e?.closest||e.closest('button,a,input,.swb,.dbtn,.more,.mset'))return null;
+  const v=e.closest('#mainv,#gspotv,#futv') as HTMLElement;if(!v)return null;
+  const r=e.closest('[data-sb],[data-gb],[data-lo],.row') as HTMLElement;if(!r||r.closest('.swr.open'))return null;
+  const raw=r.dataset.sb||r.dataset.gb||r.dataset.lo||r.querySelector<HTMLElement>('[data-coin]')?.dataset.coin||'';
+  return raw?[r,LPD[v.id],raw]:null}
+const lpSet=(k: 'ban'|'fav',d: string): string[]=>((((orig||S?.settings) as any)?.[k]||{})[d]||[]).map(banKey);
+let LP_T=0,LP_X=0,LP_Y=0,LP_FIRED=0;
+document.addEventListener('pointerdown',e=>{const h=lpRow(e.target);clearTimeout(LP_T);if(!h)return;LP_X=e.clientX;LP_Y=e.clientY;
+  LP_T=setTimeout(()=>{LP_FIRED=Date.now();try{navigator.vibrate?.(12)}catch(_){}openCoinMenu(h[1],h[2])},480)},{passive:true});
+document.addEventListener('pointermove',e=>{if(Math.abs(e.clientX-LP_X)+Math.abs(e.clientY-LP_Y)>10)clearTimeout(LP_T)},{passive:true});
+for(const ev of ['pointerup','pointercancel','scroll'])document.addEventListener(ev,()=>clearTimeout(LP_T),{passive:true,capture:true});
+// menü açıldıktan sonra parmak kalkınca gelen tıklama satırın kendi işini (grafik vb.) açmasın
+document.addEventListener('click',e=>{if(LP_FIRED&&Date.now()-LP_FIRED<900){LP_FIRED=0;e.stopPropagation();e.preventDefault()}},true);
+document.addEventListener('contextmenu',e=>{if(lpRow(e.target))e.preventDefault()});
+function openCoinMenu(d: string,raw: string){
+  const sy=banKey(sym(raw)),inst=raw.includes('-')?raw.replace(/-SWAP$/,''):sy+'-USDT',q=document.getElementById('qsh');
+  const fav=lpSet('fav',d).includes(sy),ban=lpSet('ban',d).includes(sy);
+  q.dataset.n='';qHead('i-coins','Kapat');document.getElementById('qTitle').textContent=LPN[d];
+  const t=(k: string,c: string,i: string,b: string,sm: string,on=false)=>`<button type="button" class="lpt ${c}${on?' on':''}" data-lp="${k}"><span>${ic(i)}</span><b>${b}</b><small>${sm}</small></button>`;
+  document.getElementById('qText').innerHTML=`<div class="lph">${cico(inst)}<div class="lpn"><b>${escH(sy)}</b><small>${fav||ban?'':'Basılı tutma menüsü'}</small></div>${fav?`<em class="lk am">FAVORİ</em>`:''}${ban?`<em class="lk wn">KARA LİSTE</em>`:''}</div>
+    <div class="lpg">${t('fav','lam','i-star',fav?'Favoriden çıkar':'Favoriye al',fav?'yıldız kalkar':'listelerde yıldızla görünür',fav)}
+      ${t('ban','lrd','i-ban',ban?'Listeden çıkar':'Kara listeye al',ban?'yeniden işlem açılabilir':'bot yeni işlem açmaz',ban)}
+      ${t('chart','lbl','i-chart','Grafik','mumlar · canlı fiyat')}
+      ${t('go','lgr',d==='lev'?'i-layers':'i-buy',d==='lev'?'Elle aç':'Elle al',ban?'kara listede: kapalı':d==='lev'?'uzun ya da kısa':'piyasa fiyatından')}</div>
+    <p class="hint">Kara listedeki coinde bot yeni ${d==='lev'?'pozisyon':'alım'} yapmaz; elindekini kendi kuralıyla satar. Favori yalnız işarettir, botun kararını değiştirmez.</p>`;
+  q.querySelectorAll<HTMLElement>('[data-lp]').forEach(b=>b.onclick=async()=>{const k=b.dataset.lp;
+    if(k==='chart'){q.hidden=true;openCoin(d==='lev'?sy+'-USDT':inst,d==='spot'?'tr':d==='lev'?'sw':'g');return}
+    if(k==='go'){if(ban){toast(`${sy} kara listede; önce listeden çıkar`);return}q.hidden=true;d==='spot'?openBuy(inst):d==='gspot'?openGBuy(inst):openLevOpen(sy,1);return}
+    if(!token){toast('Önce Ayarlar\'dan GitHub bağlantısını kur');return}
+    const key=k as 'ban'|'fav',had=key==='fav'?fav:ban;b.classList.add('busy');
+    const upd=(o: any)=>{const m=o[key]=o[key]||{},l: string[]=(m[d]||[]).filter((x: string)=>banKey(x)!==sy);m[d]=had?l:[...l,sy]};
+    const ok=await cloudPatch(upd,`${sy} ${key==='fav'?'favori':'kara liste'} ${had?'çıkarıldı':'eklendi'} (${d})`);
+    if(ok){for(const o of [orig,draft,S?.settings])if(o)upd(o);q.hidden=true;lpMark();
+      toast(key==='fav'?(had?`${sy} favorilerden çıkarıldı`:`${sy} favorilere eklendi`):(had?`${sy} kara listeden çıkarıldı`:`${sy} kara listeye alındı; bot yeni ${d==='lev'?'pozisyon':'alım'} açmaz`))}
+    else{b.classList.remove('busy');toast('Kaydedilemedi, tekrar dene',patchWhy())}});
+  q.hidden=false}
+/** Favori ve kara listedekileri bütün coin satırlarında / kutularında işaretler (ekran her yenilendiğinde) */
+function lpMark(){for(const [id,d] of Object.entries(LPD)){const v=document.getElementById(id);if(!v||v.hidden)continue;
+  const F=new Set(lpSet('fav',d)),B=new Set(lpSet('ban',d));
+  v.querySelectorAll<HTMLElement>('[data-sb],[data-gb],[data-lo],.row').forEach(r=>{const raw=r.dataset.sb||r.dataset.gb||r.dataset.lo||r.querySelector<HTMLElement>('[data-coin]')?.dataset.coin||'';
+    if(!raw)return;const k=banKey(sym(raw));r.classList.toggle('isfav',F.has(k));r.classList.toggle('isban',B.has(k))})}}
+{let lpQ=0;const mo=new MutationObserver(()=>{if(!lpQ)lpQ=requestAnimationFrame(()=>{lpQ=0;lpMark()})});
+  for(const id of Object.keys(LPD)){const v=document.getElementById(id);if(v)mo.observe(v,{childList:true,subtree:true})}}
 /** Futures: izlenen coinler ve sinyale uzaklık; deneme masasının son kararları */
 function levWatch(): string {
   const L = (S as any)?.lev; if (!L) return '';

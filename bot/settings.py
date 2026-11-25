@@ -92,7 +92,7 @@ def _merge(base, extra, bad=None, path=""):
 
 _GOOD = {}
 # Bozuk gelirse varsayılanı zararsız olan alanlar (görünüm, bildirim, tek seferlik istek listeleri)
-_SOFT = {"clear_all", "ban", "lang", "theme", "accent", "notify", "dust", "buy", "desk_cmd", "xfer_cancel", "xfer_req", "sell", "convert", "clear", "liquidate"}
+_SOFT = {"clear_all", "ban", "fav", "lang", "theme", "accent", "notify", "dust", "buy", "desk_cmd", "xfer_cancel", "xfer_req", "sell", "convert", "clear", "liquidate"}
 
 
 def _get(d, path):

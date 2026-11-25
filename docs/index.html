@@ -849,6 +849,24 @@ em.lk.in{display:inline-block;width:auto;padding:2px 5px;margin:0 0 0 6px;vertic
 .wgrid .wa em{background:var(--amber-bg);color:var(--amber)}.wgrid .wa>i{background:var(--amber)}
 .wgrid .wr[data-sb]{cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none}
 .nrow p.nok{display:flex;gap:5px;align-items:flex-start;margin-top:4px;color:var(--green);font-size:12.5px}.nrow p.nok svg{width:14px;height:14px;flex:none;margin-top:2px}
+
+/* Basılı tutma menüsü (Spot, Global, Futures coin satırları) */
+#mainv .row,#gspotv .row,#futv .row,.wgrid .wr{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.lph{display:flex;align-items:center;gap:10px;margin:2px 0 12px}.lph .lpn{flex:1;min-width:0}.lph b{display:block;font-size:16px;font-weight:750}.lph small{color:var(--muted);font-size:12px}
+.lph .lk{width:auto;padding:3px 7px}.lk.rd{background:var(--red-bg);color:var(--red)}.lk.am{background:var(--amber-bg);color:var(--amber-ink,var(--amber))}
+.lpg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:10px}
+.lpt{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:3px;min-height:104px;padding:12px 8px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font:inherit;color:var(--text);cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none;transition:transform .12s,border-color .15s}
+.lpt:active{transform:scale(.97)}.lpt.busy{opacity:.55;pointer-events:none}
+.lpt>span{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;margin-bottom:4px}.lpt>span svg{width:19px;height:19px}
+.lpt b{font-size:13.5px;font-weight:700}.lpt small{font-size:11px;color:var(--muted);line-height:1.3}
+.lpt.lam>span{background:var(--amber-bg);color:var(--amber)}.lpt.lrd>span{background:var(--red-bg);color:var(--red)}.lpt.lbl>span{background:var(--blue-bg);color:var(--blue)}.lpt.lgr>span{background:var(--green-bg);color:var(--green)}
+.lpt.lam.on{border-color:var(--amber);background:color-mix(in srgb,var(--amber-bg) 55%,var(--surface))}.lpt.lrd.on{border-color:var(--red);background:color-mix(in srgb,var(--red-bg) 55%,var(--surface))}
+.lpt.lam.on>span svg{fill:currentColor}
+/* işaretler: favori = coin simgesinde amber yıldız, kara liste = gri simge ve kırmızı çerçeve */
+.isfav .coin::after{content:'★';position:absolute;top:-5px;right:-5px;width:15px;height:15px;border-radius:50%;background:var(--amber);color:#fff;font-size:9px;line-height:15px;text-align:center;box-shadow:0 0 0 2px var(--surface)}
+.isban .coin{box-shadow:0 0 0 2px var(--red)}.isban .coin img{filter:grayscale(1);opacity:.6}
+.wgrid .wr.isfav>div:first-child b::after{content:'★';color:var(--amber);margin-left:4px;font-size:11px}
+.wgrid .wr.isban{opacity:.6}.wgrid .wr.isban>div:first-child b{text-decoration:line-through;text-decoration-color:var(--red)}
 </style>
 </head>
 <body>
@@ -1049,6 +1067,6 @@ em.lk.in{display:inline-block;width:auto;padding:2px 5px;margin:0 0 0 6px;vertic
 <div class="toast" id="toast" hidden></div>
 <div class="qsh" id="qsh" hidden><div class="qb"><div class="gr"></div><h3><span><svg class="i" id="qIco"><use href="#i-info"/></svg></span><b id="qTitle"></b></h3><div class="qt" id="qText"></div><button class="btn primary" id="qOk">Anladım</button></div></div>
 
-<script src="app.js?v=1.102.0"></script>
+<script src="app.js?v=1.103.0"></script>
 </body>
 </html>
