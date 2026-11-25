@@ -29,7 +29,7 @@ BASE = "https://www.okx.com"
 DEFAULT = {
     "on": True,
     "real": False,
-    "bank": 100.0,          # deneme masasının sanal kasası ($)
+    "bank": 100.0,          # eski ayar (deneme masası kaldırıldı; kullanılmıyor)
     "budget": 50.0,         # gerçek masanın kullanacağı en fazla para ($, Global işlem hesabındaki USDT'den)
     "max_loss": 15.0,       # gerçek masada toplam zarar buna ulaşınca yeni alım durur ($)
     "lot_pct": 10.0,        # 1. kademe: kasanın yüzdesi
@@ -232,7 +232,7 @@ def _equity(G, px):
 
 
 def _fut_short(state):
-    """Futures masasının KISA olduğu coinler (gerçek masa varsa onun, yoksa deneme masasının): Global spot bu coinlerde
+    """Futures masasının KISA olduğu coinler (gerçek masa varsa onun, yoksa sinyal motorunun): Global spot bu coinlerde
     alım yapmaz; biri yükselişe biri düşüşe oynayıp kâr ve zararı birbirini götürmesin, ücret iki kez ödenmesin."""
     if config.CROSS_OK:
         return set()  # ayarlardan serbest bırakıldı: masalar birbirine bakmadan kendi kuralını uygular
@@ -708,8 +708,10 @@ def step(state, S, N=None):
     FUNDRES["v"] = max(0.0, (R or {}).get("cash", 0.0) - PHYS["v"]) if (R and c["real"]) else 0.0
     if not c["on"] and not (R and R["positions"]):
         return
-    if not P:
-        P = state["gspot"] = new_state(c["bank"])
+    if not P or not P.get("scan"):
+        # deneme masası kaldırıldı: bu kayıt yalnız tarama sonucunu (alım adayları) taşır, sanal işlem yapmaz
+        P = state["gspot"] = new_state(0.0)
+        P["scan"] = True
     held = set(P["positions"]) | set((R or {}).get("positions") or {})
     _kick(held, c["coins"])
     with _LOCK:
@@ -718,11 +720,9 @@ def step(state, S, N=None):
     if not snap["ts"]:
         return
     ts = int(time.time() * 1000)
-    # Deneme masası: kararlar hemen uygulanır
+    # Alım adayları gerçek masanın elindekilere göre (eldeki coinin bir sonraki kademesi)
     if c["on"]:
-        _paper(P, decide(P, c, snap, P["start"], True, ts, _fut_short(state)), ts)
-        _mark(P, snap, ts)
-        P["watch"] = watch(P, c, snap, _fut_short(state))
+        P["watch"] = watch(R or P, c, snap, _fut_short(state))
         P["err"] = snap["err"]
     # Gerçek masa
     if c["real"] and not R and _ex().ok:

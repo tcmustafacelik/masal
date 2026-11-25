@@ -889,6 +889,22 @@ em.lk.in{display:inline-block;width:auto;padding:2px 5px;margin:0 0 0 6px;vertic
 .stb .dot{position:absolute;top:5px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--acc);box-shadow:0 0 0 2px var(--line2)}
 .stb[data-stab=spot]{--tc:var(--blue);--tb:var(--blue-bg)}.stb[data-stab=gspot]{--tc:var(--teal);--tb:var(--teal-bg)}.stb[data-stab=fut]{--tc:var(--violet);--tb:var(--violet-bg)}
 .stb[data-stab=kasa]{--tc:var(--amber);--tb:var(--amber-bg)}.stb[data-stab=app]{--tc:var(--acc);--tb:var(--acc-bg)}
+
+/* Spot · Çalışma: canlı durum kartı ve iki büyük eylem kutusu */
+.runc{border:1px solid color-mix(in srgb,var(--green) 28%,var(--line));border-radius:14px;background:linear-gradient(180deg,color-mix(in srgb,var(--green-bg) 70%,var(--surface)),var(--surface) 62%);padding:12px}
+.runc.pz{border-color:color-mix(in srgb,var(--amber) 32%,var(--line));background:linear-gradient(180deg,color-mix(in srgb,var(--amber-bg) 75%,var(--surface)),var(--surface) 62%)}
+.runh{display:flex;align-items:center;gap:10px;margin-bottom:11px}.runh>div{flex:1;min-width:0}.runh b{display:block;font-size:15px;font-weight:750}.runh small{display:block;font-size:11.5px;color:var(--muted);line-height:1.35}
+.runh em{font-style:normal;font-size:10px;font-weight:800;letter-spacing:.4px;padding:4px 8px;border-radius:6px;background:var(--green);color:#fff}.runc.pz .runh em{background:var(--amber)}
+.rdot{width:12px;height:12px;border-radius:50%;background:var(--green);flex:none;box-shadow:0 0 0 0 color-mix(in srgb,var(--green) 45%,transparent);animation:rdp 1.8s infinite}
+.runc.pz .rdot{background:var(--amber);animation:none}
+@keyframes rdp{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--green) 45%,transparent)}70%{box-shadow:0 0 0 9px transparent}100%{box-shadow:0 0 0 0 transparent}}
+.rung{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.rtile{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:3px;min-height:96px;padding:11px 8px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font:inherit;color:var(--text);cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none;transition:transform .12s,border-color .15s,background .15s}
+.rtile:active{transform:scale(.97)}.rtile>span{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;margin-bottom:3px}.rtile>span svg{width:18px;height:18px}
+.rtile b{font-size:13.5px;font-weight:700}.rtile small{font-size:11px;color:var(--muted);line-height:1.3}
+.rtile.pause>span{background:var(--amber-bg);color:var(--amber)}.rtile.go>span{background:var(--green-bg);color:var(--green)}.rtile.go{border-color:var(--green)}
+.rtile.sell>span{background:var(--red-bg);color:var(--red)}.rtile.sell b{color:var(--red)}.rtile.sell.arm{border-color:var(--red);background:color-mix(in srgb,var(--red-bg) 60%,var(--surface))}
+.runc .hint{margin:10px 2px 0}
 </style>
 </head>
 <body>
@@ -1089,6 +1105,6 @@ em.lk.in{display:inline-block;width:auto;padding:2px 5px;margin:0 0 0 6px;vertic
 <div class="toast" id="toast" hidden></div>
 <div class="qsh" id="qsh" hidden><div class="qb"><div class="gr"></div><h3><span><svg class="i" id="qIco"><use href="#i-info"/></svg></span><b id="qTitle"></b></h3><div class="qt" id="qText"></div><button class="btn primary" id="qOk">Anladım</button></div></div>
 
-<script src="app.js?v=1.103.2"></script>
+<script src="app.js?v=1.104.0"></script>
 </body>
 </html>

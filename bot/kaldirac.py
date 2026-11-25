@@ -1,4 +1,4 @@
-"""Kaldıraç masası (DENEME): OKX Global sürekli vadeli (perpetual) piyasasında gerçek fiyatlarla, sanal parayla işlem.
+"""Futures sinyal motoru: OKX Global sürekli vadeli (perpetual) piyasasında gerçek fiyatlarla karar verir; kararlar gerçek masada uygulanır.
 
 Gerçek para kullanılmaz; emir gönderilmez. Amaç: yöntemin gerçekten kazandırıp kazandırmadığını birkaç gün görmek.
 Yöntem (62 günlük 1 saatlik veride denendi): 20 saatlik kanal kırılımı, 200 saatlik ortalamanın yönünde
@@ -20,7 +20,7 @@ from . import config
 BASE = "https://www.okx.com"
 DEFAULT = {
     "on": True,
-    "bank": 100.0,        # sanal başlangıç kasası (USDT)
+    "bank": 100.0,        # motorun iç hesap tabanı (USDT; gerçek tutarı gerçek masa belirler)
     "lev": 3,             # kaldıraç (izole)
     "risk_pct": 1.0,      # işlem başına riske edilen kasa yüzdesi
     "max_pos": 3,
@@ -290,12 +290,10 @@ def _enter(L, c, side, k, x, cfg, lev, ts, why):
     name = "UZUN" if side > 0 else "KISA"
     entry = x * (1 + side * cfg["slip_pct"] / 100)
     dist = cfg["sl_atr"] * k["atr"]
-    used = sum(q["margin"] for q in L["positions"].values())
-    free = L["bank"] - used
-    qty = min(L["bank"] * cfg["risk_pct"] / 100 / dist, min(L["bank"] / max(3, int(cfg.get("max_pos") or 3)), free) * lev / entry)
-    if qty <= 0 or qty * entry / lev < 1:
-        L["stats"]["blocked"] += 1
-        _note(L, ts, "risk", f"ENGEL {c} {name}: boş teminat yetersiz")
+    # Sinyal motoru: büyüklük yalnız kayıt içindir; gerçek tutarı gerçek masa kendi hesabına göre belirler.
+    # (Eskiden sanal kasanın boş teminatı yetmeyince sinyal engelleniyor, gerçek hesapta para olsa da işlem açılmıyordu.)
+    qty = min(L["bank"] * cfg["risk_pct"] / 100 / dist, L["bank"] / max(3, int(cfg.get("max_pos") or 3)) * lev / entry)
+    if qty <= 0:
         return False
     margin = qty * entry / lev
     L["bank"] -= entry * qty * cfg["fee_pct"] / 100
@@ -350,7 +348,7 @@ def watch_list(L, px):
 
 
 def manual_close(state, sym, reason="elle kapatıldı", S=None):
-    """Uygulamadan 'Kapat': deneme masasında kapatılır, olay gerçek masaya da gider."""
+    """Uygulamadan 'Kapat': motorda kapatılır, olay gerçek masaya gider."""
     L = state.get("lev") or {}
     p = (L.get("positions") or {}).get(sym)
     if p:

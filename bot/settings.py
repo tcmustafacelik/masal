@@ -167,6 +167,12 @@ def _warn(text):
 def apply(s):
     """Yüzdeleri 10.000 TL tabanına çevirip config'e yazar; motor bunları bakiyeye göre ölçekler."""
     s.pop("meme", None)  # memecoin masası kaldırıldı: eski ayarları yok sayılır
+    # Deneme modu kaldırıldı: bütün masalar gerçek parayla çalışır (masa kapatmak için "on" kullanılır)
+    s["live"] = True
+    # ("Masa açık" anahtarı gerçek masayı açar/kapatır: kapalı futures pozisyonlarını kapatır, Global yeni alım yapmaz)
+    for k in ("gspot", "lev"):
+        if isinstance(s.get(k), dict):
+            s[k]["real"] = s[k].get("on", True) is not False
     if isinstance(s.get("ban"), dict):
         s["ban"].pop("meme", None)
     base = config.START_CASH

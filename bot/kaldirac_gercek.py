@@ -1,4 +1,4 @@
-"""Kaldıraç masası (GERÇEK): deneme masasının kararlarını OKX Global'de gerçek parayla uygular.
+"""Kaldıraç masası (GERÇEK): sinyal motorunun kararlarını OKX Global'de gerçek parayla uygular.
 
 Güvenlik kuralları (ayarla gevşetilemez):
   - Yalnız "real_budget" kadar USDT fon hesabından işlem hesabına geçer; teminat bundan alınır
@@ -237,7 +237,7 @@ def _sync(D, R, cfg):
                 p["close_try"] = time.time()
                 try:
                     D.close(c, p["side"])
-                    p["closing"] = p.get("closing") or ("deneme masası kapattı" if gone else "zarar sınırı")
+                    p["closing"] = p.get("closing") or ("sinyal kapandı" if gone else "zarar sınırı")
                 except Exception as e:
                     R["err"] = f"{c} kapatılamadı, yeniden denenecek: {e}"[:200]
             p.update(now=float(x.get("markPx") or x.get("last") or p["entry"]), upl=float(x.get("upl") or 0),
@@ -411,7 +411,7 @@ def _rejected(e):
 
 
 def _opening(D, R, cfg, live):
-    """Sonucu öğrenilemeyen açma emirlerini kendi kimliğiyle borsaya sorar. Dolmuşsa pozisyon masaya alınır; deneme
+    """Sonucu öğrenilemeyen açma emirlerini kendi kimliğiyle borsaya sorar. Dolmuşsa pozisyon masaya alınır; motor
     masası o pozisyonu bu arada kapattıysa (ya da masa durduysa) borsadaki pozisyon da hemen kapatılır. Emir borsaya
     hiç ulaşmamışsa kayıt bırakılır. Borsaya sorulamıyorsa kayıt bekler (o coinde yeni emir verilmez)."""
     for c, w in list((R.get("opening") or {}).items()):
@@ -437,7 +437,7 @@ def _opening(D, R, cfg, live):
         p = R_pos(w["side"], float(o.get("avgPx") or 0), filled, w.get("ct") or 1, w.get("lev") or 2, w["stop"], w["tp"],
                   w.get("why") or "", ts=w["ts"])
         _book(R, c, p, " · emir borsadan doğrulandı")
-        why = (w.get("close") or ("deneme masası kapattı" if c not in cfg.get("_held", [c]) else "")
+        why = (w.get("close") or ("sinyal kapandı" if c not in cfg.get("_held", [c]) else "")
                or ("masa kapalı" if not cfg.get("real") else "") or ("zarar sınırı" if R["halt"] or R["dead"] else ""))
         if why:
             _shut(D, R, c, why, c in live)
@@ -463,7 +463,7 @@ _ORPH = {}  # coin -> son sorgu zamanı (kayıtta olmayan pozisyon için emir ge
 
 
 def _orphans(D, R, cfg, live):
-    """Borsada olup masanın kaydında olmayan izole pozisyon. Deneme masası o coini tutuyorsa `_sync` sahiplenir
+    """Borsada olup masanın kaydında olmayan izole pozisyon. Sinyal motoru o coini tutuyorsa `_sync` sahiplenir
     (değişmedi). Tutmuyorsa pozisyona yalnız, masanın kendi emir kimliğiyle (CL) açıldığı borsanın emir geçmişinden
     kanıtlanırsa dokunulur: masaya alınıp hemen kapatılır. Elle açılan pozisyonun böyle bir emri olmaz; dokunulmaz."""
     if R["dead"].startswith("kayıt açılamadı"):

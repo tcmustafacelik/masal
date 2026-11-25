@@ -730,6 +730,12 @@ def main():
     for k in ("meme", "memer"):  # memecoin masası sistemden kaldırıldı: eski kayıtları da kalmasın
         state.pop(k, None)
     (state.get("locked") or {}).pop("memer", None)
+    # deneme modu kaldırıldı: o dönemin sanal işlem ve günlük kayıtları silinir (gerçek işlemler kalır)
+    lv = state.get("live")
+    if lv and not lv.get("demo_purged"):
+        lv["trades"] = [t for t in lv.get("trades", []) if "deneme" not in str(t.get("reason", ""))]
+        lv["log"] = [x for x in lv.get("log", []) if "[deneme]" not in str(x[-1] if isinstance(x, (list, tuple)) else x)]
+        lv["demo_purged"] = True
     try:
         return _turn(state, S, N, t_start)
     except Exception:
@@ -909,12 +915,12 @@ def _turn(state, S, N, t_start):
         print("Aktarım hatası:", e)
     try:
         from . import gspot
-        gspot.step(state, S, N)  # Global spot: deneme masası + (açıksa) gerçek masa (emirler arka planda)
+        gspot.step(state, S, N)  # Global spot: tarama + gerçek masa (emirler arka planda)
     except Exception as e:
         print("Global spot masası hatası:", e)
     try:
         from . import kaldirac
-        kaldirac.step(state, S)  # kaldıraç deneme masası (sanal para; ağ işi arka planda)
+        kaldirac.step(state, S)  # futures sinyal motoru (kararları gerçek masa uygular; ağ işi arka planda)
     except Exception as e:
         print("Kaldıraç masası hatası:", e)
     try:
