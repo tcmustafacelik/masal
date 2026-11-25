@@ -1,4 +1,4 @@
-const APP_VERSION='1.95.1';
+const APP_VERSION='1.95.2';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (kehribar)
@@ -909,6 +909,10 @@ function assetsExtra(x: Strategy, eq: number): string {
   return h+'</div>';
 }
 
+/** Global fon hesabında hiçbir masaya ayrılmamış USDT: borsa kontrolündeki fon − Global spot'un ayırdığı (yoksa bot özeti) */
+function gFree(): number{const G: any=(S as any)?.gspotr,r: any=G?.recon;
+  if(r?.free!=null&&Date.now()-(r.ts||0)<300000)return Math.max(0,+r.free);
+  return Math.max(0,+((S as any)?.xfer?.g_fund)||0)}
 /** Global spot / Futures için "OKX'te gerçek" satırı ve Eşleştir düğmesi (Spot'taki satırın aynısı) */
 function deskReal(desk: 'gspotr'|'levr'|'memer'): string{
   const sy=DESK_BUSY['sync:'+desk]&&Date.now()-DESK_BUSY['sync:'+desk]<60000;
@@ -923,7 +927,7 @@ function deskReal(desk: 'gspotr'|'levr'|'memer'): string{
     lbl='OKX Global\'de gerçek';val=r.ts?`${it.length-bad.length}/${it.length} coin borsada`:'kontrol bekleniyor';
     small=r.usdt!=null?`işlem ${nf(+r.usdt,2)} · fon ${nf(+r.fund,2)} USDT · ${ago(r.ts)}`:'';ok=!bad.length&&!r.err;
     if(bad.length)warn=`Borsada kayıttakinden az: ${bad.map((x: any)=>escH(x.sym)).join(', ')}. Eşleştir'e basınca kayıt borsadakine iner.`;else if(r.err)warn='Kontrol yapılamadı: '+escH(r.err);
-    const fr=+((S as any)?.xfer?.g_fund)||0;if(fr>=1)info=`Fon hesabında masaya ayrılmamış ${U(fr,2)} var; Eşleştir'e basınca bütçeye eklenir.`}
+    const fr=gFree();if(fr>=1)info=`Fon hesabında masaya ayrılmamış ${U(fr,2)} var; Eşleştir'e basınca bütçeye eklenir.`}
   return `<div class="areal${ok?'':' bad'}">${ic('i-bank')}<div><span>${lbl}</span><b>${val}</b>${small?`<small>${small}</small>`:''}</div>
     <em>${ok?ic('i-check')+'Eşleşik':'Tutmuyor'}</em><button class="btn xsync" type="button" data-dsync="${desk}"${sy?' disabled':''}>${ic('i-refresh')}${sy?'Gönderildi':'Eşleştir'}</button></div>${warn?`<div class="xw dn">${warn}</div>`:''}${info?`<div class="xw">${info}</div>`:''}`;
 }
@@ -931,7 +935,7 @@ document.addEventListener('click',async e=>{const b=(e.target as HTMLElement).cl
   if(!token){toast('Önce Ayarlar\'dan GitHub bağlantısını kur');return}const desk=b.dataset.dsync;DESK_BUSY['sync:'+desk]=Date.now();b.disabled=true;fastWatch();
   const req={id:'s'+Date.now().toString(36),ts:Date.now(),desk,act:'sync',sym:''};
   // Global spot: fon hesabında hiçbir masaya ayrılmamış USDT (ör. yeni gelen aktarım) bütçeye eklenir; masa onu da kullanır
-  const X: any=(S as any)?.xfer,free=desk==='gspotr'?Math.floor((+X?.g_fund||0)*100)/100:0,cur=+(((orig||S?.settings as any)?.gspot||{}).budget)||0,nb=Math.round((cur+free)*100)/100;
+  const free=desk==='gspotr'?Math.floor(gFree()*100)/100:0,cur=+(((orig||S?.settings as any)?.gspot||{}).budget)||0,nb=Math.round((cur+free)*100)/100;
   const ok=await cloudPatch(o=>{(o as any).desk_cmd=[...((o as any).desk_cmd||[]).filter((x: any)=>Date.now()-(x.ts||0)<600000),req];
     if(free>=1){(o as any).gspot={...((o as any).gspot||{}),budget:nb}}},'Borsayla eşleştir: '+desk+(free>=1?` · bütçe ${nb}`:''));
   toast(ok?(free>=1?`Eşleştirildi: boştaki ${U(free,2)} masaya eklendi, bütçe ${U(nb,2)}. Bot birkaç saniyede uygular`:'Eşleştirme isteği gönderildi; bot birkaç saniyede borsayla karşılaştırır'):'İstek gönderilemedi, tekrar dene',ok?'':patchWhy());if(!ok){delete DESK_BUSY['sync:'+desk];b.disabled=false}});

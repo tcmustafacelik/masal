@@ -1,10 +1,17 @@
 {
-  "version": "1.95.1",
+  "version": "1.95.2",
   "date": "2026-11-25",
   "notes": [
-    "Tümünü göster / Daha az göster düğmeleri her listede aynı tasarımda"
+    "Global Eşleştir bütçe eklemesi düzeltildi: boştaki USDT bilgisi uygulamaya hiç gelmiyordu"
   ],
   "history": [
+    {
+      "version": "1.95.2",
+      "date": "2026-11-25",
+      "notes": [
+        "Global Eşleştir bütçe eklemesi düzeltildi: boştaki USDT bilgisi uygulamaya hiç gelmiyordu"
+      ]
+    },
     {
       "version": "1.95.1",
       "date": "2026-11-25",
@@ -101,13 +108,6 @@
       "date": "2026-11-25",
       "notes": [
         "Global'de elle alım: aday kutusuna ya da Alım adayları'ndaki Elle al düğmesine dokun, coin ve tutarı seç; bot güvenlik kurallarını uygular (kara liste, futures çakışması, coin/kademe sınırı, nakit). İşlem kaydındaki çift USDT yazısı düzeldi"
-      ]
-    },
-    {
-      "version": "1.89.0",
-      "date": "2026-11-25",
-      "notes": [
-        "Tutarlar her yerde USDT olarak yazılıyor, yanında TL karşılığı; masa kutularında ve özet kartlarında TL satırı; bot kayıtlarındaki $ yazıları USDT'ye çevrildi; geçmiş temizlendi"
       ]
     }
   ]

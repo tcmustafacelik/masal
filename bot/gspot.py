@@ -530,7 +530,8 @@ def _recon_apply(R, r, ts):
         fixed.append(f"fon hesabında {fund:.2f} USDT; masaya ayrılan {res_:.2f} → {fund:.2f}")
     if r.get("force") and R.get("phys", 0.0) > usdt + 0.05:
         fixed.append(f"işlem hesabında {usdt:.2f} USDT (masanın {R['phys']:.2f}); fark alımda fondan tamamlanır")
-    R["recon"] = {"ts": ts, "items": items, "usdt": round(usdt, 2), "fund": round(fund, 2), "fixed": fixed, "force": bool(r.get("force"))}
+    free = max(0.0, fund - max(0.0, R["cash"] - R.get("phys", 0.0)))  # fon hesabında hiçbir masaya ayrılmamış USDT
+    R["recon"] = {"ts": ts, "items": items, "usdt": round(usdt, 2), "fund": round(fund, 2), "free": round(free, 2), "fixed": fixed, "force": bool(r.get("force"))}
     if fixed:
         _note(R, "info", "Borsayla eşleştirildi: " + "; ".join(fixed), ts)
     elif r.get("force"):

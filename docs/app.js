@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.95.1';
+const APP_VERSION = '1.95.2';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = 'var(--acc)';
@@ -1477,6 +1477,12 @@ function assetsExtra(x, eq) {
     }
     return h + '</div>';
 }
+function gFree() {
+    const G = S?.gspotr, r = G?.recon;
+    if (r?.free != null && Date.now() - (r.ts || 0) < 300000)
+        return Math.max(0, +r.free);
+    return Math.max(0, +(S?.xfer?.g_fund) || 0);
+}
 function deskReal(desk) {
     const sy = DESK_BUSY['sync:' + desk] && Date.now() - DESK_BUSY['sync:' + desk] < 60000;
     let lbl = '', val = '', small = '', ok = true, warn = '', info = '';
@@ -1517,7 +1523,7 @@ function deskReal(desk) {
             warn = `Borsada kayıttakinden az: ${bad.map((x) => escH(x.sym)).join(', ')}. Eşleştir'e basınca kayıt borsadakine iner.`;
         else if (r.err)
             warn = 'Kontrol yapılamadı: ' + escH(r.err);
-        const fr = +(S?.xfer?.g_fund) || 0;
+        const fr = gFree();
         if (fr >= 1)
             info = `Fon hesabında masaya ayrılmamış ${U(fr, 2)} var; Eşleştir'e basınca bütçeye eklenir.`;
     }
@@ -1537,7 +1543,7 @@ document.addEventListener('click', async (e) => {
     b.disabled = true;
     fastWatch();
     const req = { id: 's' + Date.now().toString(36), ts: Date.now(), desk, act: 'sync', sym: '' };
-    const X = S?.xfer, free = desk === 'gspotr' ? Math.floor((+X?.g_fund || 0) * 100) / 100 : 0, cur = +(((orig || S?.settings)?.gspot || {}).budget) || 0, nb = Math.round((cur + free) * 100) / 100;
+    const free = desk === 'gspotr' ? Math.floor(gFree() * 100) / 100 : 0, cur = +(((orig || S?.settings)?.gspot || {}).budget) || 0, nb = Math.round((cur + free) * 100) / 100;
     const ok = await cloudPatch(o => {
         o.desk_cmd = [...(o.desk_cmd || []).filter((x) => Date.now() - (x.ts || 0) < 600000), req];
         if (free >= 1) {
