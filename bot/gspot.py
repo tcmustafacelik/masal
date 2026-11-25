@@ -422,8 +422,18 @@ def _work():
         res = dict(job)
         try:
             inst, base = job["inst"], job["inst"].split("-")[0]
-            lot_sz, min_sz = _INST.get(inst, (0, 0))
-            if job.get("check"):
+            lot_sz, min_sz = _INST.get(inst, (0, 0))  # eşleştirme işinde inst "RECON-USDT" (kullanılmaz)
+            if job.get("act") == "recon":
+                # Borsayla eşleştirme: masadaki coinlerin işlem hesabındaki gerçek miktarı + USDT (işlem / fon)
+                bal = {}
+                ccys = ",".join(sorted({i.split("-")[0] for i in job["insts"]} | {"USDT"}))
+                d = ex.req("GET", f"/api/v5/account/balance?ccy={ccys}")
+                if not d or "details" not in d[0]:
+                    raise RuntimeError("borsa bakiye yanıtı boş")
+                for x in d[0]["details"]:
+                    bal[x["ccy"]] = float(x.get("cashBal") or x.get("availBal") or 0)
+                res.update(ok=True, bal=bal, fund=ex.funding("USDT"))
+            elif job.get("check"):
                 res.update(_check(ex, job))
             elif job["act"] == "buy":
                 # İşlem hesabındaki USDT futures masasıyla ortak: Global spot yalnız kendi parasını (phys: fon
@@ -473,6 +483,60 @@ def _work():
             _RES.append(res)
 
 
+def recon(R, force=False):
+    """Masayı borsayla karşılaştırma isteği (10 dk'da bir kendiliğinden, uygulamadan "Eşleştir" ile hemen)."""
+    if not R or R.get("pending"):
+        return  # emir sürerken bakiye ara durumda olur; sonra denenir
+    now = time.time()
+    if not force and now - (R.get("recon") or {}).get("ts", 0) / 1000 < 600:
+        return
+    R.setdefault("recon", {})["ts"] = int(now * 1000)
+    _start_worker()
+    _Q.put({"act": "recon", "inst": "RECON-USDT", "insts": list(R["positions"]), "force": force})
+
+
+def _recon_apply(R, r, ts):
+    """Kendiliğinden kontrolde yalnız karşılaştırılır (uygulamada "Tutmuyor"); "Eşleştir"e basılınca:
+    borsadaki gerçek miktar kayıttakinden azsa (elle satıldı / çekildi) kayıt borsaya indirilir; fazlası senin
+    kendi coinin sayılır, masaya katılmaz. Fon hesabında masaya ayrılandan az USDT varsa ayrılan para borsadakine iner
+    (kâr/zarar sayılmaz: başlangıç da aynı kadar düşer)."""
+    if not r.get("ok"):
+        R["recon"] = {"ts": ts, "err": str(r.get("fail") or "")[:120]}
+        return
+    bal, items, fixed = r["bal"], [], []
+    for inst, pos in list(R["positions"].items()):
+        if inst in R["pending"]:
+            continue
+        b = inst.split("-")[0]
+        mine = sum(l["qty"] for l in pos["lots"])
+        ex = bal.get(b, 0.0)
+        items.append({"sym": b, "bot": mine, "ex": ex})
+        if r.get("force") and mine > 0 and ex < mine * 0.98:  # kendiliğinden yapılan kontrol yalnız gösterir
+            k = max(0.0, ex / mine)
+            if k < 0.02:
+                del R["positions"][inst]
+                fixed.append(f"{b} borsada yok, kayıttan çıkarıldı")
+            else:
+                for l in pos["lots"]:
+                    l["qty"] *= k
+                    l["cost"] *= k
+                fixed.append(f"{b} {mine:.6g} → {ex:.6g}")
+    usdt, fund = bal.get("USDT", 0.0), r.get("fund", 0.0)
+    res_ = max(0.0, R["cash"] - R.get("phys", 0.0))
+    if r.get("force") and fund + 0.05 < res_:
+        d = res_ - fund  # fon hesabından masanın parası çıkmış (ör. elle aktarım)
+        R["cash"] = round(R["cash"] - d, 6)
+        R["start"] = round(R["start"] - d, 2)
+        fixed.append(f"fon hesabında {fund:.2f} USDT; masaya ayrılan {res_:.2f} → {fund:.2f}")
+    if r.get("force") and R.get("phys", 0.0) > usdt + 0.05:
+        fixed.append(f"işlem hesabında {usdt:.2f} USDT (masanın {R['phys']:.2f}); fark alımda fondan tamamlanır")
+    R["recon"] = {"ts": ts, "items": items, "usdt": round(usdt, 2), "fund": round(fund, 2), "fixed": fixed, "force": bool(r.get("force"))}
+    if fixed:
+        _note(R, "info", "Borsayla eşleştirildi: " + "; ".join(fixed), ts)
+    elif r.get("force"):
+        _note(R, "info", "Borsayla eşleştirildi: kayıt borsayla aynı", ts)
+
+
 def _start_worker():
     if _W["t"] is None or not _W["t"].is_alive():
         _W["t"] = threading.Thread(target=_work, daemon=True)
@@ -484,6 +548,9 @@ def _apply_results(R):
         res, _RES[:] = list(_RES), []
     for r in res:
         inst, ts = r["inst"], int(time.time() * 1000)
+        if r.get("act") == "recon":
+            _recon_apply(R, r, ts)
+            continue
         if ((R["pending"].get(inst) or {}).get("job") or {}).get("cl") != r.get("cl"):
             continue  # bu emrin sonucu zaten işlendi (ör. kimlikle sorgu ve asıl yanıt ikisi de geldi)
         R["pending"].pop(inst, None)
@@ -664,6 +731,8 @@ def step(state, S, N=None):
         _note(R, "info", f"Gerçek Global spot masası açıldı · bütçe ${c['budget']:.2f}", ts)
     if R:
         _apply_results(R)
+        if c["real"] or R["positions"]:
+            recon(R)
         for inst, p in list(R["pending"].items()):
             if ts - p["ts"] > 90_000 and _Q.empty() and not p.get("asked"):
                 # sonucu gelmeyen istek (ör. bot yeniden başladı): emir kendi kimliğiyle borsada aranır
@@ -749,4 +818,4 @@ def public(G, snap_bid=None):
             "win_rate": round(len(wins) / len(sells) * 100) if sells else None, "watch": G.get("watch"),
             "fav": config.top_earners(G["trades"]), "warm": warm, "uni": n, "stats": G["stats"],
             "phys": round(max(0.0, G.get("phys", 0.0)), 2), "fund_res": round(max(0.0, G["cash"] - G.get("phys", 0.0)), 2), "nousd": bool(G.get("cool") and G.get("nousd_ts")),
-            "coins": list(agg.values())}
+            "coins": list(agg.values()), "recon": G.get("recon")}

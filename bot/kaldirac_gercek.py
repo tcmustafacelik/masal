@@ -529,7 +529,7 @@ def _loop():
                     for w in (R.get("opening") or {}).values():
                         w["close"] = w.get("close") or "masa kapatıldı"
                     _close_all(D, R, "masa kapatıldı")
-                if time.time() - last >= SYNC or (ev and ev[0] in ("close", "kill")):
+                if time.time() - last >= SYNC or (ev and ev[0] in ("close", "kill", "sync")):
                     _sync(D, R, cfg)
                     last = time.time()
                     R["sync"] = int(time.time() * 1000)
@@ -539,6 +539,11 @@ def _loop():
                 R["err"] = str(e)[:200]
                 if ev and ev[0] == "open":
                     _note(R, "risk", f"GERÇEK {ev[1]} açılamadı: {e}")
+
+
+def request_sync():
+    """Uygulamadan "Eşleştir": masa borsayla hemen eşitlenir (bakiye, pozisyonlar, stop emirleri)."""
+    _Q.put(("sync",))
 
 
 def step(state, S, paper_cfg, N=None):

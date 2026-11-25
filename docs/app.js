@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.92.1';
+const APP_VERSION = '1.93.0';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = 'var(--acc)';
@@ -851,7 +851,8 @@ function renderLevR() {
     return `<h2 class="mh">${ic('i-layers')}Futures<span class="hsum"><em class="rbadge">GERÇEK</em>OKX Global</span><button class="mset" type="button" data-sett="fut">${ic('i-gear')}Ayarlar</button></h2>
     <div class="card mmeme">
       ${deskHero('Masa', R.equity, `bütçe ${usd(R.funded)} · ${lv.real_lev ?? 2}x izole`, R.pnl, R.funded, left, ml, [['Pozisyon', String((R.positions || []).length)], ['İşlem', String(R.closed ?? (R.trades || []).length)], ['Kazanma', R.win_rate == null ? '—' : '%' + R.win_rate], ...(R.harvest ? [['Fona alınan', usd(R.harvest)]] : [])])}
-      <p class="mnote">${ic('i-lock')}Zarar durdur borsada kayıtlı. ${st}${R.err ? ` <b class="dn">Uyarı: ${esc(R.err).slice(0, 90)}</b>` : ''}</p>
+      <p class="mnote">${ic('i-lock')}Zarar durdur borsada kayıtlı. ${st}</p>
+      ${deskReal('levr')}
     </div>
     ${pos ? `<h2 class="mh">${ic('i-coins')}Açık pozisyonlar<span class="hsum ${cls(+R.upl || 0)}">${(R.positions || []).length} pozisyon · ${sgnU(+R.upl || 0)}</span></h2><div class="card list gpos">${pos}</div><p class="hint" style="margin:6px 2px 0">Kapatmak için satırı sola kaydır; grafiği görmek için dokun. Çubuk: soldaki uç stop, sağdaki uç hedef.</p>` : ''}
     ${eqCard(R.equity_series, R.funded)}
@@ -1071,6 +1072,7 @@ function renderGspot() {
     <div class="card mmeme">
       ${((h) => real && !empty ? h : h.replace(/<div class="drisk">[\s\S]*?<\/div><\/div>\s*/, ''))(deskHero(real ? 'Masada gerçek para' : 'Deneme kasası', real ? gReal(G) : G.equity, real ? `bütçe ${usd(G.start)} · coin ${usd((G.positions || []).reduce((a, p) => a + (+p.val || 0), 0))} · USDT ${usd((+G.phys || 0) + (+G.fund_res || 0))}` : `boşta ${usd(G.cash)} · başlangıç ${usd(G.start)}`, G.pnl, G.start, left, ml, [['Coin', String((G.positions || []).length)], ['Satış', String(G.sells || 0)], ['Kazanma', G.win_rate == null ? '—' : '%' + G.win_rate], ['Kâr', '%' + nf(tp, 1)]]))}
       <p class="mnote">${ic(real ? 'i-lock' : 'i-flask')}${st}${G.err ? ` <b class="dn">Uyarı: ${esc(G.err).slice(0, 90)}</b>` : ''}</p>
+      ${real ? deskReal('gspotr') : ''}
     </div>
     ${pos ? `<h2 class="mh">${ic('i-coins')}Eldeki coinler<span class="hsum ${cls((G.positions || []).reduce((a, p) => a + (+p.pnl || 0), 0))}">${(G.positions || []).length} coin · ${sgnU((G.positions || []).reduce((a, p) => a + (+p.pnl || 0), 0))}</span></h2><div class="card list gpos">${pos}</div><p class="hint" style="margin:6px 2px 0">Satmak için satırı sola kaydır. Her kademe alışının %${nf(tp, 1)} üstünde satılır; çubuk ortalamaya göre. Grafiği görmek için dokun.</p>` : ''}
     ${eqCard(G.equity_series, G.start)}
@@ -1495,6 +1497,58 @@ function assetsExtra(x, eq) {
     }
     return h + '</div>';
 }
+function deskReal(desk) {
+    const sy = DESK_BUSY['sync:' + desk] && Date.now() - DESK_BUSY['sync:' + desk] < 60000;
+    let lbl = '', val = '', small = '', ok = true, warn = '';
+    if (desk === 'levr') {
+        const R = S?.levr;
+        if (!R)
+            return '';
+        const age = R.sync ? (Date.now() - R.sync) / 1000 : 1e9;
+        lbl = 'Futures hesabında gerçek';
+        val = U(+R.equity || 0, 2);
+        small = R.sync ? `son eşitleme ${ago(R.sync)}` : 'eşitleme bekleniyor';
+        ok = age < 120 && !R.err;
+        if (!ok)
+            warn = R.err ? `Borsa uyarısı: ${escH(String(R.err)).slice(0, 90)}` : 'Bot bir süredir borsayla eşitlenmedi; Eşleştir\'e bas.';
+    }
+    else {
+        const G = S?.gspotr;
+        if (!G)
+            return '';
+        const r = G.recon || {}, it = r.items || [], bad = it.filter((x) => x.ex < x.bot * .98);
+        lbl = 'OKX Global\'de gerçek';
+        val = r.ts ? `${it.length - bad.length}/${it.length} coin borsada` : 'kontrol bekleniyor';
+        small = r.usdt != null ? `işlem ${nf(+r.usdt, 2)} · fon ${nf(+r.fund, 2)} USDT · ${ago(r.ts)}` : '';
+        ok = !bad.length && !r.err;
+        if (bad.length)
+            warn = `Borsada kayıttakinden az: ${bad.map((x) => escH(x.sym)).join(', ')}. Eşleştir'e basınca kayıt borsadakine iner.`;
+        else if (r.err)
+            warn = 'Kontrol yapılamadı: ' + escH(r.err);
+    }
+    return `<div class="areal${ok ? '' : ' bad'}">${ic('i-bank')}<div><span>${lbl}</span><b>${val}</b>${small ? `<small>${small}</small>` : ''}</div>
+    <em>${ok ? ic('i-check') + 'Eşleşik' : 'Tutmuyor'}</em><button class="btn xsync" type="button" data-dsync="${desk}"${sy ? ' disabled' : ''}>${ic('i-refresh')}${sy ? 'Gönderildi' : 'Eşleştir'}</button></div>${warn ? `<div class="xw dn">${warn}</div>` : ''}`;
+}
+document.addEventListener('click', async (e) => {
+    const b = e.target.closest?.('[data-dsync]');
+    if (!b)
+        return;
+    if (!token) {
+        toast('Önce Ayarlar\'dan GitHub bağlantısını kur');
+        return;
+    }
+    const desk = b.dataset.dsync;
+    DESK_BUSY['sync:' + desk] = Date.now();
+    b.disabled = true;
+    fastWatch();
+    const req = { id: 's' + Date.now().toString(36), ts: Date.now(), desk, act: 'sync', sym: '' };
+    const ok = await cloudPatch(o => { o.desk_cmd = [...(o.desk_cmd || []).filter((x) => Date.now() - (x.ts || 0) < 600000), req]; }, 'Borsayla eşleştir: ' + desk);
+    toast(ok ? 'Eşleştirme isteği gönderildi; bot birkaç saniyede borsayla karşılaştırır' : 'İstek gönderilemedi, tekrar dene', ok ? '' : patchWhy());
+    if (!ok) {
+        delete DESK_BUSY['sync:' + desk];
+        b.disabled = false;
+    }
+});
 function realLine(x, now) {
     const o = S?.okx || {}, real = +(o.total_tl || x.real_total || 0);
     if (!real)
