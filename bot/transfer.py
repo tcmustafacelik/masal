@@ -335,6 +335,8 @@ def _poll(C, job, X, N):
         w = rows[0]
         st = str(w.get("state"))
         job["msg"] = WD_STATE.get(st, f"durum {st}")
+        if job.get("chain") == "OKX iç transfer" and st in ("1", "2"):
+            job["msg"] = "OKX içinde karşı hesaba aktarılıyor"  # UID ile iç transfer: zincir yok
         job["txId"] = w.get("txId") or job.get("txId")
         if st in ("-1", "-2"):
             raise RuntimeError(f"OKX çekimi reddetti ({job['msg']})")
