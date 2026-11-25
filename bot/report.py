@@ -154,12 +154,7 @@ def build(state, S=None):
         gsr_ = out.pop("gspotr", None)
         # Sıkıştırılıp şifrelenen tam kutu (uygulama 1.82+ bunu okur): şifreli veri sıkışmadığı için önce sıkıştırılır
         out["live_z"] = vault.seal({"strategy": lv, "okx": okx_, "xfer": xfer_, "levr": levr_, "memer": memer_, "gspotr": gsr_}, z=True)
-        # Eski biçimde küçük yedek kutu: henüz güncellenmemiş açık uygulama (ve sıkıştırma açamayan cihaz) bozulmasın;
-        # bakiye, pozisyonlar ve masalar durur, uzun listeler (bildirim, geçmiş, izleme) boş gider
-        lite = dict(lv, recent=lv["recent"][:5], coins=[], notifs=[], watch=None, equity_series=lv["equity_series"][-48:],
-                    log=[[state.get("updated") or 0, "Uygulamanın yeni sürümü var: listelerin tamamı için uygulamayı güncelle"]] + lv["log"][:3])
-        cut = lambda d: {**d, "trades": (d.get("trades") or [])[:5], "log": (d.get("log") or [])[:5], "equity_series": (d.get("equity_series") or [])[-48:]} if d else d
-        out["live_enc"] = vault.seal({"strategy": lite, "okx": okx_, "xfer": xfer_, "levr": cut(levr_), "memer": cut(memer_)})
+        # Eski biçimdeki yedek kutu (live_enc) artık yazılmıyor: uygulama 1.82'den beri sıkıştırılmış kutuyu okuyor; özet ~%30 küçüldü
         out["live_public"] = {"armed": lv["armed"], "paused": lv["paused"]}
         out["okx"] = None
     with open(OUT, "w", encoding="utf-8") as f:

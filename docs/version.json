@@ -1,10 +1,17 @@
 {
-  "version": "1.91.1",
+  "version": "1.91.2",
   "date": "2026-11-25",
   "notes": [
-    "Ayarlarda belirtildi: satışlar hiçbir masada mum kapanışını beklemez"
+    "Hız: veri dosyası ~%30 küçüldü (eski yedek kutu kaldırıldı), uygulama daha hızlı yenilenir"
   ],
   "history": [
+    {
+      "version": "1.91.2",
+      "date": "2026-11-25",
+      "notes": [
+        "Hız: veri dosyası ~%30 küçüldü (eski yedek kutu kaldırıldı), uygulama daha hızlı yenilenir"
+      ]
+    },
     {
       "version": "1.91.1",
       "date": "2026-11-25",
@@ -101,13 +108,6 @@
       "date": "2026-11-25",
       "notes": [
         "Global kutusu ve Özet'teki toplam, bütçeyi değil masadaki gerçek parayı gösterir (para yokken 'para yok')"
-      ]
-    },
-    {
-      "version": "1.87.2",
-      "date": "2026-11-25",
-      "notes": [
-        "OKX ve zincir sayfaları Android'de Chrome'da açılır (Chrome yoksa uygulamanın içinde). OKX TR → Global ekranı iç transferi anlatır, OKX Global UID'n kopyalanabilir"
       ]
     }
   ]
