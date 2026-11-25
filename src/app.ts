@@ -1,4 +1,4 @@
-const APP_VERSION='1.89.0';
+const APP_VERSION='1.89.1';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (kehribar)
@@ -10,7 +10,7 @@ const nf=(v,d=2)=>(NF[d]||(NF[d]=new Intl.NumberFormat('tr-TR',{minimumFractionD
 const tl=(v,d=2)=>nf(v,d)+'\u00a0TL'; // bölünmez boşluk: "TL" satır sonunda tek başına kalmasın
 const U=(v,d=2)=>nf(v,d)+'\u00a0USDT';
 /** bot kayıtlarındaki "$8.63" / "+0.38$" yazımları USDT olarak gösterilir */
-const ut=(x: string)=>x.replace(/([+\-−]?)\$(\d[\d.,]*)/g,'$1$2\u00a0USDT').replace(/(\d[\d.,]*) ?\$/g,'$1\u00a0USDT'); // Global, futures ve memecoin tutarları USDT olarak yazılır (yanında TL karşılığı)
+const ut=(x: string)=>x.replace(/([+\-−]?)\$(\d[\d.,]*)/g,'$1$2\u00a0USDT').replace(/(\d[\d.,]*) ?\$/g,'$1\u00a0USDT').replace(/\u00a0USDT USDT/g,'\u00a0USDT'); // Global, futures ve memecoin tutarları USDT olarak yazılır (yanında TL karşılığı)
 const sgn=v=>(v>0?'+':v<0?'−':'')+nf(Math.abs(v));
 const spc=(v,d=2)=>(v>0?'+':v<0?'−':'')+'%'+nf(Math.abs(v),d); // işaretli yüzde: +%0,14 / −%1,86
 const cls=v=>v>0?'up':v<0?'dn':'';
@@ -455,6 +455,50 @@ function openLevOpen(sym: string, side0: number){
   draw();q.hidden=false;
 }
 document.addEventListener('click',e=>{const t=(e.target as HTMLElement).closest?.('[data-lo]') as HTMLElement;if(t)openLevOpen(t.dataset.lo,+t.dataset.ls)});
+/** Global spot elle alım: aday kutusuna ya da "Coin al"a dokun → coin + tutar seç → al. Sonrası botun kademe
+ *  kuralıyla yönetilir (kâr al, zarar sınırı). Bot da aynı güvenlik kurallarını uygular; uymazsa kayda ENGEL yazar. */
+function openGBuy(inst0: string){
+  const gs: any=(orig||S?.settings as any)?.gspot||{},P: any=(S as any)?.gspot,RR: any=(S as any)?.gspotr;
+  const real=!!(RR&&gs.real),G: any=real?RR:P,desk=real?'gspotr':'gspot';
+  if(!G){toast('Global masası henüz hazır değil');return}
+  if(gs.on===false){toast('Global masası kapalı; Ayarlar → Global\'den aç');return}
+  let inst=inst0||'',amt=0;
+  const q=document.getElementById('qsh');q.dataset.n='';qHead('i-globe','Vazgeç');
+  const base=+G.start||0,used=(G.positions||[]).reduce((a: number,p: any)=>a+(+p.cost||0),0);
+  const free=Math.max(0,Math.min(+G.cash||0,(+(gs.use_pct??90))/100*base-used));
+  const draw=()=>{
+    const sy=inst.replace(/-USDT$/,''),p=(G.positions||[]).find((x: any)=>x.inst===inst),n=p?+p.lots||0:0;
+    const l1=base*(+(gs.lot_pct??12))/100,nxt=n<=0?l1:l1*(+(n===1?(gs.lot2_pct??70):(gs.lot3_pct??100)))/100;
+    if(!amt)amt=Math.round(Math.min(nxt,free)*100)/100;
+    const w=(P?.watch||[]).find((x: any)=>x.i===inst),banned=!!sy&&((((orig||S?.settings as any)?.ban||{}).gspot)||[]).map((x: string)=>String(x).toUpperCase()).includes(sy.toUpperCase());
+    const full=!p&&(G.positions||[]).length>=+(gs.max_coins??5),maxl=n>=+(gs.max_lots??5);
+    const why=!sy?'':banned?'Bu coin Global kara listesinde.':w?.fs?'Futures masası bu coinde KISA; ters pozisyon açılmaz.':full?`En çok ${gs.max_coins??5} coin tutulur; önce birini sat.`:maxl?`Bu coinde en çok ${gs.max_lots??5} kademe alınır.`:free<5?'Kullanılabilir para 5 USDT\'nin altında.':'';
+    document.getElementById('qTitle').textContent=sy?`${sy} · Global elle al`:'Global elle al';
+    document.getElementById('qText').innerHTML=`<div class="xfs">
+      <label class="gbin">${ic('i-coins')}<input id="gbSym" type="text" inputmode="text" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="Coin (ör. BTC)" value="${escH(sy)}"><span>/USDT</span></label>
+      <div class="xinfo">
+        ${w?`<div>${ic('i-chart')}<span>Fiyat</span><b>${nf(w.p,w.p>=100?2:w.p>=1?4:6)} USDT</b></div>`:''}
+        <div>${ic('i-layers')}<span>Kademe</span><b>${n+1}. kademe${p?` · elde ${U(+p.val||0,2)}`:''}</b></div>
+        <div>${ic('i-wallet')}<span>Kullanılabilir</span><b>${U(free,2)}${usdTL(free)?` · ${usdTL(free)}`:''}</b></div>
+        <div>${ic('i-target')}<span>Kâr al</span><b>alışın %${nf(+(gs.lot_tp_pct??3.5),1)} üstünde</b></div>
+      </div>
+      <div class="xq gbq">${[[nxt,'Kademe'],[10,''],[20,''],[free,'Hepsi']].map(([v,t])=>{const x=Math.round(Math.min(+v,free)*100)/100;return `<button type="button" data-ga="${x}"${Math.abs(x-amt)<0.005?' class="on"':''}${x<5?' disabled':''}>${t||nf(x,0)}<small>${t?nf(x,2):usdTL(x)}</small></button>`}).join('')}</div>
+      <div class="gbam"><span>Tutar</span><b>${U(amt,2)}</b><small>${usdTL(amt)}</small></div>
+      ${why?`<div class="warn">${ic('i-info')}<div>${why}</div></div>`:''}
+      <p class="hint">${real?'Gerçek parayla':'Deneme masasında'} piyasa fiyatından alınır. Sonrasını bot kendi kademe kuralıyla yönetir; istersen satırı sola kaydırıp satarsın.</p>
+      <button class="btn primary xgo" id="gbGo"${!sy||why||amt<5?' disabled':''}>${ic('i-buy')}${sy?`${escH(sy)} al · ${U(amt,2)}`:'Coin seç'}</button></div>`;
+    const inp=document.getElementById('gbSym') as HTMLInputElement;
+    inp.onchange=()=>{const v=inp.value.trim().toUpperCase().replace(/[^A-Z0-9]/g,'');inst=v?v+'-USDT':'';amt=0;draw()};
+    document.querySelectorAll<HTMLElement>('[data-ga]').forEach(b=>b.onclick=()=>{amt=+b.dataset.ga;draw()});
+    const go=document.getElementById('gbGo') as HTMLButtonElement;go.onclick=async()=>{
+      if(!token){toast('Önce Ayarlar\'dan GitHub bağlantısını kur');return}go.disabled=true;fastWatch();
+      const req={id:'b'+Date.now().toString(36),ts:Date.now(),desk,act:'buy',sym:inst,amt};
+      const ok=await cloudPatch(o=>{(o as any).desk_cmd=[...((o as any).desk_cmd||[]).filter((x: any)=>Date.now()-(x.ts||0)<600000),req]},'Global elle al: '+sy+' '+amt);
+      if(ok){q.hidden=true;toast(`${sy} alım isteği gönderildi; bot birkaç saniyede alır`)}else{go.disabled=false;toast('İstek gönderilemedi, tekrar dene',patchWhy())}};
+  };
+  draw();q.hidden=false;
+}
+document.addEventListener('click',e=>{const t=(e.target as HTMLElement).closest?.('[data-gb]') as HTMLElement;if(t)openGBuy(t.dataset.gb)});
 /** Global spot masası (OKX Global, USDT pariteleri, kademeli strateji). Gerçek mod açıksa ya da gerçek masada coin
  *  varsa gerçek masa, değilse deneme masası gösterilir; alım adayları ve favoriler deneme masasının taramasından. */
 /** Gerçek Global masasında borsadaki gerçek para: kendi USDT'si + eldeki coinlerin değeri (bütçe değil) */
@@ -484,7 +528,7 @@ function renderGspot(): string {
     `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k === 'buy' ? 'al' : k === 'exit' ? (/\+/.test(t) ? 'sat' : 'zar') : /^HATA/.test(t) ? 'err' : 'not'}">${k === 'buy' ? 'AL' : k === 'exit' ? 'SAT' : k === 'risk' ? (/^HATA/.test(t) ? 'HATA' : 'ENGEL') : 'BİLGİ'}</em><div>${feedTxt(String(t).replace(/^(?:AL|SAT|HATA|ENGEL:?|DUR:) ?/, ''))}</div></div>`).join('');
   const full = (G.positions || []).length >= +(gs.max_coins ?? 5);
   const W = (P?.watch || []).slice(0, 8).map((w: any) => {const d = w.g, ok = d <= 0 && !w.f && !w.fs && (w.h || !full), near = Math.max(4, Math.min(100, 100 - Math.max(0, d) * 12));
-    return `<div class="wr ${ok ? 'wu' : 'wd'}"><div><b>${esc(sym(w.i))}</b><em>${w.fs ? 'FUTURES KISA' : w.f ? 'FİLTRE' : ok ? 'ŞART TAMAM' : d <= 0 && full && !w.h ? 'COİN SINIRI' : w.h ? (w.h + 1) + '. KDM' : 'ADAY'}</em></div><div><span>${pf(w.p)}</span><small>${d <= 0 ? 'hedefte' : 'hedefe %' + nf(d, 1)}</small></div><i style="width:${(ok ? 100 : near).toFixed(0)}%"></i></div>`}).join('');
+    return `<div class="wr ${ok ? 'wu' : 'wd'}" data-gb="${esc(w.i)}" role="button"><div><b>${esc(sym(w.i))}</b><em>${w.fs ? 'FUTURES KISA' : w.f ? 'FİLTRE' : ok ? 'ŞART TAMAM' : d <= 0 && full && !w.h ? 'COİN SINIRI' : w.h ? (w.h + 1) + '. KDM' : 'ADAY'}</em></div><div><span>${pf(w.p)}</span><small>${d <= 0 ? 'hedefte' : 'hedefe %' + nf(d, 1)}</small></div><i style="width:${(ok ? 100 : near).toFixed(0)}%"></i></div>`}).join('');
   const warm = P && P.uni && P.warm < P.uni ? `<p class="hint">Mumlar yükleniyor: ${P.warm}/${P.uni} coin hazır. Bir coin, 60 saatlik verisi tamamlanınca alınabilir.</p>` : '';
   const empty = real && gReal(G) < 0.5;
   const ready = Math.min(+G.fund_res || 0, G.start);
@@ -502,9 +546,9 @@ function renderGspot(): string {
     <h2 class="mh">${ic('i-list')}İşlem kaydı<span class="hsum">${real ? 'gerçek masa' : 'deneme masası'}</span></h2>
     <div class="card mfeed">${feed || `<div class="empty">${ic('i-eye')}<div>Henüz işlem yok; fiyat alım hedefine inince alır</div></div>`}</div>
     ${favSec(real ? G.fav : [], P?.fav, 'gspot')}
-    <h2 class="mh">${ic('i-eye')}Alım adayları<span class="hsum">${P?.uni || 0} coin izleniyor · 15 dk</span></h2>
+    <h2 class="mh">${ic('i-eye')}Alım adayları<span class="hsum">${P?.uni || 0} coin · 15 dk</span><button class="mset" type="button" data-gb="">${ic('i-buy')}Elle al</button></h2>
     <div class="card"><div class="wgrid">${W || `<div class="empty">${ic('i-refresh')}<div>Mumlar yükleniyor</div></div>`}</div>
-    <p class="hint">Hacmi en yüksek ${gs.coins ?? 30} USDT paritesi izlenir. Fiyat son ${gs.sma_hours ?? 72} saatin ortalamasının %${nf(+(gs.step_pct ?? 3.3), 1)} altına inince 1. kademe alınır; her kademe alışının %${nf(tp, 1)} üstünde satılır. Çubuk dolu = hedefe yakın.</p>${warm}</div>`;
+    <p class="hint">Hacmi en yüksek ${gs.coins ?? 30} USDT paritesi izlenir. Fiyat son ${gs.sma_hours ?? 72} saatin ortalamasının %${nf(+(gs.step_pct ?? 3.3), 1)} altına inince 1. kademe alınır; her kademe alışının %${nf(tp, 1)} üstünde satılır. Çubuk dolu = hedefe yakın. Elle almak için coine dokun.</p>${warm}</div>`;
 }
 /** Futures/Memecoin pozisyonunu elle kapatma düğmesi: istek ayarlara yazılır, bot birkaç saniyede uygular */
 const DESK_BUSY: Record<string, number> = {};

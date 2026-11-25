@@ -485,7 +485,7 @@ def _apply_results(R):
         if r["act"] == "buy":
             if r.get("moved"):
                 R["phys"] = R.get("phys", 0.0) + r["moved"]
-                _note(R, "info", f"Fon hesabından işlem hesabına ${r['moved']:.2f} USDT geçti", ts)
+                _note(R, "info", f"Fon hesabından işlem hesabına {r['moved']:.2f} USDT geçti", ts)
             if r.get("ok"):
                 R["phys"] = R.get("phys", 0.0) - r["cost"]
                 _book_buy(R, inst, r["qty"], r["cost"], r["px"], r["why"], ts)
@@ -569,6 +569,58 @@ def manual_sell(state, inst, desk="gspotr"):
         _send(G, acts)
     else:
         _paper(G, acts, int(time.time() * 1000))
+
+
+def manual_buy(state, S, inst, amt=None, desk="gspotr"):
+    """Uygulamadan elle al: tutar verilmezse sıradaki kademe tutarı. Masanın bütün güvenlik kuralları geçerli
+    (kara liste, futures kısa çakışması, nakit, kullanım payı, coin ve kademe sınırı, zarar durdurması)."""
+    c = cfg_of(S)
+    G = state.get(desk)
+    ts = int(time.time() * 1000)
+    if not G:
+        return
+    inst = inst if inst.endswith("-USDT") else f"{inst}-USDT"
+    sym = inst.split("-")[0]
+
+    def no(why):
+        _note(G, "risk", f"{sym}: elle alım yapılmadı · {why}", ts)
+    if desk == "gspotr" and not (c["real"] and c["on"]):
+        return no("gerçek masa kapalı")
+    if G.get("halt"):
+        return no(G["halt"])
+    if S.get("paused"):
+        return no("bot beklemede")
+    if config.banned("gspot", inst):
+        return no("kara listede")
+    if inst in _fut_short(state):
+        return no("futures masası bu coinde KISA; ters pozisyon açılmaz")
+    if inst in G["pending"]:
+        return no("önceki emri sürüyor")
+    with _LOCK:
+        a = _SNAP["ask"].get(inst)
+    if not a:
+        return no("fiyat alınamadı")
+    pos = G["positions"].get(inst)
+    n = len(pos["lots"]) if pos else 0
+    if n >= c["max_lots"]:
+        return no(f"en çok {c['max_lots']} kademe")
+    if not pos and len(G["positions"]) >= c["max_coins"]:
+        return no(f"en çok {c['max_coins']} coin")
+    try:
+        amt = float(amt) if amt else lot_size(c, G["start"], n)
+    except (TypeError, ValueError):
+        return no("tutar okunamadı")
+    if amt < MIN_ORDER:
+        return no(f"tutar {amt:.2f} USDT; en az {MIN_ORDER} USDT olmalı")
+    room = c["use"] * G["start"] - _used(G)
+    amt = round(min(amt, G["cash"], room), 2)
+    if amt < MIN_ORDER:
+        return no(f"kullanılabilir para {MIN_ORDER} USDT'nin altında")
+    acts = [("buy", inst, amt, f"elle · {n + 1}. kademe", a)]
+    if desk == "gspotr":
+        _send(G, acts)
+    else:
+        _paper(G, acts, ts)
 
 
 def step(state, S, N=None):

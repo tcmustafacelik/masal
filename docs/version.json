@@ -1,10 +1,17 @@
 {
-  "version": "1.89.0",
+  "version": "1.89.1",
   "date": "2026-11-25",
   "notes": [
-    "Tutarlar her yerde USDT olarak yazılıyor, yanında TL karşılığı; masa kutularında ve özet kartlarında TL satırı; bot kayıtlarındaki $ yazıları USDT'ye çevrildi; geçmiş temizlendi"
+    "Global'de elle alım: aday kutusuna ya da Alım adayları'ndaki Elle al düğmesine dokun, coin ve tutarı seç; bot güvenlik kurallarını uygular (kara liste, futures çakışması, coin/kademe sınırı, nakit). İşlem kaydındaki çift USDT yazısı düzeldi"
   ],
   "history": [
+    {
+      "version": "1.89.1",
+      "date": "2026-11-25",
+      "notes": [
+        "Global'de elle alım: aday kutusuna ya da Alım adayları'ndaki Elle al düğmesine dokun, coin ve tutarı seç; bot güvenlik kurallarını uygular (kara liste, futures çakışması, coin/kademe sınırı, nakit). İşlem kaydındaki çift USDT yazısı düzeldi"
+      ]
+    },
     {
       "version": "1.89.0",
       "date": "2026-11-25",
@@ -101,13 +108,6 @@
       "date": "2026-11-25",
       "notes": [
         "Global spot masası: OKX Global'de USDT paritelerinde kademeli alım-satım (en hacimli 30 coin). Önce deneme olarak çalışır; Ayarlar → Global'den gerçek parayla açılır, kendi bütçesi ve kara listesi var, futures masasının parasına dokunmaz"
-      ]
-    },
-    {
-      "version": "1.85.0",
-      "date": "2026-11-25",
-      "notes": [
-        "Kara liste (spot, futures, memecoin ayrı ayrı): listedeki coinde yeni işlem açılmaz, eldeki kendi kurallarıyla satılır · Favoriler: en çok kâr getiren coinler yıldızlı · Koruma yenilenince yanlış 'sahipsiz emir' iptali düzeltildi · Futures en fazla pozisyon ayarı 10'a kadar"
       ]
     }
   ]

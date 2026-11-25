@@ -283,6 +283,9 @@ def desk_commands(state, S):
             elif c.get("desk") == "meme":
                 from . import meme
                 meme.manual_sell(state, str(c.get("sym")))
+            elif c.get("desk") in ("gspot", "gspotr") and c.get("act") == "buy":
+                from . import gspot
+                gspot.manual_buy(state, S, str(c.get("sym")), c.get("amt"), c["desk"])
             elif c.get("desk") in ("gspot", "gspotr"):
                 from . import gspot
                 gspot.manual_sell(state, str(c.get("sym")), c["desk"])
