@@ -1,4 +1,4 @@
-const APP_VERSION='1.96.0';
+const APP_VERSION='1.96.1';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (kehribar)
@@ -1140,27 +1140,22 @@ function openXfer(dir: string){
     document.getElementById('tmGo').onclick=async()=>{if(waitBusy)return;
       if(await waitMeme('tr',+inp.value,document.getElementById('tmGo'))){q.hidden=true;openExt(OKX_TR_WD)}};
     q.hidden=false;return}
-  if(dir.startsWith('tr')){const q=document.getElementById('qsh');q.dataset.n='';qHead('i-bank','Anladım');document.getElementById('qTitle').textContent=xName(dir);
-    document.getElementById('qText').innerHTML=`<div class="xfs"><p class="xnote">${dir==='tr2g'?`Bottan otomatik gönderim için bir kez: OKX TR → Çek → USDT → <b>Adres Defteri Yönetimi</b> → OKX kullanıcısı → <b>UID</b> olarak Global UID'ni ekle (API çekimine izin ver / doğrulamasız). O zamana kadar elle gönder; ücretsiz ve anında:`:`Bu yönü <b>OKX TR uygulamasından</b> yap:`}</p>
-      <div class="xinfo"><div>${ic('i-bank')}<span>1</span><b>${dir==='tr2g'?'Alıcı\'da <u>OKX Global ve OKX TR Kullanıcıları</u> sekmesine dokun':'Çek → USDT → Zincir üstü · Arbitrum One'}</b></div><div>${ic(dir==='tr2g'?'i-globe':'i-vault')}<span>2</span><b>${dir==='tr2g'?'"Telefon Numarası" yerine UID seç, yapıştır (UID kopyalandı)':'Adres defterinden KASA (Arbitrum)'}</b></div><div>${ic('i-check')}<span>3</span><b>Gelince bot kasalarda gösterir</b></div></div>${dir==='tr2g'?uidBox():''}
-      <a class="btn primary xgo" href="${OKX_TR_WD}" data-ext="1">${ic('i-out')}OKX TR'yi aç</a>
-      ${dir==='tr2g'?`<div class="xtry"><p class="hint">Bottan iç transferi dene: OKX TR kabul ederse bundan sonra otomatik olur. Yalnız TR'deki boş paradan (botun parasına dokunmaz), zincir kullanılmaz.</p>
-        <div class="xtr2"><div class="xamt"><input id="tryAmt" type="number" inputmode="decimal" min="1" step="1" value="2"><span>USDT</span></div><button class="btn xsync" type="button" id="tryGo">${ic('i-refresh')}Botla dene</button></div></div>`:''}</div>`;
-    q.hidden=false;
-    const tg=document.getElementById('tryGo');if(tg)tg.onclick=async()=>{const amt=Math.round(+(document.getElementById('tryAmt') as HTMLInputElement).value*100)/100;
-      if(!(amt>=1)){toast('En az 1 USDT');return}if(xPending('tr2g'))return;if(!token){toast('Önce Ayarlar\'dan GitHub bağlantısını kur');return}
-      const req={id:'t'+Date.now().toString(36),ts:Date.now(),dir:'tr2g',amt,src:'bos'};(tg as HTMLButtonElement).disabled=true;
-      const ok=await cloudPatch((o: any)=>{const l: any[]=o.xfer_req||[];o.xfer_req=[...l.filter(r=>Date.now()-(r.ts||0)<3600000),req]},'Deneme: OKX TR → Global iç transfer '+amt+' USDT');
-      (tg as HTMLButtonElement).disabled=false;if(ok){q.hidden=true;fastWatch();toast('İstek gönderildi; sonucu Aktarımlar\'da adım adım görürsün')}else toast('İstek gönderilemedi',patchWhy())};
-    return}
+  if(dir==='tr2k'){const q=document.getElementById('qsh');q.dataset.n='';qHead('i-bank','Anladım');document.getElementById('qTitle').textContent=xName(dir);
+    // OKX TR zincire bottan çekime izin vermiyor: KASA'ya gönderim OKX TR uygulamasından yapılır
+    document.getElementById('qText').innerHTML=`<div class="xfs"><p class="xnote">Bu yönü <b>OKX TR uygulamasından</b> yap:</p>
+      <div class="xinfo"><div>${ic('i-bank')}<span>1</span><b>Çek → USDT → Zincir üstü · Arbitrum One</b></div><div>${ic('i-vault')}<span>2</span><b>Adres defterinden KASA (Arbitrum)</b></div><div>${ic('i-check')}<span>3</span><b>Gelince bot kasalarda gösterir</b></div></div>
+      <a class="btn primary xgo" href="${OKX_TR_WD}" data-ext="1">${ic('i-out')}OKX TR'yi aç</a></div>`;
+    q.hidden=false;return}
   const X: any=(S as any)?.xfer||{},[f,t]=XDIR[dir],q=document.getElementById('qsh'),r=+(X.usdtry||USDTTRY||0);
   q.dataset.n='';qHead(XEND[t][1],'Vazgeç');document.getElementById('qTitle').textContent='Para gönder';
   xfId='x'+Date.now().toString(36);
   const bal=(k: string)=>{const o: any=S?.okx||{};const u=k==='tr'?(X.tr_total??(o.total_tl&&r?o.total_tl/r:null)):k==='g'?X.g_val:k==='m'?(S as any)?.memer?.value:X.kasa?.usd;return u==null?'—':U(u,2)};
   // "Tümü": kaynaktan gönderilebilecek en fazla tutar (MEME: boş SOL − ağ payı; Global: fon hesabındaki boş USDT − ücret payı)
+  const useBot=!!(((orig||S?.settings as any)?.xfer)||{}).use_bot;
   const MR: any=(S as any)?.memer,maxOf=(): number|null=>{let v: number|null=null;
     if(f==='m'&&MR)v=Math.max(0,(+MR.sol-0.02)*(+MR.solpx||0)*0.98);
     else if(f==='g'&&X.g_fund!=null)v=Math.max(0,+X.g_fund-(t==='tr'?0:t==='k'?0.2:0.1));
+    else if(f==='tr'&&r&&X.free_tl!=null)v=Math.max(0,(+X.free_tl+(useBot?Math.max(0,+(S?.strategies?.live as any)?.cash||0):0))/r*0.99);
     if(v!=null)v=Math.min(v,Math.max(0,(+X.daily_max||1000)-(+X.day_sum||0)));
     return v==null?null:Math.floor(v*100)/100};
   const mx=maxOf();
@@ -1177,12 +1172,13 @@ function openXfer(dir: string){
         <div>${ic('i-clock')}<span>Süre</span><b>${time_}</b></div>
         <div>${ic('i-flag')}<span>Günlük sınır</span><b>${U(X.day_sum||0,0)} / ${nf(X.daily_max||1000,0)}</b></div>
         ${dir==='g2tr'?`<div>${ic('i-info')}<span>Varınca</span><b>TL'ye çevrilip Nakit'e konur</b></div>`:''}
+        ${f==='tr'?`<div>${ic('i-wallet')}<span>Kaynak</span><b>${useBot?'Boştaki para, yetmezse Spot botunun nakdi':'Yalnız boştaki para (bota dokunulmaz)'}</b></div>`:''}
         ${t==='k'?`<div>${ic('i-lock')}<span>Adres</span><b>0x0113…7db7 (sabit)</b></div>`:''}
         ${dir==='g2m'?`<div>${ic('i-info')}<span>Nasıl</span><b>Global fonundaki USDT ile SOL alınır, MEME'ye gider</b></div><div>${ic('i-lock')}<span>Adres</span><b>7Ymj…EKwN (sabit)</b></div>`:''}
         ${dir==='m2g'?`<div>${ic('i-info')}<span>Nasıl</span><b>SOL Global'e gider, satılıp USDT olur</b></div>`:''}
         ${dir==='m2k'?`<div>${ic('i-info')}<span>Nasıl</span><b>SOL Global'de USDT olur, oradan KASA'ya gider</b></div>`:''}
         ${dir==='m2tr'?`<div>${ic('i-info')}<span>Nasıl</span><b>SOL Global'de USDT olur, OKX TR'de TL'ye çevrilip Nakit'e konur</b></div>`:''}
-      </div>${dir==='g2tr'?`<p class="hint" style="margin:8px 2px 0">OKX iç transferiyle gider (zincir yok). İlk seferde Global → Çek → USDT → Adres Defteri'ne OKX TR UID'ni "OKX kullanıcısı · UID" olarak ekle, API çekimine izin ver.</p>${uidBox('tr')}`:''}
+      </div>
       <button class="btn primary xgo" id="xfGo">${ic('i-out')}Gönder</button></div>`;
     tx.querySelectorAll<HTMLElement>('[data-q]').forEach(b=>b.onclick=()=>{(document.getElementById('xfAmt') as HTMLInputElement).value=b.dataset.q;upd()});
     const inp=document.getElementById('xfAmt') as HTMLInputElement,upd=()=>{document.getElementById('xfEq').innerHTML=r&&+inp.value?'≈ '+tl(+inp.value*r,0):'&nbsp;'};

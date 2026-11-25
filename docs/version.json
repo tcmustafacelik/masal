@@ -1,10 +1,17 @@
 {
-  "version": "1.96.0",
+  "version": "1.96.1",
   "date": "2026-11-25",
   "notes": [
-    "Kasalar bakiyeleri 15 sn'de bir yenilenir (önce dakikada bir); bütün borsa istekleri ortak sırada uç başına aralıkla gider, botlar birbirinin isteğiyle çakışıp 'çok fazla istek' almaz"
+    "OKX TR → Global: talimat ekranı ve 'Botla dene' kalktı; diğer yönlerle aynı Para gönder ekranı (tutar, Tümü, kaynak bilgisi, Gönder)"
   ],
   "history": [
+    {
+      "version": "1.96.1",
+      "date": "2026-11-25",
+      "notes": [
+        "OKX TR → Global: talimat ekranı ve 'Botla dene' kalktı; diğer yönlerle aynı Para gönder ekranı (tutar, Tümü, kaynak bilgisi, Gönder)"
+      ]
+    },
     {
       "version": "1.96.0",
       "date": "2026-11-25",
@@ -101,13 +108,6 @@
       "date": "2026-11-25",
       "notes": [
         "Global spot ve Futures'a Spot'taki bölümler: Son işlemler, Coin bazında kâr/zarar, Piyasa (OKX Global, yalnız kripto). Aday/izlenen coine dokununca önce mumlu grafik (alım seviyesiyle), altında Elle al / Elle aç"
-      ]
-    },
-    {
-      "version": "1.90.0",
-      "date": "2026-11-25",
-      "notes": [
-        "Futures ve Global spot gibi: açık pozisyonlar coin simgeli satırlarda (giriş → şimdi, stop ↔ hedef çubuğu, sola kaydır: Kapat), Bakiye seyri grafiği; satıra dokununca mumlu grafik (OKX Global, giriş/stop/hedef çizgileriyle). Global'e Anlık alım ayarı: kapatılırsa 15 dk mum kapanışını bekler"
       ]
     }
   ]
