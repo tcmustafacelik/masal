@@ -1,4 +1,4 @@
-const APP_VERSION='1.100.5';
+const APP_VERSION='1.100.6';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (kehribar)
@@ -211,6 +211,26 @@ async function load_(quiet?: boolean) {lastLoad=Date.now();offlineData=false;cle
   finally{btn.classList.remove('spin');hideSplash();cloudUI()}
 }
 
+/** Masaların çalışma durumu: [görünüm, ad, simge, durum, not]. Durum: real | demo | halt | pause | off */
+function deskModes(): [string,string,string,string,string][]{
+  const st: any=orig||S?.settings||{},L: any=S?.strategies?.live,A: any=S as any;
+  const one=(on: any,real: boolean): string=>on===false?'off':real?'real':'demo';
+  const gs=st.gspot||{},lv=st.lev||{},mm=st.meme||{};
+  return [
+    ['spot','Spot','i-coins',L?.halted?'halt':L?.paused?'pause':L?.armed?'real':'demo','OKX TR · TL'],
+    ['gspot','Global','i-globe',one(gs.on,gs.real!=null?!!gs.real&&!!A?.gspotr:!!A?.gspotr),'OKX Global · USDT spot'],
+    ['fut','Futures','i-layers',one(lv.on,lv.real!=null?!!lv.real&&!!A?.levr:!!A?.levr),`OKX Global · en fazla 3x${lv.fast?' · al-kaç':''}`],
+    ['meme','Memecoin','i-flask',one(mm.on,mm.real!=null?!!mm.real&&!!A?.memer:!!A?.memer),'Solana · ayrı cüzdan']]}
+/** Üstteki durum düğmesi: her masanın gerçek / deneme durumu; satıra dokununca o masa açılır */
+function openModes(){
+  const NM: Record<string,[string,string]>={real:['g','Gerçek para'],demo:['m','Deneme'],halt:['r','Acil fren'],pause:['a','Beklemede'],off:['m','Kapalı']};
+  const q=document.getElementById('qsh');q.dataset.n='';qHead('i-coins','Kapat');
+  document.getElementById('qTitle').textContent='Masaların durumu';
+  document.getElementById('qText').innerHTML=`<div class="mdl">${deskModes().map(([v,n,i,st,no])=>`<button type="button" class="mdr ${st}" data-mv="${v}"><span class="mdi">${ic(i)}</span><span class="mdt"><b>${n}</b><small>${no}</small></span><span class="chip ${NM[st][0]}">${NM[st][1]}</span></button>`).join('')}</div>
+    <button type="button" class="more" id="mdSet">${ic('i-gear')}Ayarlarda değiştir</button>`;
+  q.querySelectorAll<HTMLElement>('[data-mv]').forEach(b=>b.onclick=()=>{q.hidden=true;showView(b.dataset.mv)});
+  (document.getElementById('mdSet') as HTMLElement).onclick=()=>{q.hidden=true;document.getElementById('openSet').click()};
+  q.hidden=false}
 /** Spot ekranı görünür mü (başka sekme ya da tam ekran pencere açıkken ayrıntıları boşuna çizilmez) */
 const spotOn=()=>VIEW==='spot'&&!document.getElementById('mainv').hidden;
 function render(){
@@ -221,9 +241,11 @@ function render(){
    {const mc=pending?'mode':'mode'+(halt?' halt':real?' real':'');if(m.className!==mc)m.className=mc}
    setH(m,pending?`<span class="mi">${ic('i-refresh')}</span><span><b>${want?'Gerçeğe':'Denemeye'}</b><small>geçiliyor…</small></span>`:halt?`<span class="mi">${ic('i-stop')}</span><span><b>Durdu</b><small>Acil fren</small></span>`
      :L&&L.paused?`<span class="mi">${ic('i-pause')}</span><span><b>Beklemede</b><small>Yeni alım yok</small></span>`
-     :real?`<span class="mi">${ic('i-coins')}</span><span><b>Gerçek</b><small>OKX TR'de</small></span>`
-     :`<span class="mi">${ic('i-flask')}</span><span><b>Deneme</b><small>Emir gitmez</small></span>`);
-   m.onclick=()=>document.getElementById('openSet').click()}
+     :(()=>{const dm=deskModes(),n=dm.filter(d=>d[3]==='real').length;
+       return n?`<span class="mi">${ic('i-coins')}</span><span><b>Gerçek</b><small>${n}/${dm.length} masa</small></span>`
+         :`<span class="mi">${ic('i-flask')}</span><span><b>Deneme</b><small>Emir gitmez</small></span>`})());
+   if(!pending&&!halt&&!(L&&L.paused)){const n=deskModes().some(d=>d[3]==='real');const mc='mode'+(n?' real':'');if(m.className!==mc)m.className=mc}
+   m.onclick=openModes}
   setH(document.getElementById('foot'),'Fiyatlar uygulama açıkken OKX TR\'den anlık güncellenir; bot kesintisiz çalışır, saniyede bir kontrol eder.<br>'+(L&&L.armed?'Ekrandaki rakamlar OKX TR hesabındaki gerçek işlemlerdir.':'Gerçek para kullanılmıyor; tüm işlemler sanal.'));
   if(S.strategies.live&&sel!=='live')sel='live'; // sanal stratejiler kapalı: her zaman gerçek hesap
   const x=S.strategies[sel];
