@@ -10,6 +10,7 @@ OUT = os.path.join(os.path.dirname(__file__), "..", "docs", "data", "summary.jso
 
 # Herkese açık özette gösterilmeyen ayarlar (para tutarları, cüzdan, kara liste, istekler): uygulama kilidi açınca
 # şifreli kutudaki tam ayarları kullanır
+BOT_VER = "1.99.0"  # botun çalıştırdığı kod sürümü (uygulama ve bakım kontrolü için)
 _PRIVATE = {"budget", "kasa", "real_total", "target", "xfer", "ban", "notify", "sell", "buy", "convert", "liquidate",
             "xfer_req", "xfer_cancel", "dust", "desk_cmd", "test_req", "clear", "clear_all", "topup"}
 _PRIVATE_SUB = {"lev": ("real_budget", "max_loss", "real", "real_reset", "cross_ok"), "meme": ("wallet", "budget", "max_loss", "real"),
@@ -161,7 +162,7 @@ def build(state, S=None):
         "updated": state.get("updated"), "created": state.get("created"),
         "mode": "Sanal", "start_cash": config.START_CASH,
         "risk": config.RISK, "fee": config.FEE_RATE, "slippage": config.SLIPPAGE,
-        "universe": state.get("universe", []), "strategies": strategies, "settings": S, "okx": state.get("okx"), "perf": state.get("perf"), "meme": _meme(state), "lev": _lev(state), "xfer": _xfer(state, S), "levr": _levr(state), "memer": _memer(state),
+        "universe": state.get("universe", []), "strategies": strategies, "settings": S, "okx": state.get("okx"), "perf": state.get("perf"), "bot_ver": BOT_VER, "meme": _meme(state), "lev": _lev(state), "xfer": _xfer(state, S), "levr": _levr(state), "memer": _memer(state),
         "gspot": _gs(state, "gspot"), "gspotr": _gs(state, "gspotr"),
     }
     if vault.password() and "live" in strategies:

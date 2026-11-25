@@ -1,10 +1,17 @@
 {
-  "version": "1.98.3",
+  "version": "1.99.0",
   "date": "2026-11-25",
   "notes": [
-    "Ayarlar üst menüsü renkli: her masanın kendi rengi"
+    "Futures: teminat pozisyon başına kasanın 1/en fazla pozisyon'u (daha çok pozisyon sığar); ayarlarda düz yazılan alanlar şifreli ayarların içine alan alan işlenir"
   ],
   "history": [
+    {
+      "version": "1.99.0",
+      "date": "2026-11-25",
+      "notes": [
+        "Futures: teminat pozisyon başına kasanın 1/en fazla pozisyon'u (daha çok pozisyon sığar); ayarlarda düz yazılan alanlar şifreli ayarların içine alan alan işlenir"
+      ]
+    },
     {
       "version": "1.98.3",
       "date": "2026-11-25",
@@ -101,13 +108,6 @@
       "date": "2026-11-25",
       "notes": [
         "Global Eşleştir artık otomatik: fon hesabında hiçbir masaya ayrılmamış USDT (yeni gelen aktarım) bütçeye eklenir"
-      ]
-    },
-    {
-      "version": "1.94.3",
-      "date": "2026-11-25",
-      "notes": [
-        "Toplam varlık: Global'deki masaya ayrılmamış para (yeni gelen aktarım) artık Futures sayılmıyor, 'Global boşta' olarak ayrı görünüyor"
       ]
     }
   ]

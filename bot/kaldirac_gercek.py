@@ -4,7 +4,7 @@ Güvenlik kuralları (ayarla gevşetilemez):
   - Yalnız "real_budget" kadar USDT fon hesabından işlem hesabına geçer; teminat bundan alınır
   - İzole marjin, en fazla 3x (varsayılan 2x); her emirle birlikte borsaya zarar durdur + kâr al bağlanır
     (bot dursa bile pozisyon borsada korunur)
-  - Teminat pozisyon başına kasanın en fazla 1/3'ü; işlem başına risk kasanın %risk_pct'si
+  - Teminat pozisyon başına kasanın en fazla 1/max_pos'u (en az 3'e bölünür); işlem başına risk kasanın %risk_pct'si
   - Günlük zarar %daily_loss_pct'e ulaşırsa tüm pozisyonlar kapanır, o gün yeni işlem yok
   - Toplam zarar "max_loss" $'a ulaşırsa masa tamamen durur (ayarlardan yeniden başlatılana kadar)
   - Pozisyon yokken işlem hesabında bütçenin üstünde kalan kâr fon hesabına geri alınır (oradan KASA'ya süpürülür)
@@ -359,7 +359,10 @@ def _open(D, R, cfg, ev):
         _note(R, "risk", f"GERÇEK ENGEL {c}: sözleşme bilgisi yok")
         return
     eq = R["eq"] or R["funded"]
-    cap = min(eq / 3, R["avail"]) * 0.97  # ücret ve yuvarlama payı
+    # teminat pozisyon başına kasanın 1/en fazla pozisyon'u (en az 1/3'ten büyük değil): pozisyon sayısı artınca
+    # her biri küçülür, aynı kasayla daha çok işlem açılabilir
+    slots = max(3, int(cfg.get("max_pos") or 3))
+    cap = min(eq / slots, R["avail"]) * 0.97  # ücret ve yuvarlama payı
     risk = eq * cfg["risk_pct"] / 100
     qty = min(risk / dist, cap * lev / px)
     n = math.floor(qty / sp["ctVal"] / sp["lotSz"] + 1e-9) * sp["lotSz"]

@@ -1,4 +1,4 @@
-const APP_VERSION='1.98.3';
+const APP_VERSION='1.99.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (kehribar)
@@ -2229,7 +2229,8 @@ async function setOpen(raw: any): Promise<any> {
   if (!raw || !raw.sec || raw.sec.enc !== 1) return raw;
   if (!pw) throw 'kilit';
   const sec = await unseal(raw.sec, pw), plain: any = {...raw}; delete plain.sec;
-  return {...sec, ...plain};
+  const deep = (b: any, o: any): any => {const r: any = {...b}; for (const k in o) r[k] = o[k] && typeof o[k] === 'object' && !Array.isArray(o[k]) && r[k] && typeof r[k] === 'object' && !Array.isArray(r[k]) ? deep(r[k], o[k]) : o[k]; return r;};
+  return deep(sec, plain);
 }
 async function setSeal(o: any): Promise<any> {
   if (!pw) throw 'kilit';

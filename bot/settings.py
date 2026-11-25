@@ -109,6 +109,14 @@ def _put(d, path, v):
     d[ks[-1]] = v
 
 
+def _deep(base, over):
+    """Düz yazılmış alanlar şifrelinin üstüne alan alan yazılır (ör. {"lev": {"brk_h": 6}} lev'in yalnız o alanını değiştirir)."""
+    out = dict(base)
+    for k, v in over.items():
+        out[k] = _deep(out[k], v) if isinstance(v, dict) and isinstance(out.get(k), dict) else v
+    return out
+
+
 def load():
     """Ayarları okur. Dosya bozuksa ya da bir değer kullanılamaz durumdaysa (boş/yanlış tür) işlem ayarlarında
     varsayılana DÖNÜLMEZ: varsayılanda gerçek mod kapalı, bütçe ve zarar sınırları farklıdır; gerçek hesap yanlış
@@ -127,7 +135,7 @@ def load():
                 # Ayarlar uygulamada OKX şifresiyle şifrelenir (herkese açık depoda okunmasın); düz yazılmış alanlar
                 # (ör. elle düzeltme) şifreli olanın üstüne yazılır, uygulama bir sonraki kayıtta onları da şifreler
                 plain = {k: v for k, v in data.items() if k != "sec"}
-                data = {**vault.unseal(data["sec"]), **plain}
+                data = _deep(vault.unseal(data["sec"]), plain)
         except Exception as e:
             if "d" not in _GOOD:
                 raise RuntimeError(f"Ayar dosyası okunamadı; bot bu ayarlarla çalışmaz (docs/ayarlar.json düzeltilmeli): {e}")
