@@ -1,4 +1,4 @@
-const APP_VERSION='1.97.4';
+const APP_VERSION='1.98.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (kehribar)
@@ -956,7 +956,26 @@ function realLine(x: any, now: number): string {
 /** "Borsayla eşleştir": bütçe ve kasa borsadaki gerçek paraya göre ayarlanır.
  *  Bütçe öyle seçilir ki bottaki nakit = alım-satım hesabındaki gerçek boş para olur (kâr/zarar geçmişi bozulmaz);
  *  kasa = bütçe + fon hesabındaki nakit (yedek). */
-let SYNC_AT=0;
+let SYNC_AT=0,SYNCALL_AT=0;
+/** Özet: "Tümünü eşleştir" — Spot (bütçe/kasa), Global spot (boştaki para bütçeye), Futures ve Memecoin tek dokunuşla
+ *  borsayla eşitlenir. Tek kayıtla gider (istekler çakışmaz). Renk: mavi hazır · turuncu gönderildi · yeşil tamam */
+function syncAllH(): string{
+  const st=SYNCALL_AT&&Date.now()-SYNCALL_AT<90000?(['gspotr','levr'].every(d=>!(S as any)?.[d]||syncDone(d)>SYNCALL_AT)&&S.updated>SYNCALL_AT+5000?'ok':'sent'):'';
+  return `<button type="button" id="syncAll" class="sall${st?' '+st:''}"${st==='sent'?' disabled':''}>${st==='sent'?'<i class="spn"></i>Eşleştirme gönderildi · bot karşılaştırıyor':st==='ok'?ic('i-check')+'Hepsi borsayla eşleştirildi':ic('i-refresh')+'Tümünü borsayla eşleştir'}<small>${st?'':'Spot · Global · Futures'+((S as any)?.memer?' · Memecoin':'')}</small></button>`}
+async function syncAll(){
+  if(!token){toast('Önce Ayarlar\'dan GitHub bağlantısını kur');return}
+  const x: any=S?.strategies?.live,o: any=S?.okx;let b: number|null=null,k: number|null=null;
+  if(x&&!x.locked&&o&&o.try!=null&&!(x.recent||[]).some((t: any)=>t.ts>(o.ts||0)-5000)){
+    const free=o.cash_tl!=null?+o.cash_tl:(+o.try||0)+(+o.usdt_tl||0),base=+(x.base??x.start_cash)||0;
+    b=Math.max(0,Math.round(base+free-(+x.cash||0)-(+x.cash_gap||0)));k=Math.round(b+(+o.fund_tl||0))}
+  const gf=(S as any)?.gspotr?Math.floor(gFree()*100)/100:0,gb=+(((orig||S?.settings as any)?.gspot||{}).budget)||0,nb=Math.round((gb+gf)*100)/100;
+  const now=Date.now(),desks=['gspotr','levr','memer'].filter(d=>(S as any)?.[d]),reqs=desks.map((d,i)=>({id:'s'+(now+i).toString(36),ts:now,desk:d,act:'sync',sym:''}));
+  SYNCALL_AT=now;for(const d of desks)DESK_BUSY['sync:'+d]=now;renderOverview();fastWatch();
+  const ok=await cloudPatch(c=>{(c as any).desk_cmd=[...((c as any).desk_cmd||[]).filter((r: any)=>Date.now()-(r.ts||0)<600000),...reqs];
+    if(b!=null){c.budget=b;c.kasa=k as number}if(gf>=1)(c as any).gspot={...((c as any).gspot||{}),budget:nb}},'Tümünü eşleştir'+(b!=null?` · bütçe ${b}`:'')+(gf>=1?` · Global ${nb}`:''));
+  if(ok){if(b!=null)SYNC_AT=now;toast(`Eşleştirme gönderildi${b!=null?`: Spot bütçesi ${tl(b,0)}`:''}${gf>=1?` · Global'e ${U(gf,2)} eklendi`:''}. Bot birkaç saniyede karşılaştırır.`)}
+  else{SYNCALL_AT=0;for(const d of desks)delete DESK_BUSY['sync:'+d];toast('Eşleştirilemedi, tekrar dene',patchWhy())}
+  renderOverview()}
 async function syncReal(){
   const x: any=S?.strategies?.live,o: any=S?.okx;
   if(!x||!o||o.try==null){toast('Borsa bilgisi henüz gelmedi, biraz sonra dene');return}
@@ -1411,7 +1430,9 @@ function renderOverview(){
     <div class="obig"><div><strong>${tot!=null?cv(tot):'—'}</strong><small>${second}</small></div>
       <div class="adf ${OV_HIDE?'':cls(all)}">${OV_HIDE?'••••':(all>=0?'▲ ':'▼ ')+cv(Math.abs(all),cur==='try'?0:undefined)}<small>toplam kâr/zarar</small></div></div>
     <div class="abar">${bar}</div>
-    <div class="oleg">${parts.map(([k,n,,v])=>`<span class="p${k}"><em></em>${n.split(' · ')[0]}<b>%${nf(v/sum*100,0)}</b></span>`).join('')}</div></div>`);
+    <div class="oleg">${parts.map(([k,n,,v])=>`<span class="p${k}"><em></em>${n.split(' · ')[0]}<b>%${nf(v/sum*100,0)}</b></span>`).join('')}</div>
+    ${syncAllH()}</div>`);
+  {const b=document.getElementById('syncAll');if(b)b.onclick=()=>syncAll()}
   el.hidden=false;
 }
 const ICON_BAD = new Set<string>(), ICON_OK = new Set<string>();

@@ -1,10 +1,17 @@
 {
-  "version": "1.97.4",
+  "version": "1.98.0",
   "date": "2026-11-25",
   "notes": [
-    "Aktarım takibi düzeltmesi"
+    "Özet'e 'Tümünü borsayla eşleştir' düğmesi: Spot, Global, Futures ve Memecoin tek dokunuşla (renkli: mavi hazır, turuncu gönderildi, yeşil tamam)"
   ],
   "history": [
+    {
+      "version": "1.98.0",
+      "date": "2026-11-25",
+      "notes": [
+        "Özet'e 'Tümünü borsayla eşleştir' düğmesi: Spot, Global, Futures ve Memecoin tek dokunuşla (renkli: mavi hazır, turuncu gönderildi, yeşil tamam)"
+      ]
+    },
     {
       "version": "1.97.4",
       "date": "2026-11-25",
@@ -101,13 +108,6 @@
       "date": "2026-11-25",
       "notes": [
         "Aktarımda botun parasını kullan ayarı (Ayarlar → Aktarım ve KASA); Global/Futures/Memecoin: Son işlemler + Coin bazında kâr/zarar (favoriler yıldızla), notlar ayrı; Memecoin'e Eşleştir ve Bakiye seyri; tekrar eden engel notları saatte bire indi; Spot coin sınırı yazısı netleşti; futures en fazla 3 pozisyon"
-      ]
-    },
-    {
-      "version": "1.93.0",
-      "date": "2026-11-25",
-      "notes": [
-        "Global ve Futures'a Eşleştir: OKX Global'deki gerçek durumla karşılaştırma (Eşleşik / Tutmuyor) ve tek dokunuşla eşitleme"
       ]
     }
   ]
