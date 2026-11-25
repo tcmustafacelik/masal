@@ -46,6 +46,7 @@ DEFAULT = {
     "trend_filter_pct": 5.0,
     "vol_filter": 4.0,
     "coins": 30,            # en yüksek hacimli kaç coin izlenir
+    "instant": True,        # anlık alım: fiyat alım seviyesine değdiği an alır; kapalıysa 15 dk mum kapanışı beklenir
 }
 FEE = 0.001                 # OKX Global spot alıcı (taker) ücreti
 SLIP = 0.0005
@@ -171,7 +172,8 @@ def cfg_of(S):
             "tp": f("lot_tp_pct", .3, 50) / 100, "stop": f("stop_pct", 1, 90) / 100,
             "max_lots": int(f("max_lots", 1, 10)), "max_coins": int(f("max_coins", 1, 20)), "use": f("use_pct", 5, 100) / 100,
             "sma_n": int(f("sma_hours", 4, 72)) * BPH, "cf": f("trend_filter_pct", 0, 50) / 100,
-            "vol_k": f("vol_filter", 0, 50) or None, "coins": int(f("coins", 5, 60))}
+            "vol_k": f("vol_filter", 0, 50) or None, "coins": int(f("coins", 5, 60)),
+            "instant": bool(g.get("instant", DEFAULT["instant"]))}
 
 
 def new_state(cash):
@@ -276,8 +278,13 @@ def decide(G, c, snap, base, can_buy, ts, avoid=()):
         if not pos and inst not in snap["uni"]:
             continue
         t = _target(c, rows, pos)
-        if not t or a > t:
+        if not t or a > t * (1 if c["instant"] else 1.005):
             continue
+        if not c["instant"]:
+            # mum kapanışı beklenir: son kapanan 15 dk mum alım seviyesinde/altında kapanmış olmalı ve karar o mum
+            # kapandıktan sonraki 3 dakika içinde verilir (eski bir kapanışa bakıp geç alım yapılmaz)
+            if rows[-1][1] > t or ts - (rows[-1][0] + 900_000) > 180_000:
+                continue
         cands.append((a / t, inst, pos, rows, a))
     for _, inst, pos, rows, a in sorted(cands):
         if any(x[1] == inst for x in acts):

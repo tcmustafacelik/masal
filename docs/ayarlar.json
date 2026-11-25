@@ -429,7 +429,8 @@
     "max_lots": 4,
     "max_coins": 4,
     "use_pct": 90,
-    "max_loss": 15
+    "max_loss": 15,
+    "instant": true
   },
   "clear_all": 1795564433086
 }

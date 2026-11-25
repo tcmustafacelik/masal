@@ -1,10 +1,17 @@
 {
-  "version": "1.89.1",
+  "version": "1.90.0",
   "date": "2026-11-25",
   "notes": [
-    "Global'de elle alım: aday kutusuna ya da Alım adayları'ndaki Elle al düğmesine dokun, coin ve tutarı seç; bot güvenlik kurallarını uygular (kara liste, futures çakışması, coin/kademe sınırı, nakit). İşlem kaydındaki çift USDT yazısı düzeldi"
+    "Futures ve Global spot gibi: açık pozisyonlar coin simgeli satırlarda (giriş → şimdi, stop ↔ hedef çubuğu, sola kaydır: Kapat), Bakiye seyri grafiği; satıra dokununca mumlu grafik (OKX Global, giriş/stop/hedef çizgileriyle). Global'e Anlık alım ayarı: kapatılırsa 15 dk mum kapanışını bekler"
   ],
   "history": [
+    {
+      "version": "1.90.0",
+      "date": "2026-11-25",
+      "notes": [
+        "Futures ve Global spot gibi: açık pozisyonlar coin simgeli satırlarda (giriş → şimdi, stop ↔ hedef çubuğu, sola kaydır: Kapat), Bakiye seyri grafiği; satıra dokununca mumlu grafik (OKX Global, giriş/stop/hedef çizgileriyle). Global'e Anlık alım ayarı: kapatılırsa 15 dk mum kapanışını bekler"
+      ]
+    },
     {
       "version": "1.89.1",
       "date": "2026-11-25",
@@ -101,13 +108,6 @@
       "date": "2026-11-25",
       "notes": [
         "Aktarımlar aşama aşama: Kasalar'da bir aktarıma dokununca İstek → Gönderim → Onay → Ulaştı adımları saatleriyle görünür; zincir işlemlerinde 'Zincirde gör' bağlantısı. KASA'ya gidenler Arbitrum zincirinde onaylanınca 'Ulaştı' sayılır"
-      ]
-    },
-    {
-      "version": "1.86.0",
-      "date": "2026-11-25",
-      "notes": [
-        "Global spot masası: OKX Global'de USDT paritelerinde kademeli alım-satım (en hacimli 30 coin). Önce deneme olarak çalışır; Ayarlar → Global'den gerçek parayla açılır, kendi bütçesi ve kara listesi var, futures masasının parasına dokunmaz"
       ]
     }
   ]

@@ -25,7 +25,7 @@ DEFAULTS = {
     "dust": [],
     "gspot": {"on": True, "real": False, "bank": 100.0, "budget": 50.0, "max_loss": 15.0, "lot_pct": 10.0, "lot2_pct": 45.0,
               "lot3_pct": 77.0, "step_pct": 3.3, "step3_pct": 6.6, "lot_tp_pct": 3.5, "stop_pct": 50.0, "max_lots": 5,
-              "max_coins": 5, "use_pct": 85.0, "sma_hours": 72, "trend_filter_pct": 5.0, "vol_filter": 4.0, "coins": 30},  # Global spot masası ($)
+              "max_coins": 5, "use_pct": 85.0, "sma_hours": 72, "trend_filter_pct": 5.0, "vol_filter": 4.0, "coins": 30, "instant": True},  # Global spot masası ($)
     "ban": {"spot": [], "lev": [], "meme": [], "gspot": []},  # kara liste: masa başına yeni işlem açılmayacak coinler
     "buy": [],  # uygulamadan elle alım istekleri [{id, ts, inst, amt (TL)}]
     "desk_cmd": [],  # futures/memecoin elle kapat/sat istekleri  # küçük bakiye çevirme istekleri [{id, ts, ex: tr|g|m}]
