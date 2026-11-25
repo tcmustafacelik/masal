@@ -1,10 +1,17 @@
 {
-  "version": "1.97.1",
+  "version": "1.97.2",
   "date": "2026-11-25",
   "notes": [
-    "Global spot fiyatları her turda (saniyede bir) okunur: alım-satım kararı daha taze fiyatla; geçmiş temizlendi"
+    "Aktarım: OKX TR'ye ulaşıp onay bekleyen para ikinci kontrolde kayboluyordu ('ulaşması bekleniyor'da takılı kalıyordu); artık aynı yatırma takip edilir ve ne yapman gerektiği yazılır"
   ],
   "history": [
+    {
+      "version": "1.97.2",
+      "date": "2026-11-25",
+      "notes": [
+        "Aktarım: OKX TR'ye ulaşıp onay bekleyen para ikinci kontrolde kayboluyordu ('ulaşması bekleniyor'da takılı kalıyordu); artık aynı yatırma takip edilir ve ne yapman gerektiği yazılır"
+      ]
+    },
     {
       "version": "1.97.1",
       "date": "2026-11-25",
@@ -101,13 +108,6 @@
       "date": "2026-11-25",
       "notes": [
         "Global spot ile futures aynı coinde ters pozisyon tutabilir (Ayarlar → Futures → Global spot ile ters pozisyon; açık)"
-      ]
-    },
-    {
-      "version": "1.91.2",
-      "date": "2026-11-25",
-      "notes": [
-        "Hız: veri dosyası ~%30 küçüldü (eski yedek kutu kaldırıldı), uygulama daha hızlı yenilenir"
       ]
     }
   ]

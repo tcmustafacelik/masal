@@ -392,12 +392,21 @@ def _poll(C, job, X, N):
         dex = C[dest]
         rows = dex.req("GET", "/api/v5/asset/deposit-history?ccy=USDT")
         hit = next((d for d in rows if job.get("txId") and d.get("txId") == job["txId"]), None)
+        if not hit and job.get("depId"):  # daha önce eşleşen yatırma (onay beklerken her kontrolde aynı kayıt bulunur)
+            hit = next((d for d in rows if d.get("depId") == job["depId"]), None)
         if not hit:  # iç transferde zincir kaydı olmaz: tutar ve zamanla eşleştirilir
             used = set(X.get("used_dep", []))
             hit = next((d for d in rows if d.get("depId") not in used and abs(float(d.get("amt") or 0) - job["amt"]) < 0.02
                         and int(d.get("ts") or 0) >= job.get("sent_ts", 0) - 120_000), None)
+            if not hit:
+                # eski sürümde eşleşip "kullanıldı" sayılan ama başka işe ait olmayan kayıt (bu iş onay beklerken kaybolmuştu)
+                mine = {j.get("depId") for j in X.get("jobs", []) if j.get("depId") and j is not job}
+                hit = next((d for d in rows if d.get("depId") in used and d.get("depId") not in mine
+                            and str(d.get("state")) not in ("1", "2") and abs(float(d.get("amt") or 0) - job["amt"]) < 0.02
+                            and int(d.get("ts") or 0) >= job.get("sent_ts", 0) - 120_000), None)
             if hit:
                 X["used_dep"] = (X.get("used_dep", []) + [hit.get("depId")])[-50:]
+                job["depId"] = hit.get("depId")
         if not hit:
             job["msg"] = f"{NAMES[dest]}'e ulaşması bekleniyor"
             return
