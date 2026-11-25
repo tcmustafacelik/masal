@@ -256,9 +256,9 @@
     "gs1795557828089",
     "tmwvqn0c0"
   ],
-  "clear": 1795564433086,
+  "clear": 1795591813226,
   "xfer": {
-    "daily_max": 1000,
+    "daily_max": 10000,
     "sweep_on": true,
     "sweep_pct": 50,
     "sweep_days": 1,
@@ -424,5 +424,5 @@
     "coins": 30,
     "instant": true
   },
-  "clear_all": 1795564433086
+  "clear_all": 1795591813226
 }

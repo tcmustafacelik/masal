@@ -742,12 +742,17 @@ def step(state, S, N=None):
                 _Q.put({**p["job"], "check": True})
             elif p.get("asked") and ts - p["asked"] > 120_000:
                 R["pending"].pop(inst, None)
-        if c["real"] and abs(c["budget"] - R.get("funded", R["start"])) > 0.005:
-            d = c["budget"] - R.get("funded", R["start"])  # bütçe değişti: fark nakde eklenir / nakitten düşülür
+        # aktarımda masanın parasından gönderilen kısım bütçeden düşülür; bütçe ayarı değişince sıfırlanır
+        if R.get("budget_set") is not None and abs(c["budget"] - R["budget_set"]) > 0.005:
+            R["wd_off"] = 0.0
+        R["budget_set"] = c["budget"]
+        budget = max(0.0, c["budget"] - R.get("wd_off", 0.0))
+        if c["real"] and abs(budget - R.get("funded", R["start"])) > 0.005:
+            d = budget - R.get("funded", R["start"])  # bütçe değişti: fark nakde eklenir / nakitten düşülür
             R["cash"] = round(R["cash"] + d, 6)
             R["start"] = round(R["start"] + d, 2)
-            R["funded"] = c["budget"]
-            _note(R, "info", f"Bütçe ${c['budget']:.2f} oldu", ts)
+            R["funded"] = budget
+            _note(R, "info", f"Bütçe ${budget:.2f} oldu", ts)
         eq = _equity(R, snap["bid"])
         if not R["halt"] and eq <= R["start"] - c["max_loss"]:
             R["halt"] = f"toplam zarar ${c['max_loss']:.0f} sınırına ulaştı; yeni alım yok"

@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.96.1';
+const APP_VERSION = '1.97.0';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = 'var(--acc)';
@@ -313,6 +313,8 @@ async function openLive(s) {
         s.levr = o.levr;
         s.memer = o.memer;
         s.gspotr = o.gspotr;
+        if (o.settings)
+            s.settings = o.settings;
     }
     catch (e) {
         pw = '';
@@ -473,6 +475,11 @@ async function load_(quiet) {
         render();
         pollMarket();
         startNotes();
+        if (token && pw && !window._setChk) {
+            window._setChk = 1;
+            setTimeout(() => { if (!orig)
+                loadSettings(); }, 4000);
+        }
     }
     catch (e) {
         syncMark(false);
@@ -533,7 +540,11 @@ function render() {
                     S.xfer = o.xfer;
                     S.levr = o.levr;
                     S.memer = o.memer;
+                    S.gspotr = o.gspotr;
+                    if (o.settings)
+                        S.settings = o.settings;
                     render();
+                    loadSettings();
                     toast('Kilit açıldı');
                 }
                 catch (e) {
@@ -1260,7 +1271,7 @@ async function startNotes() {
         return;
     nBusy = true;
     try {
-        const st = (S?.settings || await tfetch('ayarlar.json?t=' + Date.now()).then(r => r.json()));
+        const st = (S?.settings?.notify ? S.settings : await setOpen(await tfetch('ayarlar.json?t=' + Date.now()).then(r => r.json())));
         const tp = st?.notify?.topic;
         if (!st?.notify?.enabled || !tp)
             return;
@@ -1483,8 +1494,12 @@ function gFree() {
         return Math.max(0, +r.free);
     return Math.max(0, +(S?.xfer?.g_fund) || 0);
 }
+function syncBtnH(desk, st, id = '') {
+    return `<button class="btn xsync${st ? ' ' + st : ''}" type="button"${desk ? ` data-dsync="${desk}"` : ''}${id ? ` id="${id}"` : ''}${st === 'sent' ? ' disabled' : ''} aria-label="Borsayla eşleştir">${st === 'sent' ? '<i class="spn"></i>Gönderildi' : st === 'ok' ? ic('i-check') + 'Eşleştirildi' : ic('i-refresh') + 'Eşleştir'}</button>`;
+}
+function syncDone(desk) { const o = S?.[desk]; return desk === 'gspotr' ? +(o?.recon?.ts || 0) : +(o?.sync || 0); }
 function deskReal(desk) {
-    const sy = DESK_BUSY['sync:' + desk] && Date.now() - DESK_BUSY['sync:' + desk] < 60000;
+    const bt = DESK_BUSY['sync:' + desk] || 0, sy = bt && Date.now() - bt < 60000;
     let lbl = '', val = '', small = '', ok = true, warn = '', info = '';
     if (desk === 'memer') {
         const R = S?.memer;
@@ -1528,7 +1543,7 @@ function deskReal(desk) {
             info = `Fon hesabında masaya ayrılmamış ${U(fr, 2)} var; Eşleştir'e basınca bütçeye eklenir.`;
     }
     return `<div class="areal${ok ? '' : ' bad'}">${ic('i-bank')}<div><span>${lbl}</span><b>${val}</b>${small ? `<small>${small}</small>` : ''}</div>
-    <em>${ok ? ic('i-check') + 'Eşleşik' : 'Tutmuyor'}</em><button class="btn xsync" type="button" data-dsync="${desk}"${sy ? ' disabled' : ''}>${ic('i-refresh')}${sy ? 'Gönderildi' : 'Eşleştir'}</button></div>${warn ? `<div class="xw dn">${warn}</div>` : ''}${info ? `<div class="xw">${info}</div>` : ''}`;
+    <em>${ok ? ic('i-check') + 'Eşleşik' : 'Tutmuyor'}</em>${syncBtnH(desk, sy ? (syncDone(desk) > bt ? 'ok' : 'sent') : '')}</div>${warn ? `<div class="xw dn">${warn}</div>` : ''}${info ? `<div class="xw">${info}</div>` : ''}`;
 }
 document.addEventListener('click', async (e) => {
     const b = e.target.closest?.('[data-dsync]');
@@ -1563,8 +1578,9 @@ function realLine(x, now) {
     const gap = now - real, f = +(o.fund_tl || 0), bad = Math.abs(gap) > Math.max(50, real * .01);
     const warn = bad ? `<div class="xw dn">Uygulamadaki hesap borsadan ${tl(Math.abs(gap), 0)} ${gap > 0 ? 'fazla' : 'az'}. ${gap > 0 ? 'Kasa/bütçe borsadakinden yüksek girilmiş olabilir; bot olmayan parayı kullanmaz.' : 'Borsaya eklenen para henüz bota verilmemiş.'}</div>` : '';
     return `<div class="areal${bad ? ' bad' : ''}">${ic('i-bank')}<div><span>OKX TR'de gerçek</span><b>${tl(real, 0)}</b>${f >= 1 ? `<small>fon hesabında ${tl(f, 0)}</small>` : ''}</div>
-    <em>${bad ? 'Tutmuyor' : ic('i-check') + 'Eşleşik'}</em><button class="btn xsync" id="syncBtn" aria-label="Borsayla eşleştir">${ic('i-refresh')}Eşleştir</button></div>${warn}`;
+    <em>${bad ? 'Tutmuyor' : ic('i-check') + 'Eşleşik'}</em>${syncBtnH('', SYNC_AT && Date.now() - SYNC_AT < 60000 ? (S.updated > SYNC_AT + 5000 ? 'ok' : 'sent') : '', 'syncBtn')}</div>${warn}`;
 }
+let SYNC_AT = 0;
 async function syncReal() {
     const x = S?.strategies?.live, o = S?.okx;
     if (!x || !o || o.try == null) {
@@ -1584,6 +1600,10 @@ async function syncReal() {
     if (btn)
         btn.disabled = true;
     const ok = await cloudPatch(o => { o.budget = b; o.kasa = k; }, 'Borsayla eşleştir: bütçe ' + b + ' · kasa ' + k);
+    if (ok) {
+        SYNC_AT = Date.now();
+        render();
+    }
     toast(ok ? `Eşleştirildi: botta ${tl(b, 0)}, kasa ${tl(k, 0)}. Bot birkaç saniyede uygular.` : 'Eşleştirilemedi, tekrar dene', ok ? '' : patchWhy());
     if (btn)
         btn.disabled = false;
@@ -1664,7 +1684,7 @@ function renderXfer() {
     }).join('');
     if (!setH(box, `<h2 class="mh">${ic('i-wallet')}Kasalar<span class="hsum">dakikada bir güncellenir</span></h2>
     <div class="card xf">${xKasalar(X)}</div>
-    <h2 class="mh">${ic('i-out')}Para gönder<span class="hsum">bugün ${U(X?.day_sum || 0, 0)} / ${nf(X?.daily_max || 1000, 0)}</span></h2>
+    <h2 class="mh">${ic('i-out')}Para gönder<span class="hsum">bugün ${U(X?.day_sum || 0, 0)} / ${nf(X?.daily_max || 10000, 0)}</span></h2>
     <div class="card xf xsend">${grp.filter(([, , ks]) => ks.some(k => XDIR[k])).map(([n, f, ks]) => `<div class="xg"><div class="xgh">${xEnd(f)}<span>${n}</span></div><div class="xt x3">${ks.filter(k => XDIR[k]).map(tile).join('')}</div></div>`).join('')}
       ${X?.free_tl != null ? `<p class="hint">OKX TR'de boşta ${tl(Math.max(0, X.free_tl), 0)}</p>` : ''}</div>
     ${jobs ? `<h2 class="mh">${ic('i-refresh')}Aktarımlar<span class="hsum">dokun, aşamaları gör</span></h2><div class="card xf"><div class="xj">${jobs}</div></div>` : ''}
@@ -1907,17 +1927,21 @@ function openXfer(dir) {
     document.getElementById('qTitle').textContent = 'Para gönder';
     xfId = 'x' + Date.now().toString(36);
     const bal = (k) => { const o = S?.okx || {}; const u = k === 'tr' ? (X.tr_total ?? (o.total_tl && r ? o.total_tl / r : null)) : k === 'g' ? X.g_val : k === 'm' ? S?.memer?.value : X.kasa?.usd; return u == null ? '—' : U(u, 2); };
-    const useBot = !!(((orig || S?.settings)?.xfer) || {}).use_bot;
+    if (XF_BOT == null || XF_BOT_DIR !== dir) {
+        XF_BOT = !!(((orig || S?.settings)?.xfer) || {}).use_bot;
+        XF_BOT_DIR = dir;
+    }
+    const useBot = XF_BOT, canBot = f === 'tr' || f === 'g', GR = S?.gspotr;
     const MR = S?.memer, maxOf = () => {
         let v = null;
         if (f === 'm' && MR)
             v = Math.max(0, (+MR.sol - 0.02) * (+MR.solpx || 0) * 0.98);
         else if (f === 'g' && X.g_fund != null)
-            v = Math.max(0, +X.g_fund - (t === 'tr' ? 0 : t === 'k' ? 0.2 : 0.1));
+            v = Math.max(0, +X.g_fund + (useBot ? Math.max(0, +GR?.fund_res || 0) : 0) - (t === 'tr' ? 0 : t === 'k' ? 0.2 : 0.1));
         else if (f === 'tr' && r && X.free_tl != null)
             v = Math.max(0, (+X.free_tl + (useBot ? Math.max(0, +S?.strategies?.live?.cash || 0) : 0)) / r * 0.99);
         if (v != null)
-            v = Math.min(v, Math.max(0, (+X.daily_max || 1000) - (+X.day_sum || 0)));
+            v = Math.min(v, Math.max(0, (+X.daily_max || 10000) - (+X.day_sum || 0)));
         return v == null ? null : Math.floor(v * 100) / 100;
     };
     const mx = maxOf();
@@ -1933,27 +1957,33 @@ function openXfer(dir) {
       <div class="xinfo">
         <div>${ic('i-shield')}<span>Ücret</span><b>${fee}</b></div>
         <div>${ic('i-clock')}<span>Süre</span><b>${time_}</b></div>
-        <div>${ic('i-flag')}<span>Günlük sınır</span><b>${U(X.day_sum || 0, 0)} / ${nf(X.daily_max || 1000, 0)}</b></div>
+        <div>${ic('i-flag')}<span>Günlük sınır</span><b>${U(X.day_sum || 0, 0)} / ${nf(X.daily_max || 10000, 0)}</b></div>
         ${dir === 'g2tr' ? `<div>${ic('i-info')}<span>Varınca</span><b>TL'ye çevrilip Nakit'e konur</b></div>` : ''}
-        ${f === 'tr' ? `<div>${ic('i-wallet')}<span>Kaynak</span><b>${useBot ? 'Boştaki para, yetmezse Spot botunun nakdi' : 'Yalnız boştaki para (bota dokunulmaz)'}</b></div>` : ''}
         ${t === 'k' ? `<div>${ic('i-lock')}<span>Adres</span><b>0x0113…7db7 (sabit)</b></div>` : ''}
         ${dir === 'g2m' ? `<div>${ic('i-info')}<span>Nasıl</span><b>Global fonundaki USDT ile SOL alınır, MEME'ye gider</b></div><div>${ic('i-lock')}<span>Adres</span><b>7Ymj…EKwN (sabit)</b></div>` : ''}
         ${dir === 'm2g' ? `<div>${ic('i-info')}<span>Nasıl</span><b>SOL Global'e gider, satılıp USDT olur</b></div>` : ''}
         ${dir === 'm2k' ? `<div>${ic('i-info')}<span>Nasıl</span><b>SOL Global'de USDT olur, oradan KASA'ya gider</b></div>` : ''}
         ${dir === 'm2tr' ? `<div>${ic('i-info')}<span>Nasıl</span><b>SOL Global'de USDT olur, OKX TR'de TL'ye çevrilip Nakit'e konur</b></div>` : ''}
       </div>
+      ${canBot ? `<div class="xbot">${swRow('xfBot', useBot, 'Masaların parasını da kullan', useBot ? (f === 'tr' ? 'Boş para yetmezse Spot botunun nakdinden; botun bütçesi o kadar düşer' : 'Boş para yetmezse Global spot\'un parasından; masanın bütçesi o kadar düşer. Futures teminatına dokunulmaz') : 'Yalnız boştaki para gider; masaların parasına dokunulmaz')}</div>` : ''}
       <button class="btn primary xgo" id="xfGo">${ic('i-out')}Gönder</button></div>`;
         tx.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { document.getElementById('xfAmt').value = b.dataset.q; upd(); });
         const inp = document.getElementById('xfAmt'), upd = () => { document.getElementById('xfEq').innerHTML = r && +inp.value ? '≈ ' + tl(+inp.value * r, 0) : '&nbsp;'; };
         inp.oninput = upd;
         document.getElementById('xfGo').onclick = () => sendXfer(dir);
+        const sw = document.getElementById('xfBot');
+        if (sw)
+            sw.onclick = () => { const v = document.getElementById('xfAmt').value; XF_BOT = !XF_BOT; const keep = xfId; openXfer(dir); xfId = keep; const a = document.getElementById('xfAmt'); if (a) {
+                a.value = v;
+                a.dispatchEvent(new Event('input'));
+            } };
     };
     document.getElementById('qText').innerHTML = '';
     draw();
     q.hidden = false;
     XF_OPEN = { dir, ts: Date.now() };
 }
-let XF_OPEN = null;
+let XF_OPEN = null, XF_BOT = null, XF_BOT_DIR = '';
 function xfRefresh() {
     const q = document.getElementById('qsh');
     if (!XF_OPEN || q.hidden || !document.getElementById('xfAmt')) {
@@ -2007,9 +2037,17 @@ async function sendXfer(dir) {
             toast('MEME cüzdanı bağlı değil');
             return;
         }
-        if (dir.startsWith('g') && X.g_fund != null && amt > +X.g_fund) {
-            toast(`OKX Global fon hesabında boşta ~${U(+X.g_fund, 2)} var (futures teminatı hariç); daha fazlası gönderilemez`);
+        const gMax = X.g_fund == null ? null : +X.g_fund + (XF_BOT ? Math.max(0, +S?.gspotr?.fund_res || 0) : 0);
+        if (dir.startsWith('g') && gMax != null && amt > gMax + 0.005) {
+            toast(gMax < 1 ? `OKX Global'de boşta gönderilecek para yok${XF_BOT ? '' : '. Masaların parasını kullanmak için alttaki düğmeyi aç'}` : `OKX Global'den en fazla ${U(gMax, 2)} gönderilebilir${XF_BOT ? ' (futures teminatı hariç)' : ' (masaların parası hariç)'}`);
             return;
+        }
+        if (dir.startsWith('tr') && X.free_tl != null) {
+            const r = +(X.usdtry || USDTTRY || 0), tMax = r ? (+X.free_tl + (XF_BOT ? Math.max(0, +S?.strategies?.live?.cash || 0) : 0)) / r : null;
+            if (tMax != null && amt > tMax + 0.005) {
+                toast(tMax < 1 ? `OKX TR'de boşta gönderilecek para yok${XF_BOT ? '' : '. Botun parasını kullanmak için alttaki düğmeyi aç'}` : `OKX TR'den en fazla ${U(tMax, 2)} gönderilebilir`);
+                return;
+            }
         }
         if (dir.startsWith('g') && X.g_fund == null && X.g_val != null && amt > +X.g_val) {
             toast(`OKX Global'de ~${U(+X.g_val, 2)} var; daha fazlası gönderilemez`);
@@ -2027,7 +2065,7 @@ async function sendXfer(dir) {
         btn.disabled = true;
         btn.lastChild.textContent = 'Gönderiliyor…';
     }
-    const req = { id: xfId, ts: Date.now(), dir: dir.startsWith('m') ? 'm2g' : dir, amt, src: 'bos', ...(dir === 'm2k' ? { then: 'k' } : dir === 'm2tr' ? { then: 'tr' } : {}) };
+    const req = { id: xfId, ts: Date.now(), dir: dir.startsWith('m') ? 'm2g' : dir, amt, src: XF_BOT && (dir.startsWith('tr') || dir.startsWith('g')) ? 'bot' : 'bos', ...(dir === 'm2k' ? { then: 'k' } : dir === 'm2tr' ? { then: 'tr' } : {}) };
     const ok = await cloudPatch((o) => { const l = o.xfer_req || []; if (!l.some(r => r.id === req.id))
         o.xfer_req = [...l.filter(r => Date.now() - (r.ts || 0) < 3600000), req]; }, 'Uygulamadan aktarım: ' + dir + ' ' + amt + ' USDT');
     if (ok) {
@@ -2314,7 +2352,10 @@ function renderHome() {
     }
     fd.sort((a, b) => b[0] - a[0]);
     h += `<h2 class="mh">${ic('i-list')}Son hareketler<span class="hsum">bütün masalar</span></h2><div class="card hfeed">${fd.length ? fd.slice(0, 8).map(([ts, c, i, t, sub, x]) => `<div class="hr"><span class="hk hi ${c}">${ic(i)}</span><div class="hm"><b>${String(t).replace(/</g, '&lt;')}</b><small>${ago(ts)} · ${hcut(String(sub)).replace(/</g, '&lt;')}</small></div>${x}</div>`).join('') : `<div class="empty">${ic('i-clock')}<div>Henüz hareket yok</div></div>`}</div>`;
-    h += `<div class="fv">${ic('i-phone')}Masal · sürüm <b>${APP_VERSION}</b>${remoteVer && vcmp(remoteVer.version, APP_VERSION) > 0 ? ` · <em>yeni sürüm var: ${remoteVer.version}</em>` : ''}</div>`;
+    {
+        const nw = !!(remoteVer && vcmp(remoteVer.version, APP_VERSION) > 0);
+        h += `<button type="button" class="fv2${nw ? ' nw' : ''}" data-sett="app"><svg class="fm" viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="12" fill="#18233C"/><polygon points="11,35 11,13 17,13 17,35" fill="#fff"/><polygon points="11,13 17,13 24,21.5 24,29.5" fill="#C7D3E8"/><polygon points="37,13 31,13 24,21.5 24,29.5" fill="#F4BE6A"/><polygon points="31,13 37,13 37,35 31,35" fill="#E39A2E"/></svg><span class="ft2"><b>Masal</b><small>${nw ? 'yeni sürüm hazır: ' + remoteVer.version : 'güncel · ' + (remoteVer?.date ? remoteVer.date.split('-').reverse().join('.') : 'canlı')}</small></span><span class="fvc">v${APP_VERSION}</span><i class="fdot"></i></button>`;
+    }
     setH(box, h);
 }
 document.addEventListener('click', e => { const b = e.target.closest?.('[data-goto]'); if (b)
@@ -3074,7 +3115,7 @@ const SECTIONS = [
             ['gspot.bank', 'Deneme kasası', 'Deneme masasının sanal parası (değişince deneme masası yeniden başlamaz)', 'USDT', 10, 10, 1000000, 0]
         ] },
     { t: 'Aktarım ve KASA', i: 'i-vault', sw: [['xfer.use_bot', 'Aktarımda botun parasını kullan', 'Açık: OKX TR\'de boş para yetmezse eksik kısım Spot botunun nakdinden gönderilir; botun bütçesi o kadar düşer (kâr/zarar sayılmaz). Kapalı: yalnız boştaki para gider']], f: [
-            ['xfer.daily_max', 'Günlük aktarım sınırı', 'Bir günde borsalardan en fazla gönderilecek', 'USDT', 100, 10, 1000, 0],
+            ['xfer.daily_max', 'Günlük aktarım sınırı', 'Bir günde borsalardan en fazla gönderilecek', 'USDT', 500, 10, 10000, 0],
             ['xfer.sweep_pct', 'Kâr süpürme oranı', 'Futures ve memecoin kârının bu kadarı KASA\'ya gider; 0 kapalı', '%', 5, 0, 100, 0],
             ['xfer.sweep_days', 'Süpürme aralığı', 'Bu kadar günde bir', 'gün', 1, 1, 90, 0],
             ['xfer.sweep_min', 'En az süpürme kârı', 'Kâr bundan azsa gönderilmez', 'USDT', 5, 1, 10000, 0]
@@ -3123,7 +3164,7 @@ const SUMS = {
     'Futures': () => { const l = draft.lev || {}; return `${l.real ? 'Gerçek açık' : 'Gerçek kapalı'} · bütçe ${U(l.real_budget ?? 30, 0)} · en fazla ${U(l.max_loss ?? 10, 0)} kayıp · ${l.real_lev ?? 2}x`; },
     'Memecoin': () => { const m = draft.meme || {}; return `${m.real ? 'Gerçek açık' : 'Gerçek kapalı'} · kasanın ${pc(m.size_pct ?? 10)}'u · kâr ${pc(m.tp_pct ?? 30)}${(m.tp_part ?? 100) < 100 ? ` (${pc(m.tp_part)}'i)` : ''} · zarar ${pc(m.sl_pct ?? 15)}`; },
     'Global spot': () => { const g = draft.gspot || {}; return g.on === false ? 'Kapalı' : `${g.real ? 'Gerçek açık' : 'Deneme'} · bütçe ${U(g.budget ?? 50, 0)} · kademe kârı ${pc(g.lot_tp_pct ?? 3.5)} · ${g.max_coins ?? 5} coin`; },
-    'Aktarım ve KASA': () => { const x = draft.xfer || {}; return `Günde en çok ${U(x.daily_max || 1000, 0)} · ${+x.sweep_pct > 0 ? `kârın ${pc(x.sweep_pct)}'i ${x.sweep_days} günde bir KASA'ya` : 'kâr süpürme kapalı'}`; }
+    'Aktarım ve KASA': () => { const x = draft.xfer || {}; return `Günde en çok ${U(x.daily_max || 10000, 0)} · ${+x.sweep_pct > 0 ? `kârın ${pc(x.sweep_pct)}'i ${x.sweep_days} günde bir KASA'ya` : 'kâr süpürme kapalı'}`; }
 };
 const SEC_C = { 'Global spot': 'teal', 'Futures': 'red', 'Memecoin': 'violet', 'Kasa': 'teal', 'Kasadan ekleme': 'teal', 'Koruma': 'red', 'Kâr hedefi': 'green', 'Aktarım ve KASA': 'amber' };
 function field([k, label, hint, u, step, min, max, dec]) {
@@ -3688,14 +3729,21 @@ async function loadSettings() {
             const r = await tfetch(API + '?t=' + Date.now(), { headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' }, cache: 'no-store' });
             if (!r.ok)
                 throw r.status;
-            const j = await r.json();
-            orig = JSON.parse(utf8d(j.content));
+            const j = await r.json(), raw = JSON.parse(utf8d(j.content));
+            orig = await setOpen(raw);
+            if (pw && !(raw.sec && raw.sec.enc === 1))
+                cloudPatch(() => { }, 'Ayarlar şifrelendi');
         }
         else {
-            orig = await tfetch('ayarlar.json?t=' + Date.now()).then(r => r.json());
+            orig = await setOpen(await tfetch('ayarlar.json?t=' + Date.now()).then(r => r.json()));
         }
     }
     catch (e) {
+        if (e === 'kilit') {
+            orig = null;
+            document.getElementById('setForm').innerHTML = `<div class="empty">${ic('i-lock')}<div>Ayarlar şifreli. Görmek ve değiştirmek için önce gerçek hesabın kilidini aç (OKX şifren).</div></div>`;
+            return;
+        }
         orig = S?.settings || null;
         if (e === 401) {
             token = '';
@@ -3743,16 +3791,37 @@ async function loadSettings() {
     renderForm();
 }
 let patchQ = Promise.resolve(), patchErr = '';
-function patchWhy() { const e = patchErr; return e === 'yok' ? '(GitHub bağlantısı kurulmamış)' : e === 401 ? '(GitHub anahtarının süresi dolmuş)' : e === 403 || e === 404 ? '(GitHub anahtarının yazma izni yok)' : '(bağlantı kurulamadı)'; }
+function patchWhy() { const e = patchErr; return e === 'kilit' ? '(önce gerçek hesabın kilidini aç)' : e === 'yok' ? '(GitHub bağlantısı kurulmamış)' : e === 401 ? '(GitHub anahtarının süresi dolmuş)' : e === 403 || e === 404 ? '(GitHub anahtarının yazma izni yok)' : '(bağlantı kurulamadı)'; }
 function cloudPatch(fn, msg) { const p = patchQ.then(() => cloudPatch_(fn, msg)); patchQ = p.catch(() => { }); return p; }
 const ghHead = (json) => ({ Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', ...(json ? { 'Content-Type': 'application/json' } : {}) });
 const utf8d = (t) => decodeURIComponent(escape(atob(t.replace(/\n/g, '')))), utf8e = (t) => btoa(unescape(encodeURIComponent(t)));
+const SET_PUB = ['lang', 'theme', 'accent'];
+async function setOpen(raw) {
+    if (!raw || !raw.sec || raw.sec.enc !== 1)
+        return raw;
+    if (!pw)
+        throw 'kilit';
+    const sec = await unseal(raw.sec, pw), plain = { ...raw };
+    delete plain.sec;
+    return { ...sec, ...plain };
+}
+async function setSeal(o) {
+    if (!pw)
+        throw 'kilit';
+    const pub = {}, rest = {};
+    for (const k in o)
+        (SET_PUB.includes(k) ? pub : rest)[k] = o[k];
+    return { ...pub, sec: await seal(rest, pw) };
+}
 async function cloudGet() {
     const cur = await tfetch(API + '?t=' + Date.now(), { headers: ghHead(), cache: 'no-store' }).then(r => { if (!r.ok)
         throw r.status; return r.json(); });
-    return [JSON.parse(utf8d(cur.content)), cur.sha];
+    return [await setOpen(JSON.parse(utf8d(cur.content))), cur.sha];
 }
-const cloudPut = (o, msg, sha0) => tfetch(API, { method: 'PUT', headers: ghHead(true), body: JSON.stringify({ message: msg, content: utf8e(JSON.stringify(o, null, 2) + '\n'), sha: sha0, branch: 'main' }) });
+async function cloudPut(o, msg, sha0) {
+    const enc = await setSeal(o);
+    return tfetch(API, { method: 'PUT', headers: ghHead(true), body: JSON.stringify({ message: msg, content: utf8e(JSON.stringify(enc, null, 2) + '\n'), sha: sha0, branch: 'main' }) });
+}
 async function cloudPatch_(fn, msg, retry = true) {
     if (!token) {
         patchErr = 'yok';
@@ -3835,7 +3904,7 @@ async function save_(obj, msg, keepDraft, retry = true) {
         toast(msg || 'Kaydedildi. Bot birkaç saniye içinde yeni ayarlarla çalışır.');
     }
     catch (e) {
-        toast(e === 401 ? 'GitHub anahtarının süresi dolmuş ya da silinmiş; Ayarlar → Uygulama bölümünden yeniden bağlan' : e === 403 ? 'Yetki hatası: anahtarın Contents yazma izni olmalı' : 'Kaydedilemedi, tekrar dene (' + e + ')');
+        toast(e === 'kilit' ? 'Ayarlar şifreli: kaydetmek için önce gerçek hesabın kilidini aç' : e === 401 ? 'GitHub anahtarının süresi dolmuş ya da silinmiş; Ayarlar → Uygulama bölümünden yeniden bağlan' : e === 403 ? 'Yetki hatası: anahtarın Contents yazma izni olmalı' : 'Kaydedilemedi, tekrar dene (' + e + ')');
     }
     finally {
         btn.innerHTML = ic('i-check') + 'Kaydet';

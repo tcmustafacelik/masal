@@ -31,10 +31,10 @@ ROUTES = {  # yön: (kaynak, hedef adres, hedef borsa ya da None)
 NAMES = {"tr": "OKX TR", "g": "OKX Global", None: "KASA", "m": "MEME"}
 MEME_DIRS = {"g2m": ("g", "m"), "m2g": ("m", "g")}  # SOL ile; ayrıntı meme_aktar.py
 FUNDING, TRADING = "6", "18"
-HARD_DAILY_MAX = 1000  # $: güvenlik tavanı — ayardan daha yükseği girilse de günlük aktarım bunu aşamaz
+HARD_DAILY_MAX = 10000  # USDT: güvenlik tavanı — ayardan daha yükseği girilse de günlük aktarım bunu aşamaz
 # Borsanın geçici "meşgul" cevapları: istek işlenmeden reddedilir, yeniden denemek güvenlidir
 BUSY = {"50011", "50013", "50001", "50061"}
-DEFAULT = {"daily_max": 1000, "sweep_on": True, "sweep_pct": 50, "sweep_days": 7, "sweep_min": 10, "use_bot": False}
+DEFAULT = {"daily_max": 10000, "sweep_on": True, "sweep_pct": 50, "sweep_days": 7, "sweep_min": 10, "use_bot": False}
 
 
 # Uç başına istek aralığı (sn): OKX sınırlarının biraz altında. Bot, Global spot, futures, aktarım ve bakiye
@@ -203,9 +203,14 @@ def _prepare(ex, side, amt, job):
     """Kaynakta `amt` USDT'yi fon hesabında hazırlar (TR'de gerekirse TL → USDT çevirir)."""
     need = amt
     res = 0.0
-    if side == "g" and job.get("src") != "kar":
+    if side == "g" and job.get("src") not in ("kar", "bot"):
         from . import gspot
         res = gspot.FUNDRES["v"]  # Global spot'un fon hesabında bekleyen parası elle aktarımda kullanılmaz
+    elif side == "g" and job.get("src") == "bot" and "gs_wd" not in job:
+        from . import gspot
+        # "masaların parasını da kullan": boş para yetmezse eksik kısım Global spot'un ayırdığı paradan; gönderilince
+        # masanın bütçesi o kadar düşer (kâr/zarar sayılmaz)
+        job["gs_wd"] = round(max(0.0, amt - max(0.0, ex.funding("USDT") - gspot.FUNDRES["v"])), 2)
     f = ex.funding("USDT") - res
     if f >= need:
         return True
@@ -523,7 +528,16 @@ def _track(X):
 
 
 def _bot_withdrawn(X, state):
-    """Spot botunun nakdinden gönderilen kısım: gönderim yapılınca botun bütçesinden düşülür (bir kez)."""
+    """Masaların parasından gönderilen kısım: gönderim yapılınca o masanın bütçesinden düşülür (bir kez).
+    OKX TR → Spot botu; OKX Global → Global spot masası."""
+    G = state.get("gspotr")
+    if G:
+        gd = G.setdefault("wd_ids", [])
+        for j in X["jobs"]:
+            if j.get("gs_wd", 0) > 0 and j["stage"] in ("sent", "arriving", "done") and j["id"] not in gd:
+                G["wd_off"] = round(G.get("wd_off", 0.0) + j["gs_wd"], 2)
+                gd.append(j["id"])
+                del gd[:-50]
     L = state.get("live")
     if not L:
         return
@@ -604,7 +618,7 @@ def _run_jobs(X, C, cfg, state, N, now):
                     if now * 1000 - job["ts"] > 3 * 86400_000:
                         raise RuntimeError("3 gün içinde günlük sınır açılmadı")
                     continue
-                if src == "tr" and cfg.get("use_bot") and "bot_tl" not in job:
+                if src == "tr" and (cfg.get("use_bot") or job["src"] == "bot") and "bot_tl" not in job:
                     # Ayarlar → Aktarım → "Botun parasını kullan": boş para yetmezse eksik kısım Spot botunun nakdinden
                     # alınır; gönderilince botun bütçesi o kadar düşer (kâr/zarar sayılmaz)
                     job["bot_tl"] = round(max(0.0, job["amt"] * _rate() - max(0.0, _free_tr(ex, state))), 2)

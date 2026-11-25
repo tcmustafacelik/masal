@@ -8,6 +8,23 @@ from .engine import Portfolio
 OUT = os.path.join(os.path.dirname(__file__), "..", "docs", "data", "summary.json")
 
 
+# Herkese açık özette gösterilmeyen ayarlar (para tutarları, cüzdan, kara liste, istekler): uygulama kilidi açınca
+# şifreli kutudaki tam ayarları kullanır
+_PRIVATE = {"budget", "kasa", "real_total", "target", "xfer", "ban", "notify", "sell", "buy", "convert", "liquidate",
+            "xfer_req", "xfer_cancel", "dust", "desk_cmd", "test_req", "clear", "clear_all", "topup"}
+_PRIVATE_SUB = {"lev": ("real_budget", "max_loss", "real", "real_reset", "cross_ok"), "meme": ("wallet", "budget", "max_loss", "real"),
+                "gspot": ("budget", "max_loss", "real")}
+
+
+def public_settings(S):
+    out = {k: v for k, v in (S or {}).items() if k not in _PRIVATE}
+    for k, subs in _PRIVATE_SUB.items():
+        if isinstance(out.get(k), dict):
+            out[k] = {a: b for a, b in out[k].items() if a not in subs}
+    out["ban"] = {}
+    return out
+
+
 def tr(v):
     return f"{v:,.0f}".replace(",", ".")
 
@@ -153,7 +170,9 @@ def build(state, S=None):
         okx_, xfer_, levr_, memer_ = state.get("okx"), out.pop("xfer", None), out.pop("levr", None), out.pop("memer", None)
         gsr_ = out.pop("gspotr", None)
         # Sıkıştırılıp şifrelenen tam kutu (uygulama 1.82+ bunu okur): şifreli veri sıkışmadığı için önce sıkıştırılır
-        out["live_z"] = vault.seal({"strategy": lv, "okx": okx_, "xfer": xfer_, "levr": levr_, "memer": memer_, "gspotr": gsr_}, z=True)
+        out["live_z"] = vault.seal({"strategy": lv, "okx": okx_, "xfer": xfer_, "levr": levr_, "memer": memer_, "gspotr": gsr_,
+                                    "settings": S}, z=True)
+        out["settings"] = public_settings(S)  # tam ayarlar şifreli kutuda; açıkta yalnız deneme masalarının ihtiyacı
         # Eski biçimdeki yedek kutu (live_enc) artık yazılmıyor: uygulama 1.82'den beri sıkıştırılmış kutuyu okuyor; özet ~%30 küçüldü
         out["live_public"] = {"armed": lv["armed"], "paused": lv["paused"]}
         out["okx"] = None
