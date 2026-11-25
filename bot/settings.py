@@ -180,8 +180,9 @@ def apply(s):
         s["quote"] = "USDT"
     config.QUOTE = s["quote"]
     b = s.get("ban") if isinstance(s.get("ban"), dict) else {}
-    config.BAN = {k: {config.ban_key(x) for x in (b.get(k) or []) if isinstance(x, str) and x.strip()}
-                  for k in ("spot", "lev", "gspot")}
+    # kara liste üç masada ortak: herhangi bir masadaki coin hepsinde yeni işlem açmaz
+    allb = {config.ban_key(x) for k in ("spot", "lev", "gspot") for x in (b.get(k) or []) if isinstance(x, str) and x.strip()}
+    config.BAN = {k: set(allb) for k in ("spot", "lev", "gspot")}
     # Global spot (uzun) ile futures (kısa) aynı coinde ters pozisyon tutabilir mi (Ayarlar → Futures)
     config.CROSS_OK = bool((s.get("lev") or {}).get("cross_ok", True))
     from . import engine

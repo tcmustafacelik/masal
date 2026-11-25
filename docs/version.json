@@ -1,10 +1,17 @@
 {
-  "version": "1.104.1",
+  "version": "1.105.0",
   "date": "2026-11-25",
   "notes": [
-    "Global ve Futures ayarlarında Spot ile aynı çalışma kartı: masayı durdur / hepsini sat-kapat"
+    "Kara liste üç masada ortak (Spot · Global · Futures); coin simgeli yeni tasarım, renkli Öneriler başlığı"
   ],
   "history": [
+    {
+      "version": "1.105.0",
+      "date": "2026-11-25",
+      "notes": [
+        "Kara liste üç masada ortak (Spot · Global · Futures); coin simgeli yeni tasarım, renkli Öneriler başlığı"
+      ]
+    },
     {
       "version": "1.104.1",
       "date": "2026-11-25",
@@ -101,13 +108,6 @@
       "date": "2026-11-25",
       "notes": [
         "Tümünü eşleştir: zaten eşleşikse yeniden göndermez"
-      ]
-    },
-    {
-      "version": "1.100.2",
-      "date": "2026-11-25",
-      "notes": [
-        "Futures: teminat engeli sayaçta görünür"
       ]
     }
   ]
