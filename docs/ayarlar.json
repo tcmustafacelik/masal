@@ -362,44 +362,9 @@
   ],
   "desk_cmd": [
     {
-      "id": "smwvqjilc",
-      "ts": 1795587676896,
-      "desk": "levr",
-      "act": "sync",
-      "sym": ""
-    },
-    {
-      "id": "smwvqjk4e",
-      "ts": 1795587678878,
+      "id": "smwvrisiz",
+      "ts": 1795589322731,
       "desk": "gspotr",
-      "act": "sync",
-      "sym": ""
-    },
-    {
-      "id": "smwvqni3j",
-      "ts": 1795587862879,
-      "desk": "gspotr",
-      "act": "sync",
-      "sym": ""
-    },
-    {
-      "id": "smwvqnlan",
-      "ts": 1795587867023,
-      "desk": "levr",
-      "act": "sync",
-      "sym": ""
-    },
-    {
-      "id": "smwvqu9id",
-      "ts": 1795588178341,
-      "desk": "gspotr",
-      "act": "sync",
-      "sym": ""
-    },
-    {
-      "id": "smwvqubv8",
-      "ts": 1795588181396,
-      "desk": "levr",
       "act": "sync",
       "sym": ""
     }
