@@ -3,8 +3,8 @@
   "paused": false,
   "liquidate": 0,
   "strategy": "grid",
-  "budget": 14208,
-  "kasa": 14208,
+  "budget": 14314,
+  "kasa": 14314,
   "topup": {
     "amount": 100,
     "profit_pct": 3,
