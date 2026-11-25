@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.100.6';
+const APP_VERSION = '1.100.7';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = 'var(--acc)';
@@ -741,6 +741,7 @@ function renderMasa() {
     <div class="card mfeed">${feed.length ? feed.slice(0, 30).map(([ts, k, tag, txt]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k}">${tag}</em><div>${txt}</div></div>`).join('') : `<div class="empty">${ic('i-list')}<div>Henüz kayıt yok</div></div>`}</div>`);
 }
 const usdTL = (v) => { const r = +(S?.xfer?.usdtry || USDTTRY || 0); return r && isFinite(v) ? tl(v * r, 0) : ''; };
+const pxTL = (v) => { const r = +(S?.xfer?.usdtry || USDTTRY || 0); return r && isFinite(v) && v > 0 ? px(v * r) + ' TL' : ''; };
 const pTL = (v) => { const t = usdTL(Math.abs(+v || 0)); return t ? ` · ${(+v || 0) < 0 ? '−' : '+'}${t}` : ''; };
 function deskHero(lbl, val, sub, pnl, base, left, ml, chips) {
     const usd = (v) => U(v, 2), pc = base > 0 ? pnl / base * 100 : 0, r = ml > 0 ? Math.max(0, Math.min(100, left / ml * 100)) : 0;
@@ -905,8 +906,8 @@ function levWatch() {
     const pk = (r) => { const v = r.dist || 0; return (r.side === 'UZUN' ? v <= 0 : v >= 0) ? -Math.abs(v) - 1000 : Math.abs(v); };
     const w = (L.watch || []).slice().sort((a, b) => pk(a) - pk(b)).map((r) => {
         const d = Math.abs(r.dist || 0), up = r.side === 'UZUN', past = up ? (r.dist || 0) <= 0 : (r.dist || 0) >= 0, near = Math.max(4, Math.min(100, 100 - d * 12));
-        const ps = pf(r.px), lg = ps.length > 9;
-        return `<div class="wr ${up ? 'wu' : 'wd'}" data-lo="${escH(r.sym)}" data-ls="${up ? 1 : -1}" role="button"><div><b>${escH(r.sym)}</b><em>${r.open ? 'AÇIK' : up ? '↑ UZUN' : '↓ KISA'}</em></div><div><span>${ps}</span><small>${r.open ? (lg ? 'açık' : 'pozisyon açık') : past ? `%${nf(d, 1)} ${lg ? 'geçti' : 'kırıldı'}` : `${lg ? '' : 'sinyale '}%${nf(d, 1)}`}</small></div><i style="width:${(r.open || past ? 100 : near).toFixed(0)}%"></i></div>`;
+        const ps = pf(r.px);
+        return `<div class="wr ${up ? 'wu' : 'wd'}" data-lo="${escH(r.sym)}" data-ls="${up ? 1 : -1}" role="button"><div><b>${escH(r.sym)}</b><em>${r.open ? 'AÇIK' : up ? '↑ UZUN' : '↓ KISA'}</em></div><div class="wpx"><span>${ps}</span><small>${pxTL(r.px)}</small></div><div class="wfk"><small class="${past && !r.open ? 'up' : ''}">Fark ${past ? '−' : '+'}%${nf(d, 1)}</small><small>${r.open ? 'pozisyon açık' : past ? 'kırıldı' : 'sinyale'}</small></div><i style="width:${(r.open || past ? 100 : near).toFixed(0)}%"></i></div>`;
     }).join('');
     return `<h2 class="mh">${ic('i-eye')}İzlenen coinler<span class="hsum">sinyale uzaklık · ${lv.fast ? '15 dk' : 'saatlik'}</span></h2>
     <div class="card"><div class="wgrid">${w || `<div class="empty">${ic('i-refresh')}<div>Mumlar yükleniyor</div></div>`}</div>
@@ -1088,7 +1089,7 @@ function renderGspot() {
     const full = (G.positions || []).length >= +(gs.max_coins ?? 5);
     const W = (P?.watch || []).slice().sort((a, b) => ((a.f || a.fs) ? 1 : 0) - ((b.f || b.fs) ? 1 : 0) || a.g - b.g).slice(0, 8).map((w) => {
         const d = w.g, ok = d <= 0 && !w.f && !w.fs && (w.h || !full), near = Math.max(4, Math.min(100, 100 - Math.max(0, d) * 12));
-        return `<div class="wr ${ok ? 'wu' : 'wd'}" data-gb="${esc(w.i)}" role="button"><div><b>${esc(sym(w.i))}</b><em>${w.fs ? 'FUTURES KISA' : w.f ? 'FİLTRE' : ok ? 'ŞART TAMAM' : d <= 0 && full && !w.h ? 'COİN SINIRI' : w.h ? (w.h + 1) + '. KDM' : 'ADAY'}</em></div><div><span>${pf(w.p)}</span><small>${d <= 0 ? '%' + nf(-d, 1) + ' altında' : 'hedefe %' + nf(d, 1)}</small></div><i style="width:${(ok ? 100 : near).toFixed(0)}%"></i></div>`;
+        return `<div class="wr ${ok ? 'wu' : 'wd'}" data-gb="${esc(w.i)}" role="button"><div><b>${esc(sym(w.i))}</b><em>${w.fs ? 'FUTURES KISA' : w.f ? 'FİLTRE' : ok ? 'ŞART TAMAM' : d <= 0 && full && !w.h ? 'COİN SINIRI' : w.h ? (w.h + 1) + '. KDM' : 'ADAY'}</em></div><div class="wpx"><span>${pf(w.p)}</span><small>${pxTL(w.p)}</small></div><div class="wfk"><small class="${d <= 0 ? 'up' : ''}">Fark ${d <= 0 ? '−' : '+'}%${nf(Math.abs(d), 1)}</small><small>${d <= 0 ? 'hedefin altında' : 'hedefe'}</small></div><i style="width:${(ok ? 100 : near).toFixed(0)}%"></i></div>`;
     }).join('');
     const warm = P && P.uni && P.warm < P.uni ? `<p class="hint">Mumlar yükleniyor: ${P.warm}/${P.uni} coin hazır. Bir coin, 60 saatlik verisi tamamlanınca alınabilir.</p>` : '';
     const empty = real && gReal(G) < 0.5;
