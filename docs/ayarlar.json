@@ -369,43 +369,15 @@
   ],
   "desk_cmd": [
     {
-      "id": "smwvsfso9",
-      "ts": 1795590862569,
-      "desk": "gspotr",
-      "act": "sync",
-      "sym": ""
-    },
-    {
-      "id": "smwvsfthc",
-      "ts": 1795590863616,
-      "desk": "levr",
-      "act": "sync",
-      "sym": ""
-    },
-    {
-      "id": "smwvsjlv9",
-      "ts": 1795591040373,
-      "desk": "gspotr",
-      "act": "sync",
-      "sym": ""
-    },
-    {
-      "id": "smwvsjpxa",
-      "ts": 1795591045630,
-      "desk": "levr",
-      "act": "sync",
-      "sym": ""
-    },
-    {
-      "id": "smwvskci0",
-      "ts": 1795591074888,
-      "desk": "gspotr",
-      "act": "sync",
-      "sym": ""
-    },
-    {
       "id": "smwvsnfzp",
       "ts": 1795591219381,
+      "desk": "gspotr",
+      "act": "sync",
+      "sym": ""
+    },
+    {
+      "id": "smwvszjvd",
+      "ts": 1795591784281,
       "desk": "gspotr",
       "act": "sync",
       "sym": ""
