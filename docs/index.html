@@ -807,7 +807,22 @@ em.lk.in{display:inline-block;width:auto;padding:2px 5px;margin:0 0 0 6px;vertic
 .banc .bnh{margin-top:14px;display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:12px;background:linear-gradient(100deg,#ffe7c2,#ffd6e3 55%,#dcd8ff);color:#8a3b12;font-size:12px;font-weight:800;letter-spacing:.4px;box-shadow:inset 0 0 0 1px rgba(214,120,60,.25)}
 .banc .bnh svg{width:18px;height:18px;padding:3px;border-radius:7px;background:linear-gradient(135deg,#ff9a3c,#ff4f8b);color:#fff;flex:none}
 .banc .bnh small{margin-left:auto;font-size:10.5px;font-weight:700;color:#7b55c7;letter-spacing:0}
-:root[data-theme=dark] .banc .bnh,.dark .banc .bnh{background:linear-gradient(100deg,#4a2e12,#4a1f33 55%,#2b2650);color:#ffd2a8}.banc .bnp{margin:10px 2px 0}
+:root[data-theme=dark] .banc .bnh,.dark .banc .bnh{background:linear-gradient(100deg,#4a2e12,#4a1f33 55%,#2b2650);color:#ffd2a8}
+/* Renkli başlık şeridi (Kara liste "Öneriler" ile aynı standart): ayar bölüm başlıkları ve alt gruplar */
+#setv h2:has(.hb),.fgh{--g1:#ffe7c2;--g2:#ffd6e3;--g3:#dcd8ff;--gi:#8a3b12;--gb1:#ff9a3c;--gb2:#ff4f8b;display:flex;align-items:center;gap:8px;padding:7px 11px;border-radius:12px;background:linear-gradient(100deg,var(--g1),var(--g2) 55%,var(--g3));color:var(--gi);font-weight:800;letter-spacing:.4px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.05)}
+#setv h2:has(.hb) .hb,.fgh svg{background:linear-gradient(135deg,var(--gb1),var(--gb2));color:#fff;width:20px;height:20px;border-radius:7px;flex:none}
+.fgh svg{padding:3px;box-sizing:border-box}
+#setv h2:has(.hb) .hsum{margin-left:auto;color:var(--gi)!important;opacity:.75}
+#setv h2:has(.c-green){--g1:#d6f7e6;--g2:#d4f1f7;--g3:#e2e6ff;--gi:#0f6b44;--gb1:#2fc27d;--gb2:#1aa6c9}
+#setv h2:has(.c-amber){--g1:#ffe7c2;--g2:#ffe0cf;--g3:#ffd6e3;--gi:#8a4a0c;--gb1:#ffb02e;--gb2:#ff6a3d}
+#setv h2:has(.c-blue){--g1:#dbe8ff;--g2:#dcdcff;--g3:#f0dcff;--gi:#1f4aa8;--gb1:#4f8bff;--gb2:#8a5cff}
+#setv h2:has(.c-violet){--g1:#ece0ff;--g2:#ffdcef;--g3:#ffe6d6;--gi:#5b2ea6;--gb1:#9b6bff;--gb2:#ff5fa8}
+#setv h2:has(.c-gray){--g1:#e6ebf2;--g2:#dfe9f5;--g3:#e9e2f7;--gi:#3c4a5e;--gb1:#7d8ca3;--gb2:#5c6fd6}
+.fgh{margin:2px 0 6px;font-size:11px}
+.fgrp:nth-child(3n+2) .fgh{--g1:#d6f7e6;--g2:#d4f1f7;--g3:#e2e6ff;--gi:#0f6b44;--gb1:#2fc27d;--gb2:#1aa6c9}
+.fgrp:nth-child(3n) .fgh{--g1:#dbe8ff;--g2:#dcdcff;--g3:#f0dcff;--gi:#1f4aa8;--gb1:#4f8bff;--gb2:#8a5cff}
+[data-theme=dark] #setv h2:has(.hb),[data-theme=dark] .fgh,[data-theme=dark] .banc .bnh{--g1:#3a2a18;--g2:#3a1f2c;--g3:#262342;--gi:#ffd9b5;background:linear-gradient(100deg,var(--g1),var(--g2) 55%,var(--g3));color:var(--gi)}
+.banc .bnp{margin:10px 2px 0}
 .mdesk .areal{margin-top:10px}
 .xbot{margin-top:10px;padding:10px 12px;border:1px solid var(--line2);border-radius:10px;background:var(--surface)}.xbot .sw{margin:0}
 .areal .xsync{border-color:color-mix(in srgb,var(--blue) 35%,transparent)!important;background:var(--blue-bg)!important;color:var(--blue)!important;font-weight:650}
@@ -1113,6 +1128,6 @@ em.lk.in{display:inline-block;width:auto;padding:2px 5px;margin:0 0 0 6px;vertic
 <div class="toast" id="toast" hidden></div>
 <div class="qsh" id="qsh" hidden><div class="qb"><div class="gr"></div><h3><span><svg class="i" id="qIco"><use href="#i-info"/></svg></span><b id="qTitle"></b></h3><div class="qt" id="qText"></div><button class="btn primary" id="qOk">Anladım</button></div></div>
 
-<script src="app.js?v=1.105.0"></script>
+<script src="app.js?v=1.105.1"></script>
 </body>
 </html>
