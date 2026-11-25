@@ -1,10 +1,17 @@
 {
-  "version": "1.104.0",
+  "version": "1.104.1",
   "date": "2026-11-25",
   "notes": [
-    "Deneme modu kaldırıldı: bütün masalar gerçek; Spot Çalışma bölümü yeni tasarım; futures sinyalleri sanal kasaya takılmaz"
+    "Global ve Futures ayarlarında Spot ile aynı çalışma kartı: masayı durdur / hepsini sat-kapat"
   ],
   "history": [
+    {
+      "version": "1.104.1",
+      "date": "2026-11-25",
+      "notes": [
+        "Global ve Futures ayarlarında Spot ile aynı çalışma kartı: masayı durdur / hepsini sat-kapat"
+      ]
+    },
     {
       "version": "1.104.0",
       "date": "2026-11-25",
@@ -101,13 +108,6 @@
       "date": "2026-11-25",
       "notes": [
         "Futures: teminat engeli sayaçta görünür"
-      ]
-    },
-    {
-      "version": "1.100.1",
-      "date": "2026-11-25",
-      "notes": [
-        "Futures deneme masası 5 pozisyona yer açar"
       ]
     }
   ]

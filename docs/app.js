@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.104.0';
+const APP_VERSION = '1.104.1';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = 'var(--acc)';
@@ -3145,7 +3145,7 @@ const SECTIONS = [
     { t: 'Kâr hedefi', i: 'i-flag', f: [
             ['target.amount', 'Hedef kâr', () => `Bu kârda her şey satılır, bot durur`, 'TL', 500, 100, 1e8, 0]
         ] },
-    { t: 'Futures', i: 'i-layers', sw: [['lev.on', 'Futures masası açık', 'Kapatınca açık pozisyonlar piyasa fiyatından kapanır, yeni pozisyon açılmaz'], ['lev.fast', 'Al-kaç modu', '15 dakikalık mumlarla karar verir: 4 kat daha sık işlem, kâr 1 ATR\'yi geçince stop peşine düşer. Zarar sınırları aynı kalır'], ['lev.trend_on', 'Eğilim filtresi', 'Kapalıysa yalnız kırılım yönü karar verir (daha çok işlem, daha riskli)'], ['lev.cross_ok', 'Global spot ile ters pozisyon', 'Açık: Global spot\'ta elde olan coinde futures kısa açabilir (ve tersi); masalar kendi kuralını tam uygular. Kapalı: açılmaz, ücret iki kez ödenmez']], f: [
+    { t: 'Futures', i: 'i-layers', sw: [['lev.fast', 'Al-kaç modu', '15 dakikalık mumlarla karar verir: 4 kat daha sık işlem, kâr 1 ATR\'yi geçince stop peşine düşer. Zarar sınırları aynı kalır'], ['lev.trend_on', 'Eğilim filtresi', 'Kapalıysa yalnız kırılım yönü karar verir (daha çok işlem, daha riskli)'], ['lev.cross_ok', 'Global spot ile ters pozisyon', 'Açık: Global spot\'ta elde olan coinde futures kısa açabilir (ve tersi); masalar kendi kuralını tam uygular. Kapalı: açılmaz, ücret iki kez ödenmez']], f: [
             ['lev.real_budget', 'Bütçe', 'Global fon hesabından futures\'a geçecek para', 'USDT', 5, 5, 10000, 0],
             ['lev.max_loss', 'En fazla kayıp', 'Toplam zarar buna ulaşınca masa tamamen durur', 'USDT', 5, 1, 10000, 0],
             ['lev.real_lev', 'Kaldıraç', 'İzole marjin; güvenlik için en fazla 3x', 'x', 1, 1, 3, 0],
@@ -3157,7 +3157,7 @@ const SECTIONS = [
             ['lev.sl_atr', 'Zarar durdur mesafesi', 'Saatlik oynaklığın (ATR) katı', 'kat', .5, 1, 5, 1],
             ['lev.tp_atr', 'Kâr al mesafesi', 'Saatlik oynaklığın (ATR) katı', 'kat', .5, 1, 10, 1]
         ] },
-    { t: 'Global spot', i: 'i-globe', sw: [['gspot.on', 'Global spot masası açık', 'Kapalıyken yeni alım yapılmaz; eldeki coinler kurallarıyla satılır'], ['gspot.instant', 'Anlık alım', 'Açık: fiyat değince hemen alır · kapalı: 15 dk mum kapanışını bekler. Satış her zaman anlık']], f: [
+    { t: 'Global spot', i: 'i-globe', sw: [['gspot.instant', 'Anlık alım', 'Açık: fiyat değince hemen alır · kapalı: 15 dk mum kapanışını bekler. Satış her zaman anlık']], f: [
             ['gspot.budget', 'Bütçe', 'Gerçek masanın kullanacağı en fazla para; alım anında Global fon hesabından işlem hesabına geçer', 'USDT', 10, 0, 100000, 0],
             ['gspot.max_loss', 'En fazla kayıp', 'Toplam zarar buna ulaşınca yeni alım durur; eldeki coinler kurallarıyla satılır', 'USDT', 5, 1, 100000, 0],
             ['gspot.lot_pct', '1. kademe', 'Bütçenin; en az 5 USDT olmalı', '%', 1, 1, 100, 0],
@@ -3456,7 +3456,7 @@ function renderForm() {
     if (STAB === 'spot') {
         const pz = !!draft.paused;
         h += `<section><h2><span class="hb c-green">${ic('i-power')}</span>Çalışma</h2>
-   <div class="runc${pz ? ' pz' : ''}"><div class="runh"><span class="rdot"></span><div><b>${pz ? 'Durduruldu' : 'Canlı çalışıyor'}</b><small>${pz ? 'Yeni alım yok; satışlar ve zarar sınırı çalışıyor' : 'OKX TR hesabında gerçek emir · saniyede bir kontrol'}</small></div><em>${pz ? 'BEKLEMEDE' : 'GERÇEK'}</em></div>
+   <div class="runc${pz ? ' pz' : ''}"><div class="runh"><span class="rdot"></span><div><b>${pz ? 'Spot botu durduruldu' : 'Spot botu canlı'}</b><small>${pz ? 'Yeni alım yok; satışlar ve zarar sınırı çalışıyor' : 'OKX TR hesabında gerçek emir · saniyede bir kontrol'}</small></div><em>${pz ? 'BEKLEMEDE' : 'GERÇEK'}</em></div>
    <div class="rung"><button type="button" class="rtile ${pz ? 'go' : 'pause'}" id="pauseSw"><span>${ic(pz ? 'i-power' : 'i-pause')}</span><b>${pz ? 'Devam et' : 'Botu durdur'}</b><small>${pz ? 'alımlar yeniden başlar' : 'yeni alım yapılmaz'}</small></button>
    <button type="button" class="rtile sell${sellArm ? ' arm' : ''}" id="sellAll"><span>${ic('i-sell')}</span><b>${sellArm ? 'Emin misin? Dokun' : 'Hepsini sat'}</b><small>${sellArm ? '4 sn içinde dokun' : 'tüm coinler satılır, bot durur'}</small></button></div>
    <p class="hint">Bot kesintisiz çalışır; uygulama kapalı olsa da piyasayı, borsadaki korumaları ve para hareketlerini kontrol eder.${pz !== !!orig.paused ? ' <b>Kaydet</b>\'e basınca uygulanır.' : ''}</p></div></section>
@@ -3467,6 +3467,8 @@ function renderForm() {
    <section><h2><span class="hb c-violet">${ic('i-shield')}</span>Kontrol<span class="hsum" style="font-weight:500;color:var(--faint);font-size:11px">değiştirdikçe güncellenir</span></h2><div class="card chk" id="checks"></div></section>`;
         h += '<section style="margin-bottom:-2px"><h2><span class="hb c-gray">' + ic('i-layers') + '</span>Ayrıntılı ayarlar<span class="hsum" style="font-weight:500;color:var(--faint);font-size:11px">dokununca açılır</span></h2></section>';
     }
+    if (STAB === 'gspot' || STAB === 'fut')
+        h += deskRun(STAB === 'gspot' ? 'gspot' : 'lev');
     if (STAB === 'app')
         h += notifySection();
     if (!draft.target)
@@ -3553,6 +3555,7 @@ function renderForm() {
     bindNotify();
     bindInstall();
     bindBan();
+    bindDeskRun();
     if (document.getElementById('sellAll'))
         document.getElementById('sellAll').onclick = () => {
             if (!sellArm) {
@@ -3696,6 +3699,53 @@ async function banPool(d) {
         l = c ? [...c] : [];
     }
     return [...new Set(l.map(banKey))].sort();
+}
+const DESK_ARM = {};
+function deskRun(k) {
+    const d = draft[k] || {}, on = d.on !== false, R = S?.[k === 'gspot' ? 'gspotr' : 'levr'], n = (R?.positions || []).length, arm = !!DESK_ARM[k];
+    const nm = k === 'gspot' ? 'Global spot' : 'Futures', wh = k === 'gspot' ? 'OKX Global spot hesabında' : 'OKX Global futures · izole';
+    return `<section><h2><span class="hb c-green">${ic('i-power')}</span>Çalışma</h2>
+   <div class="runc${on ? '' : ' pz'}"><div class="runh"><span class="rdot"></span><div><b>${nm} ${on ? 'canlı' : 'kapalı'}</b><small>${on ? `${wh} gerçek emir` : k === 'gspot' ? 'Yeni alım yok; eldeki coinler kurallarıyla satılır' : 'Yeni pozisyon açılmaz'}</small></div><em>${on ? 'GERÇEK' : 'KAPALI'}</em></div>
+   <div class="rung"><button type="button" class="rtile ${on ? 'pause' : 'go'}" id="run_${k}"><span>${ic(on ? 'i-pause' : 'i-power')}</span><b>${on ? 'Masayı durdur' : 'Masayı aç'}</b><small>${on ? (k === 'gspot' ? 'yeni alım yapılmaz' : 'pozisyonlar kapanır') : 'gerçek işlem başlar'}</small></button>
+   <button type="button" class="rtile sell${arm ? ' arm' : ''}" id="all_${k}"${n ? '' : ' disabled'}><span>${ic('i-sell')}</span><b>${arm ? 'Emin misin? Dokun' : k === 'gspot' ? 'Hepsini sat' : 'Tümünü kapat'}</b><small>${arm ? '4 sn içinde dokun' : n ? `${n} ${k === 'gspot' ? 'coin satılır' : 'pozisyon kapanır'}` : (k === 'gspot' ? 'elde coin yok' : 'açık pozisyon yok')}</small></button></div>
+   ${on !== (orig?.[k]?.on !== false) ? `<p class="hint"><b>Kaydet</b>'e basınca uygulanır.${!on && k === 'lev' ? ' Açık futures pozisyonları piyasa fiyatından kapanır.' : ''}</p>` : ''}</div></section>`;
+}
+function bindDeskRun() {
+    for (const k of ['gspot', 'lev']) {
+        const r = document.getElementById('run_' + k);
+        if (r)
+            r.onclick = () => { const d = draft[k] = draft[k] || {}; d.on = d.on === false; d.real = d.on; renderForm(); };
+        const a = document.getElementById('all_' + k);
+        if (a)
+            a.onclick = async () => {
+                if (!DESK_ARM[k]) {
+                    DESK_ARM[k] = setTimeout(() => { DESK_ARM[k] = 0; renderForm(); }, 4000);
+                    renderForm();
+                    return;
+                }
+                clearTimeout(DESK_ARM[k]);
+                DESK_ARM[k] = 0;
+                if (!token) {
+                    toast('Önce Ayarlar\'dan GitHub bağlantısını kur');
+                    renderForm();
+                    return;
+                }
+                const R = S?.[k === 'gspot' ? 'gspotr' : 'levr'], ps = R?.positions || [], now = Date.now();
+                const reqs = ps.map((p, i) => ({ id: 'a' + (now + i).toString(36), ts: now, desk: k === 'gspot' ? 'gspotr' : 'lev', act: k === 'gspot' ? 'sell' : 'close', sym: k === 'gspot' ? p.inst : p.sym }));
+                if (!reqs.length) {
+                    renderForm();
+                    return;
+                }
+                for (const q of reqs)
+                    DESK_BUSY[(k === 'gspot' ? 'gspotr' : 'lev') + ':' + q.sym] = now;
+                const ok = await cloudPatch(o => { o.desk_cmd = [...(o.desk_cmd || []).filter((x) => Date.now() - (x.ts || 0) < 600000), ...reqs]; }, (k === 'gspot' ? 'Global hepsini sat' : 'Futures tümünü kapat') + ` (${reqs.length})`);
+                toast(ok ? `${reqs.length} ${k === 'gspot' ? 'coin satılıyor' : 'pozisyon kapanıyor'}; bot birkaç saniyede piyasa fiyatından yapar` : 'İstek gönderilemedi, tekrar dene', ok ? '' : patchWhy());
+                if (!ok)
+                    for (const q of reqs)
+                        delete DESK_BUSY[(k === 'gspot' ? 'gspotr' : 'lev') + ':' + q.sym];
+                renderForm();
+            };
+    }
 }
 function gspotExtra() {
     const g = draft.gspot || {};
