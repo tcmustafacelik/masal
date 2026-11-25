@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = '1.100.2';
+const APP_VERSION = '1.100.3';
 const ICON = { dip: 'i-dip', trend: 'i-trend', grid: 'i-grid', live: 'i-coins' };
 const COLORS = { dip: '#2F6FDE', trend: '#7A5AC8', grid: '#178A5B', live: '#7C8696' };
 const AMBER = 'var(--acc)';
@@ -1598,6 +1598,11 @@ async function syncAll() {
         k = Math.round(b + (+o.fund_tl || 0));
     }
     const gf = S?.gspotr ? Math.floor(gFree() * 100) / 100 : 0, gb = +(((orig || S?.settings)?.gspot || {}).budget) || 0, nb = Math.round((gb + gf) * 100) / 100;
+    const cur = orig || S?.settings || {};
+    if (gf < 1 && b != null && Math.abs(b - (+cur.budget || 0)) <= 1 && Math.abs(k - (+cur.kasa || 0)) <= 1) {
+        toast('Hepsi zaten eşleşik');
+        return;
+    }
     const now = Date.now(), desks = ['gspotr', 'levr', 'memer'].filter(d => S?.[d]), reqs = desks.map((d, i) => ({ id: 's' + (now + i).toString(36), ts: now, desk: d, act: 'sync', sym: '' }));
     SYNCALL_AT = now;
     for (const d of desks)

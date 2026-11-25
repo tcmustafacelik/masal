@@ -1,10 +1,17 @@
 {
-  "version": "1.100.2",
+  "version": "1.100.3",
   "date": "2026-11-25",
   "notes": [
-    "Futures: teminat engeli sayaçta görünür"
+    "Tümünü eşleştir: zaten eşleşikse yeniden göndermez"
   ],
   "history": [
+    {
+      "version": "1.100.3",
+      "date": "2026-11-25",
+      "notes": [
+        "Tümünü eşleştir: zaten eşleşikse yeniden göndermez"
+      ]
+    },
     {
       "version": "1.100.2",
       "date": "2026-11-25",
@@ -101,13 +108,6 @@
       "date": "2026-11-25",
       "notes": [
         "Aktarım takibi: OKX TR'de tamamlanmış ama botun gözden kaçırdığı yatırma artık bulunur, iş 'Ulaştı' olur"
-      ]
-    },
-    {
-      "version": "1.97.2",
-      "date": "2026-11-25",
-      "notes": [
-        "Aktarım: OKX TR'ye ulaşıp onay bekleyen para ikinci kontrolde kayboluyordu ('ulaşması bekleniyor'da takılı kalıyordu); artık aynı yatırma takip edilir ve ne yapman gerektiği yazılır"
       ]
     }
   ]
