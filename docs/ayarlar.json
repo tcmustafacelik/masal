@@ -362,13 +362,6 @@
   ],
   "desk_cmd": [
     {
-      "id": "smwvrmy2l",
-      "ts": 1795589516541,
-      "desk": "gspotr",
-      "act": "sync",
-      "sym": ""
-    },
-    {
       "id": "smwvrvh6v",
       "ts": 1795589914567,
       "desk": "gspotr",
@@ -386,6 +379,13 @@
       "id": "smwvrwdcf",
       "ts": 1795589956239,
       "desk": "levr",
+      "act": "sync",
+      "sym": ""
+    },
+    {
+      "id": "smwvs0moz",
+      "ts": 1795590154979,
+      "desk": "gspotr",
       "act": "sync",
       "sym": ""
     }
@@ -406,7 +406,7 @@
     "on": true,
     "real": true,
     "bank": 100,
-    "budget": 72,
+    "budget": 92,
     "max_loss": 15,
     "lot_pct": 12,
     "lot2_pct": 70,
