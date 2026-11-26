@@ -1,4 +1,4 @@
-const APP_VERSION='1.105.1';
+const APP_VERSION='1.106.0';
 const ICON={dip:'i-dip',trend:'i-trend',grid:'i-grid',live:'i-coins'};
 const COLORS={dip:'#2F6FDE',trend:'#7A5AC8',grid:'#178A5B',live:'#7C8696'};
 const AMBER='var(--acc)'; // seçili çizgi: tema vurgu rengi (kehribar)
@@ -332,6 +332,8 @@ function showMasa(on: boolean) {
   masaOn = on; overlayView(on); document.getElementById('mainv').hidden = on; document.getElementById('masav').hidden = !on;
   document.querySelector('header').hidden = on; scrollTo(0, 0); if (on) renderMasa(); else pollMarket();
 }
+/** Süreyi kısa yazar: 45 sn, 12 dk, 3 sa 20 dk, 2 gün */
+function dur(ms: number) { const m = Math.max(0, ms) / 60000; return m < 1 ? `${Math.round(m * 60)} sn` : m < 60 ? `${Math.round(m)} dk` : m < 1440 ? `${Math.floor(m / 60)} sa${m % 60 >= 1 ? ' ' + Math.floor(m % 60) + ' dk' : ''}` : `${Math.floor(m / 1440)} gün`; }
 function masaClock(ts: number) { const d = new Date(ts), p = (n: number) => String(n).padStart(2, '0'); return `${p(d.getHours())}:${p(d.getMinutes())}`; }
 function renderMasa() {
   if (!masaOn || !S) return;
@@ -344,6 +346,8 @@ function renderMasa() {
   const filtered = items.filter(i => i.f).length, inCond = items.filter(i => !i.f && i.gap <= 0).length;
   const buys = rec.filter(t => t.side === 'AL'), sells = rec.filter(t => t.side === 'SAT');
   const prot = pos.filter(p => p.protected === true).length;
+  const held = pos.filter(p => p.since > 0), longest = held.slice().sort((a, b) => a.since - b.since)[0];
+  const avgHold = held.length ? held.reduce((a, p) => a + (Date.now() - p.since), 0) / held.length : 0;
   const kill = R?.kill_switch || 0, dayLim = R?.daily_loss_limit || 0;
   const blocks: string[] = [];
   if (x.halted) blocks.push('acil fren'); if (x.paused) blocks.push('beklemede'); if (x.blocked_today) blocks.push('günlük sınır');
@@ -362,7 +366,8 @@ function renderMasa() {
       ln('Kademe aralığı', c ? pp(c.step) : '—')],
     ['exit', 'i-pnl', 'Çıkışçı', 'Kârı borsada toplar, zararı keser', st(prot === pos.length, 'KORUYOR', 'KORUMA BEKLİYOR'),
       ln('Açık coin', `${pos.length}`) + ln('Borsa korumalı', `${prot}/${pos.length}`) +
-      ln('Son satış', sells[0] ? `${sym(sells[0].inst)} <span class="${cls(sells[0].pnl || 0)}">${sgn(sells[0].pnl || 0)} TL</span>` : '—')],
+      ln('Son satış', sells[0] ? `${sym(sells[0].inst)} <span class="${cls(sells[0].pnl || 0)}">${sgn(sells[0].pnl || 0)} TL</span>` : '—') +
+      (longest ? ln('En uzun', `${sym(longest.inst)} · ${dur(Date.now() - longest.since)}`) + ln('Ort. bekleme', dur(avgHold)) : '')],
     ['log', 'i-list', 'Kâtip', 'Her kararı sebebiyle yazar', st(true, 'YAZIYOR', ''),
       ln('Kayıt', `${(x.log || []).length} satır`) + ln('Kapanan işlem', `${x.trades}`) + ln('Kazanma', x.win_rate == null ? '—' : '%' + nf(x.win_rate, 0))],
     ['cash', 'i-wallet', 'Kasadar', 'Parayı ve hedefi izler', st(today >= 0, 'KÂRDA', 'ZARARDA'),
@@ -373,12 +378,44 @@ function renderMasa() {
   for (const t of rec.slice(0, 25)) feed.push([t.ts, t.side === 'AL' ? 'al' : (t.pnl || 0) >= 0 ? 'sat' : 'zar', t.side === 'AL' ? 'AL' : 'SAT',
     `<b>${sym(t.inst)}</b> ${tl(t.amount, 0)}${t.side === 'SAT' ? ` · <span class="${cls(t.pnl || 0)}">${sgn(t.pnl || 0)} TL</span>` : ''}<small>sebep: ${(t.reason || '—').replace(/</g, '&lt;')}</small>`]);
   for (const [ts, msg] of (x.log || []).slice(0, 20)) if (!/^(AL|SAT|\[deneme\]) /.test(msg)) feed.push([ts, /HATA|uyarı|alınamıyor/i.test(msg) ? 'err' : 'not', /HATA/i.test(msg) ? 'HATA' : 'NOT', feedTxt(msg)]);
+  for (const f of feed) f[3] = `<i class="dk tr">TR</i>` + f[3];
+  const FR: any = (S as any).levr, GR: any = (S as any).gspotr, GP: any = (S as any).gspot, lvC: any = ((orig || S.settings) as any)?.lev || {};
+  const day0 = new Date().setHours(0, 0, 0, 0);
+  if (FR) {
+    for (const t of (FR.trades || []).slice(0, 20)) feed.push([t.ts, (t.pnl || 0) >= 0 ? 'sat' : 'zar', 'KAPAT',
+      `<i class="dk ft">FT</i><b>${escH(t.sym)}</b> ${t.side === 'UZUN' ? 'uzun' : 'kısa'} · <span class="${cls(t.pnl || 0)}">${sgn(t.pnl || 0)} USDT</span>${pTL(t.pnl || 0)}<small>sebep: ${escH(t.reason || '—')}${t.open ? ` · ${dur(t.ts - t.open)} tuttu` : ''}</small>`]);
+    for (const [ts, k, msg] of (FR.log || []).slice(0, 20)) if (k === 'buy' && /^GERÇEK AÇ /.test(msg)) {
+      const m = msg.replace(/^GERÇEK AÇ /, '').split(' · '); feed.push([ts, 'al', 'AÇ', `<i class="dk ft">FT</i><b>${escH(m[0] || '')}</b><small>${escH(m.slice(1).join(' · '))}</small>`]) }
+  }
+  if (GR) for (const t of (GR.trades || []).slice(0, 20)) feed.push([t.ts, t.side === 'AL' ? 'al' : (t.pnl || 0) >= 0 ? 'sat' : 'zar', t.side,
+    `<i class="dk gl">GL</i><b>${escH(t.sym)}</b> ${U(t.usd || 0, 2)}${t.side === 'SAT' ? ` · <span class="${cls(t.pnl || 0)}">${sgn(t.pnl || 0)} USDT</span>${pTL(t.pnl || 0)}` : ''}<small>sebep: ${escH(t.reason || '—')}</small>`]);
   feed.sort((a, b) => b[0] - a[0]);
+  const more: any[] = [];
+  if (FR) {
+    const fp: any[] = FR.positions || [], ftd = (FR.trades || []).filter((t: any) => t.ts >= day0), last: any = (FR.trades || [])[0];
+    const hold = (FR.trades || []).slice(0, 10).filter((t: any) => t.open), avgF = hold.length ? hold.reduce((a: number, t: any) => a + t.ts - t.open, 0) / hold.length : 0;
+    const dayP = ftd.reduce((a: number, t: any) => a + (t.pnl || 0), 0);
+    more.push(['fut', 'i-bolt', 'Al-kaç', `Futures · ${lvC.fast ? '15 dk mumla hızlı gir-çık' : 'saatlik mumla gir-çık'}`,
+      st(!!FR.on && !FR.halt && !FR.dead, fp.length ? 'POZİSYONDA' : 'AV BEKLİYOR', FR.dead ? 'DURDU' : FR.halt ? 'GÜNLÜK SINIR' : 'KAPALI'),
+      ln('Mod', lvC.fast ? 'Al-kaç (15 dk)' : 'Normal (1 sa)') + ln('Bugün', `${ftd.length} işlem`) + ln('Bugün K/Z', `<span class="${cls(dayP)}">${sgn(dayP)} USDT</span>`) +
+      ln('Kazanma', FR.win_rate == null ? '—' : '%' + nf(FR.win_rate, 0)) + ln('Ort. tutma', avgF ? dur(avgF) : '—') +
+      ln('Son kaçış', last ? `${escH(last.sym)} <span class="${cls(last.pnl || 0)}">${sgn(last.pnl || 0)}</span>` : '—') +
+      (fp.length ? `<div class="ach">${fp.map((p: any) => `<span>${escH(p.sym)} ${p.side === 'UZUN' ? '▲' : '▼'} <b class="${(p.pnl || 0) >= 0 ? 'up' : 'dn'}">${sgn(p.pnl || 0)}</b>${p.trailed ? ' · iz' : ''} · ${dur(Date.now() - p.ts)}</span>`).join('')}</div>` : '')]);
+  }
+  if (GR) {
+    const gp: any[] = GR.positions || [], gt: any[] = GR.trades || [], gb = gt.find((t: any) => t.side === 'AL'), gs = gt.find((t: any) => t.side === 'SAT');
+    more.push(['gl', 'i-globe', 'Global alıcı', 'OKX Global spot · fırsatta alır, kârda satar', st(!GR.halt, gp.length ? 'ELDE COİN VAR' : 'TARIYOR', 'DURDU'),
+      ln('Aday', `${GP?.watch?.length || 0} coin`) + ln('Açık coin', `${gp.length}`) +
+      ln('Son alım', gb ? `${escH(gb.sym)} · ${ago(gb.ts)}` : '—') + ln('Son satış', gs ? `${escH(gs.sym)} <span class="${cls(gs.pnl || 0)}">${sgn(gs.pnl || 0)}</span>` : '—') +
+      ln('Kazanma', GR.win_rate == null ? '—' : '%' + nf(GR.win_rate, 0))]);
+  }
+  const card = ([k, i, n, r, s, body]: any[]) => `<div class="agent a-${k}"><div class="ah2"><span class="aic">${ic(i as string)}</span><b>${n}</b></div>${s}<small class="arole">${r}</small>${body}</div>`;
   setH(box, `<div class="mtop"><div><span>Bottaki para</span><b>${tl(eq, 0)}</b></div><div><span>Bugün</span><b class="${cls(today)}">${sgn(today)} TL</b></div>
       <div><span>İşlem</span><b>${x.trades}</b></div><div><span>Kazanma</span><b>${x.win_rate == null ? '—' : '%' + nf(x.win_rate, 0)}</b></div></div>
     <div class="mflow">${['Gözcü', 'Bekçi', 'Alıcı', 'Çıkışçı'].map((n, i) => `<span>${n}</span>${i < 3 ? ic('i-chev') : ''}`).join('')}</div>
-    <div class="agrid">${agents.map(([k, i, n, r, s, body]) => `<div class="agent a-${k}"><div class="ah2"><span class="aic">${ic(i as string)}</span><b>${n}</b></div>${s}<small class="arole">${r}</small>${body}</div>`).join('')}</div>
-    <h2 class="mh">${ic('i-list')}Canlı akış<span class="hsum">her işlem sebebiyle</span></h2>
+    <div class="agrid">${agents.map(card).join('')}</div>
+    ${more.length ? `<h2 class="mh">${ic('i-layers')}Diğer masalar<span class="hsum">Futures · Global</span></h2><div class="agrid">${more.map(card).join('')}</div>` : ''}
+    <h2 class="mh">${ic('i-list')}Canlı akış<span class="hsum">TR · Global · Futures</span></h2>
     <div class="card mfeed">${feed.length ? feed.slice(0, 30).map(([ts, k, tag, txt]) => `<div class="fr"><time>${masaClock(ts)}</time><em class="ft ${k}">${tag}</em><div>${txt}</div></div>`).join('') : `<div class="empty">${ic('i-list')}<div>Henüz kayıt yok</div></div>`}</div>`);
 }
 /** Masa kartı üst kısmı (Varlık özetiyle aynı dil): büyük değer + kâr/zarar rozeti + kalan risk çubuğu + küçük bilgiler */

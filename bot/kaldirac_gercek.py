@@ -639,6 +639,6 @@ def public(state):
             "halt": R["halt"], "dead": R["dead"], "err": R["err"], "sync": R.get("sync"),
             "positions": [{"sym": c, "side": "UZUN" if p["side"] > 0 else "KISA", "ts": p["ts"], "entry": p["entry"],
                            "now": p["now"], "stop": p["stop"], "tp": p["tp"], "liq": p["liq"], "margin": round(p["margin"], 2),
-                           "pnl": round(p.get("upl", 0), 2), "why": p["why"], "lev": p.get("lev")} for c, p in R["pos"].items()],
+                           "pnl": round(p.get("upl", 0), 2), "why": p["why"], "lev": p.get("lev"), "trailed": bool(p.get("trailed"))} for c, p in R["pos"].items()],
             "trades": done[-40:][::-1], "log": R["log"][-40:][::-1], "equity_series": R["equity"][-200:], "fav": config.top_earners(done),
             "closed": len(done), "win_rate": round(len(wins) / len(done) * 100) if done else None, "coins": _coins(done)}
